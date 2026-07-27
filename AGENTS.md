@@ -64,3 +64,51 @@ This codebase contains:
      - For COD: `PLACE CASH ON DELIVERY ORDER · ৳...`
      - For Prepaid: `PROCEED TO PAYMENT · ৳...`
    - Validate 11-digit Bangladeshi mobile numbers (`01XXXXXXXXX`) and delivery addresses inline before submission.
+
+---
+
+## 4. Multi-Agent Context Engineering & Domain Boundaries
+
+To enable multiple autonomous AI agents and human developers to collaborate with zero merge conflicts, the codebase is partitioned into distinct domain boundaries:
+
+```
+Domain Context Boundaries:
+├── 1. Authentication & Profile: apps/mobile/src/context/ProfileContext.tsx, apps/api/src/routes.ts (/v1/auth/*)
+├── 2. Catalog & Products: apps/mobile/app/(tabs)/shop.tsx, apps/mobile/app/product/[id].tsx, apps/api/src/woo.ts
+├── 3. Cart & Pricing Rules: apps/mobile/src/context/CartContext.tsx, apps/api/src/pricing.test.ts
+├── 4. Checkout & Orders: apps/mobile/app/checkout.tsx, apps/api/src/routes.ts (/v1/deen/orders)
+├── 5. Admin & BI Dashboard: apps/mobile/src/components/AdminAnalyticsModal.tsx, apps/api/src/routes.ts (/v1/deen/admin/*)
+└── 6. Shared Design Tokens: apps/mobile/src/theme/colors.ts, apps/mobile/src/theme/sharedStyles.ts
+```
+
+### Multi-Agent Collision Prevention Rules:
+1. **Isolated File Editing:** Agents working on separate domains must NOT modify common core files (like `routes.ts` or `gateway.ts`) unless implementing shared cross-cutting contracts.
+2. **Deterministic Single-Source-of-Truth:**
+   - District codes: `apps/mobile/src/data/districts.ts`
+   - Currency & BDT formatting: `bdt()` in `gateway.ts`
+   - Pricing & Cashback tiers: `apps/api/src/routes.ts` + `pricing.test.ts`
+3. **Continuous Type Safety:** Every agent modification must compile with `npm run typecheck:all` (0 errors) before declaring a task complete.
+
+---
+
+## 5. Feature Context Map (Agent Navigation Index)
+
+| Feature Domain | Mobile Screen(s) | Mobile Services / State | Gateway Route(s) | Upstream System | Tests |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Authentication** | `LoginModal.tsx`, `profile.tsx` | `ProfileContext.tsx`, `gateway.ts` | `/v1/auth/*` | WP `/wp-login.php` | `test_auth.ts` |
+| **Catalog & PDP** | `shop.tsx`, `product/[id].tsx` | `gateway.ts`, `categories.ts` | `/v1/deen/catalog/*` | WC `/wp-json/wc/v3/products` | `pricing.test.ts` |
+| **Cart & Pricing** | `cart.tsx`, `Banner.tsx` | `CartContext.tsx`, `RewardsContext.tsx` | Local / Fastify | In-Memory Rules | `pricing.test.ts` |
+| **Checkout & Order**| `checkout.tsx`, `order-success.tsx`| `OrderContext.tsx`, `districts.ts` | `/v1/deen/orders` | WC Orders + Pathao API | `pricing.test.ts` |
+| **Admin & BI** | `AdminAnalyticsModal.tsx`, `index.tsx`| `gateway.ts` (`fetchAdminAnalytics`) | `/v1/deen/admin/*` | WC Orders + In-Memory | Automated Verified |
+
+---
+
+## 6. Monorepo Verification Commands
+
+```bash
+# Typecheck entire monorepo (API + Web + Mobile)
+npm run typecheck:all
+
+# Run automated unit tests (Cashback, BOGO, Phone Validation)
+npm test
+```
