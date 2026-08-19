@@ -56,8 +56,8 @@ export const PHASES: Phase[] = [
     blurb: "Primary build target. Ships first; iOS reuses ~95% of this code.",
     tasks: [
       { id: "p2-1", label: "expo init — Expo Router shell, design tokens, dark scheme", status: "done", tag: "MOBILE" },
-      { id: "p2-2", label: "API client + TanStack Query wiring, offline-safe mutations", status: "active", tag: "MOBILE" },
-      { id: "p2-3", label: "Catalog screens — list, search, product detail, gallery", status: "todo", tag: "UI" },
+      { id: "p2-2", label: "API client + TanStack Query wiring, offline-safe mutations", status: "done", tag: "MOBILE" },
+      { id: "p2-3", label: "Catalog screens — list, search, product detail, gallery", status: "active", tag: "UI" },
       { id: "p2-4", label: "Auth screens — login, register, session persistence (SecureStore)", status: "todo", tag: "AUTH" },
       { id: "p2-5", label: "Cart + checkout flow with address & payment steps", status: "todo", tag: "UI" },
       { id: "p2-6", label: "Order history + push notifications (FCM via Expo Notifications)", status: "todo", tag: "MOBILE" },

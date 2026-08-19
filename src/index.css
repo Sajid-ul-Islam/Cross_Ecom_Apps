@@ -309,6 +309,68 @@ textarea:focus-visible {
   box-shadow: 0 0 0 3px rgba(102, 188, 227, 0.15);
 }
 
+/* device screen motion */
+.screen-in {
+  animation: screenIn 0.34s cubic-bezier(0.22, 0.8, 0.3, 1);
+}
+@keyframes screenIn {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.screen-up {
+  animation: screenUp 0.4s cubic-bezier(0.22, 0.8, 0.3, 1);
+}
+@keyframes screenUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.drawer-rise {
+  animation: drawerRise 0.42s cubic-bezier(0.22, 0.8, 0.3, 1);
+}
+@keyframes drawerRise {
+  from {
+    transform: translateY(22%);
+    opacity: 0.4;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.boot-line {
+  animation: bootline 0.45s ease-out both;
+}
+@keyframes bootline {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.blink {
+  animation: blinkc 1s steps(1) infinite;
+}
+@keyframes blinkc {
+  50% {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

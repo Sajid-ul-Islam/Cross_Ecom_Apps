@@ -1,8 +1,13 @@
 import { HashRouter, NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { Storefront } from "./apps/Storefront";
 import { Admin } from "./apps/Admin";
+import { MobileApp } from "./apps/MobileApp";
+import { Storefront } from "./apps/Storefront";
 import { BlueprintPage } from "./pages/BlueprintPage";
-import { ToastProvider } from "./components/ui";
+import { ToastProvider, useToast } from "./components/ui";
+import { useLocalStorage } from "./hooks";
+import { PHASES, SEED_SESSIONS, type SessionEntry, type TaskStatus } from "./data";
+
+const CYCLE: Record<TaskStatus, TaskStatus> = { todo: "active", active: "done", done: "todo" };
 
 /* ------------------------------------------------------------------ */
 /*  workspace chrome — branch state + route switcher                   */
@@ -24,7 +29,7 @@ function WorkspaceBar() {
           {label}
           <span
             className={`absolute inset-x-2.5 -bottom-px h-[2px] transition-all duration-300 ${
-              isActive ? "bg-amber opacity-100" : "opacity-0"
+              isActive ? "bg-mint opacity-100" : "opacity-0"
             }`}
           />
         </>
@@ -42,12 +47,11 @@ function WorkspaceBar() {
         </svg>
         <span className="font-display text-[13px] font-extrabold tracking-tight">BRIDGEWORK</span>
         <span className="hidden h-4 w-px bg-line sm:block" />
-        <span className="hidden font-mono text-[9px] uppercase tracking-[0.22em] text-faint sm:block">
-          apps workspace
-        </span>
+        <span className="hidden font-mono text-[9px] uppercase tracking-[0.22em] text-faint sm:block">apps workspace</span>
 
         <nav className="ml-2 flex items-center gap-0.5 overflow-x-auto scrollbar-none sm:ml-6">
-          {link("/", "storefront")}
+          {link("/", "android app")}
+          {link("/web", "storefront")}
           {link("/admin", "admin")}
           {link("/blueprint", "blueprint")}
         </nav>
@@ -65,7 +69,10 @@ function WorkspaceBar() {
             </svg>
             main · merged ✓
           </span>
-          <span className="border border-line px-2 py-1 font-mono text-[9px] uppercase tracking-[0.14em] text-faint" title="The middle API layer is simulated in-browser for this workspace">
+          <span
+            className="border border-line px-2 py-1 font-mono text-[9px] uppercase tracking-[0.14em] text-faint"
+            title="The middle API layer is simulated in-browser for this workspace"
+          >
             gateway: sim
           </span>
         </div>
@@ -96,36 +103,74 @@ function Ambient() {
 
 /* ------------------------------------------------------------------ */
 
+function Workspace() {
+  const toast = useToast();
+  const [overrides, setOverrides] = useLocalStorage<Record<string, TaskStatus>>("bw.tasks.v1", {});
+  const [sessions, setSessions] = useLocalStorage<SessionEntry[]>("bw.sessions.v1", SEED_SESSIONS);
+
+  const cycle = (id: string) => {
+    const base = PHASES.flatMap((p) => p.tasks).find((t) => t.id === id);
+    if (!base) return;
+    const current = overrides[id] ?? base.status;
+    setOverrides((prev) => ({ ...prev, [id]: CYCLE[current] }));
+  };
+
+  const reset = () => {
+    setOverrides({});
+    setSessions(SEED_SESSIONS);
+    toast("Ledger reset to blueprint defaults", "wire");
+  };
+
+  const addSession = (e: Omit<SessionEntry, "id" | "ts">) =>
+    setSessions((prev) => [{ ...e, id: `s-${Date.now()}`, ts: Date.now() }, ...prev]);
+
+  const deleteSession = (id: string) => setSessions((prev) => prev.filter((s) => s.id !== id));
+
+  return (
+    <HashRouter>
+      <div className="relative min-h-screen">
+        <Ambient />
+        <WorkspaceBar />
+        {/* merge ribbon — the branch transition, on record */}
+        <div className="border-b border-dashed border-line bg-panel/40">
+          <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-5 py-1.5 font-mono text-[9.5px] tracking-[0.14em] text-faint sm:px-8">
+            <span className="text-mint">✓ merged</span>
+            <span>
+              <span className="text-faint line-through decoration-faint/60">full-stack-project-blueprint-4a182</span>{" "}
+              <span className="text-wire">→ main</span>
+            </span>
+            <span className="text-coral/80">branch deleted</span>
+            <span className="ml-auto hidden sm:inline">
+              now developing: <span className="text-mint">apps/mobile</span> — P2 Expo Android · web + /admin live
+            </span>
+          </div>
+        </div>
+
+        <Routes>
+          <Route path="/" element={<MobileApp overrides={overrides} onCycle={cycle} />} />
+          <Route path="/web" element={<Storefront />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/blueprint" element={
+            <BlueprintPage
+              overrides={overrides}
+              onCycle={cycle}
+              onReset={reset}
+              sessions={sessions}
+              onAddSession={addSession}
+              onDeleteSession={deleteSession}
+            />
+          } />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </div>
+    </HashRouter>
+  );
+}
+
 export default function App() {
   return (
     <ToastProvider>
-      <HashRouter>
-        <div className="relative min-h-screen">
-          <Ambient />
-          <WorkspaceBar />
-          {/* merge ribbon — the branch transition, on record */}
-          <div className="border-b border-dashed border-line bg-panel/40">
-            <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-5 py-1.5 font-mono text-[9.5px] tracking-[0.14em] text-faint sm:px-8">
-              <span className="text-mint">✓ merged</span>
-              <span>
-                <span className="text-faint line-through decoration-faint/60">full-stack-project-blueprint-4a182</span>{" "}
-                <span className="text-wire">→ main</span>
-              </span>
-              <span className="text-coral/80">branch deleted</span>
-              <span className="ml-auto hidden sm:inline">
-                now developing: <span className="text-amber">apps/*</span> — web storefront live · /admin live · mobile next
-              </span>
-            </div>
-          </div>
-
-          <Routes>
-            <Route path="/" element={<Storefront />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/blueprint" element={<BlueprintPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </div>
-      </HashRouter>
+      <Workspace />
     </ToastProvider>
   );
 }

@@ -180,6 +180,33 @@ export const IconMap = (p: IconProps) => (
   </svg>
 );
 
+export const IconArrowLeft = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M19 12H5M10.5 18l-6-6 6-6" />
+  </svg>
+);
+
+export const IconBag = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M6 8.2h12l-1 12H7z" />
+    <path d="M9 8V6.8a3 3 0 0 1 6 0V8" />
+  </svg>
+);
+
+export const IconSignal = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M5 18.5v-3M9.5 18.5v-6M14 18.5V8.5M18.5 18.5v-13" />
+  </svg>
+);
+
+export const IconBattery = (p: IconProps) => (
+  <svg {...base(p)}>
+    <rect x="3" y="8.5" width="16" height="8" />
+    <path d="M21 11v3" />
+    <path d="M5.5 11v3h7.5v-3z" fill="currentColor" stroke="none" />
+  </svg>
+);
+
 export const IconSearch = (p: IconProps) => (
   <svg {...base(p)}>
     <circle cx="10.5" cy="10.5" r="6.5" />
