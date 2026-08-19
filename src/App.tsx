@@ -141,11 +141,11 @@ function Workspace() {
             </span>
             <span className="text-coral/80">branch deleted</span>
             <span
-              className="hidden items-center gap-1.5 lg:flex"
-              title="Verified at the file level: the branch name survives only in merge-history annotations (App.tsx ribbon + Blueprint cover). No live routes or configs reference it."
+              className="hidden cursor-help items-center gap-1.5 lg:flex"
+              title="Merge closed. Verified: branch name survives only in 3 historical annotations, route tree is single-trunk, build green. Full record: docs/MERGE_LOG.md. Nothing left to merge, nothing left to delete."
             >
               <span className="text-faint">$ git branch -a</span>
-              <span className="text-mint">→ * main · 1 branch</span>
+              <span className="text-mint">→ * main · rest: 0</span>
             </span>
             <span className="ml-auto hidden sm:inline">
               now developing: <span className="text-mint">apps/mobile</span> — P2 Expo Android · web + /admin live
