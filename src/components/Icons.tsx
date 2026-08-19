@@ -179,3 +179,49 @@ export const IconMap = (p: IconProps) => (
     <path d="M9 4v14M15 6v14" />
   </svg>
 );
+
+export const IconSearch = (p: IconProps) => (
+  <svg {...base(p)}>
+    <circle cx="10.5" cy="10.5" r="6.5" />
+    <path d="m15.4 15.4 5.1 5.1" />
+  </svg>
+);
+
+export const IconTrash = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M4.5 6.5h15M9.5 6.5V4.5h5v2M6.5 6.5l1 13h9l1-13M10 10.5v5.5M14 10.5v5.5" />
+  </svg>
+);
+
+export const IconMinus = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M5 12h14" />
+  </svg>
+);
+
+export const IconLogout = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M14 4.5H6.5v15H14M10.5 12H21M17.5 8l4 4-4 4" />
+  </svg>
+);
+
+export const IconTag = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M3.5 12.5v-9h9l8 8.5-8.5 9z" />
+    <circle cx="8" cy="8" r="1.4" />
+  </svg>
+);
+
+export const IconBox = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="m12 3 8 4v10l-8 4-8-4V7z" />
+    <path d="M4 7l8 4 8-4M12 11v10" />
+  </svg>
+);
+
+export const IconUser = (p: IconProps) => (
+  <svg {...base(p)}>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4.5 20.5c1.4-3.6 4.1-5.3 7.5-5.3s6.1 1.7 7.5 5.3" />
+  </svg>
+);
