@@ -14,7 +14,7 @@ import { IconCheck, IconX } from "./Icons";
 interface Toast {
   id: number;
   msg: string;
-  tone: "mint" | "wire" | "amber";
+  tone: "mint" | "wire" | "amber" | "coral";
 }
 
 const ToastCtx = createContext<(msg: string, tone?: Toast["tone"]) => void>(() => {});
@@ -39,6 +39,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     mint: "border-mint/60 text-mint",
     wire: "border-wire/60 text-wire",
     amber: "border-amber/60 text-amber",
+    coral: "border-coral/60 text-coral",
   };
 
   return (

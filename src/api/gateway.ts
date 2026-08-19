@@ -1,10 +1,11 @@
 /* ------------------------------------------------------------------ */
 /*  apps/api — MIDDLE API LAYER (simulated in-browser)                  */
 /*                                                                     */
-/*  Every app below calls ONLY this module. In the real build this is  */
-/*  the Fastify gateway holding the WooCommerce consumer keys; here    */
-/*  it enforces the same contract with latency, errors and persisted   */
-/*  state so both apps are developed against the real interface.       */
+/*  Every app calls ONLY this module. In the real build this is the    */
+/*  Fastify gateway holding the WooCommerce consumer keys; here it     */
+/*  enforces the same contract — latency, typed errors, auth, channel  */
+/*  tagging and request telemetry — so apps develop against the real   */
+/*  interface from day one.                                            */
 /* ------------------------------------------------------------------ */
 
 import {
@@ -14,6 +15,7 @@ import {
   SEED_PRODUCTS,
   type AdminSession,
   type CheckoutPayload,
+  type Channel,
   type Coupon,
   type Order,
   type OrderStatus,
@@ -25,6 +27,7 @@ const KEYS = {
   inventory: "bw.inventory.v1",
   coupons: "bw.coupons.v1",
   session: "bw.session.v1",
+  customer: "bw.customer.v1",
 };
 
 function load<T>(key: string, fallback: T): T {
@@ -45,10 +48,56 @@ function save(key: string, value: unknown) {
   }
 }
 
-const latency = () => 240 + Math.random() * 340;
-const wait = () => new Promise<void>((r) => setTimeout(r, latency()));
+/* ------------------------------------------------------------------ */
+/*  request telemetry — the gateway announces every call it serves     */
+/* ------------------------------------------------------------------ */
 
-/* ---- state slices ---- */
+export interface GatewayEvent {
+  id: string;
+  ts: number;
+  method: string;
+  path: string;
+  status: number;
+  ms: number;
+  channel: string;
+}
+
+export const seedGatewayEvents: GatewayEvent[] = [
+  { id: "seed-1", ts: Date.now() - 46000, method: "GET", path: "/v1/products", status: 200, ms: 341, channel: "web" },
+  { id: "seed-2", ts: Date.now() - 21000, method: "GET", path: "/v1/orders", status: 200, ms: 287, channel: "admin" },
+  { id: "seed-3", ts: Date.now() - 8000, method: "GET", path: "/v1/health", status: 200, ms: 94, channel: "android" },
+];
+
+const listeners = new Set<(e: GatewayEvent) => void>();
+
+export function subscribeGateway(cb: (e: GatewayEvent) => void): () => void {
+  listeners.add(cb);
+  return () => {
+    listeners.delete(cb);
+  };
+}
+
+let eventSeq = 0;
+
+async function track(method: string, path: string, channel: string, status = 200): Promise<number> {
+  const ms = Math.round(220 + Math.random() * 360);
+  await new Promise((r) => setTimeout(r, ms));
+  const e: GatewayEvent = {
+    id: `gw-${++eventSeq}-${Date.now()}`,
+    ts: Date.now(),
+    method,
+    path,
+    status,
+    ms,
+    channel,
+  };
+  listeners.forEach((l) => l(e));
+  return ms;
+}
+
+/* ------------------------------------------------------------------ */
+/*  state slices                                                       */
+/* ------------------------------------------------------------------ */
 
 interface InventoryOverride {
   stock?: number;
@@ -60,16 +109,26 @@ let orders: Order[] = load(KEYS.orders, SEED_ORDERS);
 let inventory: Record<string, InventoryOverride> = load(KEYS.inventory, {});
 let coupons: Coupon[] = load(KEYS.coupons, SEED_COUPONS);
 
-/* ---- auth ---- */
+/* ------------------------------------------------------------------ */
+/*  health — every app pings on boot                                   */
+/* ------------------------------------------------------------------ */
+
+export async function pingHealth(channel = "android"): Promise<{ status: "ok"; ms: number; redis: string; woo: string }> {
+  const ms = await track("GET", "/v1/health", channel);
+  return { status: "ok", ms, redis: "connected", woo: "staging" };
+}
+
+/* ------------------------------------------------------------------ */
+/*  admin auth                                                         */
+/* ------------------------------------------------------------------ */
 
 const DEMO_EMAIL = "admin@bridgework.dev";
 const DEMO_PASS = "launch-2025";
 
 export async function login(email: string, password: string): Promise<AdminSession> {
-  await wait();
-  if (email.trim().toLowerCase() !== DEMO_EMAIL || password !== DEMO_PASS) {
-    throw new ApiError("AUTH_FAILED", "Invalid credentials. Gateway rejected the handshake.");
-  }
+  const ok = email.trim().toLowerCase() === DEMO_EMAIL && password === DEMO_PASS;
+  await track("POST", "/v1/auth/login", "admin", ok ? 200 : 401);
+  if (!ok) throw new ApiError("AUTH_FAILED", "Invalid credentials. Gateway rejected the handshake.");
   const session: AdminSession = { email: email.trim().toLowerCase(), role: "admin", exp: Date.now() + 8 * 3600000 };
   save(KEYS.session, session);
   return session;
@@ -95,10 +154,38 @@ function requireAdmin() {
   if (!getSession()) throw new ApiError("UNAUTHENTICATED", "No valid admin session.");
 }
 
-/* ---- catalog (public) ---- */
+/* ------------------------------------------------------------------ */
+/*  device customer profile (stands in for app auth + SecureStore)     */
+/* ------------------------------------------------------------------ */
 
-export async function listProducts(): Promise<Product[]> {
-  await wait();
+export interface CustomerProfile {
+  name: string;
+  email: string;
+  device: string;
+  push: boolean;
+}
+
+export const demoCustomer: CustomerProfile = {
+  name: "Kai Tanaka",
+  email: "kai@trailmail.co",
+  device: "Pixel 8 · Android 15",
+  push: true,
+};
+
+export function getCustomer(): CustomerProfile {
+  return load(KEYS.customer, demoCustomer);
+}
+
+export function saveCustomer(c: CustomerProfile): void {
+  save(KEYS.customer, c);
+}
+
+/* ------------------------------------------------------------------ */
+/*  catalog (public)                                                   */
+/* ------------------------------------------------------------------ */
+
+export async function listProducts(channel: Channel | "web" = "web"): Promise<Product[]> {
+  await track("GET", "/v1/products", channel);
   return SEED_PRODUCTS.map((p) => ({
     ...p,
     stock: inventory[p.id]?.stock ?? p.stock,
@@ -108,7 +195,7 @@ export async function listProducts(): Promise<Product[]> {
 }
 
 export async function listAllProducts(): Promise<Product[]> {
-  await wait();
+  await track("GET", "/v1/products?scope=all", "admin");
   requireAdmin();
   return SEED_PRODUCTS.map((p) => ({
     ...p,
@@ -118,49 +205,49 @@ export async function listAllProducts(): Promise<Product[]> {
   }));
 }
 
-/* ---- public feed (trimmed — no PII) ---- */
+/* ------------------------------------------------------------------ */
+/*  coupons                                                            */
+/* ------------------------------------------------------------------ */
 
-export interface FeedEvent {
-  number: string;
-  channel: string;
-  total: number;
-  status: string;
+function couponMath(c: Coupon, subtotal: number): number {
+  const d = c.type === "percent" ? (subtotal * c.value) / 100 : Math.min(c.value, subtotal);
+  return Math.round(d * 100) / 100;
 }
 
-export async function gatewayFeed(): Promise<FeedEvent[]> {
-  await wait();
-  return orders.slice(0, 10).map((o) => ({
-    number: o.number,
-    channel: o.channel,
-    total: o.total,
-    status: o.status,
-  }));
-}
-
-/* ---- coupons ---- */
-
-export async function validateCoupon(code: string, subtotal: number): Promise<{ code: string; discount: number }> {
-  await wait();
+export async function validateCoupon(
+  code: string,
+  subtotal: number,
+  channel: Channel | "web" = "web"
+): Promise<{ code: string; discount: number }> {
+  await track("POST", "/v1/coupons/validate", channel);
   const c = coupons.find((x) => x.code.toLowerCase() === code.trim().toLowerCase());
-  if (!c || !c.active) throw new ApiError("COUPON_INVALID", `Code "${code.toUpperCase()}" is not active.`);
+  if (!c || !c.active) throw new ApiError("COUPON_INVALID", `Code "${code.trim().toUpperCase()}" is not active.`);
   if (subtotal < c.minSubtotal) {
     throw new ApiError("COUPON_MIN", `Needs a subtotal of $${c.minSubtotal.toFixed(2)} or more.`);
   }
-  const discount = c.type === "percent" ? (subtotal * c.value) / 100 : Math.min(c.value, subtotal);
-  return { code: c.code, discount: Math.round(discount * 100) / 100 };
+  return { code: c.code, discount: couponMath(c, subtotal) };
 }
 
-/* ---- checkout (public) ---- */
+/* ------------------------------------------------------------------ */
+/*  checkout (public)                                                  */
+/* ------------------------------------------------------------------ */
 
 export async function createOrder(payload: CheckoutPayload): Promise<Order> {
-  await wait();
-  await wait();
+  const channel: Channel = payload.channel ?? "web";
   if (!payload.customerName.trim() || !payload.customerEmail.includes("@") || !payload.address.trim()) {
+    await track("POST", "/v1/orders", channel, 422);
     throw new ApiError("VALIDATION", "Name, valid email and address are required.");
   }
-  if (payload.items.length === 0) throw new ApiError("VALIDATION", "Cart is empty.");
+  if (payload.items.length === 0) {
+    await track("POST", "/v1/orders", channel, 422);
+    throw new ApiError("VALIDATION", "Cart is empty.");
+  }
 
-  const products = SEED_PRODUCTS.map((p) => ({ ...p, stock: inventory[p.id]?.stock ?? p.stock, price: inventory[p.id]?.price ?? p.price }));
+  const products = SEED_PRODUCTS.map((p) => ({
+    ...p,
+    stock: inventory[p.id]?.stock ?? p.stock,
+    price: inventory[p.id]?.price ?? p.price,
+  }));
 
   const items = payload.items.map((it) => {
     const p = products.find((x) => x.id === it.productId);
@@ -174,10 +261,20 @@ export async function createOrder(payload: CheckoutPayload): Promise<Order> {
   let discount = 0;
   let couponCode: string | undefined;
   if (payload.couponCode) {
-    const v = await validateCoupon(payload.couponCode, subtotal);
-    discount = v.discount;
-    couponCode = v.code;
+    const c = coupons.find((x) => x.code.toLowerCase() === payload.couponCode!.trim().toLowerCase());
+    if (!c || !c.active) {
+      await track("POST", "/v1/orders", channel, 422);
+      throw new ApiError("COUPON_INVALID", "Coupon is no longer active.");
+    }
+    if (subtotal < c.minSubtotal) {
+      await track("POST", "/v1/orders", channel, 422);
+      throw new ApiError("COUPON_MIN", `Coupon needs a subtotal of $${c.minSubtotal.toFixed(2)}.`);
+    }
+    discount = couponMath(c, subtotal);
+    couponCode = c.code;
   }
+
+  await track("POST", "/v1/orders", channel, 201);
 
   const num = 1040 + orders.length + 1;
   const order: Order = {
@@ -191,11 +288,10 @@ export async function createOrder(payload: CheckoutPayload): Promise<Order> {
     couponCode,
     total: Math.round((subtotal - discount) * 100) / 100,
     status: "pending",
-    channel: "web",
+    channel,
     createdAt: new Date().toISOString(),
   };
 
-  // decrement stock
   for (const it of items) {
     const p = products.find((x) => x.id === it.productId)!;
     inventory[p.id] = { ...inventory[p.id], stock: p.stock - it.qty };
@@ -210,28 +306,29 @@ export async function createOrder(payload: CheckoutPayload): Promise<Order> {
   return order;
 }
 
-export async function listPublicOrders(email: string): Promise<Order[]> {
-  await wait();
+export async function listPublicOrders(email: string, channel: Channel | "web" = "web"): Promise<Order[]> {
+  await track("GET", "/v1/orders?mine=true", channel);
   return orders.filter((o) => o.customerEmail.toLowerCase() === email.trim().toLowerCase());
 }
 
-/* ---- admin: orders ---- */
+/* ------------------------------------------------------------------ */
+/*  admin: orders                                                      */
+/* ------------------------------------------------------------------ */
 
 export async function listOrders(): Promise<Order[]> {
-  await wait();
+  await track("GET", "/v1/orders", "admin");
   requireAdmin();
   return [...orders].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export async function updateOrderStatus(id: string, status: OrderStatus): Promise<Order> {
-  await wait();
+  await track("PATCH", `/v1/orders/${id.slice(0, 8)}`, "admin");
   requireAdmin();
   const order = orders.find((o) => o.id === id);
   if (!order) throw new ApiError("NOT_FOUND", "Order not found.");
   const wasTerminal = order.status === "cancelled" || order.status === "refunded";
   const nowTerminal = status === "cancelled" || status === "refunded";
   order.status = status;
-  // restock exactly once when an order enters a terminal state
   if (!wasTerminal && nowTerminal) {
     for (const it of order.items) {
       const base = SEED_PRODUCTS.find((p) => p.id === it.productId);
@@ -246,10 +343,12 @@ export async function updateOrderStatus(id: string, status: OrderStatus): Promis
   return { ...order };
 }
 
-/* ---- admin: inventory ---- */
+/* ------------------------------------------------------------------ */
+/*  admin: inventory                                                   */
+/* ------------------------------------------------------------------ */
 
 export async function adjustStock(id: string, delta: number): Promise<Product> {
-  await wait();
+  await track("PATCH", "/v1/inventory/adjust", "admin");
   requireAdmin();
   const base = SEED_PRODUCTS.find((p) => p.id === id);
   if (!base) throw new ApiError("NOT_FOUND", "Product not found.");
@@ -261,7 +360,7 @@ export async function adjustStock(id: string, delta: number): Promise<Product> {
 }
 
 export async function setPrice(id: string, price: number): Promise<Product> {
-  await wait();
+  await track("PATCH", "/v1/inventory/price", "admin");
   requireAdmin();
   const base = SEED_PRODUCTS.find((p) => p.id === id);
   if (!base) throw new ApiError("NOT_FOUND", "Product not found.");
@@ -272,7 +371,7 @@ export async function setPrice(id: string, price: number): Promise<Product> {
 }
 
 export async function setActive(id: string, active: boolean): Promise<Product> {
-  await wait();
+  await track("POST", "/v1/products/visibility", "admin");
   requireAdmin();
   const base = SEED_PRODUCTS.find((p) => p.id === id);
   if (!base) throw new ApiError("NOT_FOUND", "Product not found.");
@@ -281,16 +380,18 @@ export async function setActive(id: string, active: boolean): Promise<Product> {
   return { ...base, active, stock: inventory[id]?.stock ?? base.stock, price: inventory[id]?.price ?? base.price };
 }
 
-/* ---- admin: coupons ---- */
+/* ------------------------------------------------------------------ */
+/*  admin: coupons                                                     */
+/* ------------------------------------------------------------------ */
 
 export async function listCoupons(): Promise<Coupon[]> {
-  await wait();
+  await track("GET", "/v1/coupons", "admin");
   requireAdmin();
   return [...coupons];
 }
 
 export async function createCoupon(code: string, type: "percent" | "fixed", value: number, minSubtotal: number): Promise<Coupon> {
-  await wait();
+  await track("POST", "/v1/coupons", "admin");
   requireAdmin();
   const clean = code.trim().toUpperCase().replace(/\s+/g, "");
   if (clean.length < 3) throw new ApiError("VALIDATION", "Code needs at least 3 characters.");
@@ -304,7 +405,7 @@ export async function createCoupon(code: string, type: "percent" | "fixed", valu
 }
 
 export async function toggleCoupon(code: string): Promise<Coupon> {
-  await wait();
+  await track("PATCH", `/v1/coupons/${code}`, "admin");
   requireAdmin();
   coupons = coupons.map((c) => (c.code === code ? { ...c, active: !c.active } : c));
   save(KEYS.coupons, coupons);
@@ -312,8 +413,16 @@ export async function toggleCoupon(code: string): Promise<Coupon> {
 }
 
 export async function deleteCoupon(code: string): Promise<void> {
-  await wait();
+  await track("DELETE", `/v1/coupons/${code}`, "admin");
   requireAdmin();
   coupons = coupons.filter((c) => c.code !== code);
   save(KEYS.coupons, coupons);
+}
+
+/* ------------------------------------------------------------------ */
+/*  public feed — latest orders, newest first (storefront marquee)     */
+/* ------------------------------------------------------------------ */
+
+export async function gatewayFeed(): Promise<{ number: string; channel: string; total: number; status: string }[]> {
+  return orders.slice(0, 6).map((o) => ({ number: o.number, channel: o.channel, total: o.total, status: o.status }));
 }

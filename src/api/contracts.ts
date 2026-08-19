@@ -69,6 +69,7 @@ export interface CheckoutPayload {
   address: string;
   items: { productId: string; qty: number }[];
   couponCode?: string;
+  channel?: Channel;
 }
 
 export class ApiError extends Error {

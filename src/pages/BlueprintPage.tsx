@@ -5,21 +5,18 @@ import { Tooling } from "../components/Tooling";
 import { ContextStrategy } from "../components/ContextStrategy";
 import { Timeline, TimelineResetModal } from "../components/Timeline";
 import { Sessions } from "../components/Sessions";
-import { useToast } from "../components/ui";
-import { useLocalStorage } from "../hooks";
-import { PHASES, SEED_SESSIONS, type SessionEntry, type TaskStatus } from "../data";
+import { PHASES, type SessionEntry, type TaskStatus } from "../data";
 
-const CYCLE: Record<TaskStatus, TaskStatus> = {
-  todo: "active",
-  active: "done",
-  done: "todo",
-};
+interface Props {
+  overrides: Record<string, TaskStatus>;
+  onCycle: (id: string) => void;
+  onReset: () => void;
+  sessions: SessionEntry[];
+  onAddSession: (e: Omit<SessionEntry, "id" | "ts">) => void;
+  onDeleteSession: (id: string) => void;
+}
 
-/* The project blueprint — merged from full-stack-project-blueprint-4a182 into main. */
-export function BlueprintPage() {
-  const toast = useToast();
-  const [overrides, setOverrides] = useLocalStorage<Record<string, TaskStatus>>("bw.tasks.v1", {});
-  const [sessions, setSessions] = useLocalStorage<SessionEntry[]>("bw.sessions.v1", SEED_SESSIONS);
+export function BlueprintPage({ overrides, onCycle, onReset, sessions, onAddSession, onDeleteSession }: Props) {
   const [resetOpen, setResetOpen] = useState(false);
 
   const effective = useMemo(() => {
@@ -44,20 +41,6 @@ export function BlueprintPage() {
     ? `${latest.agent} · ${latest.focus} — ${latest.notes.split(".")[0]}.`
     : "No sessions logged yet — the ledger is waiting.";
 
-  const cycle = (id: string) => {
-    const base = PHASES.flatMap((p) => p.tasks).find((t) => t.id === id);
-    if (!base) return;
-    const current = overrides[id] ?? base.status;
-    setOverrides((prev) => ({ ...prev, [id]: CYCLE[current] }));
-  };
-
-  const reset = () => {
-    setOverrides({});
-    setSessions(SEED_SESSIONS);
-    setResetOpen(false);
-    toast("Ledger reset to blueprint defaults", "wire");
-  };
-
   return (
     <>
       <Header pct={effective.pct} counts={effective} latestSession={latestSession} />
@@ -69,12 +52,12 @@ export function BlueprintPage() {
         <div className="mx-auto h-px w-full max-w-6xl bg-gradient-to-r from-transparent via-line to-transparent" />
         <ContextStrategy />
         <div className="mx-auto h-px w-full max-w-6xl bg-gradient-to-r from-transparent via-line to-transparent" />
-        <Timeline overrides={overrides} onCycle={cycle} onReset={() => setResetOpen(true)} />
+        <Timeline overrides={overrides} onCycle={onCycle} onReset={() => setResetOpen(true)} />
         <div className="mx-auto h-px w-full max-w-6xl bg-gradient-to-r from-transparent via-line to-transparent" />
         <Sessions
           sessions={sortedSessions}
-          onAdd={(e) => setSessions((prev) => [{ ...e, id: `s-${Date.now()}`, ts: Date.now() }, ...prev])}
-          onDelete={(id) => setSessions((prev) => prev.filter((s) => s.id !== id))}
+          onAdd={onAddSession}
+          onDelete={onDeleteSession}
           project="BRIDGEWORK · Omnichannel Commerce Build"
           overrides={overrides}
         />
@@ -82,7 +65,7 @@ export function BlueprintPage() {
 
       {/* drawing footer strip */}
       <footer className="border-t border-line bg-panel/60">
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-8 gap-y-3 px-5 sm:px-8 py-6">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-8 gap-y-3 px-5 py-6 sm:px-8">
           <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden>
             <rect width="32" height="32" fill="var(--color-panel)" stroke="var(--color-line)" />
             <path d="M6 22 L14 10 L18 16 L26 6" stroke="var(--color-wire)" strokeWidth="2.4" fill="none" />
@@ -99,16 +82,21 @@ export function BlueprintPage() {
               Approval <span className="text-amber">Pending launch gate</span>
             </span>
           </div>
-          <span className="ml-auto font-mono text-[10px] tracking-[0.22em] text-faint">
-            BW-2025 · REV C · SHEET 05/05
-          </span>
+          <span className="ml-auto font-mono text-[10px] tracking-[0.22em] text-faint">BW-2025 · REV C · SHEET 05/05</span>
         </div>
-        <div className="border-t border-dashed border-line py-3 text-center font-mono text-[10px] tracking-[0.2em] text-faint/80 uppercase">
+        <div className="border-t border-dashed border-line py-3 text-center font-mono text-[10px] uppercase tracking-[0.2em] text-faint/80">
           Files are memory · one task per session · handoff is written, never verbal
         </div>
       </footer>
 
-      <TimelineResetModal open={resetOpen} onClose={() => setResetOpen(false)} onConfirm={reset} />
+      <TimelineResetModal
+        open={resetOpen}
+        onClose={() => setResetOpen(false)}
+        onConfirm={() => {
+          onReset();
+          setResetOpen(false);
+        }}
+      />
     </>
   );
 }
