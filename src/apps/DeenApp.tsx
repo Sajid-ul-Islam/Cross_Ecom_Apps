@@ -79,6 +79,19 @@ const T = {
   ok: "#2E7D5B",
 };
 
+const SIZE_GUIDE_ROWS: string[][] = [
+  ["M", "38–40", "30–32", "27"],
+  ["L", "40–42", "32–34", "28"],
+  ["XL", "42–44", "34–36", "29"],
+  ["2XL", "44–46", "36–38", "30"],
+  ["3XL", "46–48", "38–40", "31"],
+  ["30 (jeans)", "—", "30", "40"],
+  ["32 (jeans)", "—", "32", "41"],
+  ["34 (jeans)", "—", "34", "42"],
+  ["36 (jeans)", "—", "36", "42"],
+  ["38 (jeans)", "—", "38", "43"],
+];
+
 type Screen =
   | { name: "home" }
   | { name: "shop"; category?: DeenCategory | "ALL"; saleOnly?: boolean }
@@ -300,6 +313,12 @@ function DeenPhone() {
     toast(`Order ${order.number} placed via middle API`, "mint");
   };
 
+  const cancelOrder = async (id: string) => {
+    const o = await deenCancelOrder(id);
+    pushNotif(`Order ${o.number} cancelled`, "We've released the items and any hold on your payment.");
+    toast(`Order ${o.number} cancelled`, "wire");
+  };
+
   const tab: Tab =
     screen.name === "product" || screen.name === "shop"
       ? "shop"
@@ -352,7 +371,7 @@ function DeenPhone() {
       case "success":
         return <SuccessScreen order={screen.order} go={setScreen} />;
       case "orders":
-        return <OrdersScreen go={setScreen} onCancel={pushNotif} />;
+        return <OrdersScreen go={setScreen} onCancel={cancelOrder} />;
       case "profile":
         return <ProfileScreen go={setScreen} session={session} onLogout={() => { deenLogout(); setSession(null); toast("Signed out — token cleared from SecureStore", "wire"); }} wishCount={wishlist.length} />;
       case "wishlist":
@@ -361,7 +380,7 @@ function DeenPhone() {
         return (
           <AuthScreen
             go={setScreen}
-            returnTo={screen.returnTo}
+            returnTo={screen.returnTo ?? null}
             onAuthed={(s) => {
               setSession(s);
               pushNotif(`Welcome, ${s.name.split(" ")[0]}`, "You're signed in. Orders and offers now sync to this device.");
@@ -1038,8 +1057,15 @@ function ProductScreen({
             {product.category} · SKU {product.sku}
           </p>
           <h2 className="font-disp mt-1 text-[19px] leading-tight">{product.name}</h2>
-          <div className="mt-2">
+          <div className="mt-2 flex items-center gap-2.5">
             <PriceLine p={product} size="lg" />
+            {avg && (
+              <span className="flex items-center gap-1 rounded-full border px-2 py-0.5" style={{ borderColor: T.line }}>
+                <span style={{ color: "#D9A016" }}><IconStar size={11} /></span>
+                <span className="font-mono text-[10px] font-bold">{avg.avg.toFixed(1)}</span>
+                <span className="font-mono text-[9px]" style={{ color: T.sub }}>({avg.count})</span>
+              </span>
+            )}
           </div>
 
           {/* sizes */}
@@ -1048,9 +1074,13 @@ function ProductScreen({
               <p className="text-[12px] font-bold uppercase tracking-[0.12em]">
                 Size {sizeErr && !size && <span style={{ color: T.crimson }}>· pick one</span>}
               </p>
-              <span className="font-mono text-[9px] uppercase tracking-[0.14em]" style={{ color: T.sub }}>
-                size guide
-              </span>
+              <button
+                onClick={() => setGuide(true)}
+                className="flex cursor-pointer items-center gap-1 font-mono text-[9px] uppercase tracking-[0.14em] transition-colors active:scale-95"
+                style={{ color: T.indigo }}
+              >
+                <IconRuler size={11} /> size guide
+              </button>
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
               {product.sizes.map((s) => (
@@ -1101,7 +1131,7 @@ function ProductScreen({
           </div>
 
           {/* details */}
-          <div className="mt-4 space-y-2.5 pb-4">
+          <div className="mt-4 space-y-2.5">
             {[
               ["Fabric", product.fabric],
               ["Delivery", "Inside Dhaka ৳70 · outside ৳130 · 2–4 days"],
@@ -1115,19 +1145,125 @@ function ProductScreen({
               </div>
             ))}
           </div>
+
+          {/* reviews */}
+          <div className="mt-5 pb-4">
+            <div className="flex items-baseline justify-between">
+              <p className="font-disp text-[15px]">Reviews {avg && <span className="font-mono text-[10px]" style={{ color: T.sub }}>· {avg.avg.toFixed(1)} ★ · {avg.count}</span>}</p>
+            </div>
+
+            <div className="mt-2.5 space-y-2.5">
+              {reviews.length === 0 && (
+                <p className="rounded-xl border border-dashed px-3.5 py-3 text-[11.5px]" style={{ borderColor: T.line, color: T.sub }}>
+                  No reviews yet — be the first to rate this piece.
+                </p>
+              )}
+              {reviews.slice(0, 3).map((r) => (
+                <div key={r.id} className="rounded-xl border p-3" style={{ borderColor: T.line, background: "#fff" }}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11.5px] font-bold">{r.name}</span>
+                    <span className="flex gap-0.5" style={{ color: "#D9A016" }}>
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <span key={i} style={{ opacity: i < r.stars ? 1 : 0.25 }}><IconStar size={10} /></span>
+                      ))}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[11.5px] leading-snug" style={{ color: T.sub }}>{r.text}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* write a review */}
+            <div className="mt-3 rounded-xl border p-3.5" style={{ borderColor: T.line, background: "#fff" }}>
+              <p className="font-mono text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: T.sub }}>
+                {sessionName ? `Reviewing as ${sessionName}` : "Write a review"}
+              </p>
+              <div className="mt-2 flex gap-1">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <button key={i} onClick={() => setRStars(i + 1)} className="cursor-pointer transition-transform active:scale-75" style={{ color: i < rStars ? "#D9A016" : T.line }} aria-label={`${i + 1} stars`}>
+                    <IconStar size={20} />
+                  </button>
+                ))}
+              </div>
+              <textarea
+                value={rText}
+                onChange={(e) => setRText(e.target.value)}
+                placeholder="Fit, fabric, fade — how is it?"
+                rows={2}
+                className="mt-2 w-full resize-none rounded-lg border bg-white px-3 py-2 font-arch text-[12px]"
+                style={{ borderColor: T.line }}
+              />
+              <button
+                onClick={submitReview}
+                disabled={rBusy || rStars === 0}
+                className="mt-2 w-full cursor-pointer rounded-lg py-2.5 font-arch text-[12px] font-bold text-white transition-all active:scale-[0.98] disabled:opacity-50"
+                style={{ background: T.indigoDark }}
+              >
+                {rBusy ? "Publishing…" : "Publish review"}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* sticky CTA */}
-      <div className="border-t p-3.5" style={{ background: "#fff", borderColor: T.line }}>
+      <div className="flex gap-2.5 border-t p-3.5" style={{ background: "#fff", borderColor: T.line }}>
+        <button
+          onClick={onWish}
+          className={`flex h-[50px] w-[50px] shrink-0 cursor-pointer items-center justify-center rounded-xl border transition-all active:scale-90 ${wished ? "heart-pop" : ""}`}
+          style={{ borderColor: wished ? T.crimson : T.line, color: wished ? T.crimson : T.sub, background: wished ? "#FBEFEE" : "#fff" }}
+          aria-label="Toggle wishlist"
+        >
+          <IconHeart size={19} />
+        </button>
         <button
           onClick={add}
-          className="w-full cursor-pointer rounded-xl py-3.5 font-disp text-[15px] tracking-wide text-white transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+          className="flex-1 cursor-pointer rounded-xl py-3.5 font-disp text-[15px] tracking-wide text-white transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
           style={{ background: T.indigo }}
         >
           Add to Bag · {bdt(unit * qty)}
         </button>
       </div>
+
+      {/* size guide modal */}
+      {guide && (
+        <div className="absolute inset-0 z-30 flex items-end bg-black/45" onClick={() => setGuide(false)}>
+          <div className="screen-up w-full rounded-t-3xl p-5" style={{ background: T.paper }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <p className="font-disp text-[16px]">Size Guide · {product.category}</p>
+              <button onClick={() => setGuide(false)} className="cursor-pointer transition-transform active:scale-90" style={{ color: T.sub }} aria-label="Close">
+                <IconX size={17} />
+              </button>
+            </div>
+            <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.16em]" style={{ color: T.sub }}>
+              measurements in inches · DEEN standard block
+            </p>
+            <div className="mt-3 overflow-hidden rounded-xl border" style={{ borderColor: T.line }}>
+              <table className="w-full font-mono text-[10.5px]">
+                <thead>
+                  <tr style={{ background: T.indigoDark, color: "#fff" }}>
+                    {["Size", "Chest", "Waist", "Length"].map((h) => (
+                      <th key={h} className="px-2 py-2 text-left font-bold uppercase tracking-wider">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {SIZE_GUIDE_ROWS.map((r, i) => (
+                    <tr key={r[0]} style={{ background: i % 2 ? "#EFEBDF" : "#fff" }}>
+                      {r.map((c, j) => (
+                        <td key={j} className={`px-2 py-1.5 ${j === 0 ? "font-bold" : ""}`} style={{ color: j === 0 ? T.indigo : T.ink }}>{c}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-2.5 text-[11px] leading-relaxed" style={{ color: T.sub }}>
+              Between sizes? Go up for a relaxed fit. Jeans are true to waist — our denim stretches half a size after three wears.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1140,12 +1276,14 @@ function BagScreen({
   go,
   setQty,
   subtotal,
+  onCheckout,
 }: {
   cart: DeenCartItem[];
   find: (id: string) => DeenProduct | undefined;
   go: (s: Screen) => void;
   setQty: (id: string, size: string, qty: number) => void;
   subtotal: number;
+  onCheckout: () => void;
 }) {
   const freeTeeLeft = Math.max(0, FREE_TEE_THRESHOLD - subtotal);
   return (
@@ -1222,7 +1360,7 @@ function BagScreen({
               <span className="font-disp text-[19px]">{bdt(subtotal)}</span>
             </div>
             <p className="mt-0.5 font-mono text-[9.5px]" style={{ color: T.sub }}>delivery added at checkout · ৳70 Dhaka / ৳130 outside</p>
-            <button onClick={() => go({ name: "checkout" })} className="mt-3 w-full cursor-pointer rounded-xl py-3.5 font-disp text-[15px] text-white transition-all hover:brightness-110 active:scale-[0.98]" style={{ background: T.indigo }}>
+            <button onClick={onCheckout} className="mt-3 w-full cursor-pointer rounded-xl py-3.5 font-disp text-[15px] text-white transition-all hover:brightness-110 active:scale-[0.98]" style={{ background: T.indigo }}>
               Checkout →
             </button>
           </div>
@@ -1244,9 +1382,17 @@ function CheckoutScreen({
   cart: DeenCartItem[];
   find: (id: string) => DeenProduct | undefined;
   subtotal: number;
-  onPlace: (p: { name: string; phone: string; address: string; area: DeenArea; payment: DeenPayment }) => Promise<void>;
+  onPlace: (p: {
+    name: string;
+    phone: string;
+    address: string;
+    area: DeenArea;
+    payment: DeenPayment;
+    couponCode?: string;
+  }) => Promise<void>;
   go: (s: Screen) => void;
 }) {
+  const toast = useToast();
   const profile = getDeenProfile();
   const [name, setName] = useState(profile.name);
   const [phone, setPhone] = useState(profile.phone);
@@ -1255,16 +1401,38 @@ function CheckoutScreen({
   const [payment, setPayment] = useState<DeenPayment>("cod");
   const [err, setErr] = useState("");
   const [placing, setPlacing] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
+  const [couponMsg, setCouponMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [checkingCoupon, setCheckingCoupon] = useState(false);
 
   const freeTee = subtotal >= FREE_TEE_THRESHOLD;
   const delivery = DELIVERY_FEES[area];
-  const total = subtotal + delivery;
+  const discount = appliedCoupon?.discount ?? 0;
+  const total = subtotal - discount + delivery;
+
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setCouponMsg(null);
+    setCheckingCoupon(true);
+    try {
+      const v = await deenValidateCoupon(couponCode, subtotal);
+      setAppliedCoupon(v);
+      setCouponMsg({ ok: true, text: `${v.code} applied — you save ${bdt(v.discount)}.` });
+      toast(`Coupon ${v.code} validated via gateway`, "mint");
+    } catch (e) {
+      setAppliedCoupon(null);
+      setCouponMsg({ ok: false, text: e instanceof Error ? e.message : "Coupon not valid." });
+    } finally {
+      setCheckingCoupon(false);
+    }
+  };
 
   const submit = async () => {
     setErr("");
     setPlacing(true);
     try {
-      await onPlace({ name, phone, address, area, payment });
+      await onPlace({ name, phone, address, area, payment, couponCode: appliedCoupon?.code });
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
@@ -1308,6 +1476,12 @@ function CheckoutScreen({
             <span>Delivery · {area === "dhaka" ? "inside Dhaka" : "outside Dhaka"}</span>
             <span>{bdt(delivery)}</span>
           </div>
+          {appliedCoupon && (
+            <div className="flex justify-between py-0.5 text-[12px]" style={{ color: T.ok }}>
+              <span className="font-semibold">Coupon {appliedCoupon.code}</span>
+              <span>−{bdt(appliedCoupon.discount)}</span>
+            </div>
+          )}
           <div className="mt-1 flex items-baseline justify-between">
             <span className="text-[12px] font-bold uppercase tracking-[0.12em]">Total</span>
             <span className="font-disp text-[19px]">{bdt(total)}</span>
@@ -1319,6 +1493,56 @@ function CheckoutScreen({
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" className={input} style={{ borderColor: T.line }} />
           <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Mobile · 01XXXXXXXXX" inputMode="tel" className={input} style={{ borderColor: T.line }} />
           <textarea value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Full address — house, road, area, district" rows={2} className={`${input} resize-none`} style={{ borderColor: T.line }} />
+        </div>
+
+        {/* coupon */}
+        <div className="rounded-xl border p-3.5" style={{ borderColor: T.line, background: "#fff" }}>
+          <p className="text-[11px] font-bold uppercase tracking-[0.12em]">Promo code</p>
+          {appliedCoupon ? (
+            <div className="mt-2 flex items-center justify-between rounded-lg px-3 py-2.5" style={{ background: "#EAF3EE" }}>
+              <span className="text-[12px] font-bold" style={{ color: T.ok }}>
+                {appliedCoupon.code} · −{bdt(appliedCoupon.discount)}
+              </span>
+              <button
+                onClick={() => {
+                  setAppliedCoupon(null);
+                  setCouponCode("");
+                  setCouponMsg(null);
+                }}
+                className="cursor-pointer transition-transform active:scale-90"
+                style={{ color: T.sub }}
+                aria-label="Remove coupon"
+              >
+                <IconX size={15} />
+              </button>
+            </div>
+          ) : (
+            <div className="mt-2 flex gap-2">
+              <input
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                placeholder="SUMMER10 · DEEN100 · DENIM500"
+                className="min-w-0 flex-1 rounded-lg border bg-white px-3 py-2 font-mono text-[11px] tracking-wider"
+                style={{ borderColor: T.line }}
+              />
+              <button
+                onClick={applyCoupon}
+                disabled={checkingCoupon || !couponCode.trim()}
+                className="shrink-0 cursor-pointer rounded-lg px-3.5 py-2 font-arch text-[11px] font-bold text-white transition-all active:scale-95 disabled:opacity-50"
+                style={{ background: T.indigo }}
+              >
+                {checkingCoupon ? "…" : "Apply"}
+              </button>
+            </div>
+          )}
+          {couponMsg && !appliedCoupon && (
+            <p className="mt-1.5 text-[11px] font-semibold" style={{ color: couponMsg.ok ? T.ok : T.crimson }}>
+              {couponMsg.text}
+            </p>
+          )}
+          <p className="mt-1.5 font-mono text-[9px] uppercase tracking-[0.12em]" style={{ color: T.sub }}>
+            validated by the middle API against Woo coupons
+          </p>
         </div>
 
         {/* area */}
@@ -1443,13 +1667,24 @@ function SuccessScreen({ order, go }: { order: DeenOrder; go: (s: Screen) => voi
 
 /* ---------------- orders ---------------- */
 
-function OrdersScreen({ go }: { profile: DeenProfile; go: (s: Screen) => void }) {
+function OrdersScreen({ go, onCancel }: { go: (s: Screen) => void; onCancel: (id: string) => Promise<void> }) {
   const [orders, setOrders] = useState<DeenOrder[] | null>(null);
   const [open, setOpen] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState<string | null>(null);
 
   useEffect(() => {
     deenListOrders().then(setOrders);
   }, []);
+
+  const cancel = async (id: string) => {
+    setCancelling(id);
+    try {
+      await onCancel(id);
+      setOrders((prev) => (prev ? prev.map((o) => (o.id === id ? { ...o, status: "cancelled" as const } : o)) : prev));
+    } finally {
+      setCancelling(null);
+    }
+  };
 
   return (
     <div className="px-4 pt-1 pb-8 font-arch" style={{ color: T.ink }}>
@@ -1481,7 +1716,10 @@ function OrdersScreen({ go }: { profile: DeenProfile; go: (s: Screen) => void })
                   </span>
                   <span
                     className="rounded-full px-2.5 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.12em] text-white"
-                    style={{ background: o.status === "delivered" ? T.ok : o.status === "shipped" ? T.indigo : "#8C6A2F" }}
+                    style={{
+                      background:
+                        o.status === "delivered" ? T.ok : o.status === "shipped" ? T.indigo : o.status === "cancelled" ? "#8a8578" : "#8C6A2F",
+                    }}
                   >
                     {o.status}
                   </span>
@@ -1519,9 +1757,30 @@ function OrdersScreen({ go }: { profile: DeenProfile; go: (s: Screen) => void })
                           <span className="shrink-0 font-semibold">{l.gift ? "FREE" : bdt(l.unit * l.qty)}</span>
                         </div>
                       ))}
+                      {o.discount > 0 && (
+                        <div className="flex justify-between py-0.5 text-[12px]" style={{ color: T.ok }}>
+                          <span>Coupon {o.couponCode}</span>
+                          <span>−{bdt(o.discount)}</span>
+                        </div>
+                      )}
                       <p className="pt-1.5 font-mono text-[9.5px] leading-relaxed" style={{ color: T.sub }}>
                         {o.address} · {PAYMENT_LABELS[o.payment]}
                       </p>
+                      {o.status === "received" && (
+                        <button
+                          onClick={() => cancel(o.id)}
+                          disabled={cancelling === o.id}
+                          className="mt-3 w-full cursor-pointer rounded-lg border py-2.5 font-arch text-[12px] font-bold transition-all active:scale-[0.98] disabled:opacity-50"
+                          style={{ borderColor: T.crimson, color: T.crimson, background: "#FBEFEE" }}
+                        >
+                          {cancelling === o.id ? "Cancelling…" : "Cancel order"}
+                        </button>
+                      )}
+                      {o.status === "cancelled" && (
+                        <p className="mt-2.5 rounded-lg px-3 py-2 font-mono text-[9.5px] leading-relaxed" style={{ background: "#EFEBDF", color: T.sub }}>
+                          Cancelled before confirmation — nothing was charged.
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1536,7 +1795,17 @@ function OrdersScreen({ go }: { profile: DeenProfile; go: (s: Screen) => void })
 
 /* ---------------- profile ---------------- */
 
-function ProfileScreen({ go }: { go: (s: Screen) => void }) {
+function ProfileScreen({
+  go,
+  session,
+  onLogout,
+  wishCount,
+}: {
+  go: (s: Screen) => void;
+  session: DeenSession | null;
+  onLogout: () => void;
+  wishCount: number;
+}) {
   const toast = useToast();
   const [draft, setDraft] = useState<DeenProfile>(getDeenProfile());
 
@@ -1556,10 +1825,43 @@ function ProfileScreen({ go }: { go: (s: Screen) => void }) {
         <span className="flex h-14 w-14 items-center justify-center rounded-full font-disp text-[18px] text-white" style={{ background: T.indigo }}>
           {draft.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "D"}
         </span>
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-[15px] font-bold">{draft.name || "—"}</p>
           <p className="font-mono text-[10px]" style={{ color: T.sub }}>{draft.phone || "no number"}</p>
+          {session ? (
+            <span className="mt-1 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[8.5px] font-bold uppercase tracking-[0.14em]" style={{ background: "#EAF3EE", color: T.ok }}>
+              <span className="pulse-dot h-1 w-1 rounded-full" style={{ background: T.ok }} /> signed in · token in SecureStore
+            </span>
+          ) : (
+            <span className="mt-1 inline-block rounded-full px-2 py-0.5 font-mono text-[8.5px] font-bold uppercase tracking-[0.14em]" style={{ background: "#EFEBDF", color: "#8C6A2F" }}>
+              guest session
+            </span>
+          )}
         </div>
+      </div>
+
+      {/* quick rows */}
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <button
+          onClick={() => go({ name: "wishlist" })}
+          className="flex cursor-pointer items-center justify-between rounded-xl border px-3.5 py-3 text-left transition-all active:scale-[0.97]"
+          style={{ borderColor: T.line, background: "#fff" }}
+        >
+          <span className="flex items-center gap-2 text-[12.5px] font-bold">
+            <span style={{ color: wishCount > 0 ? T.crimson : T.ink }}><IconHeart size={15} /></span> Wishlist
+          </span>
+          <span className="font-mono text-[11px] font-bold" style={{ color: T.indigo }}>{wishCount}</span>
+        </button>
+        <button
+          onClick={() => go({ name: "notifications" })}
+          className="flex cursor-pointer items-center justify-between rounded-xl border px-3.5 py-3 text-left transition-all active:scale-[0.97]"
+          style={{ borderColor: T.line, background: "#fff" }}
+        >
+          <span className="flex items-center gap-2 text-[12.5px] font-bold">
+            <IconBell size={15} /> Alerts
+          </span>
+          <span className="font-mono text-[11px] font-bold" style={{ color: T.indigo }}>→</span>
+        </button>
       </div>
 
       <div className="mt-5 space-y-3">
@@ -1626,9 +1928,280 @@ function ProfileScreen({ go }: { go: (s: Screen) => void }) {
         </button>
       </div>
 
+      {session && (
+        <button
+          onClick={onLogout}
+          className="mt-5 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border py-3 font-arch text-[13px] font-bold transition-all active:scale-[0.98]"
+          style={{ borderColor: T.crimson, color: T.crimson, background: "#fff" }}
+        >
+          <IconLogout size={15} /> Sign out
+        </button>
+      )}
+
       <p className="mt-4 text-center font-mono text-[8.5px] uppercase tracking-[0.2em]" style={{ color: T.sub }}>
-        deen app v0.9 · expo sdk 53 · middle api · woo rest v3
+        deen app v1.1 · expo sdk 53 · middle api · woo rest v3
       </p>
+    </div>
+  );
+}
+
+/* ---------------- wishlist ---------------- */
+
+function WishlistScreen({
+  ids,
+  find,
+  go,
+  onRemove,
+  onAdd,
+}: {
+  ids: string[];
+  find: (id: string) => DeenProduct | undefined;
+  go: (s: Screen) => void;
+  onRemove: (id: string) => void;
+  onAdd: (id: string, size: string, qty?: number) => void;
+}) {
+  const items = ids.map(find).filter((p): p is DeenProduct => !!p);
+  return (
+    <div className="px-4 pt-1 pb-8 font-arch" style={{ color: T.ink }}>
+      <div className="flex items-center gap-3">
+        <button onClick={() => go({ name: "home" })} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border transition-transform active:scale-90" style={{ borderColor: T.line }} aria-label="Back">
+          <IconArrowLeft size={16} />
+        </button>
+        <p className="font-disp text-[20px]">Wishlist</p>
+        <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: T.sub }}>{items.length} saved</span>
+      </div>
+
+      {items.length === 0 ? (
+        <div className="mt-14 flex flex-col items-center gap-3 text-center">
+          <span className="flex h-16 w-16 items-center justify-center rounded-full" style={{ background: "#FBEFEE", color: T.crimson }}>
+            <IconHeart size={26} />
+          </span>
+          <p className="font-disp text-[16px]">Nothing saved yet</p>
+          <p className="max-w-[220px] text-[12px] leading-relaxed" style={{ color: T.sub }}>
+            Tap the heart on any product to keep it here — synced to this device.
+          </p>
+          <button onClick={() => go({ name: "shop" })} className="mt-1 cursor-pointer rounded-full px-5 py-2.5 text-[12px] font-bold text-white transition-transform active:scale-95" style={{ background: T.indigo }}>
+            Browse the store
+          </button>
+        </div>
+      ) : (
+        <div className="mt-4 space-y-3">
+          {items.map((p) => (
+            <div key={p.id} className="flex gap-3 rounded-xl border p-2.5" style={{ borderColor: T.line, background: "#fff" }}>
+              <button onClick={() => go({ name: "product", id: p.id })} className="h-[88px] w-[66px] shrink-0 cursor-pointer overflow-hidden rounded-lg" style={{ background: T.line }}>
+                <PImg src={p.images[0]} alt={p.name} className="h-full w-full" />
+              </button>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <button onClick={() => go({ name: "product", id: p.id })} className="clamp2 cursor-pointer text-left text-[12px] font-semibold leading-snug">
+                    {p.name}
+                  </button>
+                  <button onClick={() => onRemove(p.id)} className="shrink-0 cursor-pointer transition-transform active:scale-75" style={{ color: T.crimson }} aria-label="Remove from wishlist">
+                    <IconHeart size={16} />
+                  </button>
+                </div>
+                <p className="mt-0.5 font-mono text-[9px] uppercase tracking-[0.14em]" style={{ color: T.sub }}>{p.sku}</p>
+                <div className="mt-1.5 flex items-center justify-between">
+                  <PriceLine p={p} size="sm" />
+                  <button
+                    onClick={() => onAdd(p.id, p.sizes[0])}
+                    className="cursor-pointer rounded-full px-3 py-1.5 font-arch text-[10.5px] font-bold text-white transition-all active:scale-90"
+                    style={{ background: T.indigo }}
+                  >
+                    Add · {p.sizes[0]}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- auth ---------------- */
+
+function AuthScreen({
+  go,
+  returnTo,
+  onAuthed,
+}: {
+  go: (s: Screen) => void;
+  returnTo: Screen | null;
+  onAuthed: (s: DeenSession) => void;
+}) {
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [pass, setPass] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    setErr("");
+    setBusy(true);
+    try {
+      const s = mode === "login" ? await deenLogin(phone, pass) : await deenRegister(name, phone, pass);
+      onAuthed(s);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Something went wrong.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const input = "w-full rounded-xl border bg-white px-3.5 py-2.5 font-arch text-[13px]";
+  const label = "mb-1 block font-mono text-[9px] font-bold uppercase tracking-[0.18em]";
+
+  return (
+    <div className="flex h-full flex-col font-arch" style={{ color: T.ink }}>
+      <div className="min-h-0 flex-1 overflow-y-auto hide-scroll px-4">
+        <div className="flex items-center gap-3 pt-1">
+          <button onClick={() => go(returnTo ?? { name: "profile" })} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border transition-transform active:scale-90" style={{ borderColor: T.line }} aria-label="Back">
+            <IconArrowLeft size={16} />
+          </button>
+          <p className="font-disp text-[20px]">{mode === "login" ? "Welcome back" : "Create account"}</p>
+        </div>
+
+        <p className="mt-3 text-[12.5px] leading-relaxed" style={{ color: T.sub }}>
+          {mode === "login"
+            ? "Sign in to sync your bag, wishlist and orders on this device."
+            : "One account for the app and the website — orders sync everywhere."}
+        </p>
+
+        {/* mode toggle */}
+        <div className="mt-4 grid grid-cols-2 rounded-xl border p-1" style={{ borderColor: T.line, background: "#fff" }}>
+          {(["login", "register"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => { setMode(m); setErr(""); }}
+              className="cursor-pointer rounded-lg py-2 font-arch text-[12px] font-bold transition-all duration-200"
+              style={mode === m ? { background: T.indigo, color: "#fff" } : { color: T.sub }}
+            >
+              {m === "login" ? "Log in" : "Register"}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {mode === "register" && (
+            <div>
+              <label className={label} style={{ color: T.sub }}>Full name</label>
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Rafiq Hasan" className={input} style={{ borderColor: T.line }} />
+            </div>
+          )}
+          <div>
+            <label className={label} style={{ color: T.sub }}>Mobile</label>
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="01XXXXXXXXX" inputMode="tel" className={input} style={{ borderColor: T.line }} />
+          </div>
+          <div>
+            <label className={label} style={{ color: T.sub }}>Password</label>
+            <input value={pass} onChange={(e) => setPass(e.target.value)} type="password" placeholder="••••••" className={input} style={{ borderColor: T.line }} />
+          </div>
+        </div>
+
+        {err && (
+          <div className="deen-pop mt-3 rounded-xl border px-3.5 py-2.5 text-[12px] font-semibold" style={{ borderColor: T.crimson, color: T.crimson, background: "#FBEFEE" }}>
+            {err}
+          </div>
+        )}
+
+        {/* demo account */}
+        <button
+          onClick={() => { setMode("login"); setPhone(demoAccount.phone); setPass(demoAccount.pass); setErr(""); }}
+          className="mt-4 w-full cursor-pointer rounded-xl border border-dashed px-3.5 py-3 text-left transition-all active:scale-[0.98]"
+          style={{ borderColor: T.indigo, background: "#EEF0FA" }}
+        >
+          <span className="block font-mono text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: T.indigo }}>Demo account · tap to fill</span>
+          <span className="mt-1 block font-mono text-[11px]" style={{ color: T.ink }}>
+            {demoAccount.phone} · pass: {demoAccount.pass}
+          </span>
+        </button>
+
+        <p className="mt-3 text-center font-mono text-[9px] leading-relaxed" style={{ color: T.sub }}>
+          Sessions are JWT-shaped and stored in Expo SecureStore on device.
+          <br />In production, register hits POST /v1/deen/auth on the middle API.
+        </p>
+      </div>
+
+      <div className="border-t p-3.5" style={{ background: "#fff", borderColor: T.line }}>
+        <button
+          onClick={submit}
+          disabled={busy}
+          className="w-full cursor-pointer rounded-xl py-3.5 font-disp text-[15px] text-white transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
+          style={{ background: T.indigo }}
+        >
+          {busy ? "Talking to the gateway…" : mode === "login" ? "Log in" : "Create account"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- notifications ---------------- */
+
+function NotificationsScreen({
+  notifs,
+  go,
+  onReadAll,
+  onClear,
+}: {
+  notifs: Notif[];
+  go: (s: Screen) => void;
+  onReadAll: () => void;
+  onClear: () => void;
+}) {
+  return (
+    <div className="px-4 pt-1 pb-8 font-arch" style={{ color: T.ink }}>
+      <div className="flex items-center gap-3">
+        <button onClick={() => go({ name: "home" })} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border transition-transform active:scale-90" style={{ borderColor: T.line }} aria-label="Back">
+          <IconArrowLeft size={16} />
+        </button>
+        <p className="font-disp text-[20px]">Notifications</p>
+        {notifs.length > 0 && (
+          <div className="ml-auto flex gap-2">
+            <button onClick={onReadAll} className="cursor-pointer rounded-full border px-2.5 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.12em] transition-transform active:scale-95" style={{ borderColor: T.line, color: T.sub }}>
+              Read all
+            </button>
+            <button onClick={onClear} className="cursor-pointer rounded-full border px-2.5 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.12em] transition-transform active:scale-95" style={{ borderColor: T.crimson, color: T.crimson }}>
+              Clear
+            </button>
+          </div>
+        )}
+      </div>
+
+      {notifs.length === 0 ? (
+        <div className="mt-14 flex flex-col items-center gap-3 text-center">
+          <span className="flex h-16 w-16 items-center justify-center rounded-full" style={{ background: "#EFEBDF", color: T.indigo }}>
+            <IconBell size={26} />
+          </span>
+          <p className="font-disp text-[16px]">All quiet</p>
+          <p className="max-w-[230px] text-[12px] leading-relaxed" style={{ color: T.sub }}>
+            Order updates, promo unlocks and drop alerts will land here — mirrored from FCM push.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-4 space-y-2.5">
+          {notifs.map((n) => (
+            <div key={n.id} className="tick-in flex gap-3 rounded-xl border p-3.5" style={{ borderColor: T.line, background: n.read ? "#fff" : "#EEF0FA" }}>
+              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full" style={{ background: n.read ? "#EFEBDF" : T.indigo, color: n.read ? T.sub : "#fff" }}>
+                <IconBell size={14} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className="text-[12.5px] font-bold">{n.title}</p>
+                  <span className="shrink-0 font-mono text-[8.5px] uppercase" style={{ color: T.sub }}>
+                    {new Date(n.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-[11.5px] leading-snug" style={{ color: T.sub }}>{n.body}</p>
+              </div>
+              {!n.read && <span className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ background: T.crimson }} />}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
