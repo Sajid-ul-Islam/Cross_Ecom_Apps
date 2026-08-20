@@ -698,6 +698,140 @@ export function startDeenWebhooks(intervalMs = 18000): () => void {
   };
 }
 
+/* ------------------------------------------------------------------ */
+/*  FCM push engine — promo, drops & personalized nudges               */
+/* ------------------------------------------------------------------ */
+
+export interface DeenPush {
+  id: string;
+  ts: number;
+  title: string;
+  body: string;
+  kind: "price-drop" | "restock" | "new-drop" | "recommendation" | "promo";
+  productId?: string;
+}
+
+const pushListeners = new Set<(p: DeenPush) => void>();
+export function subscribeDeenPush(cb: (p: DeenPush) => void): () => void {
+  pushListeners.add(cb);
+  return () => {
+    pushListeners.delete(cb);
+  };
+}
+
+let pushSeq = 0;
+function emitPush(p: Omit<DeenPush, "id" | "ts">) {
+  const push: DeenPush = { ...p, id: `push-${++pushSeq}-${Date.now()}`, ts: Date.now() };
+  pushListeners.forEach((l) => l(push));
+  void req("POST", "/v1/push/fcm.send", 200);
+}
+
+function hash01(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 997;
+  return h / 997;
+}
+
+export function startDeenPush(intervalMs = 24000): () => void {
+  const tick = () => {
+    // respect the customer's marketing push toggle (order pushes ride the webhook channel)
+    const prof = getDeenProfile();
+    if (!prof.pushPromos) return;
+
+    const catalog = DEEN_CATALOG;
+    const onSale = catalog.filter((p) => p.salePrice);
+
+    let wishlist: string[] = [];
+    try {
+      wishlist = JSON.parse(window.localStorage.getItem("deen.wishlist.v1") ?? "[]") as string[];
+    } catch {
+      /* ignore */
+    }
+
+    const push = (() => {
+      // 1) a saved item just dropped in price
+      const wished = onSale.find((p) => wishlist.includes(p.id));
+      if (wished && Math.random() < 0.5) {
+        return {
+          kind: "price-drop" as const,
+          title: "Price drop on a saved item",
+          body: `${wished.name} is now ${bdt(wished.salePrice!)} — down from ${bdt(wished.price)}.`,
+          productId: wished.id,
+        };
+      }
+      // 2) personalized recommendation from the same engine the app uses
+      const recs = rankRecommendations(catalog, { wishlist, recents: [], cart: [] }, 1);
+      if (recs.length > 0 && Math.random() < 0.6) {
+        const r = recs[0];
+        return {
+          kind: "recommendation" as const,
+          title: "Picked for you",
+          body: `Because of your style, we think you'll like ${r.name}${r.salePrice ? ` — on sale at ${bdt(r.salePrice)}` : ""}.`,
+          productId: r.id,
+        };
+      }
+      // 3) new drop / promo fallback
+      const fresh = catalog.filter((p) => !p.salePrice);
+      const nd = fresh[Math.floor(hash01(String(pushSeq)) * fresh.length)];
+      return Math.random() < 0.5 && nd
+        ? { kind: "new-drop" as const, title: "New in store", body: `${nd.name} just landed — ${bdt(nd.price)}.`, productId: nd.id }
+        : { kind: "promo" as const, title: "Summer Fest is live", body: `Free cotton tee on every order over ${bdt(FREE_TEE_THRESHOLD)}. While stock lasts.` };
+    })();
+
+    emitPush(push);
+  };
+
+  const t0 = window.setTimeout(tick, 9000);
+  const t = window.setInterval(tick, intervalMs);
+  return () => {
+    window.clearTimeout(t0);
+    window.clearInterval(t);
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/*  recommendation engine — affinity scoring from customer signals     */
+/* ------------------------------------------------------------------ */
+
+export function rankRecommendations(
+  catalog: DeenProduct[],
+  signals: { wishlist: string[]; recents: string[]; cart: DeenCartItem[] },
+  count = 4
+): DeenProduct[] {
+  const score = new Map<string, number>();
+  const affinity = new Map<DeenCategory, number>();
+
+  const bump = (cat: DeenCategory, w: number) => affinity.set(cat, (affinity.get(cat) ?? 0) + w);
+
+  signals.wishlist.forEach((id) => {
+    const p = catalog.find((x) => x.id === id);
+    if (p) bump(p.category, 3);
+  });
+  signals.recents.forEach((id) => {
+    const p = catalog.find((x) => x.id === id);
+    if (p) bump(p.category, 2);
+  });
+  signals.cart.forEach((it) => {
+    const p = catalog.find((x) => x.id === it.productId);
+    if (p) bump(p.category, 1.5);
+  });
+
+  for (const p of catalog) {
+    const excluded = signals.wishlist.includes(p.id) || signals.cart.some((c) => c.productId === p.id);
+    if (excluded) continue;
+    let s = affinity.get(p.category) ?? 0;
+    if (p.salePrice) s += 1.6; // sale momentum
+    if (p.isNew) s += 0.8; // fresh drop boost
+    s += hash01(p.id) * 0.9; // stable variety
+    score.set(p.id, s);
+  }
+
+  return [...catalog]
+    .filter((p) => score.has(p.id))
+    .sort((a, b) => (score.get(b.id) ?? 0) - (score.get(a.id) ?? 0))
+    .slice(0, count);
+}
+
 export async function deenAddReview(productId: string, name: string, stars: number, text: string): Promise<DeenReview> {
   await req("POST", "/v1/deen/reviews", 201);
   if (stars < 1 || stars > 5) throw new Error("Pick a star rating.");
