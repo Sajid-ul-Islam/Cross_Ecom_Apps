@@ -38,7 +38,7 @@
       "router": {
         "origin": false
       },
-      "gatewayUrl": "http://10.0.2.2:8787",
+      "gatewayUrl": "https://cross-ecom-apps.onrender.com",
       "gatewayApiKey": "",
       "eas": {
         "projectId": "45da9018-181d-4415-a611-1cb971f61cca"
