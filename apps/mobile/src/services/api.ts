@@ -140,7 +140,7 @@ export const PRODUCTS_CATALOG: Product[] = [
     fabric: "High-Density Cotton Ripstop",
     blurb: "Relaxed ergonomic leg with articulated knee pleats, deep slant pockets, and drawstring ankle cinch.",
   },
-];
+] as Product[];
 
 const ORDERS_STORAGE_KEY = "deen_mobile_orders_v1";
 const PROFILE_STORAGE_KEY = "deen_mobile_profile_v1";

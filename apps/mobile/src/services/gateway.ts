@@ -26,6 +26,7 @@ import type {
   DeliveryArea,
   PaymentMethod,
   UserProfile,
+  Stats,
 } from "../types";
 
 const extra = (Constants.expoConfig?.extra ?? {}) as {
@@ -64,12 +65,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export async function fetchProducts(
   category?: DeenCategory,
-  query?: string
+  query?: string,
+  sort?: "price-asc" | "price-desc" | "name-asc" | "new"
 ): Promise<Product[]> {
   try {
     const params = new URLSearchParams();
     if (category && category !== "ALL") params.set("category", category);
     if (query && query.trim()) params.set("q", query.trim());
+    if (sort) params.set("sort", sort);
     const qs = params.toString();
     const list = await request<Product[]>(`/v1/deen/products${qs ? `?${qs}` : ""}`);
     connection = "online";
@@ -90,10 +93,29 @@ export async function fetchProducts(
           p.name.toLowerCase().includes(q) ||
           p.category.toLowerCase().includes(q) ||
           p.sku.toLowerCase().includes(q) ||
-          p.fabric.toLowerCase().includes(q)
+          (p.fabric || "").toLowerCase().includes(q)
       );
     }
     return list;
+  }
+}
+
+export async function fetchStats(): Promise<Stats | null> {
+  try {
+    const s = await request<Stats>("/v1/deen/stats");
+    connection = "online";
+    return s;
+  } catch {
+    connection = "offline";
+    return null;
+  }
+}
+
+export async function fetchCategories(): Promise<{ category: string; count: number }[]> {
+  try {
+    return await request<{ category: string; count: number }[]>("/v1/deen/categories");
+  } catch {
+    return [];
   }
 }
 
@@ -136,7 +158,12 @@ export async function createOrder(
         address: orderData.address,
         area: orderData.area,
         payment: orderData.payment,
-        items: orderData.lines.map((l) => ({ productId: l.productId, size: l.size, qty: l.qty })),
+        items: orderData.lines.map((l) => ({
+        productId: l.productId,
+        size: l.size,
+        qty: l.qty,
+        variationId: (l as any).variationId,
+      })),
       }),
     });
     connection = "online";

@@ -70,6 +70,7 @@ export default function CheckoutScreen() {
         size: item.size,
         qty: item.qty,
         unit: item.product.salePrice ?? item.product.price,
+        variationId: item.variationId,
       }));
 
       // Add free promotional gift if eligible

@@ -21,12 +21,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, style }) => {
   };
 
   const hasDiscount = product.salePrice && product.salePrice < product.price;
+  const pct = product.salePct ?? (hasDiscount ? Math.round(((product.price - (product.salePrice || 0)) / product.price) * 100) : 0);
+  const outOfStock = product.stockStatus === "outofstock";
 
   return (
     <TouchableOpacity
-      style={[styles.card, style]}
+      style={[styles.card, style, outOfStock && styles.cardOOS]}
       activeOpacity={0.88}
       onPress={handlePress}
+      disabled={outOfStock}
     >
       <View style={styles.imageWrapper}>
         <Image
@@ -39,11 +42,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, style }) => {
             <Text style={styles.badgeNewText}>NEW</Text>
           </View>
         )}
-        {hasDiscount && (
+        {pct > 0 && (
           <View style={styles.badgeSale}>
-            <Text style={styles.badgeSaleText}>
-              SAVE {bdt(product.price - (product.salePrice || 0))}
-            </Text>
+            <Text style={styles.badgeSaleText}>-{pct}%</Text>
+          </View>
+        )}
+        {outOfStock && (
+          <View style={styles.badgeOOS}>
+            <Text style={styles.badgeOOSText}>SOLD OUT</Text>
           </View>
         )}
       </View>
@@ -62,6 +68,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, style }) => {
             <Text style={styles.originalPrice}>{bdt(product.price)}</Text>
           )}
         </View>
+
+        {product.rating > 0 && (
+          <View style={styles.ratingRow}>
+            <Text style={styles.ratingStar}>★</Text>
+            <Text style={styles.ratingText}>{product.rating.toFixed(1)}</Text>
+          </View>
+        )}
 
         <View style={styles.sizePreviewRow}>
           {product.sizes.slice(0, 4).map((s) => (
@@ -126,6 +139,24 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "800",
   },
+  badgeOOS: {
+    position: "absolute",
+    bottom: 8,
+    left: 8,
+    backgroundColor: Colors.ink,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  badgeOOSText: {
+    color: "#FFFFFF",
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  cardOOS: {
+    opacity: 0.55,
+  },
   info: {
     padding: 10,
   },
@@ -182,5 +213,20 @@ const styles = StyleSheet.create({
   moreSizes: {
     fontSize: 9,
     color: Colors.faint,
+  },
+  ratingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    marginBottom: 6,
+  },
+  ratingStar: {
+    fontSize: 11,
+    color: Colors.denimStitch,
+  },
+  ratingText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: Colors.sub,
   },
 });
