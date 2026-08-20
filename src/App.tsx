@@ -105,7 +105,7 @@ function Ambient() {
 
 function Workspace() {
   const toast = useToast();
-  const [overrides, setOverrides] = useLocalStorage<Record<string, TaskStatus>>("bw.tasks.v1", {});
+  const [overrides, setOverrides] = useLocalStorage<Record<string, TaskStatus>>("bw.tasks.v2", {});
   const [sessions, setSessions] = useLocalStorage<SessionEntry[]>("bw.sessions.v1", SEED_SESSIONS);
 
   const cycle = (id: string) => {
@@ -148,7 +148,7 @@ function Workspace() {
               <span className="text-mint">→ * main · rest: 0</span>
             </span>
             <span className="ml-auto hidden sm:inline">
-              now developing: <span className="text-mint">apps/mobile · DEEN</span> — deencommerce.com on Expo Android
+              <span className="text-mint">P1–P3 complete</span> · next: <span className="text-amber">P4 hardening</span> · P5 iOS queued
             </span>
           </div>
         </div>

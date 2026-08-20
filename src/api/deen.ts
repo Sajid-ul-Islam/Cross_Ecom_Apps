@@ -517,6 +517,50 @@ export function deenAvg(productId: string): { avg: number; count: number } | nul
   return { avg: Math.round((rs.reduce((s, r) => s + r.stars, 0) / rs.length) * 10) / 10, count: rs.length };
 }
 
+/* ------------------------------------------------------------------ */
+/*  live webhooks — the Woo side pushes order status into the gateway  */
+/*  (in production: signed POST /v1/webhooks, HMAC-verified, queued)   */
+/* ------------------------------------------------------------------ */
+
+export interface DeenOrderStatusEvent {
+  orderId: string;
+  number: string;
+  status: DeenOrderStatus;
+  ts: number;
+}
+
+const statusListeners = new Set<(e: DeenOrderStatusEvent) => void>();
+
+export function subscribeDeenOrderStatus(cb: (e: DeenOrderStatusEvent) => void): () => void {
+  statusListeners.add(cb);
+  return () => {
+    statusListeners.delete(cb);
+  };
+}
+
+export function startDeenWebhooks(intervalMs = 18000): () => void {
+  const tick = () => {
+    const candidate = [...orders]
+      .filter((o) => o.status !== "cancelled" && o.status !== "delivered")
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))[0];
+    if (!candidate) return;
+    const idx = ORDER_FLOW.indexOf(candidate.status);
+    const next = ORDER_FLOW[Math.min(idx + 1, ORDER_FLOW.length - 1)];
+    void req("POST", `/v1/webhooks/woo.order · ${candidate.number} → ${next} · HMAC ✓`);
+    candidate.status = next;
+    orders = orders.map((o) => (o.id === candidate.id ? { ...candidate } : o));
+    save(KEYS.orders, orders);
+    const e: DeenOrderStatusEvent = { orderId: candidate.id, number: candidate.number, status: next, ts: Date.now() };
+    statusListeners.forEach((l) => l(e));
+  };
+  const t0 = window.setTimeout(tick, 6000);
+  const t = window.setInterval(tick, intervalMs);
+  return () => {
+    window.clearTimeout(t0);
+    window.clearInterval(t);
+  };
+}
+
 export async function deenAddReview(productId: string, name: string, stars: number, text: string): Promise<DeenReview> {
   await req("POST", "/v1/deen/reviews", 201);
   if (stars < 1 || stars > 5) throw new Error("Pick a star rating.");
