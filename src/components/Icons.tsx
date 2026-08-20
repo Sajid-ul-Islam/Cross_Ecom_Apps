@@ -186,6 +186,12 @@ export const IconArrowLeft = (p: IconProps) => (
   </svg>
 );
 
+export const IconArrowRight = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M5 12h14M13.5 6l6 6-6 6" />
+  </svg>
+);
+
 export const IconHeart = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M12 20.5s-7.4-4.6-9.2-9.2C1.6 8 3.6 4.9 6.8 4.9c2 0 3.6 1.1 4.4 2.7l.8 1.5.8-1.5c.8-1.6 2.4-2.7 4.4-2.7 3.2 0 5.2 3.1 4 6.4C19.4 15.9 12 20.5 12 20.5Z" />

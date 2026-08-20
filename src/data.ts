@@ -517,6 +517,18 @@ export const DEV_LOG: DevLogEntry[] = [
       "App inherits Android dark/light; Auto/Light/Dark control; 60-30-10 token palette",
     ],
   },
+  {
+    date: "BATCH 08",
+    title: "Push notifications & product recommendations",
+    tag: "P2+",
+    shipped: [
+      "FCM push engine in the gateway — price drops, new drops, promos, personalized nudges",
+      "Android heads-up push cards with tap-to-open-product deep links",
+      "Recommendation engine (affinity scoring from wishlist · recents · bag) — same signals feed pushes and UI",
+      "“Recommended for you” rail on Home + “You may also like” on product sheets",
+      "Notification center gains View-product actions; marketing pushes respect the profile toggle",
+    ],
+  },
 ];
 
 export interface NextUpGroup {
@@ -544,6 +556,7 @@ export const NEXT_UP: NextUpGroup[] = [
       { label: "Deploy real Fastify gateway; retire the in-browser simulation surface-by-surface", ref: "ops-1" },
       { label: "Vault real WooCommerce consumer keys; point DEEN web store at gateway", ref: "ops-2" },
       { label: "Merge Sajid-ul-Islam/Cross_Ecom_Apps changes into main (fetch pending)", ref: "ops-3" },
+      { label: "Swap simulated push for real FCM server keys; move rec engine server-side (ML-ready)", ref: "ops-4" },
     ],
   },
   {
@@ -558,8 +571,8 @@ export const NEXT_UP: NextUpGroup[] = [
 ];
 
 export const CURRENT_CONTEXT = {
-  focus: "DEEN Android v1.1 — feature-complete, entering hardening",
-  done: "P0 foundations · P1 middle API · P2 Expo Android · P3 web + /admin",
+  focus: "DEEN Android v1.2 — push notifications + personalized recommendations live",
+  done: "P0 foundations · P1 middle API · P2 Expo Android (incl. push & recs) · P3 web + /admin",
   inFlight: "P4 prep · repo merge with Cross_Ecom_Apps (awaiting fetch)",
   nextMilestone: "E2E suites (Playwright + Maestro) and Sentry wiring",
   risks: [

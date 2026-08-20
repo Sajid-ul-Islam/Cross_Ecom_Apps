@@ -31,8 +31,11 @@ import {
   PAYMENT_LABELS,
   saveDeenProfile,
   startDeenWebhooks,
+  startDeenPush,
+  rankRecommendations,
   subscribeDeenApi,
   subscribeDeenOrderStatus,
+  subscribeDeenPush,
   subscribeDeenSms,
   SOCIAL_ACCOUNTS,
   type DeenArea,
@@ -46,6 +49,7 @@ import {
   type DeenReview,
   type DeenSession,
   type DeenSms,
+  type DeenPush,
   type SocialAccount,
 } from "../api/deen";
 import { PHASES, type TaskStatus } from "../data";
@@ -54,6 +58,7 @@ import { DEEN_ICON } from "../icon";
 import { useLocalStorage, useReducedMotion } from "../hooks";
 import {
   IconArrowLeft,
+  IconArrowRight,
   IconBag,
   IconBattery,
   IconBell,
@@ -169,6 +174,7 @@ interface Notif {
   body: string;
   ts: number;
   read: boolean;
+  productId?: string;
 }
 
 const NKEY = "deen.notifs.v1";
@@ -332,9 +338,29 @@ function DeenPhone() {
   }, 0);
   const unread = notifs.filter((n) => !n.read).length;
 
-  const pushNotif = (title: string, body: string) => {
-    setNotifs((prev) => [{ id: `n-${Date.now()}`, title, body, ts: Date.now(), read: false }, ...prev].slice(0, 30));
+  const pushNotif = (title: string, body: string, productId?: string) => {
+    setNotifs((prev) => [{ id: `n-${Date.now()}`, title, body, ts: Date.now(), read: false, productId }, ...prev].slice(0, 30));
   };
+
+  /* FCM push engine — promo, drops & personalized nudges */
+  const [push, setPush] = useState<DeenPush | null>(null);
+  useEffect(() => startDeenPush(), []);
+  useEffect(
+    () =>
+      subscribeDeenPush((p) => {
+        setPush(p);
+        pushNotif(p.title, p.body, p.productId);
+        window.setTimeout(() => setPush((cur) => (cur?.id === p.id ? null : cur)), 8000);
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
+  /* personalized recommendations — same engine that powers the push nudges */
+  const recommended = useMemo(
+    () => rankRecommendations(products, { wishlist, recents, cart }, 6),
+    [products, wishlist, recents, cart]
+  );
 
   /* live order webhooks from the gateway (Woo side) */
   useEffect(() => startDeenWebhooks(), []);
@@ -457,6 +483,7 @@ function DeenPhone() {
             cartSubtotal={cartSubtotal}
             unread={unread}
             recents={recents.map(find).filter((p): p is DeenProduct => !!p)}
+            recommended={recommended}
           />
         );
       case "shop":
@@ -472,6 +499,7 @@ function DeenPhone() {
             onWish={() => toggleWishlist(screen.id)}
             onVisit={recordVisit}
             sessionName={session?.name}
+            alsoLike={recommended.filter((p) => p.id !== screen.id).slice(0, 4)}
           />
         );
       case "bag":
@@ -572,6 +600,39 @@ function DeenPhone() {
             </button>
           )}
 
+          {/* Android heads-up push notification (FCM) */}
+          {push && !boot && (
+            <button
+              onClick={() => {
+                if (push.productId) {
+                  setScreen({ name: "product", id: push.productId });
+                  setNotifs((prev) => prev.map((n) => (n.title === push.title && n.body === push.body ? { ...n, read: true } : n)));
+                }
+                setPush(null);
+              }}
+              className="sms-drop absolute left-2.5 right-2.5 top-9 z-30 flex cursor-pointer items-start gap-2.5 rounded-2xl border border-white/10 bg-[#1C1F2B]/97 px-3.5 py-3 text-left shadow-[0_14px_36px_rgba(0,0,0,0.55)] backdrop-blur"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg" style={{ background: "#fff" }}>
+                <img src={DEEN_ICON} alt="" className="h-full w-full object-contain" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-baseline justify-between gap-2">
+                  <span className="font-arch text-[10px] font-semibold uppercase tracking-[0.1em] text-white/60">
+                    DEEN · {push.kind === "price-drop" ? "price alert" : push.kind === "recommendation" ? "for you" : push.kind === "new-drop" ? "new drop" : "offers"}
+                  </span>
+                  <span className="font-mono text-[8.5px] text-white/40">now · FCM</span>
+                </span>
+                <span className="mt-0.5 block font-arch text-[11.5px] font-bold leading-snug text-white">{push.title}</span>
+                <span className="mt-0.5 block font-arch text-[10.5px] leading-snug text-white/75">{push.body}</span>
+                {push.productId && (
+                  <span className="mt-1.5 inline-block rounded-full px-2 py-0.5 font-mono text-[8.5px] font-bold uppercase tracking-[0.14em]" style={{ background: "#2A3680", color: "#fff" }}>
+                    Tap to view →
+                  </span>
+                )}
+              </span>
+            </button>
+          )}
+
           {/* bottom nav */}
           {!boot && (
             <div className="absolute inset-x-0 bottom-0 z-20 border-t" style={{ background: "rgba(255,255,255,0.96)", borderColor: T.line }}>
@@ -656,12 +717,14 @@ function HomeScreen({
   cartSubtotal,
   unread,
   recents,
+  recommended,
 }: {
   go: (s: Screen) => void;
   products: DeenProduct[];
   cartSubtotal: number;
   unread: number;
   recents: DeenProduct[];
+  recommended: DeenProduct[];
 }) {
   const list = products.length ? products : DEEN_CATALOG;
   const newDrop = list.filter((p) => p.isNew);
@@ -829,6 +892,43 @@ function HomeScreen({
           ))}
         </div>
       </div>
+
+      {/* recommended for you */}
+      {recommended.length > 0 && (
+        <div className="mt-6">
+          <div className="flex items-baseline justify-between px-4">
+            <p className="font-disp text-[15px]">
+              Recommended for you
+              <span className="ml-2 align-middle font-mono text-[8px] font-bold uppercase tracking-[0.16em]" style={{ color: T.sub }}>
+                picked from your style
+              </span>
+            </p>
+            <button onClick={() => go({ name: "shop" })} className="cursor-pointer font-mono text-[10px] uppercase tracking-[0.18em]" style={{ color: T.indigo }}>
+              Shop all
+            </button>
+          </div>
+          <div className="hide-scroll mt-3 flex gap-3 overflow-x-auto px-4 pb-2">
+            {recommended.map((p) => (
+              <button key={p.id} onClick={() => go({ name: "product", id: p.id })} className="w-[136px] shrink-0 cursor-pointer text-left transition-transform active:scale-[0.97]">
+                <div className="relative h-[172px] overflow-hidden rounded-xl" style={{ background: T.line }}>
+                  <PImg src={p.images[0]} alt={p.name} className="h-full w-full" />
+                  {p.salePrice ? (
+                    <span className="absolute left-2 top-2 rounded px-1.5 py-0.5 font-mono text-[9px] font-bold text-white" style={{ background: T.crimson }}>
+                      −{pctOff(p)}%
+                    </span>
+                  ) : (
+                    <span className="absolute left-2 top-2 rounded px-1.5 py-0.5 font-mono text-[9px] font-bold" style={{ background: T.indigo, color: "#fff" }}>
+                      for you
+                    </span>
+                  )}
+                </div>
+                <p className="clamp2 mt-1.5 text-[11.5px] font-semibold leading-snug">{p.name}</p>
+                <PriceLine p={p} size="sm" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* promo tiles */}
       <div className="mt-4 grid grid-cols-2 gap-3 px-4 pb-6">
@@ -1076,6 +1176,7 @@ function ProductScreen({
   onWish,
   onVisit,
   sessionName,
+  alsoLike,
 }: {
   product: DeenProduct | undefined;
   go: (s: Screen) => void;
@@ -1085,6 +1186,7 @@ function ProductScreen({
   onWish: () => void;
   onVisit: (id: string) => void;
   sessionName?: string;
+  alsoLike: DeenProduct[];
 }) {
   const toast = useToast();
   const [imgIdx, setImgIdx] = useState(0);
@@ -1361,6 +1463,34 @@ function ProductScreen({
           </div>
         </div>
       </div>
+
+      {/* you may also like */}
+      {alsoLike.length > 0 && (
+        <div className="mt-5 px-4 pb-4">
+          <div className="flex items-baseline justify-between">
+            <p className="font-disp text-[14px]">You may also like</p>
+            <span className="font-mono text-[8.5px] uppercase tracking-[0.16em]" style={{ color: T.sub }}>
+              same taste · {product.category}
+            </span>
+          </div>
+          <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-4">
+            {alsoLike.map((p) => (
+              <button key={p.id} onClick={() => go({ name: "product", id: p.id })} className="cursor-pointer text-left transition-transform active:scale-[0.97]">
+                <div className="relative aspect-[3/4] overflow-hidden rounded-xl" style={{ background: T.line }}>
+                  <PImg src={p.images[0]} alt={p.name} className="h-full w-full" />
+                  {p.salePrice && (
+                    <span className="absolute left-2 top-2 rounded px-1.5 py-0.5 font-mono text-[8.5px] font-bold text-white" style={{ background: T.crimson }}>
+                      −{pctOff(p)}%
+                    </span>
+                  )}
+                </div>
+                <p className="clamp2 mt-1.5 text-[11px] font-semibold leading-snug">{p.name}</p>
+                <PriceLine p={p} size="sm" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* sticky CTA */}
       <div className="flex gap-2.5 border-t p-3.5" style={{ background: T.card, borderColor: T.line }}>
@@ -2865,6 +2995,15 @@ function NotificationsScreen({
                   </span>
                 </div>
                 <p className="mt-0.5 text-[11.5px] leading-snug" style={{ color: T.sub }}>{n.body}</p>
+                {n.productId && (
+                  <button
+                    onClick={() => go({ name: "product", id: n.productId! })}
+                    className="mt-1.5 inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[8.5px] font-bold uppercase tracking-[0.14em] transition-all active:scale-95"
+                    style={{ background: T.indigoTint, color: T.indigo }}
+                  >
+                    View product <IconArrowRight size={9} />
+                  </button>
+                )}
               </div>
               {!n.read && <span className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ background: T.crimson }} />}
             </div>
