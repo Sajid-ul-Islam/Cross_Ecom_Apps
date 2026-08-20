@@ -78,6 +78,7 @@ export interface DeenSession {
   name: string;
   phone: string;
   exp: number;
+  provider: "password" | "otp" | "google" | "facebook";
 }
 
 export interface DeenProfile {
@@ -415,8 +416,8 @@ export function deenLogout(): void {
   }
 }
 
-function issueSession(name: string, phone: string): DeenSession {
-  const s: DeenSession = { name, phone, exp: Date.now() + 7 * 86400000 };
+function issueSession(name: string, phone: string, provider: DeenSession["provider"]): DeenSession {
+  const s: DeenSession = { name, phone, exp: Date.now() + 7 * 86400000, provider };
   save(AKEYS.session, s);
   return s;
 }
@@ -426,7 +427,7 @@ export async function deenLogin(phone: string, pass: string): Promise<DeenSessio
   const clean = phone.replace(/[^0-9]/g, "");
   const u = users().find((x) => x.phone === clean && x.pass === pass);
   if (!u) throw new Error("No account matches that number and password.");
-  return issueSession(u.name, u.phone);
+  return issueSession(u.name, u.phone, "password");
 }
 
 export async function deenRegister(name: string, phone: string, pass: string): Promise<DeenSession> {
@@ -439,10 +440,98 @@ export async function deenRegister(name: string, phone: string, pass: string): P
   if (all.some((x) => x.phone === clean)) throw new Error("That number is already registered — try logging in.");
   const next = [...all, { name: name.trim(), phone: clean, pass }];
   save(AKEYS.users, next);
-  return issueSession(name.trim(), clean);
+  return issueSession(name.trim(), clean, "password");
 }
 
 export const demoAccount = { phone: "01712345678", pass: "deen123" };
+
+/* ------------------------------------------------------------------ */
+/*  phone OTP — code arrives "via SMS" on the device's SMS bus         */
+/* ------------------------------------------------------------------ */
+
+const OTPKEY = "deen.otp.v1";
+
+interface OtpRecord {
+  code: string;
+  exp: number;
+}
+
+function otpStore(): Record<string, OtpRecord> {
+  return load(OTPKEY, {});
+}
+
+export interface DeenSms {
+  id: string;
+  ts: number;
+  phone: string;
+  code: string;
+}
+
+const smsListeners = new Set<(s: DeenSms) => void>();
+export function subscribeDeenSms(cb: (s: DeenSms) => void): () => void {
+  smsListeners.add(cb);
+  return () => {
+    smsListeners.delete(cb);
+  };
+}
+
+export async function deenSendOtp(phone: string): Promise<void> {
+  const clean = phone.replace(/[^0-9]/g, "");
+  if (!/^01[3-9]\d{8}$/.test(clean)) {
+    await req("POST", "/v1/deen/auth/otp/send", 422);
+    throw new Error("Enter a valid BD mobile number — 01XXXXXXXXX.");
+  }
+  await req("POST", "/v1/deen/auth/otp/send");
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const store = otpStore();
+  store[clean] = { code, exp: Date.now() + 5 * 60000 };
+  save(OTPKEY, store);
+  // the code is never returned over HTTP — it is delivered out-of-band via SMS
+  window.setTimeout(() => {
+    const sms: DeenSms = { id: `sms-${Date.now()}`, ts: Date.now(), phone: clean, code };
+    smsListeners.forEach((l) => l(sms));
+  }, 1400 + Math.random() * 600);
+}
+
+export async function deenVerifyOtp(phone: string, code: string): Promise<DeenSession> {
+  await req("POST", "/v1/deen/auth/otp/verify");
+  const clean = phone.replace(/[^0-9]/g, "");
+  const store = otpStore();
+  const rec = store[clean];
+  if (!rec) throw new Error("No code was requested for this number — send a new one.");
+  if (rec.exp < Date.now()) {
+    delete store[clean];
+    save(OTPKEY, store);
+    throw new Error("That code expired. Request a fresh one.");
+  }
+  if (rec.code !== code.trim()) throw new Error("That code doesn't match. Check the SMS and try again.");
+  delete store[clean];
+  save(OTPKEY, store);
+  const known = users().find((u) => u.phone === clean);
+  return issueSession(known?.name ?? "DEEN Customer", clean, "otp");
+}
+
+/* ------------------------------------------------------------------ */
+/*  social sign-in — Google & Facebook (OAuth round-trips, simulated)  */
+/* ------------------------------------------------------------------ */
+
+export interface SocialAccount {
+  provider: "google" | "facebook";
+  name: string;
+  email: string;
+  phone: string;
+}
+
+export const SOCIAL_ACCOUNTS: SocialAccount[] = [
+  { provider: "google", name: "Kai Tanaka", email: "kai.tanaka@gmail.com", phone: "01811112222" },
+  { provider: "google", name: "Rafiq Hasan", email: "rafiq.hasan@gmail.com", phone: "01712345678" },
+  { provider: "facebook", name: "Rafiq Hasan", email: "rafiq.hasan@facebook.com", phone: "01712345678" },
+];
+
+export async function deenSocialLogin(account: SocialAccount): Promise<DeenSession> {
+  await req("POST", `/v1/deen/auth/${account.provider}`);
+  return issueSession(account.name, account.phone, account.provider);
+}
 
 /* ------------------------------------------------------------------ */
 /*  coupons                                                            */
