@@ -1,6 +1,6 @@
 import { HashRouter, NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { Admin } from "./apps/Admin";
-import { MobileApp } from "./apps/MobileApp";
+import { DeenApp } from "./apps/DeenApp";
 import { Storefront } from "./apps/Storefront";
 import { BlueprintPage } from "./pages/BlueprintPage";
 import { ToastProvider, useToast } from "./components/ui";
@@ -50,7 +50,7 @@ function WorkspaceBar() {
         <span className="hidden font-mono text-[9px] uppercase tracking-[0.22em] text-faint sm:block">apps workspace</span>
 
         <nav className="ml-2 flex items-center gap-0.5 overflow-x-auto scrollbar-none sm:ml-6">
-          {link("/", "android app")}
+          {link("/", "DEEN app")}
           {link("/web", "storefront")}
           {link("/admin", "admin")}
           {link("/blueprint", "blueprint")}
@@ -148,13 +148,13 @@ function Workspace() {
               <span className="text-mint">→ * main · rest: 0</span>
             </span>
             <span className="ml-auto hidden sm:inline">
-              now developing: <span className="text-mint">apps/mobile</span> — P2 Expo Android · web + /admin live
+              now developing: <span className="text-mint">apps/mobile · DEEN</span> — deencommerce.com on Expo Android
             </span>
           </div>
         </div>
 
         <Routes>
-          <Route path="/" element={<MobileApp overrides={overrides} onCycle={cycle} />} />
+          <Route path="/" element={<DeenApp overrides={overrides} onCycle={cycle} />} />
           <Route path="/web" element={<Storefront />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/blueprint" element={
