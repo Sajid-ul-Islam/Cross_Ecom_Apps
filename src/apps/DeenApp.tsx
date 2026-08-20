@@ -25,7 +25,9 @@ import {
   ORDER_FLOW,
   PAYMENT_LABELS,
   saveDeenProfile,
+  startDeenWebhooks,
   subscribeDeenApi,
+  subscribeDeenOrderStatus,
   type DeenArea,
   type DeenCartItem,
   type DeenCategory,
@@ -39,7 +41,7 @@ import {
 } from "../api/deen";
 import { PHASES, type TaskStatus } from "../data";
 import { Bar, Reveal, Stamp, StatusChip, useToast } from "../components/ui";
-import { useReducedMotion } from "../hooks";
+import { useLocalStorage, useReducedMotion } from "../hooks";
 import {
   IconArrowLeft,
   IconBag,
@@ -255,6 +257,23 @@ function DeenPhone() {
   const pushNotif = (title: string, body: string) => {
     setNotifs((prev) => [{ id: `n-${Date.now()}`, title, body, ts: Date.now(), read: false }, ...prev].slice(0, 30));
   };
+
+  /* live order webhooks from the gateway (Woo side) */
+  useEffect(() => startDeenWebhooks(), []);
+  useEffect(
+    () =>
+      subscribeDeenOrderStatus((e) => {
+        const lines: Partial<Record<string, string>> = {
+          confirmed: "We've confirmed your order and started packing.",
+          shipped: "Your parcel is with the courier — arriving in 1–2 days.",
+          delivered: "Delivered! Enjoy — and don't forget to rate your items.",
+        };
+        const body = lines[e.status];
+        if (body) pushNotif(`Order ${e.number} · ${e.status}`, body);
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
 
   const recordVisit = (id: string) => {
     setRecents((prev) => [id, ...prev.filter((x) => x !== id)].slice(0, 8));
@@ -1674,6 +1693,9 @@ function OrdersScreen({ go, onCancel }: { go: (s: Screen) => void; onCancel: (id
 
   useEffect(() => {
     deenListOrders().then(setOrders);
+    return subscribeDeenOrderStatus(() => {
+      deenListOrders().then(setOrders);
+    });
   }, []);
 
   const cancel = async (id: string) => {
@@ -2206,6 +2228,228 @@ function NotificationsScreen({
   );
 }
 
+/* ---------------- EAS build console (p2-7) ---------------- */
+
+interface EasState {
+  profile: "development" | "preview" | "production";
+  status: "idle" | "running" | "done";
+  progress: number;
+  logs: string[];
+  buildId: string;
+  sizeMB: number;
+}
+
+function EasBuildPanel() {
+  const toast = useToast();
+  const [st, setSt] = useLocalStorage<EasState>("deen.eas.v1", {
+    profile: "preview",
+    status: "idle",
+    progress: 0,
+    logs: [],
+    buildId: "",
+    sizeMB: 0,
+  });
+  const timer = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (timer.current) window.clearInterval(timer.current);
+    },
+    []
+  );
+
+  const start = () => {
+    if (st.status === "running") return;
+    const profile = st.profile;
+    setSt({ profile, status: "running", progress: 2, logs: [`$ eas build --platform android --profile ${profile}`], buildId: "", sizeMB: 0 });
+    let p = 2;
+    const milestones: [number, string][] = [
+      [14, "✓ Resolved Expo SDK 53 + app config"],
+      [30, "✓ Provisioned Android build credentials"],
+      [52, "⠿ Gradle: bundling JS with Metro…"],
+      [74, "⠿ Gradle: assembling release AAB…"],
+      [90, "✓ Uploading artifact to EAS…"],
+    ];
+    timer.current = window.setInterval(() => {
+      p = Math.min(100, p + 8 + Math.random() * 10);
+      const lines: string[] = [];
+      for (const [at, line] of milestones) if (p >= at) lines.push(line);
+      if (p >= 100) {
+        const id = Math.random().toString(16).slice(2, 10);
+        const size = Math.round((18 + Math.random() * 7) * 10) / 10;
+        lines.push(`✓ Build finished · ${id} · ${size} MB AAB`);
+        setSt({ profile, status: "done", progress: 100, logs: lines, buildId: id, sizeMB: size });
+        if (timer.current) window.clearInterval(timer.current);
+        toast(`EAS build ${id} ready for the ${profile} track`, "mint");
+      } else {
+        setSt({ profile, status: "running", progress: Math.round(p), logs: lines, buildId: "", sizeMB: 0 });
+      }
+    }, 550);
+  };
+
+  return (
+    <div className="border border-line bg-panel/70">
+      <div className="flex items-center justify-between border-b border-dashed border-line px-5 py-3.5">
+        <h3 className="font-display text-[15px] font-bold">EAS Build · Android</h3>
+        <span className="font-mono text-[10px] text-faint">p2-7</span>
+      </div>
+      <div className="space-y-3.5 p-5">
+        <div className="grid grid-cols-3 gap-1 rounded-lg border border-line bg-bg/50 p-1">
+          {(["development", "preview", "production"] as const).map((p) => (
+            <button
+              key={p}
+              onClick={() => st.status !== "running" && setSt({ ...st, profile: p })}
+              className="cursor-pointer rounded-md py-1.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.08em] transition-all duration-200 active:scale-95"
+              style={st.profile === p ? { background: "var(--color-raise)", color: "var(--color-ink)" } : { color: "var(--color-faint)" }}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+
+        <Bar value={st.progress} tone={st.status === "done" ? "mint" : "amber"} />
+
+        <div className="min-h-[92px] border border-linesoft bg-bg/70 p-3 font-mono text-[10px] leading-[1.75] text-dim">
+          {st.logs.length === 0 && <span className="text-faint">idle — pick a profile and start the build</span>}
+          {st.logs.slice(-5).map((l, i) => (
+            <p key={i} className={`boot-line ${l.startsWith("✓") ? "text-mint" : l.startsWith("⠿") ? "text-amber" : "text-wire"}`}>
+              {l}
+            </p>
+          ))}
+          {st.status === "running" && <span className="blink text-amber">▌</span>}
+        </div>
+
+        {st.status === "done" ? (
+          <div className="flex items-center justify-between gap-3 border border-mint/40 bg-mint/[0.06] px-3.5 py-2.5">
+            <div className="min-w-0">
+              <p className="truncate font-mono text-[11px] font-bold text-mint">deen-{st.profile}.aab</p>
+              <p className="font-mono text-[9.5px] text-faint">#{st.buildId} · {st.sizeMB} MB · SDK 53</p>
+            </div>
+            <button
+              onClick={start}
+              className="shrink-0 cursor-pointer border border-line px-3 py-1.5 font-mono text-[9px] font-bold uppercase tracking-[0.12em] text-dim transition-colors hover:border-wire/60 hover:text-wire"
+            >
+              Rebuild
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={start}
+            disabled={st.status === "running"}
+            className="w-full cursor-pointer border border-amber/60 bg-amber/10 py-2.5 font-mono text-[10.5px] font-bold uppercase tracking-[0.16em] text-amber transition-all hover:bg-amber/20 active:scale-[0.98] disabled:opacity-60"
+          >
+            {st.status === "running" ? `Building… ${st.progress}%` : "Start build"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Play Console rollout (p2-8) ---------------- */
+
+interface PlayState {
+  track: "internal" | "closed" | "production";
+  rollout: number;
+}
+
+const PLAY_STEPS: { id: PlayState["track"]; label: string; note: string }[] = [
+  { id: "internal", label: "Internal testing", note: "QA matrix · 20 testers" },
+  { id: "closed", label: "Closed testing", note: "beta cohort · 500 users" },
+  { id: "production", label: "Production", note: "staged rollout · Bangladesh" },
+];
+
+function PlayConsolePanel() {
+  const toast = useToast();
+  const [st, setSt] = useLocalStorage<PlayState>("deen.play.v1", { track: "internal", rollout: 100 });
+  const idx = PLAY_STEPS.findIndex((s) => s.id === st.track);
+
+  const promote = () => {
+    if (st.track === "internal") {
+      setSt({ track: "closed", rollout: 100 });
+      toast("Promoted to closed testing", "mint");
+    } else if (st.track === "closed") {
+      setSt({ track: "production", rollout: 5 });
+      toast("Promoted to production — staged at 5%", "mint");
+    }
+  };
+
+  return (
+    <div className="border border-line bg-panel/70">
+      <div className="flex items-center justify-between border-b border-dashed border-line px-5 py-3.5">
+        <h3 className="font-display text-[15px] font-bold">Play Console</h3>
+        <span className="font-mono text-[10px] text-faint">p2-8</span>
+      </div>
+      <div className="space-y-3.5 p-5">
+        <ol className="space-y-2">
+          {PLAY_STEPS.map((s, i) => {
+            const reached = i <= idx;
+            return (
+              <li key={s.id} className="flex items-center gap-3">
+                <span
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border font-mono text-[9px] font-bold"
+                  style={
+                    reached
+                      ? { background: "var(--color-mint)", borderColor: "var(--color-mint)", color: "#081422" }
+                      : { borderColor: "var(--color-line)", color: "var(--color-faint)" }
+                  }
+                >
+                  {reached ? "✓" : i + 1}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className={`text-[12px] font-semibold ${reached ? "text-ink" : "text-faint"}`}>{s.label}</p>
+                  <p className="font-mono text-[9px] text-faint">{s.note}</p>
+                </div>
+                {i === idx && <span className="pulse-dot h-1.5 w-1.5 rounded-full bg-mint" />}
+              </li>
+            );
+          })}
+        </ol>
+
+        {st.track === "production" && (
+          <div className="space-y-2 border border-linesoft bg-bg/50 p-3.5">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-dim">Staged rollout</span>
+              <span className="font-mono text-[12px] font-bold text-mint">{st.rollout}%</span>
+            </div>
+            <input
+              type="range"
+              min={5}
+              max={100}
+              step={5}
+              value={st.rollout}
+              onChange={(e) => setSt({ ...st, rollout: Number(e.target.value) })}
+              className="w-full cursor-pointer accent-[#55d69b]"
+            />
+            {st.rollout === 100 ? (
+              <p className="text-center font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-mint">● Live · Bangladesh</p>
+            ) : (
+              <button
+                onClick={() => {
+                  setSt({ ...st, rollout: 100 });
+                  toast("Full rollout — DEEN is live on the Play Store", "mint");
+                }}
+                className="w-full cursor-pointer border border-mint/60 bg-mint/10 py-2 font-mono text-[9.5px] font-bold uppercase tracking-[0.16em] text-mint transition-all hover:bg-mint/20 active:scale-[0.98]"
+              >
+                Go to 100%
+              </button>
+            )}
+          </div>
+        )}
+
+        {st.track !== "production" && (
+          <button
+            onClick={promote}
+            className="w-full cursor-pointer border border-wire/60 bg-wire/10 py-2.5 font-mono text-[10.5px] font-bold uppercase tracking-[0.16em] text-wire transition-all hover:bg-wire/20 active:scale-[0.98]"
+          >
+            {st.track === "internal" ? "Promote to closed testing" : "Promote to production"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /*  WORKSPACE PAGE around the device                                   */
 /* ------------------------------------------------------------------ */
@@ -2309,7 +2553,11 @@ export function DeenApp({ overrides, onCycle }: { overrides: Record<string, Task
             <div className="corners border border-line bg-panel/70">
               <div className="flex items-center justify-between border-b border-dashed border-line px-5 py-3.5">
                 <h3 className="font-display text-[15px] font-bold">Sprint board · P2 Expo Android</h3>
-                <span className="font-mono text-[10px] text-faint">{done}/{p2.tasks.length} · {pct}%</span>
+                {pct === 100 ? (
+                  <Stamp tone="mint" pop>P2 shipped</Stamp>
+                ) : (
+                  <span className="font-mono text-[10px] text-faint">{done}/{p2.tasks.length} · {pct}%</span>
+                )}
               </div>
               <div className="px-5 pt-3.5">
                 <Bar value={pct} tone={pct === 100 ? "mint" : "amber"} />
@@ -2356,6 +2604,14 @@ export function DeenApp({ overrides, onCycle }: { overrides: Record<string, Task
                 )}
               </div>
             </div>
+          </Reveal>
+
+          <Reveal delay={220}>
+            <EasBuildPanel />
+          </Reveal>
+
+          <Reveal delay={280}>
+            <PlayConsolePanel />
           </Reveal>
         </div>
       </div>
