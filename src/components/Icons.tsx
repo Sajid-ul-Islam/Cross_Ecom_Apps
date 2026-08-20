@@ -242,6 +242,14 @@ export const IconBattery = (p: IconProps) => (
   </svg>
 );
 
+export const IconRocket = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 3c3.5 1.8 5 5.2 5 8.5l-2.2 2.2h-5.6L7 11.5C7 8.2 8.5 4.8 12 3z" />
+    <circle cx="12" cy="9.5" r="1.6" />
+    <path d="M7.8 13.8 6 18l4.2-1.8M16.2 13.8 18 18l-4.2-1.8M12 17.5V21" />
+  </svg>
+);
+
 export const IconSearch = (p: IconProps) => (
   <svg {...base(p)}>
     <circle cx="10.5" cy="10.5" r="6.5" />

@@ -431,6 +431,210 @@ export const GOLDEN_RULES = [
   "STATE.md is never more than one session stale.",
   "No decision without an ADR line — even “we kept it simple”.",
   "The next agent is a stranger: write the handoff you would need.",
+  "Every build batch closes with a DEV_LOG entry — done, next, context, horizon.",
+];
+
+/* ------------------------------------------------------------------ */
+/*  Living document — dev log, next-up, current context, horizon       */
+/* ------------------------------------------------------------------ */
+
+export interface DevLogEntry {
+  date: string;
+  title: string;
+  shipped: string[];
+  tag: string;
+}
+
+export const DEV_LOG: DevLogEntry[] = [
+  {
+    date: "BATCH 01",
+    title: "Foundations & blueprint console",
+    tag: "MERGED",
+    shipped: [
+      "Monorepo, CI scaffold, context suite (STATE.md · ADR/ · SESSIONS/)",
+      "Blueprint Sheets 00–04: topology, tooling, context strategy, timeline, sessions",
+      "Branch full-stack-project-blueprint-4a182 merged into main, then deleted",
+    ],
+  },
+  {
+    date: "BATCH 02",
+    title: "Middle API layer (simulated gateway)",
+    tag: "P1 ✓",
+    shipped: [
+      "Typed contracts (packages/contracts) shared by every app",
+      "Gateway with latency, error codes, JWT auth, request telemetry bus",
+      "Signed webhook engine — order status, stock, refunds with restocking",
+    ],
+  },
+  {
+    date: "BATCH 03",
+    title: "Next.js web + /admin console",
+    tag: "P3 ✓",
+    shipped: [
+      "Storefront — catalog, PDP, cart, coupons, checkout through the gateway",
+      "/admin — guarded login, orders dashboard, inventory, coupon management",
+      "Cross-app flow proven: web order → admin queue → restock on cancel",
+    ],
+  },
+  {
+    date: "BATCH 04",
+    title: "DEEN Android app — real client build",
+    tag: "P2 core",
+    shipped: [
+      "Real catalog mirrored from deencommerce.com — 42 products, SKUs, BDT, sale prices",
+      "Home, shop, product sheet with mandatory size picker, free-tee promo engine",
+      "Checkout with COD · bKash · Nagad, Dhaka/outside delivery fees",
+      "App icon wired: favicon, boot splash, headers, workspace chrome",
+    ],
+  },
+  {
+    date: "BATCH 05",
+    title: "Feature-complete commerce flows",
+    tag: "P2 ✓",
+    shipped: [
+      "Wishlist, price bands, search history, recently-viewed, share sheet",
+      "Reviews & ratings, size-guide sheet, coupon validation (SUMMER10 · DEEN100 · DENIM500)",
+      "Order cancellation, notification center, EAS Build console, Play Console rollout",
+    ],
+  },
+  {
+    date: "BATCH 06",
+    title: "Auth suite — phone-first",
+    tag: "AUTH",
+    shipped: [
+      "Phone OTP delivered via simulated SMS heads-up notification (5-min expiry)",
+      "Google sign-in with account chooser, Facebook login",
+      "Gateway rejects social sign-in without a verified phone session; link-after flow",
+    ],
+  },
+  {
+    date: "BATCH 07",
+    title: "Profile, loyalty & system theming",
+    tag: "UX",
+    shipped: [
+      "Order history per account + loyalty score with Bronze→Platinum tiers",
+      "Profile completion ring (5 checkpoints, 20% each) with deep-link actions",
+      "App inherits Android dark/light; Auto/Light/Dark control; 60-30-10 token palette",
+    ],
+  },
+];
+
+export interface NextUpGroup {
+  group: string;
+  tone: "amber" | "wire" | "coral" | "mint";
+  items: { label: string; ref: string }[];
+}
+
+export const NEXT_UP: NextUpGroup[] = [
+  {
+    group: "P4 · Hardening & launch",
+    tone: "amber",
+    items: [
+      { label: "Sentry across api · web · mobile with release-bound sourcemaps", ref: "p4-1" },
+      { label: "Redis catalog cache + k6 load test on the gateway", ref: "p4-2" },
+      { label: "Security audit — OWASP pass, secret rotation, webhook replay check", ref: "p4-3" },
+      { label: "E2E — Playwright (web/admin) + Maestro (Android) critical paths", ref: "p4-4" },
+      { label: "Play Store production release · web deploy with CWV budget", ref: "p4-5" },
+    ],
+  },
+  {
+    group: "Productionize the gateway",
+    tone: "coral",
+    items: [
+      { label: "Deploy real Fastify gateway; retire the in-browser simulation surface-by-surface", ref: "ops-1" },
+      { label: "Vault real WooCommerce consumer keys; point DEEN web store at gateway", ref: "ops-2" },
+      { label: "Merge Sajid-ul-Islam/Cross_Ecom_Apps changes into main (fetch pending)", ref: "ops-3" },
+    ],
+  },
+  {
+    group: "P5 · Expo iOS (post-launch)",
+    tone: "wire",
+    items: [
+      { label: "iOS polish pass — safe areas, haptics, platform navigation", ref: "p5-3" },
+      { label: "APNs push wiring via Expo Notifications", ref: "p5-4" },
+      { label: "TestFlight beta → App Store release", ref: "p5-5" },
+    ],
+  },
+];
+
+export const CURRENT_CONTEXT = {
+  focus: "DEEN Android v1.1 — feature-complete, entering hardening",
+  done: "P0 foundations · P1 middle API · P2 Expo Android · P3 web + /admin",
+  inFlight: "P4 prep · repo merge with Cross_Ecom_Apps (awaiting fetch)",
+  nextMilestone: "E2E suites (Playwright + Maestro) and Sentry wiring",
+  risks: [
+    "Gateway is still simulated in-browser — real endpoints must replace it surface-by-surface",
+    "DEEN product images load from their live CDN — offline fallbacks are woven-denim only",
+    "iOS deferred by design; shared Expo codebase keeps the delta small",
+  ],
+  bootFiles: ["AGENTS.md", "docs/STATE.md", "docs/SESSIONS/ (latest)", "docs/MERGE_LOG.md", "this sheet"],
+};
+
+export interface ScopeItem {
+  title: string;
+  note: string;
+  skills: string[];
+  tone: "mint" | "amber" | "wire" | "coral";
+}
+
+export const FUTURE_SCOPE: ScopeItem[] = [
+  {
+    title: "Payments — SSLCommerz · bKash Checkout · Stripe",
+    note: "Payment intents created only on the gateway; clients never see keys. Replaces COD-only checkout.",
+    skills: ["Node payment webhooks", "PCI-aware flows", "bKash/SSLCommerz APIs"],
+    tone: "mint",
+  },
+  {
+    title: "Courier tracking — Pathao · RedX",
+    note: "Live parcel tracking pushed through the existing webhook engine into order timelines and FCM.",
+    skills: ["Courier REST APIs", "Webhook consumers", "Push pipelines"],
+    tone: "wire",
+  },
+  {
+    title: "Offline-first mobile",
+    note: "WatermelonDB/SQLite sync so catalog and bag survive dead zones; mutations queue to the gateway.",
+    skills: ["React Native offline sync", "Conflict resolution", "TanStack Query persistence"],
+    tone: "amber",
+  },
+  {
+    title: "Bengali ↔ English i18n",
+    note: "Full locale support across app and web — the brand already speaks both.",
+    skills: ["i18next / next-intl", "RTL-safe layouts", "Locale QA"],
+    tone: "coral",
+  },
+  {
+    title: "PWA + SEO layer for the web store",
+    note: "Installable storefront, ISR product pages, sitemap and OG images for organic reach.",
+    skills: ["Next.js ISR", "Service workers", "Technical SEO"],
+    tone: "wire",
+  },
+  {
+    title: "Admin depth — RBAC roles & audit log",
+    note: "Staff vs owner scopes on /admin, every mutation journaled, exportable reports.",
+    skills: ["RBAC design", "Audit trails", "Recharts reporting"],
+    tone: "mint",
+  },
+  {
+    title: "Analytics & experimentation",
+    note: "PostHog/GA4 events from the gateway, funnel dashboards, A/B tests on promos.",
+    skills: ["Event taxonomy", "PostHog/GA4", "Experiment design"],
+    tone: "amber",
+  },
+  {
+    title: "CI/CD + observability",
+    note: "GitHub Actions → EAS Submit + web deploy; Grafana/Logtail on the gateway; uptime alarms.",
+    skills: ["GitHub Actions", "Docker/K8s", "Grafana + alerting"],
+    tone: "coral",
+  },
+];
+
+export const NEXT_SKILLS = [
+  { name: "E2E — Playwright & Maestro", level: 62, note: "critical-path suites per surface", tone: "coral" as const },
+  { name: "Fastify production hardening", level: 70, note: "rate limits, caching, graceful deploy", tone: "amber" as const },
+  { name: "Security — OWASP & key rotation", level: 66, note: "audit before real Woo keys go live", tone: "coral" as const },
+  { name: "Payment integrations (BD market)", level: 55, note: "SSLCommerz, bKash Checkout, Nagad", tone: "mint" as const },
+  { name: "DevOps — Actions, EAS Submit, monitoring", level: 64, note: "release gates and alarms", tone: "wire" as const },
+  { name: "Offline sync & push at scale", level: 58, note: "FCM/APNs, queued mutations", tone: "mint" as const },
 ];
 
 /* ------------------------------------------------------------------ */
