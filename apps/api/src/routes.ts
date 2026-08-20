@@ -219,4 +219,34 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     }
     return reply.send([...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
   });
+
+  /* ---- bug / crash reporting (for ongoing dev) ---- */
+  const bugReports: any[] = [];
+  app.post("/v1/deen/bugs", async (req, reply) => {
+    const b = (req.body as any) || {};
+    const report = {
+      id: `bug_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      receivedAt: new Date().toISOString(),
+      appVersion: b.appVersion ?? "unknown",
+      role: b.role ?? "customer",
+      route: b.route ?? null,
+      severity: b.severity ?? "medium", // low | medium | high | crash
+      message: b.message ?? "",
+      stack: b.stack ?? null,
+      device: b.device ?? null, // { platform, model, osVersion }
+      extra: b.extra ?? null,
+    };
+    bugReports.unshift(report);
+    if (bugReports.length > 500) bugReports.length = 500; // bound memory
+    return reply.code(201).send({ ok: true, id: report.id });
+  });
+
+  app.get("/v1/deen/bugs", async (req, reply) => {
+    const severity = (req.query as any).severity as string | undefined;
+    const list = severity ? bugReports.filter((x) => x.severity === severity) : bugReports;
+    return reply.send({
+      count: list.length,
+      reports: [...list].sort((a, b) => b.receivedAt.localeCompare(a.receivedAt)),
+    });
+  });
 }

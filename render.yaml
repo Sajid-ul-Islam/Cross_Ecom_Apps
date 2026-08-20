@@ -1,6 +1,8 @@
 # Render Blueprint — deploys ONLY the DEEN gateway (apps/api) via Docker.
 # Deploy: push this repo to GitHub, then in Render: New + Blueprint, pick the repo.
 #   Root Directory is set to apps/api below, so Docker builds just the gateway.
+# Gateway endpoints: /v1/health, /v1/deen/products, /v1/deen/stats (admin),
+#   /v1/deen/snapshot, /v1/deen/orders, /v1/deen/bugs (crash/feedback sink).
 services:
   - type: web
     name: deen-gateway

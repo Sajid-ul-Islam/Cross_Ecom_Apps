@@ -14,6 +14,7 @@ import { User, Phone, MapPin, Ruler, Bell, Save, Store, HelpCircle } from "lucid
 import { Header } from "../../src/components/Header";
 import { Colors } from "../../src/theme/colors";
 import { useProfile } from "../../src/context/ProfileContext";
+import { reportBug } from "../../src/services/gateway";
 
 const JEANS_SIZES = ["28", "30", "32", "34", "36", "38"];
 const TOP_SIZES = ["S", "M", "L", "XL", "XXL"];
@@ -29,6 +30,19 @@ export default function ProfileScreen() {
   const [pushOrders, setPushOrders] = useState(profile.pushOrders);
   const [pushPromos, setPushPromos] = useState(profile.pushPromos);
   const [savedMessage, setSavedMessage] = useState(false);
+
+  const handleReport = async () => {
+    try {
+      await reportBug({
+        severity: "low",
+        route: "profile",
+        message: "User-initiated problem report (no crash).",
+      });
+      Alert.alert("Thanks!", "Your report was sent. We'll look into it during development.");
+    } catch {
+      Alert.alert("Couldn't send", "Please try again later.");
+    }
+  };
 
   const handleSave = async () => {
     await updateProfile({
@@ -74,6 +88,15 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Report a problem — sends a low-severity bug report to the gateway */}
+        <TouchableOpacity
+          style={styles.reportBtn}
+          onPress={handleReport}
+        >
+          <HelpCircle size={16} color={Colors.indigo} />
+          <Text style={styles.reportBtnText}>REPORT A PROBLEM</Text>
+        </TouchableOpacity>
 
         {/* Contact Information */}
         <View style={styles.card}>
@@ -301,6 +324,24 @@ const styles = StyleSheet.create({
     color: Colors.sub,
     fontSize: 11,
     fontWeight: "700",
+  },
+  reportBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    borderRadius: 8,
+    paddingVertical: 14,
+    marginTop: 12,
+  },
+  reportBtnText: {
+    color: Colors.indigo,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 1,
   },
   card: {
     backgroundColor: Colors.card,
