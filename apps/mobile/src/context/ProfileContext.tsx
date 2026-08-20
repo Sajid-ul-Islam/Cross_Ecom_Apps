@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { UserProfile } from "../types";
-import { DEFAULT_PROFILE, getProfile, saveProfile as apiSaveProfile } from "../services/api";
+import { DEFAULT_PROFILE } from "../services/api";
+import { getProfile, saveProfile as apiSaveProfile } from "../services/gateway";
 
 interface ProfileContextType {
   profile: UserProfile;

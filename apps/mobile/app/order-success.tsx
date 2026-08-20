@@ -10,7 +10,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CheckCircle2, Package, ArrowRight, Home, PhoneCall } from "lucide-react-native";
 import { Colors } from "../src/theme/colors";
-import { bdt } from "../src/services/api";
+import { bdt } from "../src/services/gateway";
 
 export default function OrderSuccessScreen() {
   const router = useRouter();

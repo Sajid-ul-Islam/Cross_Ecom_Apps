@@ -23,7 +23,7 @@ import {
   ChevronUp,
 } from "lucide-react-native";
 import { Colors } from "../../src/theme/colors";
-import { fetchProductById, bdt, FREE_TEE_THRESHOLD } from "../../src/services/api";
+import { fetchProductById, bdt, FREE_TEE_THRESHOLD } from "../../src/services/gateway";
 import { Product } from "../../src/types";
 import { useCart } from "../../src/context/CartContext";
 import { useProfile } from "../../src/context/ProfileContext";

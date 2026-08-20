@@ -14,7 +14,7 @@ import { Search, X, SlidersHorizontal } from "lucide-react-native";
 import { Header } from "../../src/components/Header";
 import { ProductCard } from "../../src/components/ProductCard";
 import { Colors } from "../../src/theme/colors";
-import { fetchProducts, CATEGORIES } from "../../src/services/api";
+import { fetchProducts, CATEGORIES } from "../../src/services/gateway";
 import { Product, DeenCategory } from "../../src/types";
 
 export default function ShopScreen() {

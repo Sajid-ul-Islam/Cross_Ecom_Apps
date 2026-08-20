@@ -3,7 +3,7 @@ import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { Product } from "../types";
 import { Colors } from "../theme/colors";
-import { bdt } from "../services/api";
+import { bdt } from "../services/gateway";
 
 interface ProductCardProps {
   product: Product;
