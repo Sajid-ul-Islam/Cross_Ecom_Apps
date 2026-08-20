@@ -10,12 +10,21 @@ import {
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Search, X, SlidersHorizontal } from "lucide-react-native";
+import { Search, X, SlidersHorizontal, ArrowDownNarrowWide, ArrowUpNarrowWide } from "lucide-react-native";
 import { Header } from "../../src/components/Header";
 import { ProductCard } from "../../src/components/ProductCard";
 import { Colors } from "../../src/theme/colors";
 import { fetchProducts, CATEGORIES } from "../../src/services/gateway";
 import { Product, DeenCategory } from "../../src/types";
+
+type SortKey = "default" | "price-asc" | "price-desc" | "name-asc" | "new";
+const SORT_LABELS: Record<SortKey, string> = {
+  default: "Featured",
+  "price-asc": "Price ↑",
+  "price-desc": "Price ↓",
+  "name-asc": "A–Z",
+  new: "Newest",
+};
 
 export default function ShopScreen() {
   const params = useLocalSearchParams<{ category?: string }>();
@@ -23,6 +32,7 @@ export default function ShopScreen() {
     (params.category as DeenCategory) || "ALL"
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const [sort, setSort] = useState<SortKey>("default");
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,10 +44,11 @@ export default function ShopScreen() {
 
   useEffect(() => {
     setLoading(true);
-    fetchProducts(selectedCategory, searchQuery)
+    const sortParam = sort === "default" ? undefined : (sort as "price-asc" | "price-desc" | "name-asc" | "new");
+    fetchProducts(selectedCategory, searchQuery, sortParam)
       .then((data) => setProducts(data))
       .finally(() => setLoading(false));
-  }, [selectedCategory, searchQuery]);
+  }, [selectedCategory, searchQuery, sort]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -86,6 +97,40 @@ export default function ShopScreen() {
             );
           })}
         </ScrollView>
+      </View>
+
+      {/* Sort Bar */}
+      <View style={styles.sortBar}>
+        <TouchableOpacity
+          style={[styles.sortChip, sort === "default" && styles.sortChipActive]}
+          activeOpacity={0.7}
+          onPress={() => setSort("default")}
+        >
+          <Text style={[styles.sortChipText, sort === "default" && styles.sortChipTextActive]}>Featured</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.sortChip, sort === "price-asc" && styles.sortChipActive]}
+          activeOpacity={0.7}
+          onPress={() => setSort("price-asc")}
+        >
+          <ArrowUpNarrowWide size={13} color={sort === "price-asc" ? "#fff" : Colors.sub} />
+          <Text style={[styles.sortChipText, sort === "price-asc" && styles.sortChipTextActive]}>Price</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.sortChip, sort === "price-desc" && styles.sortChipActive]}
+          activeOpacity={0.7}
+          onPress={() => setSort("price-desc")}
+        >
+          <ArrowDownNarrowWide size={13} color={sort === "price-desc" ? "#fff" : Colors.sub} />
+          <Text style={[styles.sortChipText, sort === "price-desc" && styles.sortChipTextActive]}>Price</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.sortChip, sort === "name-asc" && styles.sortChipActive]}
+          activeOpacity={0.7}
+          onPress={() => setSort("name-asc")}
+        >
+          <Text style={[styles.sortChipText, sort === "name-asc" && styles.sortChipTextActive]}>A–Z</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Header with Result Count */}
@@ -201,6 +246,35 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   categoryChipTextActive: {
+    color: "#FFFFFF",
+  },
+  sortBar: {
+    flexDirection: "row",
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  sortChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    backgroundColor: Colors.card,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  sortChipActive: {
+    backgroundColor: Colors.indigoDark,
+    borderColor: Colors.indigoDark,
+  },
+  sortChipText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: Colors.sub,
+  },
+  sortChipTextActive: {
     color: "#FFFFFF",
   },
   metaRow: {

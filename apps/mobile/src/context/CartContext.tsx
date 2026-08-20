@@ -5,7 +5,7 @@ import { DELIVERY_FEES, FREE_TEE_THRESHOLD } from "../services/gateway";
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (product: Product, size: string, qty?: number) => void;
+  addToCart: (product: Product, size: string, qty?: number, variationId?: number) => void;
   removeFromCart: (productId: string, size: string) => void;
   updateQty: (productId: string, size: string, delta: number) => void;
   clearCart: () => void;
@@ -44,7 +44,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [cart, loaded]);
 
-  const addToCart = (product: Product, size: string, qty = 1) => {
+  const addToCart = (product: Product, size: string, qty = 1, variationId?: number) => {
     setCart((prev) => {
       const existingIdx = prev.findIndex(
         (item) => item.productId === product.id && item.size === size
@@ -54,7 +54,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         copy[existingIdx].qty += qty;
         return copy;
       }
-      return [...prev, { productId: product.id, product, size, qty }];
+      return [...prev, { productId: product.id, product, size, qty, variationId } as CartItem];
     });
   };
 

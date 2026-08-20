@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { ShoppingBag, ArrowLeft, Search } from "lucide-react-native";
 import { Colors } from "../theme/colors";
 import { useCart } from "../context/CartContext";
+import { getConnection } from "../services/gateway";
 
 interface HeaderProps {
   title?: string;
@@ -24,6 +25,8 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const router = useRouter();
   const { totalItems } = useCart();
+  const connection = getConnection();
+  const live = connection === "online";
 
   return (
     <View style={styles.container}>
@@ -39,7 +42,12 @@ export const Header: React.FC<HeaderProps> = ({
           </TouchableOpacity>
         ) : (
           <View style={styles.brandContainer}>
-            <Text style={styles.brandTitle}>{title}</Text>
+            <View style={styles.brandRow}>
+              <Text style={styles.brandTitle}>{title}</Text>
+              <View style={[styles.connDot, { backgroundColor: live ? Colors.emerald : Colors.faint }]}>
+                <Text style={styles.connText}>{live ? "LIVE" : "OFFLINE"}</Text>
+              </View>
+            </View>
             {subtitle ? <Text style={styles.brandSubtitle}>{subtitle}</Text> : (
               <Text style={styles.brandTag}>DENIM &amp; CO · BD</Text>
             )}
@@ -100,6 +108,11 @@ const styles = StyleSheet.create({
   brandContainer: {
     flexDirection: "column",
   },
+  brandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   brandTitle: {
     fontSize: 22,
     fontWeight: "900",
@@ -111,6 +124,19 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     fontWeight: "700",
     color: Colors.denimStitch,
+  },
+  connDot: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  connText: {
+    color: "#FFFFFF",
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 0.8,
   },
   brandSubtitle: {
     fontSize: 11,

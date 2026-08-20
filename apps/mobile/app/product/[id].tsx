@@ -24,7 +24,7 @@ import {
 } from "lucide-react-native";
 import { Colors } from "../../src/theme/colors";
 import { fetchProductById, bdt, FREE_TEE_THRESHOLD } from "../../src/services/gateway";
-import { Product } from "../../src/types";
+import { Product, Variation } from "../../src/types";
 import { useCart } from "../../src/context/CartContext";
 import { useProfile } from "../../src/context/ProfileContext";
 
@@ -37,30 +37,38 @@ export default function ProductDetailScreen() {
   const { profile } = useProfile();
 
   const [product, setProduct] = useState<Product | null>(null);
+  const [variations, setVariations] = useState<Variation[]>([]);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string>("");
+  const [selectedVariationId, setSelectedVariationId] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [addedNotice, setAddedNotice] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>("fabric");
 
   useEffect(() => {
-    if (id) {
-      fetchProductById(id).then((p) => {
-        if (p) {
-          setProduct(p);
-          // Auto select user's preferred size if matching
-          if (p.category === "JEANS" && p.sizes.includes(profile.jeansSize)) {
-            setSelectedSize(profile.jeansSize);
-          } else if (p.sizes.includes(profile.topSize)) {
-            setSelectedSize(profile.topSize);
-          } else if (p.sizes.length > 0) {
-            setSelectedSize(p.sizes[0]);
-          }
-        }
-        setLoading(false);
-      });
-    }
+    if (!id) return;
+    setLoading(true);
+    fetchProductById(id).then((p) => {
+      if (p) {
+        setProduct(p);
+        const vars: Variation[] = p.variations ?? [];
+        setVariations(vars);
+        const gallery = p.gallery?.length ? p.gallery : p.images;
+        // Auto select user's preferred size if matching
+        const sizes = vars.length ? vars.map((v) => v.size) : p.sizes;
+        let initial = "";
+        if (p.category === "JEANS" && sizes.includes(profile.jeansSize)) initial = profile.jeansSize;
+        else if (sizes.includes(profile.topSize)) initial = profile.topSize;
+        else if (sizes.length > 0) initial = sizes[0];
+        setSelectedSize(initial);
+        const v = vars.find((x) => x.size === initial);
+        setSelectedVariationId(v?.id);
+      }
+      setLoading(false);
+    });
   }, [id, profile]);
+
+  const galleryImages = product?.gallery?.length ? product.gallery : product?.images ?? [];
 
   if (loading || !product) {
     return (
@@ -75,16 +83,22 @@ export default function ProductDetailScreen() {
   const hasDiscount = product.salePrice && product.salePrice < product.price;
   const currentPrice = product.salePrice ?? product.price;
 
+  const handleSizeSelect = (s: string) => {
+    setSelectedSize(s);
+    const v = variations.find((x) => x.size === s);
+    setSelectedVariationId(v?.id);
+  };
+
   const handleAddToCart = () => {
     if (!selectedSize) return;
-    addToCart(product, selectedSize, 1);
+    addToCart(product, selectedSize, 1, selectedVariationId);
     setAddedNotice(true);
     setTimeout(() => setAddedNotice(false), 2500);
   };
 
   const handleBuyNow = () => {
     if (!selectedSize) return;
-    addToCart(product, selectedSize, 1);
+    addToCart(product, selectedSize, 1, selectedVariationId);
     router.push("/(tabs)/bag");
   };
 
@@ -133,14 +147,14 @@ export default function ProductDetailScreen() {
         {/* Main Product Image Carousel */}
         <View style={styles.imageGallery}>
           <Image
-            source={{ uri: product.images[activeImageIdx] }}
+            source={{ uri: galleryImages[activeImageIdx] || product.images[0] }}
             style={styles.mainImage}
             resizeMode="cover"
           />
 
           {/* Thumbnail switcher */}
           <View style={styles.thumbRow}>
-            {product.images.map((img, idx) => (
+            {galleryImages.map((img, idx) => (
               <TouchableOpacity
                 key={idx}
                 style={[styles.thumbBtn, activeImageIdx === idx && styles.thumbBtnActive]}
@@ -173,7 +187,7 @@ export default function ProductDetailScreen() {
                 <Text style={styles.origPrice}>{bdt(product.price)}</Text>
                 <View style={styles.discountBadge}>
                   <Text style={styles.discountText}>
-                    SAVE {bdt(product.price - (product.salePrice || 0))}
+                    {product.salePct ? `-${product.salePct}%` : `SAVE ${bdt(product.price - (product.salePrice || 0))}`}
                   </Text>
                 </View>
               </>
@@ -199,20 +213,36 @@ export default function ProductDetailScreen() {
             <View style={styles.sizeGrid}>
               {product.sizes.map((s) => {
                 const isSelected = selectedSize === s;
+                const varStock = variations.find((v) => v.size === s)?.stock;
+                const oos = varStock === "outofstock";
                 return (
                   <TouchableOpacity
                     key={s}
-                    style={[styles.sizeOption, isSelected && styles.sizeOptionActive]}
+                    style={[
+                      styles.sizeOption,
+                      isSelected && styles.sizeOptionActive,
+                      oos && styles.sizeOptionDisabled,
+                    ]}
                     activeOpacity={0.75}
-                    onPress={() => setSelectedSize(s)}
+                    disabled={oos}
+                    onPress={() => handleSizeSelect(s)}
                   >
-                    <Text style={[styles.sizeOptionText, isSelected && styles.sizeOptionTextActive]}>
+                    <Text style={[styles.sizeOptionText, isSelected && styles.sizeOptionTextActive, oos && styles.sizeOptionTextDisabled]}>
                       {s}
                     </Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
+            {selectedSize && (
+              <Text style={styles.sizeStockHint}>
+                {(() => {
+                  const v = variations.find((x) => x.size === selectedSize);
+                  if (!v) return product.stockStatus === "outofstock" ? "Out of stock" : "In stock";
+                  return v.stock === "outofstock" ? "❌ Out of stock in this size" : "✓ In stock";
+                })()}
+              </Text>
+            )}
           </View>
 
           {/* Free Gift Promo Tag */}
@@ -560,6 +590,20 @@ const styles = StyleSheet.create({
   },
   sizeOptionTextActive: {
     color: "#FFFFFF",
+  },
+  sizeOptionDisabled: {
+    backgroundColor: Colors.cardSecondary,
+    borderColor: Colors.borderLight,
+  },
+  sizeOptionTextDisabled: {
+    color: Colors.faint,
+    textDecorationLine: "line-through",
+  },
+  sizeStockHint: {
+    marginTop: 8,
+    fontSize: 11,
+    fontWeight: "700",
+    color: Colors.sub,
   },
   promoTag: {
     flexDirection: "row",

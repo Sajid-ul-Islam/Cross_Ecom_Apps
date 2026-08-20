@@ -1,47 +1,69 @@
 import type { FastifyInstance } from "fastify";
 import { config, wooEnabled } from "./config.js";
 import { SEED_PRODUCTS, type DeenProduct } from "./seed.js";
-import { fetchWooProducts, pushWooOrder } from "./woo.js";
+import {
+  fetchWooProducts,
+  fetchWooVariations,
+  fetchWooStats,
+  fetchWooCategoryList,
+  pushWooOrder,
+  wooHealthy,
+} from "./woo.js";
 
-/* ------------------------------------------------------------------ */
-/*  Runtime state (gateway-side). Orders live here until Woo is live.  */
-/* ------------------------------------------------------------------ */
-
-let catalog: DeenProduct[] | null = null;
-const orders: any[] = [];
 const orderSeq = { n: 1041 };
+const orders: any[] = [];
+
+/* ------------------------------------------------------------------ */
+/*  Runtime catalog cache (gateway-side).                              */
+/* ------------------------------------------------------------------ */
 
 async function getCatalog(): Promise<DeenProduct[]> {
   if (!wooEnabled) return SEED_PRODUCTS;
-  if (catalog) return catalog;
   try {
-    catalog = await fetchWooProducts();
+    return await fetchWooProducts();
   } catch (e) {
     console.error("[gateway] Woo products failed, using seed:", (e as Error).message);
-    catalog = SEED_PRODUCTS;
+    return SEED_PRODUCTS;
   }
-  return catalog;
+}
+
+function sortProducts(list: DeenProduct[], sort: string): DeenProduct[] {
+  const arr = [...list];
+  switch (sort) {
+    case "price-asc":
+      return arr.sort((a, b) => (a.salePrice ?? a.price) - (b.salePrice ?? b.price));
+    case "price-desc":
+      return arr.sort((a, b) => (b.salePrice ?? b.price) - (a.salePrice ?? a.price));
+    case "name-asc":
+      return arr.sort((a, b) => a.name.localeCompare(b.name));
+    case "new":
+      return arr.sort((a, b) => Number(b.isNew ?? false) - Number(a.isNew ?? false));
+    default:
+      return arr;
+  }
 }
 
 export async function registerDeenRoutes(app: FastifyInstance) {
-  /* ---- health (every app pings on boot) ---- */
+  /* ---- health (honest: pings Woo when keys present) ---- */
   app.get("/v1/health", async (_req, reply) => {
-    return reply.send({
+    const health = {
       status: "ok",
       ms: Date.now(),
       gateway: config.publicUrl || `http://localhost:${config.port}`,
       mode: wooEnabled ? "live" : "seed",
-      woo: wooEnabled ? "connected" : "staging",
+      woo: wooEnabled ? (wooHealthy() ? "connected" : "no-keys") : "staging",
       redis: "in-memory",
-    });
+    };
+    return reply.send(health);
   });
 
-  /* ---- catalog (public) ---- */
+  /* ---- catalog (filter + search + sort) ---- */
   app.get("/v1/deen/products", async (req, reply) => {
     const category = (req.query as any).category as string | undefined;
     const q = (req.query as any).q as string | undefined;
+    const sort = (req.query as any).sort as string | undefined;
     let list = await getCatalog();
-    if (category && category !== "ALL") {
+    if (category && category !== "ALL" && category !== "OTHER") {
       list = list.filter((p) => p.category === category);
     }
     if (q && q.trim()) {
@@ -54,14 +76,55 @@ export async function registerDeenRoutes(app: FastifyInstance) {
           p.fabric.toLowerCase().includes(s)
       );
     }
+    if (sort) list = sortProducts(list, sort);
     return reply.send(list);
   });
 
+  /* ---- single product (with real variations) ---- */
   app.get("/v1/deen/products/:id", async (req, reply) => {
     const list = await getCatalog();
     const product = list.find((p) => p.id === (req.params as any).id);
     if (!product) return reply.code(404).send({ error: "NOT_FOUND", message: "Product not found." });
-    return reply.send(product);
+
+    let variations: any[] = [];
+    if (wooEnabled) {
+      try {
+        variations = await fetchWooVariations(product.id);
+      } catch {
+        variations = [];
+      }
+    }
+    return reply.send({ ...product, variations });
+  });
+
+  /* ---- analytics: store + sales + category + top sellers ---- */
+  app.get("/v1/deen/stats", async (_req, reply) => {
+    if (!wooEnabled) {
+      return reply.send({
+        mode: "seed",
+        store: { totalProducts: SEED_PRODUCTS.length, onSale: 0, outOfStock: 0, avgPrice: 0 },
+        sales: { period: "—", totalSales: 0, netSales: 0, orders: 0, items: 0, newCustomers: 0, shipping: 0, series: [] },
+        categories: [],
+        topSellers: [],
+        updatedAt: new Date().toISOString(),
+      });
+    }
+    try {
+      const stats = await fetchWooStats();
+      return reply.send({ mode: "live", ...stats });
+    } catch (e) {
+      return reply.code(502).send({ error: "WOO_STATS_FAILED", message: (e as Error).message });
+    }
+  });
+
+  /* ---- categories with counts (derived from live catalog) ---- */
+  app.get("/v1/deen/categories", async (_req, reply) => {
+    try {
+      const cats = await fetchWooCategoryList();
+      return reply.send(cats);
+    } catch {
+      return reply.send([]);
+    }
   });
 
   /* ---- create order (public) ---- */
@@ -93,7 +156,6 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const delivery = area === "outside" ? 130 : 70;
     const gift = subtotal >= 3500;
 
-    // Push to Woo live store when keys present; otherwise keep gateway-side.
     let wooId: number | undefined;
     if (wooEnabled) {
       try {
@@ -102,7 +164,11 @@ export async function registerDeenRoutes(app: FastifyInstance) {
           billing: { first_name: name, phone: digits, address_1: address },
           shipping: { first_name: name, phone: digits, address_1: address },
           payment_method: payment,
-          line_items: items.map((it: any) => ({ product_id: Number(it.productId), quantity: it.qty, variation_id: 0 })),
+          line_items: items.map((it: any) => ({
+            product_id: Number(it.productId),
+            variation_id: Number(it.variationId) || 0,
+            quantity: it.qty,
+          })),
         });
         wooId = r.id;
       } catch (e) {

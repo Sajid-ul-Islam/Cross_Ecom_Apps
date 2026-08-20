@@ -12,14 +12,52 @@ export interface Product {
   id: string;
   sku: string;
   name: string;
-  category: "JEANS" | "PANJABI" | "SHIRT" | "T-SHIRT" | "TROUSERS" | "POLO" | "ACCESSORIES";
+  category: "JEANS" | "PANJABI" | "SHIRT" | "T-SHIRT" | "TROUSERS" | "POLO" | "ACCESSORIES" | "OTHER";
   price: number;
   salePrice?: number;
+  regularPrice?: number;
+  salePct?: number;
   sizes: string[];
   images: [string, string];
+  gallery: string[];
   fabric: string;
+  stockStatus: "instock" | "outofstock" | "onbackorder";
+  rating: number;
+  ratingCount: number;
   blurb: string;
   isNew?: boolean;
+  variations?: Variation[];
+}
+
+export interface Variation {
+  id: number;
+  size: string;
+  stock: string;
+  price: number;
+  regular: number;
+}
+
+export interface Stats {
+  mode: "live" | "seed";
+  store: {
+    totalProducts: number;
+    onSale: number;
+    outOfStock: number;
+    avgPrice: number;
+  };
+  sales: {
+    period: string;
+    totalSales: number;
+    netSales: number;
+    orders: number;
+    items: number;
+    newCustomers: number;
+    shipping: number;
+    series: { date: string; sales: number; orders: number; customers: number }[];
+  };
+  categories: { category: string; count: number }[];
+  topSellers: { productId: number; name: string; itemsSold: number; revenue: number }[];
+  updatedAt: string;
 }
 
 export interface CartItem {
@@ -27,6 +65,7 @@ export interface CartItem {
   product: Product;
   size: string;
   qty: number;
+  variationId?: number;
 }
 
 export type PaymentMethod = "cod" | "bkash" | "nagad";
@@ -41,6 +80,7 @@ export interface OrderItemLine {
   qty: number;
   unit: number;
   gift?: boolean;
+  variationId?: number;
 }
 
 export interface Order {

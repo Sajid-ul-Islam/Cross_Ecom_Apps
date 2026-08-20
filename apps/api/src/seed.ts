@@ -11,7 +11,8 @@ export type DeenCategory =
   | "T-SHIRT"
   | "TROUSERS"
   | "POLO"
-  | "ACCESSORIES";
+  | "ACCESSORIES"
+  | "OTHER";
 
 export interface DeenProduct {
   id: string;
@@ -20,9 +21,15 @@ export interface DeenProduct {
   category: DeenCategory;
   price: number;
   salePrice?: number;
+  regularPrice?: number;
+  salePct?: number;
   sizes: string[];
   images: [string, string];
+  gallery: string[];
   fabric: string;
+  stockStatus: "instock" | "outofstock" | "onbackorder";
+  rating: number;
+  ratingCount: number;
   blurb: string;
   isNew?: boolean;
 }
@@ -54,7 +61,11 @@ function p(
     salePrice,
     sizes,
     images: [`${CDN}/${a}`, `${CDN}/${b}`],
+    gallery: [`${CDN}/${a}`, `${CDN}/${b}`],
     fabric,
+    stockStatus: "instock",
+    rating: 0,
+    ratingCount: 0,
     blurb,
     isNew,
   };
