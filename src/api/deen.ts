@@ -79,6 +79,8 @@ export interface DeenSession {
   phone: string;
   exp: number;
   provider: "password" | "otp" | "google" | "facebook";
+  providers: string[];
+  email?: string;
 }
 
 export interface DeenProfile {
@@ -345,7 +347,7 @@ export async function deenCreateOrder(payload: {
     id: `d-${Date.now()}`,
     number: `DC-${1041 + orders.length}`,
     name: payload.name.trim(),
-    phone: payload.phone.trim(),
+    phone: (getDeenSession()?.phone ?? payload.phone).trim(),
     address: payload.address.trim(),
     area: payload.area,
     payment: payload.payment,
@@ -365,7 +367,10 @@ export async function deenCreateOrder(payload: {
 
 export async function deenListOrders(): Promise<DeenOrder[]> {
   await req("GET", "/v1/deen/orders?mine=true");
-  return [...orders].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const s = getDeenSession();
+  const owner = s?.phone ?? demoAccount.phone;
+  const mine = orders.filter((o) => o.phone === owner);
+  return [...mine].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export const PAYMENT_LABELS: Record<DeenPayment, string> = {
@@ -405,6 +410,9 @@ export function getDeenSession(): DeenSession | null {
     }
     return null;
   }
+  if (!Array.isArray(s.providers)) {
+    s.providers = [s.provider ?? "password"];
+  }
   return s;
 }
 
@@ -416,8 +424,8 @@ export function deenLogout(): void {
   }
 }
 
-function issueSession(name: string, phone: string, provider: DeenSession["provider"]): DeenSession {
-  const s: DeenSession = { name, phone, exp: Date.now() + 7 * 86400000, provider };
+function issueSession(name: string, phone: string, provider: DeenSession["provider"], email?: string): DeenSession {
+  const s: DeenSession = { name, phone, exp: Date.now() + 7 * 86400000, provider, providers: [provider], email };
   save(AKEYS.session, s);
   return s;
 }
@@ -529,8 +537,48 @@ export const SOCIAL_ACCOUNTS: SocialAccount[] = [
 ];
 
 export async function deenSocialLogin(account: SocialAccount): Promise<DeenSession> {
+  const existing = getDeenSession();
+  if (!existing) {
+    await req("POST", `/v1/deen/auth/${account.provider}`, 403);
+    throw new Error("Verify your phone first — Google & Facebook link onto a phone-verified account from Profile.");
+  }
   await req("POST", `/v1/deen/auth/${account.provider}`);
-  return issueSession(account.name, account.phone, account.provider);
+  return issueSession(account.name, account.phone, account.provider, account.email);
+}
+
+/* ------------------------------------------------------------------ */
+/*  social account linking (completes a phone-verified profile)        */
+/* ------------------------------------------------------------------ */
+
+export async function deenLinkSocial(provider: "google" | "facebook", account: SocialAccount): Promise<DeenSession> {
+  await req("POST", `/v1/deen/auth/link/${provider}`);
+  const s = getDeenSession();
+  if (!s) throw new Error("Sign in with your phone first — then link accounts.");
+  const providers = Array.from(new Set([...(s.providers ?? [s.provider]), provider]));
+  const next: DeenSession = { ...s, providers, email: s.email ?? account.email };
+  save(AKEYS.session, next);
+  return next;
+}
+
+/* ------------------------------------------------------------------ */
+/*  loyalty — 1 point per ৳10 spent on non-cancelled orders            */
+/* ------------------------------------------------------------------ */
+
+export const DEEN_TIERS: { name: string; min: number; perk: string }[] = [
+  { name: "Bronze", min: 0, perk: "Birthday surprise coupon" },
+  { name: "Silver", min: 300, perk: "Free delivery inside Dhaka" },
+  { name: "Gold", min: 900, perk: "Early access to new drops" },
+  { name: "Platinum", min: 2000, perk: "Dedicated style line + free exchanges" },
+];
+
+export function computeLoyalty(list: DeenOrder[]) {
+  const active = list.filter((o) => o.status !== "cancelled");
+  const points = active.reduce((s, o) => s + Math.floor(o.total / 10), 0);
+  let tier = DEEN_TIERS[0];
+  for (const t of DEEN_TIERS) if (points >= t.min) tier = t;
+  const next = DEEN_TIERS.find((t) => t.min > points) ?? null;
+  const progress = next ? Math.min(100, Math.round(((points - tier.min) / (next.min - tier.min)) * 100)) : 100;
+  return { points, tier, next, progress };
 }
 
 /* ------------------------------------------------------------------ */

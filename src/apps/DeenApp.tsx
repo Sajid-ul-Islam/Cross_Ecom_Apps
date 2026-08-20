@@ -11,7 +11,9 @@ import {
   deenSendOtp,
   deenSocialLogin,
   deenVerifyOtp,
+  computeLoyalty,
   deenCreateOrder,
+  deenLinkSocial,
   deenListOrders,
   deenListProducts,
   deenLogin,
@@ -77,16 +79,58 @@ import {
 /*  in-app palette (light, denim-inspired)                             */
 /* ------------------------------------------------------------------ */
 
+/* Theme system — the app inherits the OS appearance (prefers-color-scheme)
+   and can be pinned Light/Dark from Profile → Appearance.
+   Palette follows 60-30-10: 60 paper, 30 card surfaces, 10 indigo accent. */
+export const DN_LIGHT = {
+  "--dn-paper": "#F5F3EC",
+  "--dn-card": "#FFFFFF",
+  "--dn-ink": "#151A2C",
+  "--dn-sub": "#6C7284",
+  "--dn-line": "#E6E2D7",
+  "--dn-indigo": "#2A3680",
+  "--dn-indigo-deep": "#1A2350",
+  "--dn-crimson": "#C93B36",
+  "--dn-ok": "#2E7D5B",
+  "--dn-sand": "#EFEBDF",
+  "--dn-indigo-tint": "#EEF0FA",
+  "--dn-crimson-tint": "#FBEFEE",
+  "--dn-ok-tint": "#EAF3EE",
+  "--dn-sand-ink": "#8C6A2F",
+} as React.CSSProperties;
+
+export const DN_DARK = {
+  "--dn-paper": "#14161F",
+  "--dn-card": "#1D2130",
+  "--dn-ink": "#ECEEF6",
+  "--dn-sub": "#9AA0B4",
+  "--dn-line": "#2C3145",
+  "--dn-indigo": "#5D6BD6",
+  "--dn-indigo-deep": "#0E1024",
+  "--dn-crimson": "#E5484D",
+  "--dn-ok": "#46B489",
+  "--dn-sand": "#262B3E",
+  "--dn-indigo-tint": "#262C4E",
+  "--dn-crimson-tint": "#3B2431",
+  "--dn-ok-tint": "#1F3229",
+  "--dn-sand-ink": "#D8B36A",
+} as React.CSSProperties;
+
 const T = {
-  paper: "#F5F3EC",
-  card: "#FFFFFF",
-  ink: "#151A2C",
-  sub: "#6C7284",
-  line: "#E6E2D7",
-  indigo: "#2A3680",
-  indigoDark: "#1A2350",
-  crimson: "#C93B36",
-  ok: "#2E7D5B",
+  paper: "var(--dn-paper)",
+  card: "var(--dn-card)",
+  ink: "var(--dn-ink)",
+  sub: "var(--dn-sub)",
+  line: "var(--dn-line)",
+  indigo: "var(--dn-indigo)",
+  indigoDark: "var(--dn-indigo-deep)",
+  crimson: "var(--dn-crimson)",
+  ok: "var(--dn-ok)",
+  sand: "var(--dn-sand)",
+  indigoTint: "var(--dn-indigo-tint)",
+  crimsonTint: "var(--dn-crimson-tint)",
+  okTint: "var(--dn-ok-tint)",
+  sandInk: "var(--dn-sand-ink)",
 };
 
 const SIZE_GUIDE_ROWS: string[][] = [
@@ -243,6 +287,32 @@ function DeenPhone() {
   const [searchHistory, setSearchHistory] = usePersisted<string[]>("deen.search.v1", []);
   const [notifs, setNotifs] = usePersisted<Notif[]>(NKEY, loadNotifs());
   const [session, setSession] = useState<DeenSession | null>(() => getDeenSession());
+
+  /* appearance — inherits the OS theme by default, pinnable from Profile */
+  const [themeMode, setThemeMode] = useState<"system" | "light" | "dark">(() => {
+    try {
+      return (window.localStorage.getItem("deen.theme.v1") as "system" | "light" | "dark") || "system";
+    } catch {
+      return "system";
+    }
+  });
+  const setTheme = (m: "system" | "light" | "dark") => {
+    setThemeMode(m);
+    try {
+      window.localStorage.setItem("deen.theme.v1", m);
+    } catch {
+      /* ignore */
+    }
+  };
+  const [sysDark, setSysDark] = useState(() => window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false);
+  useEffect(() => {
+    const mq = window.matchMedia?.("(prefers-color-scheme: dark)");
+    if (!mq) return;
+    const on = (e: MediaQueryListEvent) => setSysDark(e.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  const dark = themeMode === "dark" || (themeMode === "system" && sysDark);
 
   useEffect(() => {
     const t = window.setTimeout(() => setBoot(false), reduced ? 200 : 1600);
@@ -413,7 +483,17 @@ function DeenPhone() {
       case "orders":
         return <OrdersScreen go={setScreen} onCancel={cancelOrder} />;
       case "profile":
-        return <ProfileScreen go={setScreen} session={session} onLogout={() => { deenLogout(); setSession(null); toast("Signed out — token cleared from SecureStore", "wire"); }} wishCount={wishlist.length} />;
+        return (
+          <ProfileScreen
+            go={setScreen}
+            session={session}
+            onLogout={() => { deenLogout(); setSession(null); toast("Signed out — token cleared from SecureStore", "wire"); }}
+            onSession={setSession}
+            wishCount={wishlist.length}
+            themeMode={themeMode}
+            onThemeMode={setTheme}
+          />
+        );
       case "wishlist":
         return <WishlistScreen ids={wishlist} find={find} go={setScreen} onRemove={toggleWishlist} onAdd={addToCart} />;
       case "auth":
@@ -450,7 +530,11 @@ function DeenPhone() {
       >
         <span className="absolute -right-[3px] top-28 h-16 w-[3px] rounded-r bg-black/70" />
         <span className="absolute -right-[3px] top-48 h-10 w-[3px] rounded-r bg-black/70" />
-        <div className="relative h-[720px] overflow-hidden rounded-[34px]" style={{ background: T.paper }}>
+        <div
+          data-deen-theme={dark ? "dark" : "light"}
+          className="relative h-[720px] overflow-hidden rounded-[34px]"
+          style={{ ...(dark ? DN_DARK : DN_LIGHT), background: T.paper }}
+        >
           {/* status bar */}
           <div className="relative z-20 flex items-center justify-between px-6 pt-2.5 pb-1.5 font-mono text-[10px]" style={{ color: T.ink }}>
             <span className="font-semibold tracking-wider">{clock}</span>
@@ -1166,7 +1250,7 @@ function ProductScreen({
                   style={
                     size === s
                       ? { background: T.indigo, borderColor: T.indigo, color: "#fff" }
-                      : { background: "#fff", borderColor: sizeErr ? T.crimson : T.line, color: T.ink }
+                      : { background: T.card, borderColor: sizeErr ? T.crimson : T.line, color: T.ink }
                   }
                 >
                   {s}
@@ -1279,11 +1363,11 @@ function ProductScreen({
       </div>
 
       {/* sticky CTA */}
-      <div className="flex gap-2.5 border-t p-3.5" style={{ background: "#fff", borderColor: T.line }}>
+      <div className="flex gap-2.5 border-t p-3.5" style={{ background: T.card, borderColor: T.line }}>
         <button
           onClick={onWish}
           className={`flex h-[50px] w-[50px] shrink-0 cursor-pointer items-center justify-center rounded-xl border transition-all active:scale-90 ${wished ? "heart-pop" : ""}`}
-          style={{ borderColor: wished ? T.crimson : T.line, color: wished ? T.crimson : T.sub, background: wished ? "#FBEFEE" : "#fff" }}
+          style={{ borderColor: wished ? T.crimson : T.line, color: wished ? T.crimson : T.sub, background: wished ? T.crimsonTint : T.card }}
           aria-label="Toggle wishlist"
         >
           <IconHeart size={19} />
@@ -1384,7 +1468,7 @@ function BagScreen({
               const p = find(it.productId);
               if (!p) return null;
               return (
-                <div key={`${it.productId}-${it.size}`} className="flex gap-3 rounded-xl border p-2.5" style={{ borderColor: T.line, background: "#fff" }}>
+                <div key={`${it.productId}-${it.size}`} className="flex gap-3 rounded-xl border p-2.5" style={{ borderColor: T.line, background: T.card }}>
                   <button onClick={() => go({ name: "product", id: p.id })} className="h-[84px] w-[64px] shrink-0 cursor-pointer overflow-hidden rounded-lg" style={{ background: T.line }}>
                     <PImg src={p.images[0]} alt={p.name} className="h-full w-full" />
                   </button>
@@ -1426,7 +1510,7 @@ function BagScreen({
             </div>
           </div>
 
-          <div className="border-t p-4" style={{ background: "#fff", borderColor: T.line }}>
+          <div className="border-t p-4" style={{ background: T.card, borderColor: T.line }}>
             <div className="flex items-baseline justify-between">
               <span className="text-[12px] uppercase tracking-[0.12em]" style={{ color: T.sub }}>Subtotal</span>
               <span className="font-disp text-[19px]">{bdt(subtotal)}</span>
@@ -1631,7 +1715,7 @@ function CheckoutScreen({
                 key={a.id}
                 onClick={() => setArea(a.id)}
                 className="cursor-pointer rounded-xl border px-3 py-2.5 text-left transition-all active:scale-[0.97]"
-                style={area === a.id ? { borderColor: T.indigo, background: "#EEF0FA" } : { borderColor: T.line, background: "#fff" }}
+                style={area === a.id ? { borderColor: T.indigo, background: T.indigoTint } : { borderColor: T.line, background: T.card }}
               >
                 <span className="block text-[12px] font-bold">{a.label}</span>
                 <span className="font-mono text-[10px]" style={{ color: T.sub }}>{bdt(a.fee)} · 2–4 days</span>
@@ -1649,7 +1733,7 @@ function CheckoutScreen({
                 key={pm}
                 onClick={() => setPayment(pm)}
                 className="flex w-full cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-all active:scale-[0.98]"
-                style={payment === pm ? { borderColor: T.indigo, background: "#EEF0FA" } : { borderColor: T.line, background: "#fff" }}
+                style={payment === pm ? { borderColor: T.indigo, background: T.indigoTint } : { borderColor: T.line, background: T.card }}
               >
                 <span className="flex h-4 w-4 items-center justify-center rounded-full border" style={{ borderColor: payment === pm ? T.indigo : T.line }}>
                   {payment === pm && <span className="h-2 w-2 rounded-full" style={{ background: T.indigo }} />}
@@ -1671,13 +1755,13 @@ function CheckoutScreen({
         </div>
 
         {err && (
-          <div className="deen-pop rounded-xl border px-3.5 py-2.5 text-[12px] font-semibold" style={{ borderColor: T.crimson, color: T.crimson, background: "#FBEFEE" }}>
+          <div className="deen-pop rounded-xl border px-3.5 py-2.5 text-[12px] font-semibold" style={{ borderColor: T.crimson, color: T.crimson, background: T.crimsonTint }}>
             {err}
           </div>
         )}
       </div>
 
-      <div className="border-t p-4" style={{ background: "#fff", borderColor: T.line }}>
+      <div className="border-t p-4" style={{ background: T.card, borderColor: T.line }}>
         <button
           onClick={submit}
           disabled={placing}
@@ -1709,7 +1793,7 @@ function SuccessScreen({ order, go }: { order: DeenOrder; go: (s: Screen) => voi
           {PAYMENT_LABELS[order.payment]}: our agent will share the merchant number via SMS. Pay {bdt(order.total)} to confirm.
         </p>
       )}
-      <div className="mt-4 w-full rounded-xl border p-3.5 text-left" style={{ borderColor: T.line, background: "#fff" }}>
+      <div className="mt-4 w-full rounded-xl border p-3.5 text-left" style={{ borderColor: T.line, background: T.card }}>
         {order.lines.map((l, i) => (
           <div key={i} className="flex justify-between py-0.5 text-[12px]">
             <span className="truncate pr-3">{l.name}{l.gift ? " ★" : ""}</span>
@@ -1781,7 +1865,7 @@ function OrdersScreen({ go, onCancel }: { go: (s: Screen) => void; onCancel: (id
             const isOpen = open === o.id;
             const stageIdx = ORDER_FLOW.indexOf(o.status);
             return (
-              <div key={o.id} className="overflow-hidden rounded-xl border transition-shadow" style={{ borderColor: T.line, background: "#fff" }}>
+              <div key={o.id} className="overflow-hidden rounded-xl border transition-shadow" style={{ borderColor: T.line, background: T.card }}>
                 <button onClick={() => setOpen(isOpen ? null : o.id)} className="flex w-full cursor-pointer items-center justify-between px-4 py-3 text-left">
                   <span>
                     <span className="block font-mono text-[12px] font-bold">{o.number}</span>
@@ -1810,7 +1894,7 @@ function OrdersScreen({ go, onCancel }: { go: (s: Screen) => void; onCancel: (id
                               className="flex h-5 w-5 items-center justify-center rounded-full border-2"
                               style={{
                                 borderColor: i <= stageIdx ? T.indigo : T.line,
-                                background: i <= stageIdx ? T.indigo : "#fff",
+                                background: i <= stageIdx ? T.indigo : T.card,
                                 color: "#fff",
                               }}
                             >
@@ -1874,20 +1958,82 @@ function ProfileScreen({
   go,
   session,
   onLogout,
+  onSession,
   wishCount,
+  themeMode,
+  onThemeMode,
 }: {
   go: (s: Screen) => void;
   session: DeenSession | null;
   onLogout: () => void;
+  onSession: (s: DeenSession) => void;
   wishCount: number;
+  themeMode: "system" | "light" | "dark";
+  onThemeMode: (m: "system" | "light" | "dark") => void;
 }) {
   const toast = useToast();
   const [draft, setDraft] = useState<DeenProfile>(getDeenProfile());
+  const [orders, setOrders] = useState<DeenOrder[] | null>(null);
+  const [linking, setLinking] = useState<"google" | "facebook" | null>(null);
+  const [linkBusy, setLinkBusy] = useState<string | null>(null);
+  const [sizesSaved, setSizesSaved] = useState(() => {
+    try {
+      return window.localStorage.getItem("deen.sizes.v1") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [ringOn, setRingOn] = useState(false);
+
+  useEffect(() => {
+    if (session) deenListOrders().then(setOrders);
+  }, [session?.phone]);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setRingOn(true), 120);
+    return () => window.clearTimeout(t);
+  }, []);
 
   const saveAll = () => {
     saveDeenProfile(draft);
+    setSizesSaved(true);
+    try {
+      window.localStorage.setItem("deen.sizes.v1", "1");
+    } catch {
+      /* ignore */
+    }
     toast("Profile synced · SecureStore updated", "mint");
   };
+
+  const loyalty = computeLoyalty(orders ?? []);
+  const providers = session?.providers ?? [];
+
+  /* completion — five checkpoints, 20% each */
+  const checks: { label: string; done: boolean; action: (() => void) | null }[] = [
+    { label: "Phone verified", done: !!session, action: session ? null : () => go({ name: "auth", returnTo: { name: "profile" } }) },
+    { label: "Google linked", done: providers.includes("google"), action: session ? () => setLinking("google") : () => go({ name: "auth", returnTo: { name: "profile" } }) },
+    { label: "Facebook linked", done: providers.includes("facebook"), action: session ? () => setLinking("facebook") : () => go({ name: "auth", returnTo: { name: "profile" } }) },
+    { label: "Sizes saved", done: sizesSaved, action: null },
+    { label: "First order placed", done: (orders?.length ?? 0) > 0, action: () => go({ name: "shop" }) },
+  ];
+  const pctDone = Math.round((checks.filter((c) => c.done).length / checks.length) * 100);
+  const R = 32;
+  const CIRC = 2 * Math.PI * R;
+
+  const linkAccount = async (account: SocialAccount) => {
+    setLinkBusy(account.email);
+    try {
+      const updated = await deenLinkSocial(account.provider, account);
+      onSession(updated);
+      setLinking(null);
+      pushProfileToast(`${account.provider === "google" ? "Google" : "Facebook"} linked — profile +20%`, "mint");
+    } catch (e) {
+      pushProfileToast(e instanceof Error ? e.message : "Could not link account.", "coral");
+    } finally {
+      setLinkBusy(null);
+    }
+  };
+  const pushProfileToast = toast;
 
   const input = "w-full rounded-xl border bg-white px-3.5 py-2.5 font-arch text-[13px]";
   const label = "mb-1 block font-mono text-[9px] font-bold uppercase tracking-[0.18em]";
@@ -1896,6 +2042,7 @@ function ProfileScreen({
     <div className="px-4 pt-1 pb-8 font-arch" style={{ color: T.ink }}>
       <p className="font-disp text-[20px]">Profile</p>
 
+      {/* identity + completion ring */}
       <div className="mt-3 flex items-center gap-3.5">
         <span className="flex h-14 w-14 items-center justify-center rounded-full font-disp text-[18px] text-white" style={{ background: T.indigo }}>
           {draft.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "D"}
@@ -1904,34 +2051,153 @@ function ProfileScreen({
           <p className="text-[15px] font-bold">{draft.name || "—"}</p>
           <p className="font-mono text-[10px]" style={{ color: T.sub }}>{draft.phone || "no number"}</p>
           {session ? (
-            <span className="mt-1 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[8.5px] font-bold uppercase tracking-[0.14em]" style={{ background: "#EAF3EE", color: T.ok }}>
+            <span className="mt-1 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[8.5px] font-bold uppercase tracking-[0.14em]" style={{ background: T.okTint, color: T.ok }}>
               <span className="pulse-dot h-1 w-1 rounded-full" style={{ background: T.ok }} />
-              via {session.provider === "otp" ? "phone OTP" : session.provider === "google" ? "Google" : session.provider === "facebook" ? "Facebook" : "password"} · SecureStore
+              phone ✓{providers.includes("google") ? " · G" : ""}{providers.includes("facebook") ? " · f" : ""} · SecureStore
             </span>
           ) : (
-            <span className="mt-1 inline-block rounded-full px-2 py-0.5 font-mono text-[8.5px] font-bold uppercase tracking-[0.14em]" style={{ background: "#EFEBDF", color: "#8C6A2F" }}>
+            <span className="mt-1 inline-block rounded-full px-2 py-0.5 font-mono text-[8.5px] font-bold uppercase tracking-[0.14em]" style={{ background: T.sand, color: T.sandInk }}>
               guest session
             </span>
           )}
         </div>
+        {/* completion ring */}
+        <div className="relative h-[84px] w-[84px] shrink-0" title="Profile completion">
+          <svg viewBox="0 0 84 84" className="h-full w-full -rotate-90">
+            <circle cx="42" cy="42" r={R} fill="none" strokeWidth="7" style={{ stroke: T.line }} />
+            <circle
+              cx="42"
+              cy="42"
+              r={R}
+              fill="none"
+              strokeWidth="7"
+              strokeLinecap="round"
+              style={{
+                stroke: pctDone === 100 ? T.ok : T.indigo,
+                strokeDasharray: CIRC,
+                strokeDashoffset: ringOn ? CIRC * (1 - pctDone / 100) : CIRC,
+                transition: "stroke-dashoffset 1s cubic-bezier(0.22,0.8,0.3,1), stroke 0.4s",
+              }}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="font-disp text-[17px] leading-none">{pctDone}%</span>
+            <span className="mt-0.5 font-mono text-[6.5px] uppercase tracking-[0.14em]" style={{ color: T.sub }}>complete</span>
+          </div>
+        </div>
+      </div>
+
+      {/* completion checklist */}
+      <div className="mt-4 rounded-xl border p-3.5" style={{ borderColor: T.line, background: T.card }}>
+        <div className="flex items-baseline justify-between">
+          <p className="text-[12px] font-bold uppercase tracking-[0.12em]">Complete your profile</p>
+          <span className="font-mono text-[9px] uppercase tracking-[0.14em]" style={{ color: T.sub }}>{checks.filter((c) => c.done).length}/5</span>
+        </div>
+        <div className="mt-2.5 space-y-1.5">
+          {checks.map((c) => (
+            <button
+              key={c.label}
+              onClick={c.done ? undefined : (c.action ?? undefined)}
+              className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[12px] transition-all ${c.done ? "" : "cursor-pointer active:scale-[0.98]"}`}
+              style={c.done ? {} : { background: T.indigoTint }}
+            >
+              <span
+                className="flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-full border"
+                style={c.done ? { background: T.ok, borderColor: T.ok, color: "#fff" } : { borderColor: T.indigo, color: T.indigo }}
+              >
+                {c.done ? <IconCheck size={9} /> : <span className="h-1.5 w-1.5 rounded-full" style={{ background: T.indigo }} />}
+              </span>
+              <span className={c.done ? "font-semibold" : "font-bold"} style={c.done ? { color: T.sub, textDecoration: "line-through" } : {}}>{c.label}</span>
+              {!c.done && <span className="ml-auto font-mono text-[8.5px] font-bold uppercase tracking-[0.12em]" style={{ color: T.indigo }}>do it →</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* loyalty */}
+      <div className="mt-3 overflow-hidden rounded-xl" style={{ background: T.indigoDark }}>
+        <div className="flex items-center justify-between px-4 pt-3.5">
+          <div>
+            <p className="font-mono text-[8.5px] font-bold uppercase tracking-[0.2em] text-white/50">Loyalty score</p>
+            <p className="mt-1 font-disp text-[26px] leading-none text-white">
+              {loyalty.points.toLocaleString("en-IN")} <span className="text-[12px] text-white/60">pts</span>
+            </p>
+          </div>
+          <span className="rounded-full px-3 py-1.5 font-mono text-[9.5px] font-bold uppercase tracking-[0.16em]" style={{ background: T.indigo, color: "#fff" }}>
+            {loyalty.tier.name}
+          </span>
+        </div>
+        <div className="px-4 pb-4 pt-3">
+          <div className="h-1.5 overflow-hidden rounded-full bg-white/15">
+            <div className="h-full rounded-full bg-white transition-all duration-700" style={{ width: `${loyalty.progress}%` }} />
+          </div>
+          <p className="mt-2 font-mono text-[9px] leading-relaxed text-white/60">
+            {loyalty.next
+              ? `${(loyalty.next.min - loyalty.points).toLocaleString("en-IN")} pts to ${loyalty.next.name} — ${loyalty.next.perk}`
+              : `Top tier unlocked — ${loyalty.tier.perk}`}
+            <span className="block text-white/40">1 pt per ৳10 spent · points land when the parcel is on its way</span>
+          </p>
+        </div>
+      </div>
+
+      {/* recent orders */}
+      <div className="mt-3 rounded-xl border" style={{ borderColor: T.line, background: T.card }}>
+        <div className="flex items-center justify-between px-4 pt-3.5">
+          <p className="text-[12px] font-bold uppercase tracking-[0.12em]">Your orders</p>
+          <button onClick={() => go({ name: "orders" })} className="cursor-pointer font-mono text-[9px] font-bold uppercase tracking-[0.14em] transition-colors" style={{ color: T.indigo }}>
+            view all →
+          </button>
+        </div>
+        {orders === null ? (
+          <p className="px-4 py-4 font-mono text-[10px]" style={{ color: T.sub }}>syncing…</p>
+        ) : orders.length === 0 ? (
+          <div className="px-4 py-4">
+            <p className="text-[12px]" style={{ color: T.sub }}>{session ? "No orders yet — your history will live here." : "Sign in to see your order history."}</p>
+            {!session && (
+              <button onClick={() => go({ name: "auth", returnTo: { name: "profile" } })} className="mt-2 cursor-pointer rounded-full px-4 py-2 text-[11px] font-bold text-white transition-transform active:scale-95" style={{ background: T.indigo }}>
+                Verify phone to sign in
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="px-4 pb-3.5 pt-2">
+            {orders.slice(0, 3).map((o) => (
+              <button key={o.id} onClick={() => go({ name: "orders" })} className="flex w-full cursor-pointer items-center justify-between gap-3 border-t py-2 text-left transition-opacity hover:opacity-80" style={{ borderColor: T.line }}>
+                <span className="min-w-0">
+                  <span className="block font-mono text-[11px] font-bold">{o.number}</span>
+                  <span className="block truncate font-mono text-[8.5px] uppercase tracking-[0.1em]" style={{ color: T.sub }}>
+                    {new Date(o.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })} · {o.lines.length} item{o.lines.length > 1 ? "s" : ""}
+                  </span>
+                </span>
+                <span
+                  className="shrink-0 rounded-full px-2 py-0.5 font-mono text-[8px] font-bold uppercase tracking-[0.1em] text-white"
+                  style={{ background: o.status === "delivered" ? T.ok : o.status === "shipped" ? T.indigo : o.status === "cancelled" ? T.sub : T.sandInk }}
+                >
+                  {o.status}
+                </span>
+                <span className="shrink-0 text-[12px] font-bold">{bdt(o.total)}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* quick rows */}
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <div className="mt-3 grid grid-cols-2 gap-2">
         <button
           onClick={() => go({ name: "wishlist" })}
           className="flex cursor-pointer items-center justify-between rounded-xl border px-3.5 py-3 text-left transition-all active:scale-[0.97]"
-          style={{ borderColor: T.line, background: "#fff" }}
+          style={{ borderColor: T.line, background: T.card }}
         >
           <span className="flex items-center gap-2 text-[12.5px] font-bold">
-            <span style={{ color: wishCount > 0 ? T.crimson : T.ink }}><IconHeart size={15} /></span> Wishlist
+            <span style={{ color: wishCount > 0 ? T.crimson : T.ink }}><IconHeart size={15} /></span> Saved
           </span>
           <span className="font-mono text-[11px] font-bold" style={{ color: T.indigo }}>{wishCount}</span>
         </button>
         <button
           onClick={() => go({ name: "notifications" })}
           className="flex cursor-pointer items-center justify-between rounded-xl border px-3.5 py-3 text-left transition-all active:scale-[0.97]"
-          style={{ borderColor: T.line, background: "#fff" }}
+          style={{ borderColor: T.line, background: T.card }}
         >
           <span className="flex items-center gap-2 text-[12.5px] font-bold">
             <IconBell size={15} /> Alerts
@@ -1939,6 +2205,56 @@ function ProfileScreen({
           <span className="font-mono text-[11px] font-bold" style={{ color: T.indigo }}>→</span>
         </button>
       </div>
+
+      {/* appearance — inherits system by default */}
+      <div className="mt-3 rounded-xl border p-3.5" style={{ borderColor: T.line, background: T.card }}>
+        <div className="flex items-baseline justify-between">
+          <p className="text-[12px] font-bold uppercase tracking-[0.12em]">Appearance</p>
+          <span className="font-mono text-[8.5px] uppercase tracking-[0.14em]" style={{ color: T.sub }}>follows Android theme</span>
+        </div>
+        <div className="mt-2.5 grid grid-cols-3 gap-1 rounded-lg p-1" style={{ background: T.paper }}>
+          {(["system", "light", "dark"] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => onThemeMode(m)}
+              className="cursor-pointer rounded-md py-1.5 font-mono text-[9px] font-bold uppercase tracking-[0.1em] transition-all duration-200 active:scale-95"
+              style={themeMode === m ? { background: T.indigo, color: "#fff" } : { color: T.sub }}
+            >
+              {m === "system" ? "Auto" : m}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* social link sheet */}
+      {linking && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-4" onClick={() => setLinking(null)}>
+          <div className="screen-up w-full max-w-[340px] rounded-2xl p-5" style={{ background: T.card }} onClick={(e) => e.stopPropagation()}>
+            <p className="font-disp text-[16px]">{linking === "google" ? "Link a Google account" : "Link Facebook"}</p>
+            <p className="mt-1 font-mono text-[9.5px]" style={{ color: T.sub }}>adds email + one-tap sign-in · your phone stays the account key</p>
+            <div className="mt-3 space-y-2">
+              {SOCIAL_ACCOUNTS.filter((a) => a.provider === linking).map((a) => (
+                <button
+                  key={a.email}
+                  onClick={() => linkAccount(a)}
+                  disabled={linkBusy !== null}
+                  className="flex w-full cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-all hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-60"
+                  style={{ borderColor: T.line, background: T.paper }}
+                >
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full font-arch text-[12px] font-bold text-white" style={{ background: linking === "google" ? "#4285F4" : "#1877F2" }}>
+                    {a.name[0]}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[12.5px] font-bold">{a.name}</span>
+                    <span className="block truncate font-mono text-[9.5px]" style={{ color: T.sub }}>{a.email}</span>
+                  </span>
+                  {linkBusy === a.email ? <span className="deen-dot h-2 w-2 rounded-full" style={{ background: T.indigo }} /> : <span className="font-mono text-[9px] font-bold uppercase" style={{ color: T.indigo }}>link</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mt-5 space-y-3">
         <div>
@@ -1983,13 +2299,13 @@ function ProfileScreen({
             key={key}
             onClick={() => setDraft({ ...draft, [key]: !draft[key] })}
             className="flex w-full cursor-pointer items-center justify-between rounded-xl border px-4 py-3 text-left transition-all active:scale-[0.98]"
-            style={{ borderColor: T.line, background: "#fff" }}
+            style={{ borderColor: T.line, background: T.card }}
           >
             <span>
               <span className="block text-[13px] font-bold">{title}</span>
               <span className="block font-mono text-[9.5px]" style={{ color: T.sub }}>{sub}</span>
             </span>
-            <span className="flex h-6 w-11 items-center rounded-full p-0.5 transition-colors duration-200" style={{ background: draft[key] ? T.indigo : "#D9D5C9" }}>
+            <span className="flex h-6 w-11 items-center rounded-full p-0.5 transition-colors duration-200" style={{ background: draft[key] ? T.indigo : T.line }}>
               <span className="h-5 w-5 rounded-full bg-white shadow transition-transform duration-200" style={{ transform: draft[key] ? "translateX(20px)" : "none" }} />
             </span>
           </button>
@@ -1999,7 +2315,7 @@ function ProfileScreen({
       <div className="mt-5 rounded-xl p-4 text-center" style={{ background: T.indigoDark }}>
         <p className="font-disp text-[14px] text-white">Need help?</p>
         <p className="mt-1 font-mono text-[11px] text-white/70">Hotline 09617-700500 · 10 AM – 6 PM</p>
-        <button onClick={() => go({ name: "shop" })} className="mt-3 cursor-pointer rounded-full bg-white px-5 py-2 text-[11px] font-bold transition-transform active:scale-95" style={{ color: T.indigoDark }}>
+        <button onClick={() => go({ name: "shop" })} className="dn-keep-white mt-3 cursor-pointer rounded-full bg-white px-5 py-2 text-[11px] font-bold transition-transform active:scale-95" style={{ color: "#fff" }}>
           Back to store
         </button>
       </div>
@@ -2008,7 +2324,7 @@ function ProfileScreen({
         <button
           onClick={onLogout}
           className="mt-5 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border py-3 font-arch text-[13px] font-bold transition-all active:scale-[0.98]"
-          style={{ borderColor: T.crimson, color: T.crimson, background: "#fff" }}
+          style={{ borderColor: T.crimson, color: T.crimson, background: T.card }}
         >
           <IconLogout size={15} /> Sign out
         </button>
@@ -2063,7 +2379,7 @@ function WishlistScreen({
       ) : (
         <div className="mt-4 space-y-3">
           {items.map((p) => (
-            <div key={p.id} className="flex gap-3 rounded-xl border p-2.5" style={{ borderColor: T.line, background: "#fff" }}>
+            <div key={p.id} className="flex gap-3 rounded-xl border p-2.5" style={{ borderColor: T.line, background: T.card }}>
               <button onClick={() => go({ name: "product", id: p.id })} className="h-[88px] w-[66px] shrink-0 cursor-pointer overflow-hidden rounded-lg" style={{ background: T.line }}>
                 <PImg src={p.images[0]} alt={p.name} className="h-full w-full" />
               </button>
@@ -2325,7 +2641,7 @@ function AuthScreen({
         </p>
 
         {/* method toggle */}
-        <div className="mt-4 grid grid-cols-2 rounded-xl border p-1" style={{ borderColor: T.line, background: "#fff" }}>
+        <div className="mt-4 grid grid-cols-2 rounded-xl border p-1" style={{ borderColor: T.line, background: T.card }}>
           {([["otp", "Phone OTP"], ["password", "Password"]] as const).map(([m, lbl]) => (
             <button
               key={m}
@@ -2537,8 +2853,8 @@ function NotificationsScreen({
       ) : (
         <div className="mt-4 space-y-2.5">
           {notifs.map((n) => (
-            <div key={n.id} className="tick-in flex gap-3 rounded-xl border p-3.5" style={{ borderColor: T.line, background: n.read ? "#fff" : "#EEF0FA" }}>
-              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full" style={{ background: n.read ? "#EFEBDF" : T.indigo, color: n.read ? T.sub : "#fff" }}>
+            <div key={n.id} className="tick-in flex gap-3 rounded-xl border p-3.5" style={{ borderColor: T.line, background: n.read ? T.card : T.indigoTint }}>
+              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full" style={{ background: n.read ? T.sand : T.indigo, color: n.read ? T.sub : "#fff" }}>
                 <IconBell size={14} />
               </span>
               <div className="min-w-0 flex-1">

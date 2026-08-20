@@ -353,6 +353,26 @@ textarea:focus-visible {
   }
 }
 
+/* DEEN app dark theme — remaps white utility surfaces inside the device */
+[data-deen-theme="dark"] .bg-white:not(.dn-keep-white) {
+  background-color: var(--dn-card) !important;
+}
+[data-deen-theme="dark"] .bg-white\/90:not(.dn-keep-white) {
+  background-color: color-mix(in srgb, var(--dn-card) 92%, transparent) !important;
+}
+[data-deen-theme="dark"] .shadow-\[0_2px_10px_rgba\(0\2c 0\2c 0\2c 0\.08\)\] {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45) !important;
+}
+[data-deen-theme="dark"] input::placeholder,
+[data-deen-theme="dark"] textarea::placeholder {
+  color: color-mix(in srgb, var(--dn-sub) 75%, transparent);
+}
+[data-deen-theme="dark"] input,
+[data-deen-theme="dark"] textarea,
+[data-deen-theme="dark"] select {
+  color-scheme: dark;
+}
+
 /* device screen motion */
 .screen-in {
   animation: screenIn 0.34s cubic-bezier(0.22, 0.8, 0.3, 1);
