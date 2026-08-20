@@ -3,3 +3,10 @@ node_modules/
 dist/
 build/
 *.log
+
+# Build artifacts (keep out of git — large binaries)
+*.apk
+*.aab
+*.ipa
+dist-android/
+.expo/
