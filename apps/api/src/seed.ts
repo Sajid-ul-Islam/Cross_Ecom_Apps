@@ -111,7 +111,7 @@ export const SEED_PRODUCTS: DeenProduct[] = [
   p("a5", "109-0301-001", "Breathable Face Mask", "ACCESSORIES", 280, undefined, ["OS"], "2025/02/Breathable-Face-Mask-760x1100.webp", "2025/02/Breathable-Face-Mask-2nd-760x1140.webp", "Washable cotton layers", "Reusable, breathable, everyday protection."),
 ];
 
-export const SEED_CATEGORIES: DeenCategory[] = [
+export const SEED_CATEGORIES: string[] = [
   "ALL",
   "JEANS",
   "PANJABI",

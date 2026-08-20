@@ -66,9 +66,8 @@ export async function registerDeenRoutes(app: FastifyInstance) {
 
   /* ---- create order (public) ---- */
   app.post<{ Body: any }>("/v1/deen/orders", async (req, reply) => {
-    const body = req.body ?? {};
+    const body = (req.body ?? {}) as any;
     const { name, phone, address, area, payment, items } = body;
-
     if (!name || !String(name).trim()) {
       return reply.code(422).send({ error: "VALIDATION", message: "Name is required." });
     }
@@ -111,7 +110,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       }
     }
 
-    const order = {
+    const order: any = {
       id: `d-${Date.now()}`,
       number: `DC-${++orderSeq.n}`,
       name: String(name).trim(),
