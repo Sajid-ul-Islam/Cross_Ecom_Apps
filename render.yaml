@@ -1,0 +1,27 @@
+# Render Blueprint — deploys ONLY the DEEN gateway (apps/api).
+# Deploy: push this repo to GitHub, then in Render: New + Blueprint, pick the repo.
+# (Or skip this file and do "New > Web Service" manually with the settings below.)
+services:
+  - type: web
+    name: deen-gateway
+    runtime: node
+    rootDir: apps/api          # <-- gateway lives in apps/api
+    plan: free                 # free tier; upgrade to starter to disable sleep
+    region: oregon             # pick the region nearest you
+    buildCommand: npm install
+    startCommand: npm start    # runs `tsx src/index.ts` (binds 0.0.0.0:$PORT)
+    healthCheckPath: /v1/health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: PORT
+        sync: false            # Render injects this automatically
+      # ---- Add these in the Render dashboard (Secret > never commit keys) ----
+      - key: WOO_SITE
+        value: "https://deencommerce.com"
+      - key: WOO_CONSUMER_KEY
+        sync: false            # set in dashboard (your read-only key)
+      - key: WOO_CONSUMER_SECRET
+        sync: false            # set in dashboard
+      - key: GATEWAY_API_KEY
+        sync: false            # leave blank for now
