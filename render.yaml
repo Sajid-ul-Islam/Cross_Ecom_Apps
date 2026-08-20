@@ -1,15 +1,13 @@
-# Render Blueprint — deploys ONLY the DEEN gateway (apps/api).
+# Render Blueprint — deploys ONLY the DEEN gateway (apps/api) via Docker.
 # Deploy: push this repo to GitHub, then in Render: New + Blueprint, pick the repo.
-# (Or skip this file and do "New > Web Service" manually with the settings below.)
+#   Root Directory is set to apps/api below, so Docker builds just the gateway.
 services:
   - type: web
     name: deen-gateway
-    runtime: node
-    rootDir: apps/api          # <-- gateway lives in apps/api
+    runtime: docker
+    rootDir: apps/api          # <-- Docker context = apps/api (holds the Dockerfile)
     plan: free                 # free tier; upgrade to starter to disable sleep
     region: oregon             # pick the region nearest you
-    buildCommand: npm install
-    startCommand: npm start    # runs `tsx src/index.ts` (binds 0.0.0.0:$PORT)
     healthCheckPath: /v1/health
     envVars:
       - key: NODE_VERSION
