@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CartItem, Product, DeliveryArea } from "../types";
-import { DELIVERY_FEES, FREE_TEE_THRESHOLD } from "../services/api";
+import { DELIVERY_FEES, FREE_TEE_THRESHOLD } from "../services/gateway";
 
 interface CartContextType {
   cart: CartItem[];
