@@ -9,6 +9,7 @@ const TABS = [
   { id: "sheet-02", label: "02 · CONTEXT" },
   { id: "sheet-03", label: "03 · TIMELINE" },
   { id: "sheet-04", label: "04 · SESSIONS" },
+  { id: "sheet-05", label: "05 · DEV LOG" },
 ];
 
 export const SECTION_IDS = TABS.map((t) => t.id);
@@ -196,7 +197,7 @@ export function Header({
                   </div>
                   <div className="mt-5">
                     <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-faint">Sheets</p>
-                    <p className="mt-1 font-mono text-[12px] text-dim">05 · topology → sessions</p>
+                    <p className="mt-1 font-mono text-[12px] text-dim">06 · topology → dev log</p>
                   </div>
                 </div>
                 <div className="col-span-2 border-t border-line p-5 flex items-center justify-between gap-4">

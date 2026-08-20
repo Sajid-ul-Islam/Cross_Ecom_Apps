@@ -113,7 +113,7 @@ function Ambient() {
 
 function Workspace() {
   const toast = useToast();
-  const [overrides, setOverrides] = useLocalStorage<Record<string, TaskStatus>>("bw.tasks.v2", {});
+  const [overrides, setOverrides] = useLocalStorage<Record<string, TaskStatus>>("bw.tasks.v3", {});
   const [sessions, setSessions] = useLocalStorage<SessionEntry[]>("bw.sessions.v1", SEED_SESSIONS);
 
   const cycle = (id: string) => {

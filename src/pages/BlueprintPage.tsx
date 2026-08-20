@@ -5,6 +5,7 @@ import { Tooling } from "../components/Tooling";
 import { ContextStrategy } from "../components/ContextStrategy";
 import { Timeline, TimelineResetModal } from "../components/Timeline";
 import { Sessions } from "../components/Sessions";
+import { DevLog } from "../components/DevLog";
 import { PHASES, type SessionEntry, type TaskStatus } from "../data";
 
 interface Props {
@@ -61,6 +62,8 @@ export function BlueprintPage({ overrides, onCycle, onReset, sessions, onAddSess
           project="BRIDGEWORK · Omnichannel Commerce Build"
           overrides={overrides}
         />
+        <div className="mx-auto h-px w-full max-w-6xl bg-gradient-to-r from-transparent via-line to-transparent" />
+        <DevLog />
       </main>
 
       {/* drawing footer strip */}
@@ -82,10 +85,10 @@ export function BlueprintPage({ overrides, onCycle, onReset, sessions, onAddSess
               Approval <span className="text-amber">Pending launch gate</span>
             </span>
           </div>
-          <span className="ml-auto font-mono text-[10px] tracking-[0.22em] text-faint">BW-2025 · REV C · SHEET 05/05</span>
+          <span className="ml-auto font-mono text-[10px] tracking-[0.22em] text-faint">BW-2025 · REV C · SHEET 06/06</span>
         </div>
         <div className="border-t border-dashed border-line py-3 text-center font-mono text-[10px] uppercase tracking-[0.2em] text-faint/80">
-          Files are memory · one task per session · handoff is written, never verbal
+          Files are memory · one task per session · handoff is written, never verbal · dev log after every batch
         </div>
       </footer>
 
