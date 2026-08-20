@@ -31,7 +31,7 @@ export interface DeenCartItem {
 
 export type DeenPayment = "cod" | "bkash" | "nagad";
 export type DeenArea = "dhaka" | "outside";
-export type DeenOrderStatus = "received" | "confirmed" | "shipped" | "delivered";
+export type DeenOrderStatus = "received" | "confirmed" | "shipped" | "delivered" | "cancelled";
 
 export interface DeenOrderLine {
   productId: string;
@@ -53,10 +53,31 @@ export interface DeenOrder {
   payment: DeenPayment;
   lines: DeenOrderLine[];
   subtotal: number;
+  discount: number;
+  couponCode?: string;
   delivery: number;
   total: number;
   status: DeenOrderStatus;
   createdAt: string;
+}
+
+/* ---------------- reviews ---------------- */
+
+export interface DeenReview {
+  id: string;
+  productId: string;
+  name: string;
+  stars: number;
+  text: string;
+  ts: number;
+}
+
+/* ---------------- auth session ---------------- */
+
+export interface DeenSession {
+  name: string;
+  phone: string;
+  exp: number;
 }
 
 export interface DeenProfile {
@@ -230,6 +251,7 @@ const SEED_ORDERS: DeenOrder[] = [
       { productId: "j3", name: "High-End Whisker Faded Jeans – Slim Fit", sku: "101-0100-150", size: "32", qty: 1, unit: 2490 },
     ],
     subtotal: 2490,
+    discount: 0,
     delivery: 70,
     total: 2560,
     status: "delivered",
@@ -271,6 +293,7 @@ export async function deenCreateOrder(payload: {
   area: DeenArea;
   payment: DeenPayment;
   items: DeenCartItem[];
+  couponCode?: string;
 }): Promise<DeenOrder> {
   if (!payload.name.trim()) {
     await req("POST", "/v1/deen/orders", 422);
@@ -302,6 +325,19 @@ export async function deenCreateOrder(payload: {
   }
   const delivery = DELIVERY_FEES[payload.area];
 
+  let discount = 0;
+  let couponCode: string | undefined;
+  if (payload.couponCode) {
+    try {
+      const v = await deenValidateCoupon(payload.couponCode, subtotal);
+      discount = v.discount;
+      couponCode = v.code;
+    } catch (e) {
+      await req("POST", "/v1/deen/orders", 422);
+      throw e;
+    }
+  }
+
   await req("POST", "/v1/deen/orders", 201);
 
   const order: DeenOrder = {
@@ -314,8 +350,10 @@ export async function deenCreateOrder(payload: {
     payment: payload.payment,
     lines,
     subtotal,
+    discount,
+    couponCode,
     delivery,
-    total: subtotal + delivery,
+    total: subtotal - discount + delivery,
     status: "received",
     createdAt: new Date().toISOString(),
   };
@@ -336,3 +374,162 @@ export const PAYMENT_LABELS: Record<DeenPayment, string> = {
 };
 
 export const ORDER_FLOW: DeenOrderStatus[] = ["received", "confirmed", "shipped", "delivered"];
+
+/* ------------------------------------------------------------------ */
+/*  auth — register / login / session (JWT stand-in, SecureStore)      */
+/* ------------------------------------------------------------------ */
+
+interface DeenUserRecord {
+  name: string;
+  phone: string;
+  pass: string;
+}
+
+const AKEYS = { users: "deen.users.v1", session: "deen.session.v1" };
+
+const SEED_USERS: DeenUserRecord[] = [{ name: "Rafiq Hasan", phone: "01712345678", pass: "deen123" }];
+
+function users(): DeenUserRecord[] {
+  return load(AKEYS.users, SEED_USERS);
+}
+
+export function getDeenSession(): DeenSession | null {
+  const s = load<DeenSession | null>(AKEYS.session, null);
+  if (!s) return null;
+  if (s.exp < Date.now()) {
+    try {
+      window.localStorage.removeItem(AKEYS.session);
+    } catch {
+      /* ignore */
+    }
+    return null;
+  }
+  return s;
+}
+
+export function deenLogout(): void {
+  try {
+    window.localStorage.removeItem(AKEYS.session);
+  } catch {
+    /* ignore */
+  }
+}
+
+function issueSession(name: string, phone: string): DeenSession {
+  const s: DeenSession = { name, phone, exp: Date.now() + 7 * 86400000 };
+  save(AKEYS.session, s);
+  return s;
+}
+
+export async function deenLogin(phone: string, pass: string): Promise<DeenSession> {
+  await req("POST", "/v1/deen/auth/login");
+  const clean = phone.replace(/[^0-9]/g, "");
+  const u = users().find((x) => x.phone === clean && x.pass === pass);
+  if (!u) throw new Error("No account matches that number and password.");
+  return issueSession(u.name, u.phone);
+}
+
+export async function deenRegister(name: string, phone: string, pass: string): Promise<DeenSession> {
+  await req("POST", "/v1/deen/auth/register", 201);
+  const clean = phone.replace(/[^0-9]/g, "");
+  if (!/^01[3-9]\d{8}$/.test(clean)) throw new Error("Enter a valid BD mobile number — 01XXXXXXXXX.");
+  if (name.trim().length < 2) throw new Error("Please enter your full name.");
+  if (pass.length < 4) throw new Error("Password needs at least 4 characters.");
+  const all = users();
+  if (all.some((x) => x.phone === clean)) throw new Error("That number is already registered — try logging in.");
+  const next = [...all, { name: name.trim(), phone: clean, pass }];
+  save(AKEYS.users, next);
+  return issueSession(name.trim(), clean);
+}
+
+export const demoAccount = { phone: "01712345678", pass: "deen123" };
+
+/* ------------------------------------------------------------------ */
+/*  coupons                                                            */
+/* ------------------------------------------------------------------ */
+
+export interface DeenCoupon {
+  code: string;
+  type: "percent" | "fixed";
+  value: number;
+  min: number;
+  note: string;
+}
+
+export const DEEN_COUPONS: DeenCoupon[] = [
+  { code: "SUMMER10", type: "percent", value: 10, min: 0, note: "10% off everything" },
+  { code: "DEEN100", type: "fixed", value: 100, min: 2000, note: "৳100 off orders over ৳2,000" },
+  { code: "DENIM500", type: "fixed", value: 500, min: 5000, note: "৳500 off orders over ৳5,000" },
+];
+
+export async function deenValidateCoupon(code: string, subtotal: number): Promise<{ code: string; discount: number }> {
+  await req("POST", "/v1/deen/coupons/validate");
+  const c = DEEN_COUPONS.find((x) => x.code === code.trim().toUpperCase());
+  if (!c) throw new Error(`Code "${code.trim().toUpperCase()}" is not valid.`);
+  if (subtotal < c.min) throw new Error(`${c.code} needs a subtotal of ${bdt(c.min)} or more.`);
+  const discount = c.type === "percent" ? Math.round((subtotal * c.value) / 100) : Math.min(c.value, subtotal);
+  return { code: c.code, discount };
+}
+
+/* ------------------------------------------------------------------ */
+/*  order cancellation (before confirmation)                           */
+/* ------------------------------------------------------------------ */
+
+export async function deenCancelOrder(id: string): Promise<DeenOrder> {
+  await req("POST", "/v1/deen/orders/cancel");
+  const o = orders.find((x) => x.id === id);
+  if (!o) throw new Error("Order not found.");
+  if (o.status !== "received") throw new Error("Only orders awaiting confirmation can be cancelled.");
+  o.status = "cancelled";
+  orders = orders.map((x) => (x.id === id ? { ...o } : x));
+  save(KEYS.orders, orders);
+  return { ...o };
+}
+
+/* ------------------------------------------------------------------ */
+/*  reviews                                                            */
+/* ------------------------------------------------------------------ */
+
+const RKEY = "deen.reviews.v1";
+
+const SEED_REVIEWS: DeenReview[] = [
+  { id: "r1", productId: "j1", name: "Tanvir A.", stars: 5, text: "The raw wash fades beautifully after a month. Best denim in BD, period.", ts: Date.now() - 12 * 86400000 },
+  { id: "r2", productId: "j1", name: "Mehedi H.", stars: 4, text: "Slim fit is true to size 32. Fabric feels premium and heavy.", ts: Date.now() - 26 * 86400000 },
+  { id: "r3", productId: "j3", name: "Sadia R.", stars: 5, text: "Bought for my husband — the whisker fade looks exactly like the photos.", ts: Date.now() - 8 * 86400000 },
+  { id: "r4", productId: "s5", name: "Arif Chowdhury", stars: 5, text: "Wore it to Cox's Bazar. Breathable, and the print gets compliments.", ts: Date.now() - 15 * 86400000 },
+  { id: "r5", productId: "s5", name: "Nusrat K.", stars: 4, text: "Great summer shirt. Runs slightly loose — size down if between sizes.", ts: Date.now() - 30 * 86400000 },
+  { id: "r6", productId: "pn4", name: "Mahmudul Karim", stars: 5, text: "Wore it on Eid. The embroidery is finer than panjabis twice the price.", ts: Date.now() - 40 * 86400000 },
+  { id: "r7", productId: "pn1", name: "Shakil Ahmed", stars: 4, text: "Coconut buttons are a nice touch. Breathable even in June heat.", ts: Date.now() - 19 * 86400000 },
+  { id: "r8", productId: "t4", name: "Rakib Hasan", stars: 5, text: "220gsm cotton is thick and holds shape after washes. Want more colours.", ts: Date.now() - 6 * 86400000 },
+  { id: "r9", productId: "a1", name: "Fahim S.", stars: 5, text: "Genuine leather, smells great, stitching is solid. Ages well.", ts: Date.now() - 22 * 86400000 },
+  { id: "r10", productId: "tr1", name: "Imran Kabir", stars: 4, text: "Sky blue is exactly as pictured. Stretch twill is comfy for office.", ts: Date.now() - 11 * 86400000 },
+];
+
+let reviews: DeenReview[] = load(RKEY, SEED_REVIEWS);
+
+export function getDeenReviews(productId: string): DeenReview[] {
+  return reviews.filter((r) => r.productId === productId).sort((a, b) => b.ts - a.ts);
+}
+
+export function deenAvg(productId: string): { avg: number; count: number } | null {
+  const rs = getDeenReviews(productId);
+  if (rs.length === 0) return null;
+  return { avg: Math.round((rs.reduce((s, r) => s + r.stars, 0) / rs.length) * 10) / 10, count: rs.length };
+}
+
+export async function deenAddReview(productId: string, name: string, stars: number, text: string): Promise<DeenReview> {
+  await req("POST", "/v1/deen/reviews", 201);
+  if (stars < 1 || stars > 5) throw new Error("Pick a star rating.");
+  if (text.trim().length < 5) throw new Error("Write a few words about the product.");
+  const review: DeenReview = {
+    id: `r-${Date.now()}`,
+    productId,
+    name: name.trim() || "DEEN customer",
+    stars,
+    text: text.trim(),
+    ts: Date.now(),
+  };
+  reviews = [review, ...reviews];
+  save(RKEY, reviews);
+  return review;
+}

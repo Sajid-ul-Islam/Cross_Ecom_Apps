@@ -4,12 +4,23 @@ import {
   DEFAULT_PROFILE,
   DEEN_CATALOG,
   DEEN_CATEGORIES,
+  DEEN_COUPONS,
+  deenAddReview,
+  deenAvg,
+  deenCancelOrder,
   deenCreateOrder,
   deenListOrders,
   deenListProducts,
+  deenLogin,
+  deenLogout,
+  deenRegister,
+  deenValidateCoupon,
   DELIVERY_FEES,
+  demoAccount,
   FREE_TEE_THRESHOLD,
   getDeenProfile,
+  getDeenReviews,
+  getDeenSession,
   HERO_IMG,
   ORDER_FLOW,
   PAYMENT_LABELS,
@@ -23,6 +34,8 @@ import {
   type DeenProduct,
   type DeenProfile,
   type DeenRequest,
+  type DeenReview,
+  type DeenSession,
 } from "../api/deen";
 import { PHASES, type TaskStatus } from "../data";
 import { Bar, Reveal, Stamp, StatusChip, useToast } from "../components/ui";
@@ -31,12 +44,19 @@ import {
   IconArrowLeft,
   IconBag,
   IconBattery,
+  IconBell,
   IconBox,
   IconCheck,
+  IconClock,
+  IconHeart,
+  IconLogout,
   IconMinus,
   IconPlus,
+  IconRuler,
   IconSearch,
+  IconShare,
   IconSignal,
+  IconStar,
   IconTag,
   IconTrash,
   IconUser,
@@ -67,9 +87,50 @@ type Screen =
   | { name: "checkout" }
   | { name: "success"; order: DeenOrder }
   | { name: "orders" }
-  | { name: "profile" };
+  | { name: "profile" }
+  | { name: "wishlist" }
+  | { name: "auth"; returnTo?: Screen }
+  | { name: "notifications" };
 
-type Tab = "home" | "shop" | "bag" | "orders" | "profile";
+type Tab = "home" | "shop" | "wishlist" | "bag" | "orders" | "profile";
+
+/* ---------------- notifications ---------------- */
+
+interface Notif {
+  id: string;
+  title: string;
+  body: string;
+  ts: number;
+  read: boolean;
+}
+
+const NKEY = "deen.notifs.v1";
+
+function loadNotifs(): Notif[] {
+  try {
+    const raw = window.localStorage.getItem(NKEY);
+    if (raw) return JSON.parse(raw) as Notif[];
+  } catch {
+    /* ignore */
+  }
+  return [
+    {
+      id: "n-welcome",
+      title: "Summer Fest is live",
+      body: "Free cotton tee on every order over ৳3,500 — plus codes SUMMER10 and DEEN100.",
+      ts: Date.now(),
+      read: false,
+    },
+  ];
+}
+
+function saveNotifs(n: Notif[]) {
+  try {
+    window.localStorage.setItem(NKEY, JSON.stringify(n));
+  } catch {
+    /* ignore */
+  }
+}
 
 /* ---------------- image with woven fallback ---------------- */
 
@@ -123,14 +184,42 @@ function PriceLine({ p, size = "base" }: { p: DeenProduct; size?: "sm" | "base" 
 /*  THE APP                                                            */
 /* ------------------------------------------------------------------ */
 
+function usePersisted<T>(key: string, initial: T) {
+  const [v, setV] = useState<T>(() => {
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (raw) return JSON.parse(raw) as T;
+    } catch {
+      /* ignore */
+    }
+    return initial;
+  });
+  const set = (updater: T | ((prev: T) => T)) => {
+    setV((prev) => {
+      const next = typeof updater === "function" ? (updater as (p: T) => T)(prev) : updater;
+      try {
+        window.localStorage.setItem(key, JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
+  return [v, set] as const;
+}
+
 function DeenPhone() {
   const toast = useToast();
   const reduced = useReducedMotion();
   const [boot, setBoot] = useState(true);
   const [products, setProducts] = useState<DeenProduct[]>([]);
   const [screen, setScreen] = useState<Screen>({ name: "home" });
-  const [cart, setCart] = useState<DeenCartItem[]>([]);
-  const [lastOrder, setLastOrder] = useState<DeenOrder | null>(null);
+  const [cart, setCart] = usePersisted<DeenCartItem[]>("deen.cart.v1", []);
+  const [wishlist, setWishlist] = usePersisted<string[]>("deen.wishlist.v1", []);
+  const [recents, setRecents] = usePersisted<string[]>("deen.recent.v1", []);
+  const [searchHistory, setSearchHistory] = usePersisted<string[]>("deen.search.v1", []);
+  const [notifs, setNotifs] = usePersisted<Notif[]>(NKEY, loadNotifs());
+  const [session, setSession] = useState<DeenSession | null>(() => getDeenSession());
 
   useEffect(() => {
     const t = window.setTimeout(() => setBoot(false), reduced ? 200 : 1600);
@@ -148,6 +237,27 @@ function DeenPhone() {
     const p = find(i.productId);
     return s + (p ? (p.salePrice ?? p.price) * i.qty : 0);
   }, 0);
+  const unread = notifs.filter((n) => !n.read).length;
+
+  const pushNotif = (title: string, body: string) => {
+    setNotifs((prev) => [{ id: `n-${Date.now()}`, title, body, ts: Date.now(), read: false }, ...prev].slice(0, 30));
+  };
+
+  const recordVisit = (id: string) => {
+    setRecents((prev) => [id, ...prev.filter((x) => x !== id)].slice(0, 8));
+  };
+
+  const recordSearch = (q: string) => {
+    const clean = q.trim();
+    if (!clean) return;
+    setSearchHistory((prev) => [clean, ...prev.filter((x) => x.toLowerCase() !== clean.toLowerCase())].slice(0, 5));
+  };
+
+  const toggleWishlist = (id: string) => {
+    const has = wishlist.includes(id);
+    setWishlist((prev) => (has ? prev.filter((x) => x !== id) : [id, ...prev]));
+    toast(has ? "Removed from wishlist" : "Saved to wishlist ♥", has ? "wire" : "coral");
+  };
 
   const addToCart = (productId: string, size: string, qty = 1) => {
     setCart((prev) => {
@@ -166,22 +276,40 @@ function DeenPhone() {
     );
   };
 
-  const placeOrder = async (payload: { name: string; phone: string; address: string; area: DeenArea; payment: DeenPayment }) => {
+  const requireAuth = (target: Screen) => {
+    if (session) {
+      setScreen(target);
+    } else {
+      toast("Log in to continue — it takes 10 seconds", "amber");
+      setScreen({ name: "auth", returnTo: target });
+    }
+  };
+
+  const placeOrder = async (payload: {
+    name: string;
+    phone: string;
+    address: string;
+    area: DeenArea;
+    payment: DeenPayment;
+    couponCode?: string;
+  }) => {
     const order = await deenCreateOrder({ ...payload, items: cart });
     setCart([]);
-    setLastOrder(order);
     setScreen({ name: "success", order });
+    pushNotif(`Order ${order.number} confirmed`, `${bdt(order.total)} · ${PAYMENT_LABELS[order.payment]}. We'll call to confirm shortly.`);
     toast(`Order ${order.number} placed via middle API`, "mint");
   };
 
   const tab: Tab =
     screen.name === "product" || screen.name === "shop"
-      ? screen.name === "shop"
-        ? "shop"
-        : "shop"
+      ? "shop"
       : screen.name === "bag" || screen.name === "checkout" || screen.name === "success"
         ? "bag"
-        : screen.name;
+        : screen.name === "auth"
+          ? "profile"
+          : screen.name === "notifications"
+            ? "home"
+            : screen.name;
 
   const clock = useMemo(() => {
     const d = new Date();
@@ -193,21 +321,64 @@ function DeenPhone() {
   const screenNode: ReactNode = (() => {
     switch (screen.name) {
       case "home":
-        return <HomeScreen go={setScreen} products={products} cartSubtotal={cartSubtotal} />;
+        return (
+          <HomeScreen
+            go={setScreen}
+            products={products}
+            cartSubtotal={cartSubtotal}
+            unread={unread}
+            recents={recents.map(find).filter((p): p is DeenProduct => !!p)}
+          />
+        );
       case "shop":
-        return <ShopScreen init={screen} go={setScreen} products={products} />;
+        return <ShopScreen init={screen} go={setScreen} products={products} history={searchHistory} onSearch={recordSearch} />;
       case "product":
-        return <ProductScreen product={find(screen.id)} go={setScreen} onAdd={addToCart} cartSubtotal={cartSubtotal} />;
+        return (
+          <ProductScreen
+            product={find(screen.id)}
+            go={setScreen}
+            onAdd={addToCart}
+            cartSubtotal={cartSubtotal}
+            wished={wishlist.includes(screen.id)}
+            onWish={() => toggleWishlist(screen.id)}
+            onVisit={recordVisit}
+            sessionName={session?.name}
+          />
+        );
       case "bag":
-        return <BagScreen cart={cart} find={find} go={setScreen} setQty={setQty} subtotal={cartSubtotal} />;
+        return <BagScreen cart={cart} find={find} go={setScreen} setQty={setQty} subtotal={cartSubtotal} onCheckout={() => requireAuth({ name: "checkout" })} />;
       case "checkout":
         return <CheckoutScreen cart={cart} find={find} subtotal={cartSubtotal} onPlace={placeOrder} go={setScreen} />;
       case "success":
         return <SuccessScreen order={screen.order} go={setScreen} />;
       case "orders":
-        return <OrdersScreen profile={getDeenProfile()} go={setScreen} />;
+        return <OrdersScreen go={setScreen} onCancel={pushNotif} />;
       case "profile":
-        return <ProfileScreen go={setScreen} />;
+        return <ProfileScreen go={setScreen} session={session} onLogout={() => { deenLogout(); setSession(null); toast("Signed out — token cleared from SecureStore", "wire"); }} wishCount={wishlist.length} />;
+      case "wishlist":
+        return <WishlistScreen ids={wishlist} find={find} go={setScreen} onRemove={toggleWishlist} onAdd={addToCart} />;
+      case "auth":
+        return (
+          <AuthScreen
+            go={setScreen}
+            returnTo={screen.returnTo}
+            onAuthed={(s) => {
+              setSession(s);
+              pushNotif(`Welcome, ${s.name.split(" ")[0]}`, "You're signed in. Orders and offers now sync to this device.");
+              setScreen(screen.returnTo ?? { name: "profile" });
+              toast(`Signed in as ${s.phone}`, "mint");
+            }}
+          />
+        );
+      case "notifications":
+        return (
+          <NotificationsScreen
+            notifs={notifs}
+            go={setScreen}
+            onReadAll={() => setNotifs((prev) => prev.map((n) => ({ ...n, read: true })))}
+            onClear={() => setNotifs([])}
+          />
+        );
     }
   })();
 
@@ -240,14 +411,15 @@ function DeenPhone() {
           {/* bottom nav */}
           {!boot && (
             <div className="absolute inset-x-0 bottom-0 z-20 border-t" style={{ background: "rgba(255,255,255,0.96)", borderColor: T.line }}>
-              <div className="grid grid-cols-5">
+              <div className="grid grid-cols-6">
                 {(
                   [
-                    { id: "home", label: "Home", icon: <HouseIcon size={20} active={tab === "home"} /> },
-                    { id: "shop", label: "Shop", icon: <IconTag size={20} strokeWidth={tab === "shop" ? 2.1 : 1.7} /> },
-                    { id: "bag", label: "Bag", icon: <IconBag size={20} strokeWidth={tab === "bag" ? 2.1 : 1.7} /> },
-                    { id: "orders", label: "Orders", icon: <IconBox size={20} strokeWidth={tab === "orders" ? 2.1 : 1.7} /> },
-                    { id: "profile", label: "Profile", icon: <IconUser size={20} strokeWidth={tab === "profile" ? 2.1 : 1.7} /> },
+                    { id: "home", label: "Home", icon: <HouseIcon size={19} active={tab === "home"} /> },
+                    { id: "shop", label: "Shop", icon: <IconTag size={19} strokeWidth={tab === "shop" ? 2.1 : 1.7} /> },
+                    { id: "wishlist", label: "Saved", icon: <IconHeart size={19} strokeWidth={tab === "wishlist" ? 2.1 : 1.7} /> },
+                    { id: "bag", label: "Bag", icon: <IconBag size={19} strokeWidth={tab === "bag" ? 2.1 : 1.7} /> },
+                    { id: "orders", label: "Orders", icon: <IconBox size={19} strokeWidth={tab === "orders" ? 2.1 : 1.7} /> },
+                    { id: "profile", label: "Profile", icon: <IconUser size={19} strokeWidth={tab === "profile" ? 2.1 : 1.7} /> },
                   ] as { id: Tab; label: string; icon: ReactNode }[]
                 ).map((t) => (
                   <button
@@ -310,16 +482,22 @@ function HomeScreen({
   go,
   products,
   cartSubtotal,
+  unread,
+  recents,
 }: {
   go: (s: Screen) => void;
   products: DeenProduct[];
   cartSubtotal: number;
+  unread: number;
+  recents: DeenProduct[];
 }) {
   const list = products.length ? products : DEEN_CATALOG;
   const newDrop = list.filter((p) => p.isNew);
   const freeTeeLeft = Math.max(0, FREE_TEE_THRESHOLD - cartSubtotal);
 
   const catCount = (c: DeenCategory) => list.filter((p) => p.category === c).length;
+
+  const circleBtn = "relative flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-transform active:scale-90";
 
   return (
     <div className="font-arch" style={{ color: T.ink }}>
@@ -328,16 +506,37 @@ function HomeScreen({
         <span className="font-disp text-[22px] tracking-tight">DEEN</span>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => go({ name: "notifications" })}
+            className={circleBtn}
+            style={{ border: `1px solid ${T.line}`, color: T.ink }}
+            aria-label="Notifications"
+          >
+            <IconBell size={16} />
+            {unread > 0 && (
+              <span className="deen-pop absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-mono text-[8px] font-bold text-white" style={{ background: T.crimson }}>
+                {unread}
+              </span>
+            )}
+          </button>
+          <button
             onClick={() => go({ name: "shop" })}
-            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-transform active:scale-90"
+            className={circleBtn}
             style={{ border: `1px solid ${T.line}`, color: T.ink }}
             aria-label="Search"
           >
             <IconSearch size={16} />
           </button>
           <button
+            onClick={() => go({ name: "wishlist" })}
+            className={circleBtn}
+            style={{ border: `1px solid ${T.line}`, color: T.ink }}
+            aria-label="Wishlist"
+          >
+            <IconHeart size={16} />
+          </button>
+          <button
             onClick={() => go({ name: "bag" })}
-            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-transform active:scale-90"
+            className={circleBtn}
             style={{ border: `1px solid ${T.line}`, color: T.ink }}
             aria-label="Bag"
           >
@@ -381,6 +580,28 @@ function HomeScreen({
           </span>
         </span>
       </button>
+
+      {/* recently viewed */}
+      {recents.length > 0 && (
+        <div className="mt-5">
+          <div className="flex items-baseline justify-between px-4">
+            <p className="font-disp text-[15px] flex items-center gap-1.5">
+              <IconClock size={13} className="inline" /> Recently viewed
+            </p>
+          </div>
+          <div className="hide-scroll mt-3 flex gap-2.5 overflow-x-auto px-4 pb-1">
+            {recents.map((p) => (
+              <button key={`r-${p.id}`} onClick={() => go({ name: "product", id: p.id })} className="w-[92px] shrink-0 cursor-pointer text-left transition-transform active:scale-[0.96]">
+                <div className="h-[116px] overflow-hidden rounded-lg" style={{ background: T.line }}>
+                  <PImg src={p.images[0]} alt={p.name} className="h-full w-full" />
+                </div>
+                <p className="mt-1 truncate text-[10px] font-semibold">{p.name}</p>
+                <p className="font-mono text-[9px]" style={{ color: T.sub }}>{bdt(p.salePrice ?? p.price)}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* categories */}
       <div className="mt-5 px-4">
@@ -473,26 +694,46 @@ function ShopScreen({
   init,
   go,
   products,
+  history,
+  onSearch,
 }: {
   init: { category?: DeenCategory | "ALL"; saleOnly?: boolean };
   go: (s: Screen) => void;
   products: DeenProduct[];
+  history: string[];
+  onSearch: (q: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const [cat, setCat] = useState<DeenCategory | "ALL">(init.category ?? "ALL");
   const [saleOnly, setSaleOnly] = useState(init.saleOnly ?? false);
   const [sort, setSort] = useState<"featured" | "low" | "high" | "off">("featured");
+  const [priceBand, setPriceBand] = useState<"all" | "lt1k" | "1to2k" | "gt2k">("all");
+
+  const priceOf = (p: DeenProduct) => p.salePrice ?? p.price;
+  const inBand = (p: DeenProduct) => {
+    const v = priceOf(p);
+    if (priceBand === "lt1k") return v < 1000;
+    if (priceBand === "1to2k") return v >= 1000 && v <= 2000;
+    if (priceBand === "gt2k") return v > 2000;
+    return true;
+  };
 
   const list = (products.length ? products : DEEN_CATALOG)
     .filter((p) => (cat === "ALL" ? true : p.category === cat))
     .filter((p) => (saleOnly ? !!p.salePrice : true))
+    .filter(inBand)
     .filter((p) => p.name.toLowerCase().includes(query.toLowerCase()) || p.sku.toLowerCase().includes(query.toLowerCase()))
     .sort((a, b) => {
-      if (sort === "low") return (a.salePrice ?? a.price) - (b.salePrice ?? b.price);
-      if (sort === "high") return (b.salePrice ?? b.price) - (a.salePrice ?? a.price);
+      if (sort === "low") return priceOf(a) - priceOf(b);
+      if (sort === "high") return priceOf(b) - priceOf(a);
       if (sort === "off") return pctOff(b) - pctOff(a);
       return Number(!!b.salePrice) - Number(!!a.salePrice);
     });
+
+  const openProduct = (id: string) => {
+    onSearch(query);
+    go({ name: "product", id });
+  };
 
   return (
     <div className="font-arch" style={{ color: T.ink }}>
@@ -512,6 +753,26 @@ function ShopScreen({
             </button>
           )}
         </div>
+
+        {/* search history */}
+        {!query && history.length > 0 && (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <span className="flex items-center gap-1 font-mono text-[8.5px] uppercase tracking-[0.14em]" style={{ color: T.sub }}>
+              <IconClock size={10} /> recent
+            </span>
+            {history.map((h) => (
+              <button
+                key={h}
+                onClick={() => setQuery(h)}
+                className="cursor-pointer rounded-full border px-2.5 py-1 font-arch text-[10.5px] font-semibold transition-all active:scale-95"
+                style={{ borderColor: T.line, color: T.sub, background: "#fff" }}
+              >
+                {h}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="hide-scroll -mx-4 mt-3 flex gap-1.5 overflow-x-auto px-4">
           {(["ALL", ...DEEN_CATEGORIES] as const).map((c) => (
             <button
@@ -548,6 +809,31 @@ function ShopScreen({
             <option value="off">Biggest discount</option>
           </select>
         </div>
+
+        {/* price bands */}
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          {(
+            [
+              { id: "all", label: "Any price" },
+              { id: "lt1k", label: "Under ৳1,000" },
+              { id: "1to2k", label: "৳1,000 – 2,000" },
+              { id: "gt2k", label: "Over ৳2,000" },
+            ] as { id: typeof priceBand; label: string }[]
+          ).map((b) => (
+            <button
+              key={b.id}
+              onClick={() => setPriceBand(b.id)}
+              className="cursor-pointer rounded-full border px-2.5 py-1 font-mono text-[9.5px] font-semibold uppercase tracking-[0.08em] transition-all active:scale-95"
+              style={
+                priceBand === b.id
+                  ? { background: T.indigoDark, borderColor: T.indigoDark, color: "#fff" }
+                  : { borderColor: T.line, color: T.sub, background: "transparent" }
+              }
+            >
+              {b.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <p className="px-4 pb-2 font-mono text-[10px] uppercase tracking-[0.2em]" style={{ color: T.sub }}>
@@ -575,7 +861,7 @@ function ShopScreen({
       ) : (
         <div className="grid grid-cols-2 gap-x-3 gap-y-5 px-4 pb-8">
           {list.map((p) => (
-            <button key={p.id} onClick={() => go({ name: "product", id: p.id })} className="cursor-pointer text-left transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.97]">
+            <button key={p.id} onClick={() => openProduct(p.id)} className="cursor-pointer text-left transition-transform duration-200 hover:-translate-y-0.5 active:scale-[0.97]">
               <div className="relative aspect-[3/4] overflow-hidden rounded-xl" style={{ background: T.line }}>
                 <PImg src={p.images[0]} alt={p.name} className="h-full w-full" />
                 {p.salePrice && (
@@ -611,20 +897,49 @@ function ProductScreen({
   go,
   onAdd,
   cartSubtotal,
+  wished,
+  onWish,
+  onVisit,
+  sessionName,
 }: {
   product: DeenProduct | undefined;
   go: (s: Screen) => void;
   onAdd: (id: string, size: string, qty: number) => void;
   cartSubtotal: number;
+  wished: boolean;
+  onWish: () => void;
+  onVisit: (id: string) => void;
+  sessionName?: string;
 }) {
+  const toast = useToast();
   const [imgIdx, setImgIdx] = useState(0);
   const [size, setSize] = useState<string | null>(null);
   const [qty, setQtyState] = useState(1);
   const [sizeErr, setSizeErr] = useState(false);
+  const [guide, setGuide] = useState(false);
+  const [reviews, setReviews] = useState<DeenReview[]>([]);
+  const [rStars, setRStars] = useState(0);
+  const [rText, setRText] = useState("");
+  const [rBusy, setRBusy] = useState(false);
+
+  useEffect(() => {
+    if (product) {
+      onVisit(product.id);
+      setReviews(getDeenReviews(product.id));
+      setSize(null);
+      setQtyState(1);
+      setSizeErr(false);
+      setImgIdx(0);
+      setRStars(0);
+      setRText("");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id]);
 
   if (!product) return null;
   const unit = product.salePrice ?? product.price;
   const freeTeeLeft = Math.max(0, FREE_TEE_THRESHOLD - (cartSubtotal + unit * qty));
+  const avg = deenAvg(product.id);
 
   const add = () => {
     if (!size) {
@@ -632,6 +947,41 @@ function ProductScreen({
       return;
     }
     onAdd(product.id, size, qty);
+  };
+
+  const share = async () => {
+    const url = `https://deencommerce.com/product/${product.sku.toLowerCase()}/`;
+    const text = `${product.name} — ${bdt(unit)} at DEEN`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "DEEN", text, url });
+        return;
+      }
+      throw new Error("no-share");
+    } catch {
+      try {
+        await navigator.clipboard.writeText(`${text}\n${url}`);
+        toast("Product link copied to clipboard", "wire");
+      } catch {
+        toast(url, "wire");
+      }
+    }
+  };
+
+  const submitReview = async () => {
+    if (rBusy) return;
+    setRBusy(true);
+    try {
+      const r = await deenAddReview(product.id, sessionName ?? "", rStars, rText);
+      setReviews((prev) => [r, ...prev]);
+      setRStars(0);
+      setRText("");
+      toast("Review published — shukriya!", "mint");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Could not save review.", "coral");
+    } finally {
+      setRBusy(false);
+    }
   };
 
   return (
@@ -647,11 +997,29 @@ function ProductScreen({
           >
             <IconArrowLeft size={17} />
           </button>
-          {product.salePrice && (
-            <span className="absolute right-3 top-3 rounded px-2 py-1 font-mono text-[10px] font-bold text-white" style={{ background: T.crimson }}>
-              SALE −{pctOff(product)}%
-            </span>
-          )}
+          <div className="absolute right-3 top-3 flex flex-col gap-2">
+            {product.salePrice && (
+              <span className="rounded px-2 py-1 font-mono text-[10px] font-bold text-white" style={{ background: T.crimson }}>
+                SALE −{pctOff(product)}%
+              </span>
+            )}
+            <button
+              onClick={onWish}
+              className={`flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/90 shadow transition-all active:scale-75 ${wished ? "heart-pop" : ""}`}
+              style={{ color: wished ? T.crimson : T.sub }}
+              aria-label="Wishlist"
+            >
+              <IconHeart size={16} strokeWidth={wished ? 2.2 : 1.7} className={wished ? "fill-current" : ""} />
+            </button>
+            <button
+              onClick={share}
+              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-white/90 shadow transition-all active:scale-75"
+              style={{ color: T.sub }}
+              aria-label="Share"
+            >
+              <IconShare size={15} />
+            </button>
+          </div>
           <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
             {product.images.map((_, i) => (
               <button

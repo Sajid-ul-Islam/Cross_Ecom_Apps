@@ -186,6 +186,41 @@ export const IconArrowLeft = (p: IconProps) => (
   </svg>
 );
 
+export const IconHeart = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 20.5s-7.4-4.6-9.2-9.2C1.6 8 3.6 4.9 6.8 4.9c2 0 3.6 1.1 4.4 2.7l.8 1.5.8-1.5c.8-1.6 2.4-2.7 4.4-2.7 3.2 0 5.2 3.1 4 6.4C19.4 15.9 12 20.5 12 20.5Z" />
+  </svg>
+);
+
+export const IconBell = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M6 9.5a6 6 0 0 1 12 0c0 5 2 6.5 2 6.5H4s2-1.5 2-6.5" />
+    <path d="M10 19.5a2 2 0 0 0 4 0" />
+  </svg>
+);
+
+export const IconStar = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9Z" />
+  </svg>
+);
+
+export const IconShare = (p: IconProps) => (
+  <svg {...base(p)}>
+    <circle cx="6" cy="12" r="2.2" />
+    <circle cx="18" cy="5.5" r="2.2" />
+    <circle cx="18" cy="18.5" r="2.2" />
+    <path d="m8 10.8 8-4M8 13.2l8 4" />
+  </svg>
+);
+
+export const IconRuler = (p: IconProps) => (
+  <svg {...base(p)}>
+    <rect x="2.5" y="9" width="19" height="6" />
+    <path d="M6.5 9v2.5M10.5 9v3.5M14.5 9v2.5M18.5 9v3.5" />
+  </svg>
+);
+
 export const IconBag = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="M6 8.2h12l-1 12H7z" />
