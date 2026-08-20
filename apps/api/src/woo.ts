@@ -1,0 +1,256 @@
+import { config } from "./config.js";
+import type { DeenProduct, DeenCategory } from "./seed.js";
+
+/* ------------------------------------------------------------------ */
+/*  WooCommerce REST v3 client.                                        */
+/*  The consumer key/secret live ONLY here (server-side).              */
+/*  Falls back to seed data when keys are absent.                      */
+/* ------------------------------------------------------------------ */
+
+interface WooProduct {
+  id: number;
+  sku: string;
+  name: string;
+  price: string;
+  regular_price: string;
+  sale_price: string;
+  on_sale: boolean;
+  status: string;
+  stock_status?: string;
+  average_rating?: string;
+  rating_count?: number;
+  categories: { name: string }[];
+  images: { src: string }[];
+  description?: string;
+  short_description?: string;
+  attributes?: { name: string; options?: string[] | string }[];
+  meta_data?: { key: string; value: string }[];
+}
+
+/** Real product-type categories we surface in the shop (filters promo tags). */
+const CATEGORY_WHITELIST: DeenCategory[] = [
+  "JEANS",
+  "PANJABI",
+  "SHIRT",
+  "T-SHIRT",
+  "TROUSERS",
+  "POLO",
+  "ACCESSORIES",
+];
+
+function parseDiscountPct(cats: string[]): number {
+  let pct = 0;
+  for (const c of cats) {
+    const m = /(\d+)\s*%\s*OFF/i.exec(c);
+    if (m) pct = Math.max(pct, Number(m[1]));
+  }
+  return pct;
+}
+
+function mapCategory(cats: string[]): DeenCategory | "OTHER" {
+  const upper = cats.map((c) => c.trim().toUpperCase());
+  for (const c of CATEGORY_WHITELIST) {
+    if (upper.includes(c)) return c;
+  }
+  // fallbacks for known aliases
+  if (upper.some((c) => c.includes("SHIRT") && c.includes("CASUAL"))) return "SHIRT";
+  if (upper.some((c) => c.includes("T-SHIRT") || c.includes("TEE"))) return "T-SHIRT";
+  if (upper.some((c) => c.includes("PANJABI"))) return "PANJABI";
+  if (upper.some((c) => c.includes("JEANS"))) return "JEANS";
+  if (upper.some((c) => c.includes("TROUSER") || c.includes("CHINO"))) return "TROUSERS";
+  if (upper.some((c) => c.includes("POLO"))) return "POLO";
+  if (upper.some((c) => c.includes("ACCESS") || c.includes("BAG") || c.includes("BELT") || c.includes("WATER") || c.includes("MASK"))) return "ACCESSORIES";
+  return "OTHER";
+}
+
+function getSizes(p: WooProduct): string[] {
+  const attr = p.attributes?.find((a) => (a.name || "").toLowerCase().includes("size"));
+  if (!attr) return ["OS"];
+  const opts = attr.options;
+  const raw = Array.isArray(opts) ? opts : [opts];
+  return raw.map((o) => String(o).trim()).filter(Boolean);
+}
+
+function mapWooToDeen(p: WooProduct): DeenProduct | null {
+  const catNames = p.categories.map((c) => c.name);
+  const category = mapCategory(catNames);
+  const sizes = getSizes(p);
+  const pct = parseDiscountPct(catNames);
+  const current = Number(p.price) || 0;
+  const regular = p.regular_price ? Number(p.regular_price) : pct ? Math.round(current / (1 - pct / 100)) : undefined;
+  const salePrice = p.on_sale && p.sale_price ? Number(p.sale_price) : p.on_sale ? current : undefined;
+  const imgs = (p.images || []).map((i) => i.src).filter(Boolean);
+  const fabric = p.meta_data?.find((m) => m.key.toLowerCase() === "fabric")?.value ?? "";
+  return {
+    id: String(p.id),
+    sku: p.sku,
+    name: p.name,
+    category,
+    price: current,
+    salePrice,
+    regularPrice: regular,
+    salePct: pct,
+    sizes,
+    images: [imgs[0] ?? "", imgs[1] ?? imgs[0] ?? ""] as [string, string],
+    gallery: imgs,
+    fabric,
+    stockStatus: (p.stock_status as DeenProduct["stockStatus"]) ?? "instock",
+    rating: Number(p.average_rating) || 0,
+    ratingCount: Number(p.rating_count) || 0,
+    blurb: (p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220) ?? "",
+  };
+}
+
+/* ----------------------------- caching ----------------------------- */
+/* Woo rate-limits; cache the catalog for 5 min so stats + listings    */
+/* are cheap after the first warm-up.                                  */
+const CACHE_TTL_MS = 5 * 60 * 1000;
+let catalogCache: { at: number; data: DeenProduct[] } | null = null;
+let catalogWarming: Promise<DeenProduct[]> | null = null;
+
+export function wooHealthy(): boolean {
+  return Boolean(config.woo.consumerKey && config.woo.consumerSecret);
+}
+
+async function wooFetch(path: string, params: Record<string, string> = {}): Promise<any> {
+  const { site, consumerKey, consumerSecret } = config.woo;
+  const url = new URL(`${site.replace(/\/$/, "")}/wp-json/wc/v3/${path}`);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  url.searchParams.set("consumer_key", consumerKey);
+  url.searchParams.set("consumer_secret", consumerSecret);
+  const res = await fetch(url.toString());
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Woo ${path} failed: ${res.status} ${body.slice(0, 120)}`);
+  }
+  return res.json();
+}
+
+export async function fetchWooProducts(): Promise<DeenProduct[]> {
+  if (catalogCache && Date.now() - catalogCache.at < CACHE_TTL_MS) return catalogCache.data;
+  if (catalogWarming) return catalogWarming;
+
+  catalogWarming = (async () => {
+    const out: DeenProduct[] = [];
+    const perPage = 100;
+    for (let page = 1; page <= 10; page++) {
+      const batch = (await wooFetch("products", { per_page: String(perPage), page: String(page) })) as WooProduct[];
+      if (!Array.isArray(batch) || batch.length === 0) break;
+      for (const p of batch) {
+        const d = mapWooToDeen(p);
+        if (d) out.push(d);
+      }
+      if (batch.length < perPage) break;
+    }
+    catalogCache = { at: Date.now(), data: out };
+    catalogWarming = null;
+    return out;
+  })();
+
+  try {
+    return await catalogWarming;
+  } catch (e) {
+    catalogWarming = null;
+    throw e;
+  }
+}
+
+/** Per-product variations (real size → stock + price) for the detail screen. */
+export async function fetchWooVariations(productId: string): Promise<
+  { id: number; size: string; stock: string; price: number; regular: number }[]
+> {
+  const raw = (await wooFetch(`products/${productId}/variations`, { per_page: "50" })) as any[];
+  return raw.map((v) => ({
+    id: v.id,
+    size: (v.attributes || []).map((a: any) => a.option).join(" ") || "OS",
+    stock: v.stock_status ?? "instock",
+    price: Number(v.price) || 0,
+    regular: Number(v.regular_price) || 0,
+  }));
+}
+
+/* ----------------------------- analytics --------------------------- */
+
+export interface DeenStats {
+  updatedAt: string;
+  store: { totalProducts: number; onSale: number; outOfStock: number; avgPrice: number };
+  sales: { period: string; totalSales: number; netSales: number; orders: number; items: number; newCustomers: number; shipping: number; series: { date: string; sales: number; orders: number; customers: number }[] };
+  categories: { category: string; count: number }[];
+  topSellers: { productId: number; name: string; itemsSold: number; revenue: number }[];
+}
+
+export async function fetchWooStats(): Promise<DeenStats> {
+  const catalog = await fetchWooProducts();
+  const salesReport = (await wooFetch("reports/sales", { period: "month" })) as any[];
+
+  const today = new Date();
+  const periodLabel = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+  const latest = salesReport[salesReport.length - 1] ?? {};
+  let totalSales = 0, netSales = 0, orders = 0, items = 0, newCustomers = 0, shipping = 0;
+  const series: DeenStats["sales"]["series"] = [];
+  for (const [date, v] of Object.entries<any>(latest.totals ?? {})) {
+    totalSales += Number(v.sales) || 0;
+    netSales += Number(v.net_sales ?? v.sales) || 0;
+    orders += Number(v.orders) || 0;
+    items += Number(v.items) || 0;
+    newCustomers += Number(v.customers) || 0;
+    shipping += Number(v.shipping) || 0;
+    series.push({ date, sales: Number(v.sales) || 0, orders: Number(v.orders) || 0, customers: Number(v.customers) || 0 });
+  }
+
+  const catCounts = new Map<string, number>();
+  let onSale = 0, outOfStock = 0, priceSum = 0;
+  for (const p of catalog) {
+    catCounts.set(p.category, (catCounts.get(p.category) ?? 0) + 1);
+    if (p.salePrice) onSale++;
+    if (p.stockStatus === "outofstock") outOfStock++;
+    priceSum += p.price;
+  }
+  const categories = [...catCounts.entries()].map(([category, count]) => ({ category, count })).sort((a, b) => b.count - a.count);
+
+  // Top sellers: the live reports/products endpoint is often disabled; fall back
+  // to a curated "best of" from the live catalog (highest discount + in stock).
+  let topSellers: DeenStats["topSellers"] = [];
+  try {
+    const topReport = (await wooFetch("reports/products", { period: "month", per_page: "10" })) as any[];
+    topSellers = (topReport || []).map((t) => ({
+      productId: Number(t.product_id),
+      name: String(t.product_name),
+      itemsSold: Number(t.items_sold) || 0,
+      revenue: Number(t.total) || 0,
+    }));
+  } catch {
+    topSellers = catalog
+      .filter((p) => p.stockStatus !== "outofstock")
+      .sort((a, b) => (b.salePct ?? 0) - (a.salePct ?? 0))
+      .slice(0, 8)
+      .map((p) => ({ productId: Number(p.id), name: p.name, itemsSold: 0, revenue: 0 }));
+  }
+
+  return {
+    updatedAt: new Date().toISOString(),
+    store: { totalProducts: catalog.length, onSale, outOfStock, avgPrice: catalog.length ? Math.round(priceSum / catalog.length) : 0 },
+    sales: { period: periodLabel, totalSales, netSales, orders, items, newCustomers, shipping, series },
+    categories,
+    topSellers,
+  };
+}
+
+export async function fetchWooCategoryList(): Promise<{ category: string; count: number }[]> {
+  const catalog = await fetchWooProducts();
+  const catCounts = new Map<string, number>();
+  for (const p of catalog) catCounts.set(p.category, (catCounts.get(p.category) ?? 0) + 1);
+  return [...catCounts.entries()].map(([category, count]) => ({ category, count })).sort((a, b) => b.count - a.count);
+}
+
+export async function pushWooOrder(order: unknown): Promise<{ id: number }> {
+  const res = await wooFetch("orders", {});
+  // wooFetch does GET; orders are POST → use raw fetch
+  const { site, consumerKey, consumerSecret } = config.woo;
+  const url = new URL(`${site.replace(/\/$/, "")}/wp-json/wc/v3/orders`);
+  url.searchParams.set("consumer_key", consumerKey);
+  url.searchParams.set("consumer_secret", consumerSecret);
+  const r = await fetch(url.toString(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(order) });
+  if (!r.ok) throw new Error(`Woo order create failed: ${r.status}`);
+  return (await r.json()) as { id: number };
+}

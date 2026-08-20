@@ -1,0 +1,27 @@
+# Render Blueprint — deploys ONLY the DEEN gateway (apps/api) via Docker.
+# Deploy: push this repo to GitHub, then in Render: New + Blueprint, pick the repo.
+#   Root Directory is set to apps/api below, so Docker builds just the gateway.
+# Gateway endpoints: /v1/health, /v1/deen/products, /v1/deen/stats (admin),
+#   /v1/deen/snapshot, /v1/deen/orders, /v1/deen/bugs (crash/feedback sink).
+services:
+  - type: web
+    name: deen-gateway
+    runtime: docker
+    rootDir: apps/api          # <-- Docker context = apps/api (holds the Dockerfile)
+    plan: free                 # free tier; upgrade to starter to disable sleep
+    region: oregon             # pick the region nearest you
+    healthCheckPath: /v1/health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: PORT
+        sync: false            # Render injects this automatically
+      # ---- Add these in the Render dashboard (Secret > never commit keys) ----
+      - key: WOO_SITE
+        value: "https://deencommerce.com"
+      - key: WOO_CONSUMER_KEY
+        sync: false            # set in dashboard (your read-only key)
+      - key: WOO_CONSUMER_SECRET
+        sync: false            # set in dashboard
+      - key: GATEWAY_API_KEY
+        sync: false            # leave blank for now
