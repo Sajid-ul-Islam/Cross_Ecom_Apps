@@ -222,7 +222,45 @@ export async function createOrder(
   }
 }
 
-/* ------------------------------ profile ---------------------------- */
+/* --------------------------- bug reporting ------------------------- */
+/* Sends client-side crashes/errors to the gateway for ongoing dev.
+   Best-effort: never throws to the caller, never blocks the UI.     */
+
+export interface BugReport {
+  severity?: "low" | "medium" | "high" | "crash";
+  route?: string;
+  message: string;
+  stack?: string;
+  device?: { platform?: string; model?: string; osVersion?: string };
+  extra?: any;
+}
+
+export async function reportBug(report: BugReport): Promise<void> {
+  try {
+    const body = JSON.stringify({
+      appVersion: (require("../../app.json") as any).expo?.version ?? "unknown",
+      role: "customer",
+      severity: report.severity ?? "medium",
+      route: report.route ?? null,
+      message: report.message,
+      stack: report.stack ?? null,
+      device: report.device ?? null,
+      extra: report.extra ?? null,
+    });
+    await requestRaw("/v1/deen/bugs", { method: "POST", body });
+  } catch {
+    /* swallow — bug reporting must never crash the app */
+  }
+}
+
+/* raw POST without the online/offline side effects (used by reportBug) */
+async function requestRaw(path: string, init?: RequestInit): Promise<Response> {
+  return fetch(`${GATEWAY_URL}${path}`, {
+    ...init,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 /* Profile stays device-local (it's the shopper's own preferences).     */
 
 const PROFILE_KEY = "deen_mobile_profile_v1";
