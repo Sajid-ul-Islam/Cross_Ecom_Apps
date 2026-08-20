@@ -2,7 +2,7 @@
   "expo": {
     "name": "DEEN",
     "slug": "deen-commerce",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "deen",
@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#1A2350"
+      "backgroundColor": "#E06020"
     },
     "ios": {
       "supportsTablet": true,
@@ -19,7 +19,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1A2350"
+        "backgroundColor": "#E06020"
       },
       "package": "com.deencommerce.app"
     },
