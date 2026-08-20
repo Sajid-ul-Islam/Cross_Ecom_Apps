@@ -33,6 +33,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "45da9018-181d-4415-a611-1cb971f61cca"
+      }
+    },
+    "owner": "sajid.islam"
   }
 }
