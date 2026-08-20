@@ -146,6 +146,7 @@ const ORDERS_STORAGE_KEY = "deen_mobile_orders_v1";
 const PROFILE_STORAGE_KEY = "deen_mobile_profile_v1";
 
 export const DEFAULT_PROFILE: UserProfile = {
+  role: "customer",
   name: "Tanvir Ahmed",
   phone: "01712-345678",
   address: "House 42, Road 11, Sector 4, Uttara, Dhaka",

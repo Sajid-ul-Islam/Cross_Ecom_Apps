@@ -100,6 +100,8 @@ export interface Order {
 }
 
 export interface UserProfile {
+  username?: string;
+  role: "customer" | "admin";
   name: string;
   phone: string;
   address: string;

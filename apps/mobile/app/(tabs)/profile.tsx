@@ -19,7 +19,7 @@ const JEANS_SIZES = ["28", "30", "32", "34", "36", "38"];
 const TOP_SIZES = ["S", "M", "L", "XL", "XXL"];
 
 export default function ProfileScreen() {
-  const { profile, updateProfile } = useProfile();
+  const { profile, updateProfile, loginAsAdmin, logoutAdmin } = useProfile();
 
   const [name, setName] = useState(profile.name);
   const [phone, setPhone] = useState(profile.phone);
@@ -54,6 +54,26 @@ export default function ProfileScreen() {
             <Text style={styles.alertSuccessText}>✓ Profile &amp; fit preferences updated</Text>
           </View>
         )}
+
+        {/* Admin access — login reveals the BI / sales dashboard (home) */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Store size={16} color={Colors.indigo} />
+            <Text style={styles.cardTitle}>STORE ADMIN ACCESS</Text>
+          </View>
+          {profile.role === "admin" ? (
+            <View style={styles.adminOn}>
+              <Text style={styles.adminOnText}>✓ Logged in as admin — sales &amp; BI dashboard visible on Home.</Text>
+              <TouchableOpacity style={styles.adminLogoutBtn} onPress={logoutAdmin}>
+                <Text style={styles.adminLogoutText}>LOG OUT</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.adminLoginBtn} onPress={loginAsAdmin}>
+              <Text style={styles.adminLoginText}>LOGIN AS ADMIN</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* Contact Information */}
         <View style={styles.card}>
@@ -247,6 +267,39 @@ const styles = StyleSheet.create({
   alertSuccessText: {
     color: Colors.emerald,
     fontSize: 12,
+    fontWeight: "700",
+  },
+  adminLoginBtn: {
+    backgroundColor: Colors.indigo,
+    paddingVertical: 12,
+    borderRadius: 6,
+    alignItems: "center",
+  },
+  adminLoginText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  adminOn: {
+    gap: 8,
+  },
+  adminOnText: {
+    color: Colors.emerald,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  adminLogoutBtn: {
+    alignSelf: "flex-start",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  adminLogoutText: {
+    color: Colors.sub,
+    fontSize: 11,
     fontWeight: "700",
   },
   card: {

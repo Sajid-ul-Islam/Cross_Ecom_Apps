@@ -63,40 +63,73 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 /* ----------------------------- catalog ----------------------------- */
 
+import { getBundledProducts } from "./catalog";
+
+function applyFilters(list: Product[], category?: DeenCategory, query?: string): Product[] {
+  let out = list;
+  if (category && category !== "ALL") {
+    out = out.filter((p) => p.category === category);
+  }
+  if (query && query.trim()) {
+    const q = query.toLowerCase();
+    out = out.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q) ||
+        p.sku.toLowerCase().includes(q) ||
+        (p.fabric || "").toLowerCase().includes(q)
+    );
+  }
+  return out;
+}
+
+/**
+ * Offline-first: returns the BUNDLED catalog instantly so the storefront
+ * renders with zero network. Then attempts a background refresh from the
+ * gateway; if it succeeds we update the offline cache, otherwise we keep
+ * the bundled data. Never throws — always resolves.
+ */
 export async function fetchProducts(
   category?: DeenCategory,
   query?: string,
   sort?: "price-asc" | "price-desc" | "name-asc" | "new"
 ): Promise<Product[]> {
-  try {
-    const params = new URLSearchParams();
-    if (category && category !== "ALL") params.set("category", category);
-    if (query && query.trim()) params.set("q", query.trim());
-    if (sort) params.set("sort", sort);
-    const qs = params.toString();
-    const list = await request<Product[]>(`/v1/deen/products${qs ? `?${qs}` : ""}`);
-    connection = "online";
-    // Gateway returns DEEN products; cache them as the offline fallback.
-    await AsyncStorage.setItem("deen_gateway_products_v1", JSON.stringify(list)).catch(() => {});
-    return list;
-  } catch (e) {
-    connection = "offline";
-    // Fall back to cached gateway response, then to the bundled seed catalog.
-    const cached = await AsyncStorage.getItem("deen_gateway_products_v1").catch(() => null);
-    const base: Product[] = cached ? JSON.parse(cached) : PRODUCTS_CATALOG;
-    let list = base;
-    if (category && category !== "ALL") list = list.filter((p) => p.category === category);
-    if (query && query.trim()) {
-      const q = query.toLowerCase();
-      list = list.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.category.toLowerCase().includes(q) ||
-          p.sku.toLowerCase().includes(q) ||
-          (p.fabric || "").toLowerCase().includes(q)
-      );
+  // 1) Instant offline result (bundled snapshot)
+  const bundled = applyFilters(getBundledProducts(), category, query);
+  const sortedBundled = sort ? sortProductsLocal(bundled, sort) : bundled;
+
+  // 2) Background refresh (fire-and-forget; do not block the UI)
+  (async () => {
+    try {
+      const params = new URLSearchParams();
+      if (category && category !== "ALL") params.set("category", category);
+      if (query && query.trim()) params.set("q", query.trim());
+      if (sort) params.set("sort", sort);
+      const qs = params.toString();
+      const list = await request<Product[]>(`/v1/deen/products${qs ? `?${qs}` : ""}`);
+      connection = "online";
+      await AsyncStorage.setItem("deen_gateway_products_v1", JSON.stringify(list)).catch(() => {});
+    } catch {
+      connection = "offline";
     }
-    return list;
+  })();
+
+  return sortedBundled;
+}
+
+function sortProductsLocal(list: Product[], sort: string): Product[] {
+  const arr = [...list];
+  switch (sort) {
+    case "price-asc":
+      return arr.sort((a, b) => (a.salePrice ?? a.price) - (b.salePrice ?? b.price));
+    case "price-desc":
+      return arr.sort((a, b) => (b.salePrice ?? b.price) - (a.salePrice ?? b.price));
+    case "name-asc":
+      return arr.sort((a, b) => a.name.localeCompare(b.name));
+    case "new":
+      return arr.sort((a, b) => Number(b.isNew ?? false) - Number(a.isNew ?? false));
+    default:
+      return arr;
   }
 }
 

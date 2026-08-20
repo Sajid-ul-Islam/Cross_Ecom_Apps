@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, StatusBar } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { ShoppingBag, ArrowLeft, Search } from "lucide-react-native";
 import { Colors } from "../theme/colors";
@@ -43,7 +43,11 @@ export const Header: React.FC<HeaderProps> = ({
         ) : (
           <View style={styles.brandContainer}>
             <View style={styles.brandRow}>
-              <Text style={styles.brandTitle}>{title}</Text>
+              <Image
+                source={require("../../assets/logo.png")}
+                style={styles.brandLogo}
+                resizeMode="contain"
+              />
               <View style={[styles.connDot, { backgroundColor: live ? Colors.emerald : Colors.faint }]}>
                 <Text style={styles.connText}>{live ? "LIVE" : "OFFLINE"}</Text>
               </View>
@@ -118,6 +122,10 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 2,
     color: Colors.indigoDark,
+  },
+  brandLogo: {
+    width: 92,
+    height: 30,
   },
   brandTag: {
     fontSize: 9,
