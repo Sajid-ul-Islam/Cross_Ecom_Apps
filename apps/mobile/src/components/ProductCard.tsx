@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { Product } from "../types";
 import { Colors } from "../theme/colors";
@@ -10,8 +10,9 @@ interface ProductCardProps {
   style?: any;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product, style }) => {
+function ProductCardBase({ product, style }: ProductCardProps) {
   const router = useRouter();
+  const [imgLoaded, setImgLoaded] = React.useState(false);
 
   const handlePress = () => {
     router.push({
@@ -36,7 +37,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, style }) => {
           source={{ uri: product.images[0] }}
           style={styles.image}
           resizeMode="cover"
+          fadeDuration={150}
+          progressiveRenderingEnabled
+          onLoadStart={() => setImgLoaded(false)}
+          onLoadEnd={() => setImgLoaded(true)}
         />
+        {!imgLoaded && (
+          <View style={styles.imgPlaceholder}>
+            <ActivityIndicator size="small" color={Colors.indigo} />
+          </View>
+        )}
         {product.isNew && (
           <View style={styles.badgeNew}>
             <Text style={styles.badgeNewText}>NEW</Text>
@@ -91,6 +101,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, style }) => {
   );
 };
 
+/** Memoized so list re-renders only re-render changed cards (keeps grids snappy). */
+export const ProductCard = React.memo(ProductCardBase);
+
 const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.card,
@@ -109,6 +122,16 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: "100%",
+  },
+  imgPlaceholder: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.cardSecondary,
   },
   badgeNew: {
     position: "absolute",

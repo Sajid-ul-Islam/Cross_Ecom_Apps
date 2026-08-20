@@ -4,6 +4,7 @@ import {
   Text,
   TextInput,
   ScrollView,
+  FlatList,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
@@ -32,9 +33,16 @@ export default function ShopScreen() {
     (params.category as DeenCategory) || "ALL"
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const [deferredQuery, setDeferredQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("default");
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Debounce search input (200ms) so filtering large lists stays smooth.
+  useEffect(() => {
+    const t = setTimeout(() => setDeferredQuery(searchQuery), 200);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (params.category && params.category !== selectedCategory) {
@@ -45,10 +53,10 @@ export default function ShopScreen() {
   useEffect(() => {
     setLoading(true);
     const sortParam = sort === "default" ? undefined : (sort as "price-asc" | "price-desc" | "name-asc" | "new");
-    fetchProducts(selectedCategory, searchQuery, sortParam)
+    fetchProducts(selectedCategory, deferredQuery, sortParam)
       .then((data) => setProducts(data))
       .finally(() => setLoading(false));
-  }, [selectedCategory, searchQuery, sort]);
+  }, [selectedCategory, deferredQuery, sort]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -174,18 +182,23 @@ export default function ShopScreen() {
           </TouchableOpacity>
         </View>
       ) : (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
+        <FlatList
+          data={products}
+          keyExtractor={(p) => p.id}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
           contentContainerStyle={styles.scrollContent}
-        >
-          <View style={styles.grid}>
-            {products.map((product) => (
-              <View key={product.id} style={styles.gridItem}>
-                <ProductCard product={product} />
-              </View>
-            ))}
-          </View>
-        </ScrollView>
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={8}
+          maxToRenderPerBatch={6}
+          windowSize={5}
+          removeClippedSubviews
+          renderItem={({ item }) => (
+            <View style={styles.gridItem}>
+              <ProductCard product={item} />
+            </View>
+          )}
+        />
       )}
     </SafeAreaView>
   );
@@ -300,15 +313,14 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 24,
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
     paddingHorizontal: 16,
+  },
+  row: {
     justifyContent: "space-between",
   },
   gridItem: {
     width: "48%",
+    marginBottom: 12,
   },
   centerContainer: {
     flex: 1,
