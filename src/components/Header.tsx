@@ -114,9 +114,14 @@ export function Header({
         <div className="corners border border-line bg-panel/70">
           {/* drawing header strip */}
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-dashed border-line px-6 py-3">
-            <p className="font-mono text-[10px] tracking-[0.3em] text-faint uppercase">
-              Omnichannel commerce build · drawing set BW-2025
-            </p>
+            <div>
+              <p className="font-mono text-[10px] tracking-[0.3em] text-faint uppercase">
+                Omnichannel commerce build · drawing set BW-2025
+              </p>
+              <p className="mt-1 font-mono text-[9px] tracking-[0.18em] text-mint/80 uppercase">
+                ⎇ main · merged from full-stack-project-blueprint-4a182 ✓ · branch deleted · apps/* in development
+              </p>
+            </div>
             <div className="flex items-center gap-3">
               <Stamp tone="amber" pop>
                 In progress
