@@ -11,7 +11,7 @@ let cache: any = null;
 export function getBundledCatalog(): { generatedAt: string; count: number; products: any[] } {
   if (!cache) {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    cache = require("./data/catalog.snapshot.json");
+    cache = require("../data/catalog.snapshot.json");
   }
   return cache;
 }
