@@ -4,6 +4,7 @@ import { DeenApp } from "./apps/DeenApp";
 import { Storefront } from "./apps/Storefront";
 import { BlueprintPage } from "./pages/BlueprintPage";
 import { ToastProvider, useToast } from "./components/ui";
+import { DEEN_ICON } from "./icon";
 import { useLocalStorage } from "./hooks";
 import { PHASES, SEED_SESSIONS, type SessionEntry, type TaskStatus } from "./data";
 
@@ -57,6 +58,13 @@ function WorkspaceBar() {
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-2.5">
+          <span
+            className="hidden items-center gap-1.5 border border-line px-1.5 py-0.5 sm:flex"
+            title="DEEN — client app (icon provided by the client)"
+          >
+            <img src={DEEN_ICON} alt="DEEN app icon" className="rounded object-contain" style={{ background: "#fff", height: 18, width: 18 }} />
+            <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-dim">deen</span>
+          </span>
           <span
             className="hidden items-center gap-1.5 border border-mint/40 bg-mint/5 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.14em] text-mint md:flex"
             title="full-stack-project-blueprint-4a182 was merged into main, then deleted. The blueprint console lives on at #/blueprint."

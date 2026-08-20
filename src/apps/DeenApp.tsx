@@ -41,6 +41,7 @@ import {
 } from "../api/deen";
 import { PHASES, type TaskStatus } from "../data";
 import { Bar, Reveal, Stamp, StatusChip, useToast } from "../components/ui";
+import { DEEN_ICON } from "../icon";
 import { useLocalStorage, useReducedMotion } from "../hooks";
 import {
   IconArrowLeft,
@@ -500,8 +501,16 @@ function DeenPhone() {
 function BootSplash() {
   return (
     <div className="flex h-full flex-col items-center justify-center" style={{ background: T.indigoDark }}>
-      <div className="boot-line font-disp text-[44px] tracking-tight text-white">DEEN</div>
-      <p className="boot-line mt-2 font-mono text-[10px] tracking-[0.3em] text-white/50" style={{ animationDelay: "0.2s" }}>
+      <div
+        className="boot-line overflow-hidden rounded-[22%] shadow-[0_10px_40px_rgba(42,54,128,0.55)] ring-1 ring-white/15"
+        style={{ animationDelay: "0.05s" }}
+      >
+        <img src={DEEN_ICON} alt="DEEN app icon" className="h-20 w-20 object-contain" style={{ background: "#fff" }} />
+      </div>
+      <div className="boot-line mt-5 font-disp text-[44px] tracking-tight text-white" style={{ animationDelay: "0.15s" }}>
+        DEEN
+      </div>
+      <p className="boot-line mt-2 font-mono text-[10px] tracking-[0.3em] text-white/50" style={{ animationDelay: "0.3s" }}>
         দেশের প্রথম ডেনিম ব্র্যান্ড
       </p>
       <div className="mt-8 flex gap-1.5">
@@ -541,7 +550,10 @@ function HomeScreen({
     <div className="font-arch" style={{ color: T.ink }}>
       {/* header */}
       <div className="flex items-center justify-between px-4 pt-1 pb-3">
-        <span className="font-disp text-[22px] tracking-tight">DEEN</span>
+        <span className="flex items-center gap-2">
+          <img src={DEEN_ICON} alt="" className="h-8 w-8 rounded-lg object-contain shadow-sm" style={{ background: "#fff" }} />
+          <span className="font-disp text-[22px] tracking-tight">DEEN</span>
+        </span>
         <div className="flex items-center gap-2">
           <button
             onClick={() => go({ name: "notifications" })}
@@ -2493,8 +2505,18 @@ export function DeenApp({ overrides, onCycle }: { overrides: Record<string, Task
           <Reveal>
             <div className="corners border border-line bg-panel/70 p-5">
               <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-wire">Client</p>
-              <p className="mt-2 font-display text-xl font-extrabold">DEEN</p>
-              <p className="mt-0.5 text-[12px] text-dim">দেশের প্রথম ডেনিম ব্র্যান্ড</p>
+              <div className="mt-2.5 flex items-center gap-3">
+                <img
+                  src={DEEN_ICON}
+                  alt="DEEN app icon"
+                  className="h-11 w-11 rounded-xl object-contain ring-1 ring-line shadow-[0_4px_16px_rgba(0,0,0,0.35)]"
+                  style={{ background: "#fff" }}
+                />
+                <div>
+                  <p className="font-display text-xl font-extrabold leading-none">DEEN</p>
+                  <p className="mt-1 text-[11px] text-dim">দেশের প্রথম ডেনিম ব্র্যান্ড</p>
+                </div>
+              </div>
               <dl className="mt-4 space-y-2 text-[12px]">
                 {[
                   ["Store", "deencommerce.com"],
