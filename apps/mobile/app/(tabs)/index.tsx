@@ -19,27 +19,33 @@ import { Sparkline, CategoryBars, Donut, KpiTile } from "../../src/components/Ch
 import { Colors } from "../../src/theme/colors";
 import { fetchProducts, fetchStats, CATEGORIES, bdt } from "../../src/services/gateway";
 import { Product, DeenCategory, Stats } from "../../src/types";
+import { useProfile } from "../../src/context/ProfileContext";
 
 const { width } = Dimensions.get("window");
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { profile } = useProfile();
+  const isAdmin = profile.role === "admin" || profile.username === "admin";
   const [products, setProducts] = useState<Product[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
-    Promise.all([fetchProducts(), fetchStats()]).then(([p, s]) => {
-      if (!active) return;
-      setProducts(p);
-      setStats(s);
-      setLoading(false);
+    // Offline-first: products render from the bundled catalog immediately.
+    fetchProducts().then((p) => {
+      if (active) setProducts(p);
     });
+    // Sales/BI data is ADMIN ONLY — customers never request it.
+    if (isAdmin) {
+      fetchStats()
+        .then((s) => active && setStats(s))
+        .catch(() => {});
+    }
     return () => {
       active = false;
     };
-  }, []);
+  }, [isAdmin]);
 
   const newDrops = products.filter((p) => p.isNew || p.salePct);
   const jeansCollection = products.filter((p) => p.category === "JEANS");
@@ -94,18 +100,14 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* LIVE STORE INSIGHTS DASHBOARD */}
-        {loading ? (
-          <View style={styles.loadingCard}>
-            <ActivityIndicator color={Colors.indigo} />
-            <Text style={styles.loadingText}>Loading live store data…</Text>
-          </View>
-        ) : stats ? (
+        {/* ADMIN ONLY — Store Insights / BI dashboard.
+            Customers never see sales data. Gated by role. */}
+        {isAdmin && stats ? (
           <View style={styles.insightsCard}>
             <View style={styles.insightsHeader}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <TrendingUp size={16} color={Colors.indigo} />
-                <Text style={styles.insightsTitle}>STORE INSIGHTS</Text>
+                <Text style={styles.insightsTitle}>STORE INSIGHTS · ADMIN</Text>
               </View>
               <View style={[styles.modePill, { backgroundColor: stats.mode === "live" ? Colors.emeraldLight : Colors.amberLight }]}>
                 <Text style={[styles.modePillText, { color: stats.mode === "live" ? Colors.emerald : Colors.amber }]}>

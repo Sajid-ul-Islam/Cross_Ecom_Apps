@@ -80,6 +80,16 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     return reply.send(list);
   });
 
+  /* ---- full snapshot (for bundling into the app as offline catalog) ---- */
+  app.get("/v1/deen/snapshot", async (_req, reply) => {
+    const list = await getCatalog();
+    return reply.send({
+      generatedAt: new Date().toISOString(),
+      count: list.length,
+      products: list,
+    });
+  });
+
   /* ---- single product (with real variations) ---- */
   app.get("/v1/deen/products/:id", async (req, reply) => {
     const list = await getCatalog();
