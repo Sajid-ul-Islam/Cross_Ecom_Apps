@@ -14,7 +14,7 @@ import { Header } from "../../src/components/Header";
 import { FreeTeeBanner } from "../../src/components/Banner";
 import { Colors } from "../../src/theme/colors";
 import { useCart } from "../../src/context/CartContext";
-import { bdt } from "../../src/services/api";
+import { bdt } from "../../src/services/gateway";
 import { DeliveryArea } from "../../src/types";
 
 export default function BagScreen() {

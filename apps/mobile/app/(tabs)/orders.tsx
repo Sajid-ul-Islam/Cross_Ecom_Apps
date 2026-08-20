@@ -13,7 +13,7 @@ import { Package, Clock, CheckCircle2, Truck, ShoppingBag, ArrowRight } from "lu
 import { Header } from "../../src/components/Header";
 import { Colors } from "../../src/theme/colors";
 import { useOrders } from "../../src/context/OrderContext";
-import { bdt } from "../../src/services/api";
+import { bdt } from "../../src/services/gateway";
 import { OrderStatus } from "../../src/types";
 
 const STATUS_STEPS: { key: OrderStatus; label: string }[] = [

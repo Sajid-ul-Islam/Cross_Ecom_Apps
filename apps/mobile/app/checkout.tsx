@@ -23,7 +23,7 @@ import { Colors } from "../src/theme/colors";
 import { useCart } from "../src/context/CartContext";
 import { useOrders } from "../src/context/OrderContext";
 import { useProfile } from "../src/context/ProfileContext";
-import { bdt } from "../src/services/api";
+import { bdt } from "../src/services/gateway";
 import { DeliveryArea, PaymentMethod, OrderItemLine } from "../src/types";
 
 export default function CheckoutScreen() {

@@ -15,7 +15,7 @@ import { Header } from "../../src/components/Header";
 import { FreeTeeBanner, DeliveryNoticeBanner } from "../../src/components/Banner";
 import { ProductCard } from "../../src/components/ProductCard";
 import { Colors } from "../../src/theme/colors";
-import { fetchProducts, CATEGORIES } from "../../src/services/api";
+import { fetchProducts, CATEGORIES } from "../../src/services/gateway";
 import { Product, DeenCategory } from "../../src/types";
 
 const { width } = Dimensions.get("window");
