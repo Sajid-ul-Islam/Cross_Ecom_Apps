@@ -8,6 +8,9 @@ import {
   deenAddReview,
   deenAvg,
   deenCancelOrder,
+  deenSendOtp,
+  deenSocialLogin,
+  deenVerifyOtp,
   deenCreateOrder,
   deenListOrders,
   deenListProducts,
@@ -28,6 +31,8 @@ import {
   startDeenWebhooks,
   subscribeDeenApi,
   subscribeDeenOrderStatus,
+  subscribeDeenSms,
+  SOCIAL_ACCOUNTS,
   type DeenArea,
   type DeenCartItem,
   type DeenCategory,
@@ -38,6 +43,8 @@ import {
   type DeenRequest,
   type DeenReview,
   type DeenSession,
+  type DeenSms,
+  type SocialAccount,
 } from "../api/deen";
 import { PHASES, type TaskStatus } from "../data";
 import { Bar, Reveal, Stamp, StatusChip, useToast } from "../components/ui";
@@ -276,6 +283,19 @@ function DeenPhone() {
     []
   );
 
+  /* SMS bus — OTP codes arrive out-of-band, like real Android */
+  const [sms, setSms] = useState<DeenSms | null>(null);
+  useEffect(
+    () =>
+      subscribeDeenSms((s) => {
+        setSms(s);
+        pushNotif("Verification code", `Your DEEN code is ${s.code}. Valid for 5 minutes.`);
+        window.setTimeout(() => setSms((cur) => (cur?.id === s.id ? null : cur)), 7000);
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
   const recordVisit = (id: string) => {
     setRecents((prev) => [id, ...prev.filter((x) => x !== id)].slice(0, 8));
   };
@@ -446,6 +466,27 @@ function DeenPhone() {
           <div className="h-[calc(100%-104px)] overflow-hidden">
             {boot ? <BootSplash /> : <div key={screen.name} className="screen-in h-full overflow-y-auto hide-scroll">{screenNode}</div>}
           </div>
+
+          {/* Android heads-up SMS (OTP delivery) */}
+          {sms && !boot && (
+            <button
+              onClick={() => setSms(null)}
+              className="sms-drop absolute left-2.5 right-2.5 top-9 z-30 flex cursor-pointer items-start gap-2.5 rounded-2xl border border-black/5 bg-[#202124]/95 px-3.5 py-3 text-left shadow-[0_14px_36px_rgba(0,0,0,0.5)] backdrop-blur"
+            >
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white" style={{ background: "#34A853" }}>
+                ✉
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-baseline justify-between gap-2">
+                  <span className="font-arch text-[11px] font-bold text-white">Messages · DEEN</span>
+                  <span className="font-mono text-[8.5px] text-white/50">now</span>
+                </span>
+                <span className="mt-0.5 block font-arch text-[11px] leading-snug text-white/85">
+                  Your DEEN verification code is <span className="font-mono font-bold tracking-[0.18em] text-white">{sms.code}</span>. Valid 5 min.
+                </span>
+              </span>
+            </button>
+          )}
 
           {/* bottom nav */}
           {!boot && (
@@ -1864,7 +1905,8 @@ function ProfileScreen({
           <p className="font-mono text-[10px]" style={{ color: T.sub }}>{draft.phone || "no number"}</p>
           {session ? (
             <span className="mt-1 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[8.5px] font-bold uppercase tracking-[0.14em]" style={{ background: "#EAF3EE", color: T.ok }}>
-              <span className="pulse-dot h-1 w-1 rounded-full" style={{ background: T.ok }} /> signed in · token in SecureStore
+              <span className="pulse-dot h-1 w-1 rounded-full" style={{ background: T.ok }} />
+              via {session.provider === "otp" ? "phone OTP" : session.provider === "google" ? "Google" : session.provider === "facebook" ? "Facebook" : "password"} · SecureStore
             </span>
           ) : (
             <span className="mt-1 inline-block rounded-full px-2 py-0.5 font-mono text-[8.5px] font-bold uppercase tracking-[0.14em]" style={{ background: "#EFEBDF", color: "#8C6A2F" }}>
@@ -2056,6 +2098,29 @@ function WishlistScreen({
 
 /* ---------------- auth ---------------- */
 
+function GoogleIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden>
+      <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.2-.1-2.3-.4-3.9z" />
+      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.3 6.1 29.4 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+      <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z" />
+      <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.1 5.7l6.2 5.2C41.4 35.9 44 30.4 44 24c0-1.2-.1-2.3-.4-3.9z" />
+    </svg>
+  );
+}
+
+function FacebookIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>
+      <circle cx="12" cy="12" r="12" fill="#1877F2" />
+      <path
+        fill="#fff"
+        d="M15.9 12.4l.4-2.6h-2.5V8.1c0-.7.4-1.4 1.5-1.4h1.1V4.4s-1-.2-2-.2c-2.1 0-3.5 1.3-3.5 3.6v2H8.5v2.6h2.4V19c.5.1 1 .1 1.5.1s1 0 1.5-.1v-6.6h2z"
+      />
+    </svg>
+  );
+}
+
 function AuthScreen({
   go,
   returnTo,
@@ -2065,29 +2130,187 @@ function AuthScreen({
   returnTo: Screen | null;
   onAuthed: (s: DeenSession) => void;
 }) {
-  const [mode, setMode] = useState<"login" | "register">("login");
-  const [name, setName] = useState("");
+  const toast = useToast();
+  /* method: OTP (default) or password */
+  const [method, setMethod] = useState<"otp" | "password">("otp");
+  /* OTP flow */
+  const [otpStep, setOtpStep] = useState<"phone" | "verify">("phone");
   const [phone, setPhone] = useState("");
+  const [code, setCode] = useState<string[]>(["", "", "", "", "", ""]);
+  const [sending, setSending] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [otpErr, setOtpErr] = useState("");
+  const [shake, setShake] = useState(0);
+  const [resendIn, setResendIn] = useState(0);
+  const codeRefs = useRef<(HTMLInputElement | null)[]>([]);
+  /* password flow */
+  const [pwMode, setPwMode] = useState<"login" | "register">("login");
+  const [name, setName] = useState("");
   const [pass, setPass] = useState("");
-  const [err, setErr] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [pwErr, setPwErr] = useState("");
+  const [pwBusy, setPwBusy] = useState(false);
+  /* social flow */
+  const [social, setSocial] = useState<null | { provider: "google" | "facebook"; stage: "chooser" | "connecting"; account?: SocialAccount }>(null);
 
-  const submit = async () => {
-    setErr("");
-    setBusy(true);
-    try {
-      const s = mode === "login" ? await deenLogin(phone, pass) : await deenRegister(name, phone, pass);
-      onAuthed(s);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Something went wrong.");
-    } finally {
-      setBusy(false);
-    }
-  };
+  /* resend countdown */
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = window.setInterval(() => setResendIn((s) => Math.max(0, s - 1)), 1000);
+    return () => window.clearInterval(t);
+  }, [resendIn > 0]);
 
   const input = "w-full rounded-xl border bg-white px-3.5 py-2.5 font-arch text-[13px]";
   const label = "mb-1 block font-mono text-[9px] font-bold uppercase tracking-[0.18em]";
 
+  /* ---------- OTP ---------- */
+  const sendOtp = async () => {
+    setOtpErr("");
+    setSending(true);
+    try {
+      await deenSendOtp(phone);
+      setOtpStep("verify");
+      setResendIn(30);
+      setCode(["", "", "", "", "", ""]);
+      toast("Verification code sent via SMS", "wire");
+      window.setTimeout(() => codeRefs.current[0]?.focus(), 80);
+    } catch (e) {
+      setOtpErr(e instanceof Error ? e.message : "Could not send code.");
+      setShake((s) => s + 1);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const setCodeAt = (i: number, v: string) => {
+    const digit = v.replace(/\D/g, "").slice(-1);
+    setCode((prev) => {
+      const next = [...prev];
+      next[i] = digit;
+      return next;
+    });
+    if (digit && i < 5) codeRefs.current[i + 1]?.focus();
+  };
+
+  const onCodeKey = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !code[i] && i > 0) codeRefs.current[i - 1]?.focus();
+  };
+
+  const onCodePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const digits = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!digits) return;
+    e.preventDefault();
+    const next = ["", "", "", "", "", ""];
+    digits.split("").forEach((d, i) => (next[i] = d));
+    setCode(next);
+    codeRefs.current[Math.min(digits.length, 5)]?.focus();
+  };
+
+  const verifyOtp = async () => {
+    const full = code.join("");
+    if (full.length < 6) {
+      setOtpErr("Enter the 6-digit code from your SMS.");
+      setShake((s) => s + 1);
+      return;
+    }
+    setOtpErr("");
+    setVerifying(true);
+    try {
+      const s = await deenVerifyOtp(phone, full);
+      onAuthed(s);
+    } catch (e) {
+      setOtpErr(e instanceof Error ? e.message : "Verification failed.");
+      setShake((s) => s + 1);
+      setCode(["", "", "", "", "", ""]);
+      codeRefs.current[0]?.focus();
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  /* ---------- password ---------- */
+  const submitPw = async () => {
+    setPwErr("");
+    setPwBusy(true);
+    try {
+      const s = pwMode === "login" ? await deenLogin(phone, pass) : await deenRegister(name, phone, pass);
+      onAuthed(s);
+    } catch (e) {
+      setPwErr(e instanceof Error ? e.message : "Something went wrong.");
+    } finally {
+      setPwBusy(false);
+    }
+  };
+
+  /* ---------- social ---------- */
+  const startSocial = (provider: "google" | "facebook") => {
+    if (provider === "google") {
+      setSocial({ provider, stage: "chooser" });
+    } else {
+      const acc = SOCIAL_ACCOUNTS.find((a) => a.provider === "facebook")!;
+      setSocial({ provider, stage: "connecting", account: acc });
+      window.setTimeout(() => deenSocialLogin(acc).then(onAuthed).catch(() => setSocial(null)), 1100);
+    }
+  };
+
+  const pickGoogle = (account: SocialAccount) => {
+    setSocial({ provider: "google", stage: "connecting", account });
+    window.setTimeout(() => deenSocialLogin(account).then(onAuthed).catch(() => setSocial(null)), 1100);
+  };
+
+  /* ---------- Google account chooser ---------- */
+  if (social?.stage === "chooser") {
+    return (
+      <div className="flex h-full flex-col font-arch" style={{ background: "#f2f1ee", color: "#1f1f1f" }}>
+        <div className="flex items-center gap-3 px-4 pt-1 pb-3">
+          <button onClick={() => setSocial(null)} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-black/10 bg-white transition-transform active:scale-90" aria-label="Back">
+            <IconArrowLeft size={16} />
+          </button>
+          <p className="font-disp text-[18px]">Google</p>
+        </div>
+        <div className="mx-4 rounded-2xl bg-white p-5 shadow-[0_2px_10px_rgba(0,0,0,0.08)]">
+          <div className="flex justify-center"><GoogleIcon size={30} /></div>
+          <p className="mt-3 text-center text-[15px] font-bold">Choose an account</p>
+          <p className="mt-0.5 text-center text-[12px]" style={{ color: "#5f6368" }}>to continue to <span className="font-semibold" style={{ color: T.indigo }}>DEEN</span></p>
+          <div className="mt-4 divide-y divide-black/5">
+            {SOCIAL_ACCOUNTS.filter((a) => a.provider === "google").map((a) => (
+              <button
+                key={a.email}
+                onClick={() => pickGoogle(a)}
+                className="flex w-full cursor-pointer items-center gap-3 px-1 py-3 text-left transition-colors hover:bg-black/[0.04] active:bg-black/[0.07]"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-full text-[14px] font-bold text-white" style={{ background: "#7b5cd6" }}>
+                  {a.name[0]}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[13px] font-semibold">{a.name}</span>
+                  <span className="block truncate text-[11.5px]" style={{ color: "#5f6368" }}>{a.email}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <p className="mt-4 px-6 text-center text-[10px] leading-relaxed" style={{ color: "#5f6368" }}>
+          To continue, Google will share your name and email address with DEEN.
+        </p>
+      </div>
+    );
+  }
+
+  /* ---------- social connecting ---------- */
+  if (social?.stage === "connecting") {
+    return (
+      <div className="flex h-full flex-col items-center justify-center px-8 text-center font-arch" style={{ color: T.ink }}>
+        {social.provider === "google" ? <GoogleIcon size={40} /> : <FacebookIcon size={40} />}
+        <span className="spin-slow mt-5 h-8 w-8 rounded-full border-[3px] border-t-transparent" style={{ borderColor: T.line, borderTopColor: "transparent" }} />
+        <p className="mt-4 text-[13px] font-semibold">
+          Connecting to {social.provider === "google" ? "accounts.google.com" : "facebook.com"}…
+        </p>
+        <p className="mt-1 font-mono text-[10px]" style={{ color: T.sub }}>{social.account?.email}</p>
+      </div>
+    );
+  }
+
+  /* ---------- main auth screen ---------- */
   return (
     <div className="flex h-full flex-col font-arch" style={{ color: T.ink }}>
       <div className="min-h-0 flex-1 overflow-y-auto hide-scroll px-4">
@@ -2095,79 +2318,175 @@ function AuthScreen({
           <button onClick={() => go(returnTo ?? { name: "profile" })} className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border transition-transform active:scale-90" style={{ borderColor: T.line }} aria-label="Back">
             <IconArrowLeft size={16} />
           </button>
-          <p className="font-disp text-[20px]">{mode === "login" ? "Welcome back" : "Create account"}</p>
+          <p className="font-disp text-[20px]">Sign in to DEEN</p>
         </div>
-
         <p className="mt-3 text-[12.5px] leading-relaxed" style={{ color: T.sub }}>
-          {mode === "login"
-            ? "Sign in to sync your bag, wishlist and orders on this device."
-            : "One account for the app and the website — orders sync everywhere."}
+          Sync your bag, wishlist and orders on this device — one account for the app and the website.
         </p>
 
-        {/* mode toggle */}
+        {/* method toggle */}
         <div className="mt-4 grid grid-cols-2 rounded-xl border p-1" style={{ borderColor: T.line, background: "#fff" }}>
-          {(["login", "register"] as const).map((m) => (
+          {([["otp", "Phone OTP"], ["password", "Password"]] as const).map(([m, lbl]) => (
             <button
               key={m}
-              onClick={() => { setMode(m); setErr(""); }}
+              onClick={() => setMethod(m)}
               className="cursor-pointer rounded-lg py-2 font-arch text-[12px] font-bold transition-all duration-200"
-              style={mode === m ? { background: T.indigo, color: "#fff" } : { color: T.sub }}
+              style={method === m ? { background: T.indigo, color: "#fff" } : { color: T.sub }}
             >
-              {m === "login" ? "Log in" : "Register"}
+              {lbl}
             </button>
           ))}
         </div>
 
-        <div className="mt-4 space-y-3">
-          {mode === "register" && (
-            <div>
-              <label className={label} style={{ color: T.sub }}>Full name</label>
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Rafiq Hasan" className={input} style={{ borderColor: T.line }} />
+        {method === "otp" ? (
+          otpStep === "phone" ? (
+            /* ---- step 1: enter number ---- */
+            <div key="s1" className="screen-in mt-4">
+              <label className={label} style={{ color: T.sub }}>Mobile number</label>
+              <div key={shake} className={`flex items-center overflow-hidden rounded-xl border bg-white ${shake ? "shake-x" : ""}`} style={{ borderColor: T.line }}>
+                <span className="shrink-0 border-r px-3 py-2.5 font-mono text-[12px] font-semibold" style={{ borderColor: T.line, color: T.sub }}>+880</span>
+                <input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, "").slice(0, 11))}
+                  placeholder="1XXXXXXXXX"
+                  inputMode="tel"
+                  className="w-full bg-transparent px-3 py-2.5 font-arch text-[14px] tracking-wide"
+                />
+              </div>
+              {otpErr && <p className="deen-pop mt-2 text-[11.5px] font-semibold" style={{ color: T.crimson }}>{otpErr}</p>}
+              <p className="mt-2.5 font-mono text-[9px] leading-relaxed" style={{ color: T.sub }}>
+                We'll text a 6-digit code to this number. Demo SMS appears as a phone notification.
+              </p>
             </div>
-          )}
-          <div>
-            <label className={label} style={{ color: T.sub }}>Mobile</label>
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="01XXXXXXXXX" inputMode="tel" className={input} style={{ borderColor: T.line }} />
-          </div>
-          <div>
-            <label className={label} style={{ color: T.sub }}>Password</label>
-            <input value={pass} onChange={(e) => setPass(e.target.value)} type="password" placeholder="••••••" className={input} style={{ borderColor: T.line }} />
-          </div>
-        </div>
-
-        {err && (
-          <div className="deen-pop mt-3 rounded-xl border px-3.5 py-2.5 text-[12px] font-semibold" style={{ borderColor: T.crimson, color: T.crimson, background: "#FBEFEE" }}>
-            {err}
+          ) : (
+            /* ---- step 2: enter code ---- */
+            <div key="s2" className="screen-in mt-4">
+              <p className="text-[13px] font-semibold">
+                Enter the code sent to <span className="font-mono">+880 {phone}</span>
+              </p>
+              <div key={shake} className={`mt-3 flex justify-between gap-1.5 ${shake ? "shake-x" : ""}`}>
+                {code.map((c, i) => (
+                  <input
+                    key={i}
+                    ref={(el) => { codeRefs.current[i] = el; }}
+                    value={c}
+                    onChange={(e) => setCodeAt(i, e.target.value)}
+                    onKeyDown={(e) => onCodeKey(i, e)}
+                    onPaste={i === 0 ? onCodePaste : undefined}
+                    inputMode="numeric"
+                    maxLength={1}
+                    className="h-12 w-full max-w-[46px] rounded-xl border bg-white text-center font-mono text-[18px] font-bold transition-all focus:border-[#2A3680]"
+                    style={{ borderColor: otpErr ? T.crimson : T.line }}
+                  />
+                ))}
+              </div>
+              {otpErr && <p className="deen-pop mt-2 text-[11.5px] font-semibold" style={{ color: T.crimson }}>{otpErr}</p>}
+              <button
+                onClick={resendIn > 0 ? undefined : sendOtp}
+                disabled={resendIn > 0}
+                className="mt-3 cursor-pointer font-arch text-[12px] font-bold disabled:cursor-default"
+                style={{ color: resendIn > 0 ? T.sub : T.indigo }}
+              >
+                {resendIn > 0 ? `Resend code in 0:${String(resendIn).padStart(2, "0")}` : "Resend code"}
+              </button>
+            </div>
+          )
+        ) : (
+          /* ---- password flow ---- */
+          <div className="screen-in mt-4">
+            <div className="grid grid-cols-2 gap-1 rounded-lg border border-dashed p-0.5" style={{ borderColor: T.line }}>
+              {(["login", "register"] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => { setPwMode(m); setPwErr(""); }}
+                  className="cursor-pointer rounded-md py-1.5 text-[11px] font-bold transition-all"
+                  style={pwMode === m ? { background: "#EEF0FA", color: T.indigo } : { color: T.sub }}
+                >
+                  {m === "login" ? "Log in" : "Register"}
+                </button>
+              ))}
+            </div>
+            <div className="mt-3 space-y-2.5">
+              {pwMode === "register" && (
+                <div>
+                  <label className={label} style={{ color: T.sub }}>Full name</label>
+                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Rafiq Hasan" className={input} style={{ borderColor: T.line }} />
+                </div>
+              )}
+              <div>
+                <label className={label} style={{ color: T.sub }}>Mobile</label>
+                <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="01XXXXXXXXX" inputMode="tel" className={input} style={{ borderColor: T.line }} />
+              </div>
+              <div>
+                <label className={label} style={{ color: T.sub }}>Password</label>
+                <input value={pass} onChange={(e) => setPass(e.target.value)} type="password" placeholder="••••••" className={input} style={{ borderColor: T.line }} />
+              </div>
+            </div>
+            {pwErr && <p className="deen-pop mt-2 text-[11.5px] font-semibold" style={{ color: T.crimson }}>{pwErr}</p>}
+            <button
+              onClick={() => { setMethod("otp"); setOtpStep("phone"); }}
+              className="mt-2.5 cursor-pointer text-[11px] font-bold"
+              style={{ color: T.indigo }}
+            >
+              ← Back to phone OTP
+            </button>
+            <button
+              onClick={() => { setPwMode("login"); setPhone(demoAccount.phone); setPass(demoAccount.pass); setPwErr(""); }}
+              className="mt-3 w-full cursor-pointer rounded-xl border border-dashed px-3.5 py-2.5 text-left transition-all active:scale-[0.98]"
+              style={{ borderColor: T.indigo, background: "#EEF0FA" }}
+            >
+              <span className="block font-mono text-[8.5px] font-bold uppercase tracking-[0.16em]" style={{ color: T.indigo }}>Demo password account · tap to fill</span>
+              <span className="mt-0.5 block font-mono text-[10.5px]">{demoAccount.phone} · {demoAccount.pass}</span>
+            </button>
           </div>
         )}
 
-        {/* demo account */}
-        <button
-          onClick={() => { setMode("login"); setPhone(demoAccount.phone); setPass(demoAccount.pass); setErr(""); }}
-          className="mt-4 w-full cursor-pointer rounded-xl border border-dashed px-3.5 py-3 text-left transition-all active:scale-[0.98]"
-          style={{ borderColor: T.indigo, background: "#EEF0FA" }}
-        >
-          <span className="block font-mono text-[9px] font-bold uppercase tracking-[0.18em]" style={{ color: T.indigo }}>Demo account · tap to fill</span>
-          <span className="mt-1 block font-mono text-[11px]" style={{ color: T.ink }}>
-            {demoAccount.phone} · pass: {demoAccount.pass}
-          </span>
-        </button>
+        {/* social divider */}
+        <div className="mt-5 flex items-center gap-3">
+          <span className="h-px flex-1" style={{ background: T.line }} />
+          <span className="font-mono text-[9px] uppercase tracking-[0.18em]" style={{ color: T.sub }}>or continue with</span>
+          <span className="h-px flex-1" style={{ background: T.line }} />
+        </div>
 
-        <p className="mt-3 text-center font-mono text-[9px] leading-relaxed" style={{ color: T.sub }}>
-          Sessions are JWT-shaped and stored in Expo SecureStore on device.
-          <br />In production, register hits POST /v1/deen/auth on the middle API.
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button
+            onClick={() => startSocial("google")}
+            className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border bg-white py-3 text-[12.5px] font-bold transition-all hover:-translate-y-0.5 active:scale-[0.97]"
+            style={{ borderColor: T.line }}
+          >
+            <GoogleIcon /> Google
+          </button>
+          <button
+            onClick={() => startSocial("facebook")}
+            className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border bg-white py-3 text-[12.5px] font-bold transition-all hover:-translate-y-0.5 active:scale-[0.97]"
+            style={{ borderColor: T.line }}
+          >
+            <FacebookIcon /> Facebook
+          </button>
+        </div>
+
+        <p className="mt-4 pb-2 text-center font-mono text-[8.5px] leading-relaxed" style={{ color: T.sub }}>
+          OTP arrives via the gateway SMS bus · social uses OAuth round-trips.
+          <br />Sessions are JWT-shaped, stored in Expo SecureStore.
         </p>
       </div>
 
       <div className="border-t p-3.5" style={{ background: "#fff", borderColor: T.line }}>
-        <button
-          onClick={submit}
-          disabled={busy}
-          className="w-full cursor-pointer rounded-xl py-3.5 font-disp text-[15px] text-white transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60"
-          style={{ background: T.indigo }}
-        >
-          {busy ? "Talking to the gateway…" : mode === "login" ? "Log in" : "Create account"}
-        </button>
+        {method === "otp" ? (
+          otpStep === "phone" ? (
+            <button onClick={sendOtp} disabled={sending} className="w-full cursor-pointer rounded-xl py-3.5 font-disp text-[15px] text-white transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60" style={{ background: T.indigo }}>
+              {sending ? "Sending code…" : "Send OTP"}
+            </button>
+          ) : (
+            <button onClick={verifyOtp} disabled={verifying} className="w-full cursor-pointer rounded-xl py-3.5 font-disp text-[15px] text-white transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60" style={{ background: T.indigo }}>
+              {verifying ? "Verifying…" : "Verify & sign in"}
+            </button>
+          )
+        ) : (
+          <button onClick={submitPw} disabled={pwBusy} className="w-full cursor-pointer rounded-xl py-3.5 font-disp text-[15px] text-white transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60" style={{ background: T.indigo }}>
+            {pwBusy ? "Talking to the gateway…" : pwMode === "login" ? "Log in" : "Create account"}
+          </button>
+        )}
       </div>
     </div>
   );

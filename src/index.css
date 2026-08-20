@@ -309,6 +309,50 @@ textarea:focus-visible {
   box-shadow: 0 0 0 3px rgba(102, 188, 227, 0.15);
 }
 
+/* Android heads-up SMS notification */
+.sms-drop {
+  animation: smsdrop 0.5s cubic-bezier(0.22, 0.9, 0.3, 1.1);
+}
+@keyframes smsdrop {
+  from {
+    transform: translateY(-130%);
+    opacity: 0.3;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.shake-x {
+  animation: shakex 0.42s ease-in-out;
+}
+@keyframes shakex {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-7px);
+  }
+  40% {
+    transform: translateX(6px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(3px);
+  }
+}
+.spin-slow {
+  animation: spinslow 0.9s linear infinite;
+}
+@keyframes spinslow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* device screen motion */
 .screen-in {
   animation: screenIn 0.34s cubic-bezier(0.22, 0.8, 0.3, 1);

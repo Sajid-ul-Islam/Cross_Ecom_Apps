@@ -58,7 +58,7 @@ export const PHASES: Phase[] = [
       { id: "p2-1", label: "expo init — Expo Router shell, design tokens, dark scheme", status: "done", tag: "MOBILE" },
       { id: "p2-2", label: "API client + TanStack Query wiring, offline-safe mutations", status: "done", tag: "MOBILE" },
       { id: "p2-3", label: "Catalog screens — list, search, product detail, gallery", status: "done", tag: "UI" },
-      { id: "p2-4", label: "Auth screens — login, register, session persistence (SecureStore)", status: "done", tag: "AUTH" },
+      { id: "p2-4", label: "Auth — phone OTP (SMS), Google/Facebook sign-in, SecureStore sessions", status: "done", tag: "AUTH" },
       { id: "p2-5", label: "Cart + checkout flow with address & payment steps", status: "done", tag: "UI" },
       { id: "p2-6", label: "Order history + push notifications (FCM via Expo Notifications)", status: "done", tag: "MOBILE" },
       { id: "p2-7", label: "EAS Build — internal-track AAB, real-device matrix test", status: "done", tag: "RELEASE" },
