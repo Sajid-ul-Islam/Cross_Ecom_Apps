@@ -10,12 +10,16 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Package, Clock, CheckCircle2, Truck, ShoppingBag, ArrowRight } from "../../src/components/Icons";
+import { Package, Clock, CheckCircle2, Truck, ShoppingBag, ArrowRight, RotateCcw, Camera, FileText, ShieldCheck } from "../../src/components/Icons";
 import { Header } from "../../src/components/Header";
 import { Colors } from "../../src/theme/colors";
+import { useTheme } from "../../src/context/ThemeContext";
 import { useOrders } from "../../src/context/OrderContext";
-import { bdt } from "../../src/services/gateway";
-import { OrderStatus } from "../../src/types";
+import { useReturns } from "../../src/context/ReturnContext";
+import { ReturnExchangeModal } from "../../src/components/ReturnExchangeModal";
+import { CourierTrackingModal } from "../../src/components/CourierTrackingModal";
+import { bdt, DELIVERY_OPTIONS } from "../../src/services/gateway";
+import { OrderStatus, Order } from "../../src/types";
 
 const STATUS_STEPS: { key: OrderStatus; label: string }[] = [
   { key: "received", label: "Received" },
@@ -26,8 +30,14 @@ const STATUS_STEPS: { key: OrderStatus; label: string }[] = [
 
 export default function OrdersScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const { orders, loading, refreshOrders } = useOrders();
+  const { returns, getReturnForOrder } = useReturns();
   const [refreshing, setRefreshing] = useState(false);
+  const [returnModalVisible, setReturnModalVisible] = useState(false);
+  const [trackingModalVisible, setTrackingModalVisible] = useState(false);
+  const [selectedOrderForReturn, setSelectedOrderForReturn] = useState<Order | null>(null);
+  const [selectedOrderForTracking, setSelectedOrderForTracking] = useState<Order | null>(null);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -41,7 +51,7 @@ export default function OrdersScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
         <Header title="MY ORDERS" showSearch={false} />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={Colors.indigo} />
@@ -52,7 +62,7 @@ export default function OrdersScreen() {
 
   if (orders.length === 0) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
         <Header title="MY ORDERS" showSearch={false} />
         <View style={styles.emptyContainer}>
           <View style={styles.emptyIconCircle}>
@@ -76,7 +86,7 @@ export default function OrdersScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
       <Header title="MY ORDERS" showSearch={false} />
 
       <ScrollView
@@ -180,21 +190,125 @@ export default function OrdersScreen() {
 
                 {/* Total and Payment */}
                 <View style={styles.orderFooter}>
-                  <View>
-                    <Text style={styles.paymentInfo}>
-                      Paid via: <Text style={styles.bold}>{order.payment.toUpperCase()}</Text>
-                    </Text>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 2 }}>
+                      <Text style={styles.paymentInfo}>
+                        Paid via: <Text style={styles.bold}>{order.payment.toUpperCase()}</Text>
+                      </Text>
+                      {order.deliveryOption && DELIVERY_OPTIONS[order.deliveryOption] && (
+                        <View style={styles.delOptionBadge}>
+                          <Text style={styles.delOptionBadgeText}>
+                            {DELIVERY_OPTIONS[order.deliveryOption].name}
+                          </Text>
+                        </View>
+                      )}
+                      {order.isGuestOrder && (
+                        <View style={styles.guestBadge}>
+                          <Text style={styles.guestBadgeText}>GUEST</Text>
+                        </View>
+                      )}
+                    </View>
                     <Text style={styles.addressInfo} numberOfLines={1}>
                       {order.address}
                     </Text>
                   </View>
                   <Text style={styles.orderTotal}>{bdt(order.total)}</Text>
                 </View>
+
+                {/* Return & Exchange Section */}
+                {(() => {
+                  const ret = getReturnForOrder(order.id) || getReturnForOrder(order.number);
+                  if (ret) {
+                    return (
+                      <View style={styles.activeReturnBox}>
+                        <View style={styles.activeReturnHeader}>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                            <RotateCcw size={13} color={Colors.indigoDark} />
+                            <Text style={styles.activeReturnTitle}>
+                              {ret.type === "EXCHANGE" ? "EXCHANGE REQUEST" : "RETURN REQUEST"}
+                            </Text>
+                          </View>
+                          <View style={styles.retStatusBadge}>
+                            <Text style={styles.retStatusBadgeText}>
+                              {ret.status.replace("_", " ")}
+                            </Text>
+                          </View>
+                        </View>
+
+                        <Text style={styles.retTicketLine}>
+                          Ticket #{ret.ticketNumber} · {ret.reasonText}
+                        </Text>
+                        {ret.customerNotes ? (
+                          <Text style={styles.retNotes} numberOfLines={2}>
+                            "{ret.customerNotes}"
+                          </Text>
+                        ) : null}
+
+                        <View style={styles.retMetaRow}>
+                          <Text style={styles.retMetaText}>
+                            📸 {ret.images.length} Photos Attached
+                          </Text>
+                          <Text style={styles.retMetaText}>
+                            🚚 {ret.pickupMethod === "courier_pickup" ? "Doorstep Pickup" : "Studio Drop"}
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  }
+
+                  return (
+                    <View style={styles.orderActionsRow}>
+                      <TouchableOpacity
+                        style={styles.trackBtn}
+                        activeOpacity={0.8}
+                        onPress={() => {
+                          setSelectedOrderForTracking(order);
+                          setTrackingModalVisible(true);
+                        }}
+                      >
+                        <Truck size={13} color="#FFFFFF" />
+                        <Text style={styles.trackBtnText}>LIVE GPS TRACKING</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.returnBtn}
+                        activeOpacity={0.8}
+                        onPress={() => {
+                          setSelectedOrderForReturn(order);
+                          setReturnModalVisible(true);
+                        }}
+                      >
+                        <RotateCcw size={13} color={Colors.indigo} />
+                        <Text style={styles.returnBtnText}>EXCHANGE / RETURN</Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })()}
               </View>
             );
           })}
         </View>
       </ScrollView>
+
+      {/* Live Courier Tracking Modal */}
+      <CourierTrackingModal
+        visible={trackingModalVisible}
+        order={selectedOrderForTracking}
+        onClose={() => {
+          setTrackingModalVisible(false);
+          setSelectedOrderForTracking(null);
+        }}
+      />
+
+      {/* Return & Exchange Modal */}
+      <ReturnExchangeModal
+        visible={returnModalVisible}
+        order={selectedOrderForReturn}
+        onClose={() => {
+          setReturnModalVisible(false);
+          setSelectedOrderForReturn(null);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -254,6 +368,112 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
     letterSpacing: 1,
+  },
+  orderActionsRow: {
+    flexDirection: "row",
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+    paddingTop: 10,
+    marginTop: 4,
+  },
+  trackBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: Colors.indigo,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  trackBtnText: {
+    fontSize: 10,
+    fontWeight: "900",
+    color: "#FFFFFF",
+    letterSpacing: 0.4,
+  },
+  returnActionRow: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+    paddingTop: 10,
+    marginTop: 4,
+  },
+  returnBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 8,
+    backgroundColor: Colors.indigoLight,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.indigo,
+  },
+  returnBtnText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: Colors.indigoDark,
+    letterSpacing: 0.5,
+  },
+  activeReturnBox: {
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+    paddingTop: 10,
+    backgroundColor: "#FAFBFD",
+    padding: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 4,
+  },
+  activeReturnHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  activeReturnTitle: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: Colors.indigoDark,
+    letterSpacing: 0.5,
+  },
+  retStatusBadge: {
+    backgroundColor: Colors.amberLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  retStatusBadgeText: {
+    color: Colors.amber,
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 0.4,
+  },
+  retTicketLine: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: Colors.ink,
+  },
+  retNotes: {
+    fontSize: 10,
+    color: Colors.sub,
+    fontStyle: "italic",
+  },
+  retMetaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+    paddingTop: 4,
+  },
+  retMetaText: {
+    fontSize: 9,
+    color: Colors.sub,
+    fontWeight: "600",
   },
   ordersList: {
     gap: 14,
@@ -389,6 +609,28 @@ const styles = StyleSheet.create({
   paymentInfo: {
     fontSize: 11,
     color: Colors.sub,
+  },
+  delOptionBadge: {
+    backgroundColor: Colors.indigoLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  delOptionBadgeText: {
+    color: Colors.indigoDark,
+    fontSize: 9,
+    fontWeight: "700",
+  },
+  guestBadge: {
+    backgroundColor: Colors.amberLight,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 3,
+  },
+  guestBadgeText: {
+    color: Colors.amber,
+    fontSize: 8,
+    fontWeight: "800",
   },
   addressInfo: {
     fontSize: 10,

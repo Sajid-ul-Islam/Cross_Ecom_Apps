@@ -13,12 +13,14 @@ import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Gift, ShieldCheck } from 
 import { Header } from "../../src/components/Header";
 import { FreeTeeBanner } from "../../src/components/Banner";
 import { Colors } from "../../src/theme/colors";
+import { useTheme } from "../../src/context/ThemeContext";
 import { useCart } from "../../src/context/CartContext";
-import { bdt } from "../../src/services/gateway";
-import { DeliveryArea } from "../../src/types";
+import { bdt, DELIVERY_OPTIONS } from "../../src/services/gateway";
+import { DeliveryArea, DeliveryOptionKey } from "../../src/types";
 
 export default function BagScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const {
     cart,
     updateQty,
@@ -29,14 +31,14 @@ export default function BagScreen() {
     calculateTotal,
   } = useCart();
 
-  const [selectedArea, setSelectedArea] = useState<DeliveryArea>("dhaka");
+  const [selectedArea, setSelectedArea] = useState<DeliveryArea>("dhaka_standard");
 
   const deliveryFee = getDeliveryFee(selectedArea);
   const total = calculateTotal(selectedArea);
 
   if (cart.length === 0) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={["top"]}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
         <Header title="SHOPPING BAG" showBag={false} />
         <View style={styles.emptyContainer}>
           <View style={styles.emptyIconCircle}>
@@ -60,7 +62,7 @@ export default function BagScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
       <Header title="SHOPPING BAG" showBag={false} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -141,25 +143,31 @@ export default function BagScreen() {
 
         {/* Delivery Area Selector */}
         <View style={styles.areaSelectorCard}>
-          <Text style={styles.areaTitle}>SELECT DELIVERY DESTINATION</Text>
-          <View style={styles.areaOptionsRow}>
-            <TouchableOpacity
-              style={[styles.areaOption, selectedArea === "dhaka" && styles.areaOptionActive]}
-              onPress={() => setSelectedArea("dhaka")}
-            >
-              <Text style={[styles.areaOptionText, selectedArea === "dhaka" && styles.areaOptionTextActive]}>
-                Inside Dhaka (৳70)
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.areaOption, selectedArea === "outside" && styles.areaOptionActive]}
-              onPress={() => setSelectedArea("outside")}
-            >
-              <Text style={[styles.areaOptionText, selectedArea === "outside" && styles.areaOptionTextActive]}>
-                Outside Dhaka (৳130)
-              </Text>
-            </TouchableOpacity>
+          <Text style={styles.areaTitle}>SELECT DELIVERY METHOD</Text>
+          <View style={styles.areaGrid}>
+            {(Object.keys(DELIVERY_OPTIONS) as DeliveryOptionKey[]).map((key) => {
+              const opt = DELIVERY_OPTIONS[key];
+              const isSelected = selectedArea === key;
+              return (
+                <TouchableOpacity
+                  key={key}
+                  style={[styles.areaOption, isSelected && styles.areaOptionActive]}
+                  onPress={() => setSelectedArea(key)}
+                >
+                  <View style={styles.areaOptionHeader}>
+                    <Text style={[styles.areaOptionText, isSelected && styles.areaOptionTextActive]}>
+                      {opt.name}
+                    </Text>
+                    <Text style={[styles.areaOptionFee, isSelected && styles.areaOptionFeeActive]}>
+                      {opt.fee === 0 ? "FREE" : bdt(opt.fee)}
+                    </Text>
+                  </View>
+                  <Text style={[styles.areaOptionSub, isSelected && styles.areaOptionSubActive]}>
+                    {opt.estimatedDays}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -168,15 +176,15 @@ export default function BagScreen() {
           <Text style={styles.summaryTitle}>ORDER SUMMARY</Text>
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Subtotal</Text>
+            <Text style={styles.summaryLabel}>Subtotal ({cart.length} items)</Text>
             <Text style={styles.summaryValue}>{bdt(subtotal)}</Text>
           </View>
 
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>
-              Delivery ({selectedArea === "dhaka" ? "Dhaka" : "Outside Dhaka"})
+              Delivery ({DELIVERY_OPTIONS[selectedArea as DeliveryOptionKey]?.name || "Standard"})
             </Text>
-            <Text style={styles.summaryValue}>{bdt(deliveryFee)}</Text>
+            <Text style={styles.summaryValue}>{deliveryFee === 0 ? "FREE" : bdt(deliveryFee)}</Text>
           </View>
 
           {freeTeeEligible && (
@@ -423,30 +431,49 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     marginBottom: 8,
   },
-  areaOptionsRow: {
-    flexDirection: "row",
-    gap: 8,
+  areaGrid: {
+    gap: 6,
   },
   areaOption: {
-    flex: 1,
     paddingVertical: 8,
+    paddingHorizontal: 10,
     borderRadius: 6,
     backgroundColor: Colors.paper,
     borderWidth: 1,
     borderColor: Colors.border,
-    alignItems: "center",
   },
   areaOptionActive: {
-    backgroundColor: Colors.indigoDark,
-    borderColor: Colors.indigoDark,
+    backgroundColor: Colors.indigoLight,
+    borderColor: Colors.indigo,
+  },
+  areaOptionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   areaOptionText: {
     fontSize: 11,
     fontWeight: "700",
-    color: Colors.sub,
+    color: Colors.ink,
   },
   areaOptionTextActive: {
-    color: "#FFFFFF",
+    color: Colors.indigoDark,
+  },
+  areaOptionFee: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: Colors.sub,
+  },
+  areaOptionFeeActive: {
+    color: Colors.indigoDark,
+  },
+  areaOptionSub: {
+    fontSize: 9,
+    color: Colors.sub,
+    marginTop: 2,
+  },
+  areaOptionSubActive: {
+    color: Colors.indigoDark,
   },
   summaryCard: {
     backgroundColor: Colors.card,

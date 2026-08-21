@@ -1,26 +1,27 @@
 import React from "react";
 import { Tabs } from "expo-router";
 import { Home, Compass, ShoppingBag, Clock, User } from "../../src/components/Icons";
-import { Colors } from "../../src/theme/colors";
+import { useTheme } from "../../src/context/ThemeContext";
 import { useCart } from "../../src/context/CartContext";
 
 export default function TabLayout() {
   const { totalItems } = useCart();
+  const { colors, isDark } = useTheme();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: Colors.card,
+          backgroundColor: colors.card,
           borderTopWidth: 1,
-          borderTopColor: Colors.border,
+          borderTopColor: colors.border,
           height: 60,
           paddingBottom: 8,
           paddingTop: 8,
         },
-        tabBarActiveTintColor: Colors.indigoDark,
-        tabBarInactiveTintColor: Colors.faint,
+        tabBarActiveTintColor: colors.indigo,
+        tabBarInactiveTintColor: colors.faint,
         tabBarLabelStyle: {
           fontSize: 10,
           fontWeight: "700",
@@ -48,7 +49,7 @@ export default function TabLayout() {
           title: "Bag",
           tabBarBadge: totalItems > 0 ? totalItems : undefined,
           tabBarBadgeStyle: {
-            backgroundColor: Colors.crimson,
+            backgroundColor: colors.crimson,
             fontSize: 10,
             fontWeight: "800",
             color: "#FFFFFF",
