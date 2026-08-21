@@ -84,11 +84,11 @@ SafeAreaProvider
 
 `gatewayUrl` is configured in `apps/mobile/app.json` `extra.gatewayUrl` (currently the Render URL: `https://cross-ecom-apps.onrender.com`). Never hardcode it in source.
 
-## Demo Test Credentials
-- **👤 Regular Customer**: `customer` / `deen1234` · Phone: `01712-345678` (Tanvir Ahmed)
-- **⭐ VIP Gold Shopper**: `vip` / `deen1234` · Phone: `01899-776655` (Sajid-ul Islam)
-- **👑 Store Admin & Merchant**: `admin` / `admin123` · Phone: `01711-223344` (DEEN Admin)
-- **⚡ Guest Mode**: `guest` / *(No pass)* · Phone: `01911-000000` (Anonymous Guest)
+## Demo Test Profiles
+- **👤 Regular Customer**: `customer` · Phone: `01712-345678` (Tanvir Ahmed)
+- **⭐ VIP Gold Shopper**: `vip` · Phone: `01899-776655` (Sajid-ul Islam)
+- **👑 Store Admin & Merchant**: `admin` · Phone: `01711-223344` (DEEN Admin)
+- **⚡ Guest Mode**: `guest` · Phone: `01911-000000` (Anonymous Guest)
 
 ## Roles & 3-Way Mode Switcher
 - `UserProfile.role` is derived from active mode: `admin` vs `customer` (registered vs guest).

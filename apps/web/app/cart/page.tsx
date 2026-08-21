@@ -10,14 +10,14 @@ const DELIVERY_OPTIONS = [
     id: "dhaka_standard",
     label: "Dhaka Standard",
     sub: "24–48 hours",
-    fee: 80,
+    fee: 50,
     icon: "🛵",
   },
   {
     id: "outside",
     label: "Outside Dhaka",
     sub: "3–5 business days",
-    fee: 150,
+    fee: 90,
     icon: "📦",
   },
   {

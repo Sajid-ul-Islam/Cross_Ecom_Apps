@@ -179,7 +179,7 @@ export default async function HomePage() {
               {
                 icon: "🚚",
                 title: "Fast Delivery",
-                desc: "Dhaka in 24–48h (৳80) · All of Bangladesh in 3–5 days (৳150)",
+                desc: "Dhaka in 24–48h (৳50) · All of Bangladesh in 3–5 days (৳90)",
               },
               {
                 icon: "✅",

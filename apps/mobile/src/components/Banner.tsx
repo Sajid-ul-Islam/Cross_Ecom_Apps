@@ -80,9 +80,9 @@ export const DeliveryNoticeBanner: React.FC = () => {
       <Truck size={15} color={colors.indigo} />
       <Text style={{ fontSize: 11, color: colors.ink, flex: 1 }}>
         Dhaka Delivery:{" "}
-        <Text style={{ fontWeight: "700" }}>৳80</Text>
+        <Text style={{ fontWeight: "700" }}>৳50</Text>
         {" "}(24–48h) · Outside Dhaka:{" "}
-        <Text style={{ fontWeight: "700" }}>৳150</Text>
+        <Text style={{ fontWeight: "700" }}>৳90</Text>
         {" "}(3–5 days)
       </Text>
     </View>

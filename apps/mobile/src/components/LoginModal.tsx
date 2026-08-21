@@ -37,7 +37,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, onClose, onSucc
   } = useProfile();
 
   const [identifier, setIdentifier] = useState("customer");
-  const [password, setPassword] = useState("deen1234");
+  const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -46,34 +46,29 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, onClose, onSucc
     if (visible) {
       if (profile.role === "admin") {
         setIdentifier("admin");
-        setPassword("admin123");
       } else if (profile.phone?.includes("776655")) {
         setIdentifier("vip");
-        setPassword("deen1234");
       } else if (profile.isGuest) {
         setIdentifier("guest");
-        setPassword("");
       } else {
         setIdentifier("customer");
-        setPassword("deen1234");
       }
+      setPassword("");
       setNotice(null);
     }
   }, [visible, profile]);
 
   const handleSelectDemo = (acc: DemoAccount) => {
     setIdentifier(acc.username);
-    setPassword(acc.password);
     setNotice({
       type: "success",
-      text: `Loaded credentials for ${acc.name}. Tap "SIGN IN" or double tap card.`,
+      text: `Loaded ${acc.name} (${acc.badge}). Tap "SIGN IN" or double tap card.`,
     });
   };
 
   const handleQuickLoginDemo = async (acc: DemoAccount) => {
     setSubmitting(true);
     setIdentifier(acc.username);
-    setPassword(acc.password);
     try {
       await loginAsDemoAccount(acc.id);
       setNotice({
@@ -87,7 +82,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, onClose, onSucc
       }, 700);
     } catch {
       setSubmitting(false);
-      setNotice({ type: "error", text: "Login failed. Please try again." });
+      setNotice({ type: "error", text: "Failed to switch account." });
     }
   };
 
@@ -268,9 +263,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, onClose, onSucc
                       </View>
 
                       <View style={styles.credCol}>
-                        <Text style={styles.credKey}>PASSWORD</Text>
+                        <Text style={styles.credKey}>ROLE</Text>
                         <Text style={[styles.credVal, { color: colors.ink }]} selectable>
-                          {acc.password || "(None - Guest)"}
+                          {acc.badge}
                         </Text>
                       </View>
 
@@ -314,7 +309,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, onClose, onSucc
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.ink }]}>Password</Text>
+                <Text style={[styles.inputLabel, { color: colors.ink }]}>Password / PIN</Text>
                 <View
                   style={[
                     styles.inputWrap,
@@ -326,7 +321,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, onClose, onSucc
                     style={[styles.inputField, { color: colors.ink }]}
                     value={password}
                     onChangeText={setPassword}
-                    placeholder="Enter password (e.g. deen1234)"
+                    placeholder="Optional demo password or PIN"
                     placeholderTextColor={colors.faint}
                     secureTextEntry
                   />
