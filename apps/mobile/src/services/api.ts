@@ -1,10 +1,61 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Product, Order, DeenCategory, DeliveryArea, PaymentMethod, UserProfile } from "../types";
+import {
+  Product,
+  Order,
+  DeenCategory,
+  DeliveryArea,
+  DeliveryOptionKey,
+  DeliveryOption,
+  PaymentMethod,
+  UserProfile,
+} from "../types";
 
 export const FREE_TEE_THRESHOLD = 3500;
-export const DELIVERY_FEES: Record<DeliveryArea, number> = {
+
+export const DELIVERY_OPTIONS: Record<DeliveryOptionKey, DeliveryOption> = {
+  dhaka_standard: {
+    id: "dhaka_standard",
+    name: "Inside Dhaka (Standard)",
+    sub: "2-3 business days · Regular doorstep courier",
+    fee: 70,
+    estimatedDays: "2-3 Days",
+  },
+  dhaka_express: {
+    id: "dhaka_express",
+    name: "Dhaka Express (Same-Day / 24h)",
+    sub: "Within 24 hours · Priority rush delivery in Dhaka",
+    fee: 150,
+    estimatedDays: "24 Hours",
+    badge: "FASTEST",
+  },
+  outside_standard: {
+    id: "outside_standard",
+    name: "Outside Dhaka (All Districts)",
+    sub: "3-5 business days · Steadfast / RedX home delivery",
+    fee: 130,
+    estimatedDays: "3-5 Days",
+  },
+  store_pickup: {
+    id: "store_pickup",
+    name: "Store Pickup (Banani Studio)",
+    sub: "Ready within 2 hours · Free collection from outlet",
+    fee: 0,
+    estimatedDays: "Ready in 2h",
+    badge: "FREE",
+  },
+};
+
+export const DELIVERY_FEES: Record<string, number> = {
   dhaka: 70,
   outside: 130,
+  dhaka_standard: 70,
+  dhaka_express: 150,
+  outside_standard: 130,
+  store_pickup: 0,
+};
+
+export const getDeliveryFee = (area: string | DeliveryArea): number => {
+  return DELIVERY_FEES[area] ?? 70;
 };
 
 export const bdt = (amount: number): string => {
@@ -145,16 +196,123 @@ export const PRODUCTS_CATALOG: Product[] = [
 const ORDERS_STORAGE_KEY = "deen_mobile_orders_v1";
 const PROFILE_STORAGE_KEY = "deen_mobile_profile_v1";
 
+export const DEMO_ACCOUNTS: import("../types").DemoAccount[] = [
+  {
+    id: "customer",
+    name: "Tanvir Ahmed",
+    username: "customer",
+    email: "tanvir@deen.com",
+    password: "deen1234",
+    phone: "01712-345678",
+    role: "customer",
+    accountType: "customer",
+    badge: "REGULAR CUSTOMER",
+    description: "Standard registered account with saved addresses in Uttara & fit preferences.",
+    address: "House 42, Road 11, Sector 4, Uttara, Dhaka",
+    area: "dhaka_standard",
+    jeansSize: "32",
+    topSize: "L",
+    coins: 1250,
+  },
+  {
+    id: "vip",
+    name: "Sajid-ul Islam",
+    username: "vip",
+    email: "vip@deen.com",
+    password: "deen1234",
+    phone: "01899-776655",
+    role: "customer",
+    accountType: "customer",
+    badge: "VIP ELITE GOLD",
+    description: "Gold loyalty tier member with express Dhaka delivery and 4,800 VIP coins.",
+    address: "Plot 68, Kemal Ataturk Ave, Banani, Dhaka",
+    area: "dhaka_express",
+    jeansSize: "34",
+    topSize: "XL",
+    coins: 4800,
+  },
+  {
+    id: "admin",
+    name: "DEEN Store Admin",
+    username: "admin",
+    email: "admin@deen.com",
+    password: "admin123",
+    phone: "01711-223344",
+    role: "admin",
+    accountType: "admin",
+    badge: "STORE ADMIN & BI",
+    description: "Full store operator with BI metrics, order analytics, push broadcasts & catalog control.",
+    address: "DEEN HQ, Plot 12, Banani Commercial Area, Dhaka",
+    area: "dhaka_standard",
+    jeansSize: "32",
+    topSize: "L",
+    coins: 9999,
+  },
+  {
+    id: "guest",
+    name: "Guest Shopper",
+    username: "guest",
+    email: "",
+    password: "",
+    phone: "01911-000000",
+    role: "customer",
+    accountType: "guest",
+    badge: "GUEST CHECKOUT",
+    description: "Anonymous guest mode without password or account registration requirement.",
+    address: "Mirpur DOHS, Road 9, Dhaka",
+    area: "dhaka_standard",
+    jeansSize: "32",
+    topSize: "L",
+    coins: 0,
+  },
+];
+
+export const GUEST_PROFILE: UserProfile = {
+  accountType: "guest",
+  isGuest: true,
+  role: "customer",
+  name: "",
+  phone: "",
+  address: "",
+  area: "dhaka_standard",
+  jeansSize: "32",
+  topSize: "L",
+  pushOrders: true,
+  pushPromos: false,
+};
+
 export const DEFAULT_PROFILE: UserProfile = {
+  accountType: "customer",
+  isGuest: false,
+  username: "customer",
   role: "customer",
   name: "Tanvir Ahmed",
   phone: "01712-345678",
+  email: "tanvir@deen.com",
   address: "House 42, Road 11, Sector 4, Uttara, Dhaka",
-  area: "dhaka",
+  area: "dhaka_standard",
+  deliverySlot: "afternoon",
+  deliveryNotes: "Please call before arrival. Leave with security if not available.",
   jeansSize: "32",
   topSize: "L",
   pushOrders: true,
   pushPromos: true,
+  memberSince: "Aug 2024",
+  savedAddresses: [
+    {
+      id: "addr_1",
+      label: "Home (Uttara)",
+      address: "House 42, Road 11, Sector 4, Uttara, Dhaka",
+      area: "dhaka_standard",
+      isDefault: true,
+    },
+    {
+      id: "addr_2",
+      label: "Office (Banani)",
+      address: "Plot 68, Block C, Kemal Ataturk Ave, Banani, Dhaka",
+      area: "dhaka_express",
+    },
+  ],
 };
 
 export const fetchProducts = async (category?: DeenCategory, query?: string): Promise<Product[]> => {

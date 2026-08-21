@@ -249,4 +249,264 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       reports: [...list].sort((a, b) => b.receivedAt.localeCompare(a.receivedAt)),
     });
   });
+
+  /* ---- push notification & marketing broadcasts (admin + customer inbox) ---- */
+  const broadcasts: any[] = [
+    {
+      id: "bc_init_1",
+      title: "🔥 Flash Sale: 20% OFF Raw Selvedge Denim",
+      body: "Use promo code DEEN20 at checkout to claim 20% discount on all artisanal Japanese-grade rigid jeans.",
+      type: "PROMO",
+      audience: "ALL",
+      promoCode: "DEEN20",
+      actionUrl: "/category/JEANS",
+      actionLabel: "Shop Selvedge Jeans",
+      sentAt: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
+      sentBy: "Admin",
+      recipientCount: 1420,
+    },
+    {
+      id: "bc_init_2",
+      title: "📣 Banani Flagship Studio Now Open for 2h Pickups",
+      body: "Select 'Store Pickup' at checkout to collect your orders free of charge from Plot 68, Kemal Ataturk Ave, Banani.",
+      type: "BROADCAST",
+      audience: "DHAKA_ONLY",
+      actionUrl: "/(tabs)/profile",
+      actionLabel: "View Outlet Details",
+      sentAt: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(),
+      sentBy: "Admin",
+      recipientCount: 890,
+    },
+  ];
+
+  app.post("/v1/deen/broadcasts", async (req, reply) => {
+    const b = (req.body as any) || {};
+    if (!b.title || !b.body) {
+      return reply.code(422).send({ error: "VALIDATION", message: "Title and body are required for broadcast." });
+    }
+    const broadcast = {
+      id: `bc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      title: String(b.title).trim(),
+      body: String(b.body).trim(),
+      type: b.type ?? "PROMO",
+      audience: b.audience ?? "ALL",
+      promoCode: b.promoCode ?? null,
+      actionUrl: b.actionUrl ?? null,
+      actionLabel: b.actionLabel ?? null,
+      sentAt: new Date().toISOString(),
+      sentBy: b.sentBy ?? "Admin",
+      recipientCount: Math.floor(900 + Math.random() * 1200),
+    };
+    broadcasts.unshift(broadcast);
+    if (broadcasts.length > 200) broadcasts.length = 200;
+    return reply.code(201).send(broadcast);
+  });
+
+  app.get("/v1/deen/broadcasts", async (_req, reply) => {
+    return reply.send(broadcasts);
+  });
+
+  /* ---- returns & exchanges (customer request + photos & notes) ---- */
+  const returns: any[] = [
+    {
+      id: "ret_init_1",
+      ticketNumber: "EXC-1041",
+      orderId: "d-1710000000000",
+      orderNumber: "DC-1040",
+      type: "EXCHANGE",
+      reason: "SIZE_FIT_TOO_TIGHT",
+      reasonText: "Waist is too tight, need to swap from Size 30 to Size 32",
+      customerNotes: "The selvedge denim is very rigid and fits smaller on the waist. Want 1 size up.",
+      images: [
+        "https://image.qwenlm.ai/generated-images/79c9339e-d306-4444-aee3-bc6da2b12cf3/_result.png",
+      ],
+      items: [
+        {
+          productId: "dn-01",
+          name: "Vintage Rigid Raw Selvedge Jeans",
+          sku: "DN-SEL-01",
+          currentSize: "30",
+          desiredSize: "32",
+          qty: 1,
+          unit: 2450,
+        },
+      ],
+      pickupMethod: "courier_pickup",
+      pickupAddress: "House 14, Road 7, Sector 3, Uttara, Dhaka",
+      contactPhone: "01711223344",
+      customerName: "Sajid Islam",
+      status: "PICKUP_SCHEDULED",
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+      updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
+    },
+  ];
+
+  app.post("/v1/deen/returns", async (req, reply) => {
+    const b = (req.body as any) || {};
+    const ticket = {
+      id: b.id || `ret_${Date.now()}`,
+      ticketNumber: b.ticketNumber || `RET-${Math.floor(1000 + Math.random() * 9000)}`,
+      orderId: b.orderId || "unknown",
+      orderNumber: b.orderNumber || "DC-1000",
+      type: b.type || "EXCHANGE",
+      reason: b.reason || "SIZE_FIT_TOO_TIGHT",
+      reasonText: b.reasonText || "Exchange / Return Request",
+      customerNotes: b.customerNotes || "",
+      images: Array.isArray(b.images) ? b.images : [],
+      items: Array.isArray(b.items) ? b.items : [],
+      pickupMethod: b.pickupMethod || "courier_pickup",
+      pickupAddress: b.pickupAddress || "",
+      contactPhone: b.contactPhone || "",
+      customerName: b.customerName || "Customer",
+      refundMethod: b.refundMethod || null,
+      refundAccount: b.refundAccount || null,
+      status: b.status || "PENDING_REVIEW",
+      createdAt: b.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    returns.unshift(ticket);
+    if (returns.length > 200) returns.length = 200;
+    return reply.code(201).send(ticket);
+  });
+
+  app.get("/v1/deen/returns", async (req, reply) => {
+    const orderNumber = (req.query as any).orderNumber as string | undefined;
+    const phone = (req.query as any).phone as string | undefined;
+    let list = returns;
+    if (orderNumber) list = list.filter((r) => r.orderNumber === orderNumber);
+    if (phone) list = list.filter((r) => r.contactPhone.includes(phone.replace(/[^0-9]/g, "")));
+    return reply.send(list);
+  });
+
+  /* ---- Demo Accounts & Authentication ---- */
+  const DEMO_ACCOUNTS = [
+    {
+      id: "customer",
+      name: "Tanvir Ahmed",
+      username: "customer",
+      email: "tanvir@deen.com",
+      password: "deen1234",
+      phone: "01712-345678",
+      role: "customer",
+      accountType: "customer",
+      badge: "REGULAR CUSTOMER",
+      description: "Standard registered account with saved addresses in Uttara & fit preferences.",
+      address: "House 42, Road 11, Sector 4, Uttara, Dhaka",
+      area: "dhaka_standard",
+      jeansSize: "32",
+      topSize: "L",
+      coins: 1250,
+    },
+    {
+      id: "vip",
+      name: "Sajid-ul Islam",
+      username: "vip",
+      email: "vip@deen.com",
+      password: "deen1234",
+      phone: "01899-776655",
+      role: "customer",
+      accountType: "customer",
+      badge: "VIP ELITE GOLD",
+      description: "Gold loyalty tier member with express Dhaka delivery and 4,800 VIP coins.",
+      address: "Plot 68, Kemal Ataturk Ave, Banani, Dhaka",
+      area: "dhaka_express",
+      jeansSize: "34",
+      topSize: "XL",
+      coins: 4800,
+    },
+    {
+      id: "admin",
+      name: "DEEN Store Admin",
+      username: "admin",
+      email: "admin@deen.com",
+      password: "admin123",
+      phone: "01711-223344",
+      role: "admin",
+      accountType: "admin",
+      badge: "STORE ADMIN & BI",
+      description: "Full store operator with BI metrics, order analytics, push broadcasts & catalog control.",
+      address: "DEEN HQ, Plot 12, Banani Commercial Area, Dhaka",
+      area: "dhaka_standard",
+      jeansSize: "32",
+      topSize: "L",
+      coins: 9999,
+    },
+    {
+      id: "guest",
+      name: "Guest Shopper",
+      username: "guest",
+      email: "",
+      password: "",
+      phone: "01911-000000",
+      role: "customer",
+      accountType: "guest",
+      badge: "GUEST CHECKOUT",
+      description: "Anonymous guest mode without password or account registration requirement.",
+      address: "Mirpur DOHS, Road 9, Dhaka",
+      area: "dhaka_standard",
+      jeansSize: "32",
+      topSize: "L",
+      coins: 0,
+    },
+  ];
+
+  app.get("/v1/auth/demo-accounts", async (_req, reply) => {
+    return reply.send({
+      success: true,
+      accounts: DEMO_ACCOUNTS,
+    });
+  });
+
+  app.post("/v1/auth/login", async (req, reply) => {
+    const b = (req.body as any) || {};
+    const identifier = (b.identifier || b.username || b.phone || b.email || "").toString().trim().toLowerCase();
+    const password = (b.password || "").toString().trim();
+
+    const cleanPhone = identifier.replace(/[^0-9]/g, "");
+    const match = DEMO_ACCOUNTS.find((acc) => {
+      const uMatch = acc.username.toLowerCase() === identifier;
+      const eMatch = acc.email.toLowerCase() === identifier;
+      const pMatch = cleanPhone && acc.phone.replace(/[^0-9]/g, "") === cleanPhone;
+      return uMatch || eMatch || pMatch;
+    });
+
+    if (match) {
+      if (match.password && match.password !== password) {
+        return reply.code(401).send({
+          success: false,
+          message: `Incorrect password for ${match.name}. Hint: ${match.password}`,
+        });
+      }
+
+      return reply.send({
+        success: true,
+        message: `Authenticated as ${match.name}`,
+        user: match,
+        token: `mock_jwt_${match.id}_${Date.now()}`,
+      });
+    }
+
+    if (cleanPhone.length >= 10 || identifier.includes("@")) {
+      return reply.send({
+        success: true,
+        message: `Authenticated as custom user ${identifier}`,
+        user: {
+          id: `usr_${Date.now()}`,
+          name: identifier.split("@")[0] || "Custom Shopper",
+          username: identifier,
+          phone: identifier,
+          role: "customer",
+          accountType: "customer",
+        },
+        token: `mock_jwt_custom_${Date.now()}`,
+      });
+    }
+
+    return reply.code(404).send({
+      success: false,
+      message: "Account not found. Please use demo accounts (customer, vip, admin, guest).",
+    });
+  });
 }
+
+

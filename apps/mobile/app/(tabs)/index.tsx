@@ -18,19 +18,25 @@ import { FreeTeeBanner, DeliveryNoticeBanner } from "../../src/components/Banner
 import { ProductCard } from "../../src/components/ProductCard";
 import { Sparkline, CategoryBars, Donut, KpiTile } from "../../src/components/Charts";
 import { Colors } from "../../src/theme/colors";
+import { useTheme } from "../../src/context/ThemeContext";
 import { fetchProducts, fetchStats, CATEGORIES, bdt } from "../../src/services/gateway";
 import { Product, DeenCategory, Stats } from "../../src/types";
 import { useProfile } from "../../src/context/ProfileContext";
+import { getCategoryInfo } from "../../src/data/categories";
+import { AdminBroadcastModal } from "../../src/components/AdminBroadcastModal";
+import { UserModeBar } from "../../src/components/UserModeBar";
 
 const { width } = Dimensions.get("window");
 
 export default function HomeScreen() {
   const router = useRouter();
   const { profile } = useProfile();
+  const { colors, isDark } = useTheme();
   const isAdmin = profile.role === "admin" || profile.username === "admin";
   const [products, setProducts] = useState<Product[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [broadcastModalVisible, setBroadcastModalVisible] = useState(false);
 
   const loadData = async () => {
     try {
@@ -58,17 +64,17 @@ export default function HomeScreen() {
   const festivePanjabi = products.filter((p) => p.category === "PANJABI").slice(0, 10);
   const bestDeals = [...products].filter((p) => (p.salePct || 0) > 0).sort((a, b) => (b.salePct ?? 0) - (a.salePct ?? 0)).slice(0, 8);
 
-  const handleCategoryPress = (cat: DeenCategory) => {
+  const handleCategoryPress = (cat: DeenCategory | string) => {
     router.push({
-      pathname: "/(tabs)/shop",
-      params: { category: cat },
+      pathname: "/category/[slug]",
+      params: { slug: cat },
     });
   };
 
   const salesSeries = stats?.sales.series.map((d) => d.sales) ?? [];
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
       <Header />
       <DeliveryNoticeBanner />
 
@@ -84,6 +90,9 @@ export default function HomeScreen() {
           />
         }
       >
+        {/* Quick Role & Mode Switcher Bar */}
+        <UserModeBar />
+
         <FreeTeeBanner />
 
         {/* Hero Section */}
@@ -186,32 +195,59 @@ export default function HomeScreen() {
                 ))}
               </>
             )}
+
+            {/* Quick Broadcast Action */}
+            <TouchableOpacity
+              style={styles.quickBroadcastBtn}
+              activeOpacity={0.88}
+              onPress={() => setBroadcastModalVisible(true)}
+            >
+              <Sparkles size={14} color="#FFFFFF" />
+              <Text style={styles.quickBroadcastText}>📢 SEND MARKETING BROADCAST PUSH</Text>
+            </TouchableOpacity>
           </View>
         ) : null}
 
-        {/* Categories Bar */}
+        {/* Categories Showcase with Cover Images */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>SHOP BY CATEGORY</Text>
+          <View>
+            <Text style={styles.sectionTitle}>EXPLORE COLLECTIONS</Text>
+            <Text style={styles.sectionSubtitle}>Tailored menswear crafted in Bangladesh</Text>
+          </View>
           <TouchableOpacity onPress={() => router.push("/(tabs)/shop")}>
-            <Text style={styles.seeAllText}>All Categories →</Text>
+            <Text style={styles.seeAllText}>All Items →</Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoryScroll}
+          contentContainerStyle={styles.categoryCardScroll}
         >
-          {CATEGORIES.filter((c) => c !== "ALL").map((cat) => (
-            <TouchableOpacity
-              key={cat}
-              style={styles.categoryChip}
-              activeOpacity={0.7}
-              onPress={() => handleCategoryPress(cat)}
-            >
-              <Text style={styles.categoryChipText}>{cat}</Text>
-            </TouchableOpacity>
-          ))}
+          {CATEGORIES.filter((c) => c !== "ALL").map((cat) => {
+            const info = getCategoryInfo(cat);
+            const count = products.filter((p) => p.category.toUpperCase() === cat.toUpperCase()).length;
+            return (
+              <TouchableOpacity
+                key={cat}
+                style={styles.catCard}
+                activeOpacity={0.88}
+                onPress={() => handleCategoryPress(cat)}
+              >
+                <Image source={{ uri: info.coverImage }} style={styles.catCardImage} resizeMode="cover" />
+                <View style={styles.catCardOverlay} />
+                <View style={styles.catCardContent}>
+                  {info.badge && (
+                    <View style={styles.catCardBadge}>
+                      <Text style={styles.catCardBadgeText}>{info.badge}</Text>
+                    </View>
+                  )}
+                  <Text style={styles.catCardTitle}>{info.name}</Text>
+                  <Text style={styles.catCardCount}>{count > 0 ? `${count} Items` : "Explore Vault"}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
         {/* Best Deals */}
@@ -316,6 +352,12 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Admin Broadcast Marketing Modal */}
+      <AdminBroadcastModal
+        visible={broadcastModalVisible}
+        onClose={() => setBroadcastModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -353,6 +395,54 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 14, fontWeight: "800", color: Colors.ink, letterSpacing: 0.8 },
   sectionSubtitle: { fontSize: 11, color: Colors.sub, marginTop: 2 },
   seeAllText: { fontSize: 12, color: Colors.indigo, fontWeight: "700" },
+  categoryCardScroll: { paddingHorizontal: 16, gap: 12, paddingBottom: 4 },
+  catCard: {
+    width: 140,
+    height: 180,
+    borderRadius: 10,
+    overflow: "hidden",
+    backgroundColor: Colors.indigoDark,
+    position: "relative",
+  },
+  catCardImage: {
+    width: "100%",
+    height: "100%",
+  },
+  catCardOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(10, 20, 15, 0.55)",
+  },
+  catCardContent: {
+    position: "absolute",
+    bottom: 12,
+    left: 10,
+    right: 10,
+  },
+  catCardBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: Colors.indigo,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 3,
+    marginBottom: 4,
+  },
+  catCardBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  catCardTitle: {
+    color: "#FFFFFF",
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  catCardCount: {
+    color: "rgba(255, 255, 255, 0.8)",
+    fontSize: 10,
+    marginTop: 2,
+  },
   categoryScroll: { paddingHorizontal: 16, gap: 8, paddingBottom: 4 },
   categoryChip: {
     backgroundColor: Colors.card, paddingHorizontal: 14, paddingVertical: 8,
@@ -397,4 +487,20 @@ const styles = StyleSheet.create({
   topRank: { width: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center" },
   topRankText: { fontSize: 11, fontWeight: "800" },
   topName: { flex: 1, fontSize: 12, fontWeight: "600", color: Colors.ink },
+  quickBroadcastBtn: {
+    backgroundColor: Colors.indigo,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 14,
+  },
+  quickBroadcastText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+  },
 });

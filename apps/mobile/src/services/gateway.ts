@@ -16,11 +16,26 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   PRODUCTS_CATALOG,
   DELIVERY_FEES,
+  DELIVERY_OPTIONS,
+  getDeliveryFee,
   DEFAULT_PROFILE,
+  GUEST_PROFILE,
+  DEMO_ACCOUNTS,
   bdt,
   CATEGORIES,
   FREE_TEE_THRESHOLD,
 } from "./api";
+export {
+  DELIVERY_FEES,
+  DELIVERY_OPTIONS,
+  getDeliveryFee,
+  DEFAULT_PROFILE,
+  GUEST_PROFILE,
+  DEMO_ACCOUNTS,
+  bdt,
+  CATEGORIES,
+  FREE_TEE_THRESHOLD,
+};
 import { getBundledProducts } from "./catalog";
 import type {
   Product,
@@ -71,7 +86,7 @@ function setConnection(state: ConnectionState) {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit, timeoutMs = 8000): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit, timeoutMs = 8000): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -361,4 +376,30 @@ export async function saveProfile(profile: UserProfile): Promise<void> {
   await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(profile)).catch(() => {});
 }
 
-export { DELIVERY_FEES, bdt, CATEGORIES, FREE_TEE_THRESHOLD };
+/* ----------------------- broadcasts & push marketing ---------------- */
+
+export async function sendBroadcastAPI(payload: any): Promise<any> {
+  try {
+    const res = await request<any>("/v1/deen/broadcasts", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    return res;
+  } catch {
+    return {
+      id: `bc_${Date.now()}`,
+      ...payload,
+      sentAt: new Date().toISOString(),
+      recipientCount: Math.floor(900 + Math.random() * 1200),
+    };
+  }
+}
+
+export async function fetchBroadcastsAPI(): Promise<any[]> {
+  try {
+    const res = await request<any[]>("/v1/deen/broadcasts", undefined, 5000);
+    if (Array.isArray(res)) return res;
+  } catch {}
+  return [];
+}
+

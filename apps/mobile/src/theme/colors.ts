@@ -1,4 +1,4 @@
-export const Colors = {
+export const LightColors = {
   // Brand Denim Palette
   indigo: "#2A3680",
   indigoDark: "#1A2350",
@@ -30,6 +30,44 @@ export const Colors = {
   nagad: "#F7941D",
   cod: "#2A3680",
 };
+
+export const DarkColors: typeof LightColors = {
+  // Brand Denim Palette
+  indigo: "#5B6EE1",
+  indigoDark: "#4354BF",
+  indigoLight: "#1F2848",
+  denimStitch: "#EAA74B",
+
+  // Background & Surfaces
+  paper: "#0D111A",
+  card: "#161C2A",
+  cardSecondary: "#1F273B",
+  border: "#2A344D",
+  borderLight: "#1E2638",
+
+  // Typography
+  ink: "#F4F6FC",
+  sub: "#A2ABC3",
+  faint: "#6C7691",
+
+  // Status & Accents
+  crimson: "#F25F5C",
+  crimsonLight: "#3A191D",
+  emerald: "#34D399",
+  emeraldLight: "#143828",
+  amber: "#FBBF24",
+  amberLight: "#382B0E",
+
+  // Bangladeshi Payment Accents
+  bkash: "#FF3388",
+  nagad: "#FFA63D",
+  cod: "#5B6EE1",
+};
+
+export type ThemeColors = typeof LightColors;
+
+// Default fallback export
+export const Colors = LightColors;
 
 export const Typography = {
   titleLarge: { fontSize: 24, fontWeight: "700" as const, letterSpacing: -0.5 },
