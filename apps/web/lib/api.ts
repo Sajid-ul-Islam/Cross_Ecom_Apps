@@ -41,14 +41,18 @@ async function ensureGuestToken(): Promise<string | null> {
 }
 
 export async function fetchOrders(phone?: string): Promise<OrderResult[]> {
-  const token = await ensureGuestToken();
-  const qs = phone ? `?phone=${encodeURIComponent(phone)}` : "";
-  const res = await fetch(`${API_URL}/v1/deen/orders${qs}`, {
-    cache: "no-store",
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (!res.ok) return [];
-  return res.json();
+  try {
+    const token = await ensureGuestToken();
+    const qs = phone ? `?phone=${encodeURIComponent(phone)}` : "";
+    const res = await fetch(`${API_URL}/v1/deen/orders${qs}`, {
+      cache: "no-store",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
 }
 
 export interface Product {
@@ -117,26 +121,34 @@ export async function fetchProducts(params?: {
   sort?: string;
   per_page?: number;
 }): Promise<Product[]> {
-  const qs = new URLSearchParams();
-  if (params?.category && params.category !== "ALL")
-    qs.set("category", params.category);
-  if (params?.search) qs.set("search", params.search);
-  if (params?.sort) qs.set("sort", params.sort);
-  if (params?.per_page) qs.set("per_page", String(params.per_page));
-  const res = await fetch(
-    `${API_URL}/v1/deen/products${qs.toString() ? "?" + qs.toString() : ""}`,
-    { next: { revalidate: 60 } }
-  );
-  if (!res.ok) return [];
-  return res.json();
+  try {
+    const qs = new URLSearchParams();
+    if (params?.category && params.category !== "ALL")
+      qs.set("category", params.category);
+    if (params?.search) qs.set("search", params.search);
+    if (params?.sort) qs.set("sort", params.sort);
+    if (params?.per_page) qs.set("per_page", String(params.per_page));
+    const res = await fetch(
+      `${API_URL}/v1/deen/products${qs.toString() ? "?" + qs.toString() : ""}`,
+      { next: { revalidate: 60 } }
+    );
+    if (!res.ok) return [];
+    return res.json();
+  } catch {
+    return [];
+  }
 }
 
 export async function fetchProduct(id: string): Promise<Product | null> {
-  const res = await fetch(`${API_URL}/v1/deen/products/${id}`, {
-    next: { revalidate: 60 },
-  });
-  if (!res.ok) return null;
-  return res.json();
+  try {
+    const res = await fetch(`${API_URL}/v1/deen/products/${id}`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
 }
 
 export async function placeOrder(payload: OrderPayload): Promise<OrderResult> {

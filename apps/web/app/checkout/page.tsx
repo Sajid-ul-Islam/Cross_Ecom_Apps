@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -27,7 +27,7 @@ const PAYMENT_OPTIONS = [
   { id: "card", label: "Card / Bank", icon: "💳" },
 ];
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { items, subtotal, clearCart } = useCart();
@@ -365,5 +365,20 @@ export default function CheckoutPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="container" style={{ padding: "80px 0", textAlign: "center" }}>
+          <div className="spinner" />
+          <p style={{ color: "var(--sub)", fontSize: 14 }}>Loading checkout…</p>
+        </div>
+      }
+    >
+      <CheckoutContent />
+    </Suspense>
   );
 }
