@@ -15,7 +15,7 @@ WooCommerce. Built to be handed between autonomous coding agents — read this f
 ## Repo layout
 ```
 apps/
-  mobile/            Expo SDK 51 app (package com.deencommerce.app)
+  mobile/            Expo SDK 55 app (package com.deencommerce.app)
     app/(tabs)/      home(index), shop, bag, orders, profile
     app/product/[id] product detail (real Woo variations / per-size stock)
     app/checkout     COD / bKash / Nagad
@@ -26,7 +26,9 @@ apps/
       services/catalog.ts  lazy loader for bundled snapshot
       services/api.ts      local fallback catalog + DEFAULT_PROFILE
       context/             Cart / Order / Profile (role derived from username)
-      components/          Header (logo), ProductCard (memoized), Charts (admin BI), Banner
+      components/          Header (logo), ProductCard (memoized), Charts (admin BI), Banner,
+                           Icons (in-house SVG set on react-native-svg — replaced
+                           lucide-react-native, whose React <=18 peer broke installs on SDK 55)
       types/index.ts       Product, Stats, Order, UserProfile(+role), CartItem(+variationId)
       data/catalog.snapshot.json  826 live products (regenerate via gateway /v1/deen/snapshot)
       assets/              icon.png, splash.png, adaptive-icon.png (orange plates), logo.png (real)
@@ -92,9 +94,12 @@ cd apps/mobile
 eas build --platform android --profile production-apk   # installable APK
 eas build --platform android --profile preview          # internal/distribution
 ```
-Node 20 required (system Node 24 breaks Expo 51). Use the pinned toolchain at
-`~/tools/node-v20.18.1-win-x64` on the dev machine. Android multi-worker export crashes
-under git-bash → use `--max-workers 1` (EAS cloud build avoids this).
+The app is on **Expo SDK 55** (RN 0.83, React 19.2, expo-router v7) — Node 20/22/24 all
+work, the old Node-20-only pin was for SDK 51 and is no longer needed. Commit
+`package-lock.json` so EAS installs are deterministic. Android multi-worker export
+crashes under git-bash → use `--max-workers 1` (EAS cloud build avoids this).
+History + diagnosis of the two fixed build failures (iOS SDK-51 EOL, Android
+lucide peer conflict) lives in `apps/mobile/EAS-FIX.md`.
 
 ## Regenerating the bundled catalog
 The snapshot can go stale. To refresh:
