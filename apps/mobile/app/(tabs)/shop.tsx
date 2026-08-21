@@ -8,15 +8,18 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Image,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Search, X, SlidersHorizontal, ArrowDownNarrowWide, ArrowUpNarrowWide } from "../../src/components/Icons";
+import { Search, X, SlidersHorizontal, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowRight, Layers } from "../../src/components/Icons";
 import { Header } from "../../src/components/Header";
 import { ProductCard } from "../../src/components/ProductCard";
 import { Colors } from "../../src/theme/colors";
-import { fetchProducts, CATEGORIES } from "../../src/services/gateway";
+import { useTheme } from "../../src/context/ThemeContext";
+import { fetchProducts, CATEGORIES, useCatalogRefreshOnFocus } from "../../src/services/gateway";
 import { Product, DeenCategory } from "../../src/types";
+import { getCategoryInfo } from "../../src/data/categories";
 
 type SortKey = "default" | "price-asc" | "price-desc" | "name-asc" | "new";
 const SORT_LABELS: Record<SortKey, string> = {
@@ -28,6 +31,8 @@ const SORT_LABELS: Record<SortKey, string> = {
 };
 
 export default function ShopScreen() {
+  const router = useRouter();
+  const { colors, isDark } = useTheme();
   const params = useLocalSearchParams<{ category?: string }>();
   const [selectedCategory, setSelectedCategory] = useState<DeenCategory>(
     (params.category as DeenCategory) || "ALL"
@@ -37,6 +42,7 @@ export default function ShopScreen() {
   const [sort, setSort] = useState<SortKey>("default");
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Debounce search input (200ms) so filtering large lists stays smooth.
   useEffect(() => {
@@ -50,17 +56,33 @@ export default function ShopScreen() {
     }
   }, [params.category]);
 
+  const loadProducts = async () => {
+    const sortParam = sort === "default" ? undefined : (sort as "price-asc" | "price-desc" | "name-asc" | "new");
+    try {
+      const data = await fetchProducts(selectedCategory, deferredQuery, sortParam);
+      setProducts(data);
+    } catch {}
+  };
+
+  // Refresh catalog whenever the shop screen regains focus or the app resumes
+  // from background — surfaces live WooCommerce stock/product changes without
+  // a manual pull-to-refresh.
+  useCatalogRefreshOnFocus(loadProducts);
+
   useEffect(() => {
     setLoading(true);
-    const sortParam = sort === "default" ? undefined : (sort as "price-asc" | "price-desc" | "name-asc" | "new");
-    fetchProducts(selectedCategory, deferredQuery, sortParam)
-      .then((data) => setProducts(data))
-      .finally(() => setLoading(false));
+    loadProducts().finally(() => setLoading(false));
   }, [selectedCategory, deferredQuery, sort]);
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadProducts();
+    setRefreshing(false);
+  };
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <Header title="CATALOG" showSearch={false} />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
+      <Header title="SHOP COLLECTION" showSearch={false} />
 
       {/* Search Bar */}
       <View style={styles.searchSection}>
@@ -189,10 +211,47 @@ export default function ShopScreen() {
           columnWrapperStyle={styles.row}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
           initialNumToRender={8}
           maxToRenderPerBatch={6}
           windowSize={5}
           removeClippedSubviews
+          ListHeaderComponent={
+            selectedCategory !== "ALL" ? (
+              <TouchableOpacity
+                style={styles.categoryHeroBanner}
+                activeOpacity={0.88}
+                onPress={() =>
+                  router.push({
+                    pathname: "/category/[slug]",
+                    params: { slug: selectedCategory },
+                  })
+                }
+              >
+                <Image
+                  source={{ uri: getCategoryInfo(selectedCategory).coverImage }}
+                  style={styles.categoryHeroImage}
+                  resizeMode="cover"
+                />
+                <View style={styles.categoryHeroOverlay} />
+                <View style={styles.categoryHeroContent}>
+                  <View style={styles.categoryHeroTop}>
+                    <Text style={styles.categoryHeroTitle}>
+                      {getCategoryInfo(selectedCategory).title}
+                    </Text>
+                    <View style={styles.landingPageLink}>
+                      <Text style={styles.landingPageLinkText}>Full Page</Text>
+                      <ArrowRight size={12} color="#FFFFFF" />
+                    </View>
+                  </View>
+                  <Text style={styles.categoryHeroSub} numberOfLines={2}>
+                    {getCategoryInfo(selectedCategory).subtitle}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ) : null
+          }
           renderItem={({ item }) => (
             <View style={styles.gridItem}>
               <ProductCard product={item} />
@@ -362,5 +421,60 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.8,
+  },
+  categoryHeroBanner: {
+    height: 120,
+    borderRadius: 10,
+    overflow: "hidden",
+    backgroundColor: Colors.indigoDark,
+    position: "relative",
+    marginBottom: 14,
+  },
+  categoryHeroImage: {
+    width: "100%",
+    height: "100%",
+  },
+  categoryHeroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(10, 20, 15, 0.6)",
+  },
+  categoryHeroContent: {
+    position: "absolute",
+    bottom: 12,
+    left: 12,
+    right: 12,
+  },
+  categoryHeroTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  categoryHeroTitle: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+    flex: 1,
+    marginRight: 8,
+  },
+  landingPageLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: Colors.indigo,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  landingPageLinkText: {
+    color: "#FFFFFF",
+    fontSize: 9,
+    fontWeight: "800",
+  },
+  categoryHeroSub: {
+    color: "rgba(255, 255, 255, 0.85)",
+    fontSize: 10,
+    lineHeight: 14,
   },
 });

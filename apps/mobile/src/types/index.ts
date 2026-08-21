@@ -6,7 +6,8 @@ export type DeenCategory =
   | "T-SHIRT"
   | "TROUSERS"
   | "POLO"
-  | "ACCESSORIES";
+  | "ACCESSORIES"
+  | "OTHER";
 
 export interface Product {
   id: string;
@@ -69,7 +70,27 @@ export interface CartItem {
 }
 
 export type PaymentMethod = "cod" | "bkash" | "nagad";
-export type DeliveryArea = "dhaka" | "outside";
+
+export type DeliveryOptionKey =
+  | "dhaka_standard"
+  | "dhaka_express"
+  | "outside_standard"
+  | "store_pickup";
+
+export type DeliveryArea = "dhaka" | "outside" | DeliveryOptionKey;
+
+export type DeliverySlot = "any" | "morning" | "afternoon" | "evening";
+
+export interface DeliveryOption {
+  id: DeliveryOptionKey;
+  name: string;
+  sub: string;
+  fee: number;
+  estimatedDays: string;
+  badge?: string;
+  icon?: string;
+}
+
 export type OrderStatus = "received" | "confirmed" | "shipped" | "delivered";
 
 export interface OrderItemLine {
@@ -88,26 +109,159 @@ export interface Order {
   number: string;
   name: string;
   phone: string;
+  email?: string;
   address: string;
   area: DeliveryArea;
+  deliveryOption?: DeliveryOptionKey;
+  deliverySlot?: DeliverySlot;
+  deliveryNotes?: string;
   payment: PaymentMethod;
+  paymentTitle?: string;
+  paymentStatus?: string;
   lines: OrderItemLine[];
   subtotal: number;
   delivery: number;
   total: number;
   status: OrderStatus;
+  courier?: string;
+  pathaoConsignmentId?: string;
+  pathaoTrackingUrl?: string;
+  wooId?: number;
+  isGuestOrder?: boolean;
+  /** Gateway-issued anonymous guest session token (when placed as a guest). */
+  guestToken?: string;
   createdAt: string;
 }
 
+
+export type AccountType = "guest" | "customer" | "admin";
+
+export interface DemoAccount {
+  id: string;
+  name: string;
+  username: string;
+  email: string;
+  phone: string;
+  role: "customer" | "admin";
+  accountType: AccountType;
+  badge: string;
+  description: string;
+  address: string;
+  area: DeliveryOptionKey;
+  jeansSize: string;
+  topSize: string;
+  coins?: number;
+}
+
+export interface SavedAddress {
+  id: string;
+  label: string; // e.g. "Home", "Office"
+  address: string;
+  area: DeliveryOptionKey;
+  isDefault?: boolean;
+}
+
 export interface UserProfile {
+  accountType: AccountType;
+  isGuest: boolean;
   username?: string;
   role: "customer" | "admin";
   name: string;
   phone: string;
+  email?: string;
   address: string;
-  area: DeliveryArea;
+  area: DeliveryOptionKey;
+  deliverySlot?: DeliverySlot;
+  deliveryNotes?: string;
   jeansSize: string;
   topSize: string;
   pushOrders: boolean;
   pushPromos: boolean;
+  memberSince?: string;
+  savedAddresses?: SavedAddress[];
 }
+
+export type NotificationType = "PROMO" | "ORDER" | "RESTOCK" | "BROADCAST" | "SYSTEM";
+
+export interface NotificationItem {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body: string;
+  timestamp: string;
+  read: boolean;
+  promoCode?: string;
+  actionUrl?: string; // e.g. "/category/JEANS" or "/product/dn-01" or "/(tabs)/orders"
+  actionLabel?: string;
+  bannerImage?: string;
+}
+
+export type BroadcastAudience = "ALL" | "REGISTERED" | "GUEST" | "DHAKA_ONLY";
+
+export interface BroadcastMessage {
+  id: string;
+  title: string;
+  body: string;
+  type: NotificationType;
+  audience: BroadcastAudience;
+  promoCode?: string;
+  actionUrl?: string;
+  actionLabel?: string;
+  bannerImage?: string;
+  sentAt: string;
+  sentBy?: string;
+  recipientCount?: number;
+}
+
+export type ReturnType = "EXCHANGE" | "RETURN";
+
+export type ReturnReason =
+  | "SIZE_FIT_TOO_TIGHT"
+  | "SIZE_FIT_TOO_LOOSE"
+  | "FABRIC_DEFECT"
+  | "STITCHING_ISSUE"
+  | "WRONG_ITEM_SENT"
+  | "CHANGED_MIND"
+  | "TRANSIT_DAMAGE";
+
+export type ReturnStatus =
+  | "PENDING_REVIEW"
+  | "APPROVED"
+  | "PICKUP_SCHEDULED"
+  | "IN_TRANSIT"
+  | "COMPLETED"
+  | "REJECTED";
+
+export interface ReturnExchangeItem {
+  productId: string;
+  name: string;
+  sku: string;
+  currentSize: string;
+  desiredSize?: string;
+  qty: number;
+  unit: number;
+}
+
+export interface ReturnExchangeRequest {
+  id: string; // e.g. "RET-8492" or "EXC-1049"
+  ticketNumber: string;
+  orderId: string;
+  orderNumber: string;
+  type: ReturnType;
+  reason: ReturnReason;
+  reasonText: string;
+  customerNotes: string;
+  images: string[]; // URLs or base64 data URIs
+  items: ReturnExchangeItem[];
+  pickupMethod: "courier_pickup" | "studio_dropoff";
+  pickupAddress: string;
+  contactPhone: string;
+  customerName: string;
+  refundMethod?: "bkash" | "nagad" | "bank" | "store_credit";
+  refundAccount?: string;
+  status: ReturnStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+

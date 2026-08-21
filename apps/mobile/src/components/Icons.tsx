@@ -171,6 +171,14 @@ export const Lock = make(
   </>,
 );
 
+export const Key = make(
+  <>
+    <Circle cx="7.5" cy="15.5" r="5.5" />
+    <Path d="m21 2-9.6 9.6" />
+    <Path d="m15.5 7.5 3 3L22 7l-3-3" />
+  </>,
+);
+
 export const MapPin = make(
   <>
     <Path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
@@ -344,3 +352,134 @@ export const X = make(
     <Path d="m6 6 12 12" />
   </>,
 );
+
+export const Info = make(
+  <>
+    <Circle cx="12" cy="12" r="10" />
+    <Path d="M12 16v-4" />
+    <Path d="M12 8h.01" />
+  </>,
+);
+
+export const AlertCircle = make(
+  <>
+    <Circle cx="12" cy="12" r="10" />
+    <Line x1="12" y1="8" x2="12" y2="12" />
+    <Line x1="12" y1="16" x2="12.01" y2="16" />
+  </>,
+);
+
+export const Maximize2 = make(
+  <>
+    <Path d="M15 3h6v6" />
+    <Path d="m21 3-7 7" />
+    <Path d="M9 21H3v-6" />
+    <Path d="m3 21 7-7" />
+  </>,
+);
+
+export const ZoomIn = make(
+  <>
+    <Circle cx="11" cy="11" r="8" />
+    <Path d="m21 21-4.3-4.3" />
+    <Path d="M11 8v6" />
+    <Path d="M8 11h6" />
+  </>,
+);
+
+export const ZoomOut = make(
+  <>
+    <Circle cx="11" cy="11" r="8" />
+    <Path d="m21 21-4.3-4.3" />
+    <Path d="M8 11h6" />
+  </>,
+);
+
+export const Eye = make(
+  <>
+    <Path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+    <Circle cx="12" cy="12" r="3" />
+  </>,
+);
+
+export const Camera = make(
+  <>
+    <Path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
+    <Circle cx="12" cy="13" r="3" />
+  </>,
+);
+
+export const ImageIcon = make(
+  <>
+    <Rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+    <Circle cx="9" cy="9" r="2" />
+    <Path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+  </>,
+);
+
+export const RotateCcw = make(
+  <>
+    <Path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <Path d="M3 3v5h5" />
+  </>,
+);
+
+export const FileText = make(
+  <>
+    <Path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+    <Path d="M14 2v4a2 2 0 0 0 2 2h4" />
+    <Path d="M10 9H8" />
+    <Path d="M16 13H8" />
+    <Path d="M16 17H8" />
+  </>,
+);
+
+export const UploadCloud = make(
+  <>
+    <Path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
+    <Path d="M12 12v9" />
+    <Path d="m16 16-4-4-4 4" />
+  </>,
+);
+
+export const Star = make(
+  <Polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />,
+);
+
+export const MessageCircle = make(
+  <Path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />,
+);
+
+export const BookOpen = make(
+  <>
+    <Path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+    <Path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+  </>,
+);
+
+export const Share2 = make(
+  <>
+    <Circle cx="18" cy="5" r="3" />
+    <Circle cx="6" cy="12" r="3" />
+    <Circle cx="18" cy="19" r="3" />
+    <Line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+    <Line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+  </>,
+);
+
+export const Navigation = make(
+  <Polygon points="3 11 22 2 13 21 11 13 3 11" />,
+);
+
+export const Trophy = make(
+  <>
+    <Path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+    <Path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+    <Path d="M4 22h16" />
+    <Path d="M10 14.66V17c0 .55-.45.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+    <Path d="M14 14.66V17c0 .55.45.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+    <Path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+  </>,
+);
+
+

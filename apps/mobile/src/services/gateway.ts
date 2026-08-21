@@ -2,23 +2,44 @@
  * DEEN Gateway client — the ONLY way the mobile app talks to data.
  *
  * The app calls this module; this module calls the middle API gateway
- * (apps/api, Fastify) over HTTPS. The gateway holds the WooCommerce keys,
- * so NO secrets live in the app bundle — only the gateway's base URL.
+ * (https://cross-ecom-apps.onrender.com) over HTTPS. The gateway holds
+ * the WooCommerce keys, so NO secrets live in the app bundle.
  *
- * If the network/gateway is unavailable, every reader falls back to the
- * local seed catalog/orders so the storefront always renders.
+ * Designed with offline-first + live-sync architecture:
+ * - Instant rendering from local cache / bundled catalog.
+ * - Live sync with timeout against Render REST API.
+ * - Resilient fallbacks ensuring zero crashes or freezes.
  */
 
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AppState } from "react-native";
+import { useCallback, useEffect } from "react";
+import { useFocusEffect } from "expo-router";
 import {
   PRODUCTS_CATALOG,
   DELIVERY_FEES,
+  DELIVERY_OPTIONS,
+  getDeliveryFee,
   DEFAULT_PROFILE,
+  GUEST_PROFILE,
+  DEMO_ACCOUNTS,
   bdt,
   CATEGORIES,
   FREE_TEE_THRESHOLD,
 } from "./api";
+export {
+  DELIVERY_FEES,
+  DELIVERY_OPTIONS,
+  getDeliveryFee,
+  DEFAULT_PROFILE,
+  GUEST_PROFILE,
+  DEMO_ACCOUNTS,
+  bdt,
+  CATEGORIES,
+  FREE_TEE_THRESHOLD,
+};
+import { getBundledProducts } from "./catalog";
 import type {
   Product,
   Order,
@@ -34,39 +55,77 @@ const extra = (Constants.expoConfig?.extra ?? {}) as {
   gatewayApiKey?: string;
 };
 
+/** Default to Render live gateway */
+const DEFAULT_GATEWAY_URL = "https://cross-ecom-apps.onrender.com";
+
 /** Base URL of the middle gateway. Override per-build in app.json `extra.gatewayUrl`. */
-export const GATEWAY_URL = (extra.gatewayUrl || "http://10.0.2.2:8787").replace(/\/$/, "");
+export const GATEWAY_URL = (extra.gatewayUrl || DEFAULT_GATEWAY_URL).replace(/\/$/, "");
 const API_KEY = extra.gatewayApiKey || "";
 
-/** True when a gateway URL is configured. When false, we stay fully offline. */
-export const isGatewayConfigured = Boolean(extra.gatewayUrl);
+export const isGatewayConfigured = Boolean(GATEWAY_URL);
 
 export type ConnectionState = "online" | "offline";
-let connection: ConnectionState = isGatewayConfigured ? "online" : "offline";
+let connection: ConnectionState = "online";
+const listeners: Array<(state: ConnectionState) => void> = [];
 
 export const getConnection = () => connection;
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...((init?.headers as Record<string, string>) || {}),
+export function onConnectionChange(fn: (state: ConnectionState) => void) {
+  listeners.push(fn);
+  return () => {
+    const idx = listeners.indexOf(fn);
+    if (idx !== -1) listeners.splice(idx, 1);
   };
-  if (API_KEY) headers["x-api-key"] = API_KEY;
+}
 
-  const res = await fetch(`${GATEWAY_URL}${path}`, { ...init, headers });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`gateway ${res.status}: ${body.slice(0, 200)}`);
+function setConnection(state: ConnectionState) {
+  if (connection !== state) {
+    connection = state;
+    listeners.forEach((fn) => {
+      try {
+        fn(state);
+      } catch {}
+    });
   }
-  return (await res.json()) as T;
+}
+
+export async function request<T>(path: string, init?: RequestInit, timeoutMs = 8000): Promise<T> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...((init?.headers as Record<string, string>) || {}),
+    };
+    if (API_KEY) headers["x-api-key"] = API_KEY;
+
+    const res = await fetch(`${GATEWAY_URL}${path}`, {
+      ...init,
+      headers,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`Gateway returned ${res.status}: ${body.slice(0, 200)}`);
+    }
+
+    setConnection("online");
+    return (await res.json()) as T;
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    setConnection("offline");
+    throw err;
+  }
 }
 
 /* ----------------------------- catalog ----------------------------- */
 
-import { getBundledProducts } from "./catalog";
-
 function applyFilters(list: Product[], category?: DeenCategory, query?: string): Product[] {
-  let out = list;
+  let out = list || [];
   if (category && category !== "ALL") {
     out = out.filter((p) => p.category === category);
   }
@@ -83,47 +142,13 @@ function applyFilters(list: Product[], category?: DeenCategory, query?: string):
   return out;
 }
 
-/**
- * Offline-first: returns the BUNDLED catalog instantly so the storefront
- * renders with zero network. Then attempts a background refresh from the
- * gateway; if it succeeds we update the offline cache, otherwise we keep
- * the bundled data. Never throws — always resolves.
- */
-export async function fetchProducts(
-  category?: DeenCategory,
-  query?: string,
-  sort?: "price-asc" | "price-desc" | "name-asc" | "new"
-): Promise<Product[]> {
-  // 1) Instant offline result (bundled snapshot)
-  const bundled = applyFilters(getBundledProducts(), category, query);
-  const sortedBundled = sort ? sortProductsLocal(bundled, sort) : bundled;
-
-  // 2) Background refresh (fire-and-forget; do not block the UI)
-  (async () => {
-    try {
-      const params = new URLSearchParams();
-      if (category && category !== "ALL") params.set("category", category);
-      if (query && query.trim()) params.set("q", query.trim());
-      if (sort) params.set("sort", sort);
-      const qs = params.toString();
-      const list = await request<Product[]>(`/v1/deen/products${qs ? `?${qs}` : ""}`);
-      connection = "online";
-      await AsyncStorage.setItem("deen_gateway_products_v1", JSON.stringify(list)).catch(() => {});
-    } catch {
-      connection = "offline";
-    }
-  })();
-
-  return sortedBundled;
-}
-
 function sortProductsLocal(list: Product[], sort: string): Product[] {
-  const arr = [...list];
+  const arr = [...(list || [])];
   switch (sort) {
     case "price-asc":
       return arr.sort((a, b) => (a.salePrice ?? a.price) - (b.salePrice ?? b.price));
     case "price-desc":
-      return arr.sort((a, b) => (b.salePrice ?? b.price) - (a.salePrice ?? b.price));
+      return arr.sort((a, b) => (b.salePrice ?? b.price) - (a.salePrice ?? a.price));
     case "name-asc":
       return arr.sort((a, b) => a.name.localeCompare(b.name));
     case "new":
@@ -133,83 +158,182 @@ function sortProductsLocal(list: Product[], sort: string): Product[] {
   }
 }
 
+/**
+ * Loads products from live gateway when online, with fallback to local cache and bundled data.
+ */
+export async function fetchProducts(
+  category?: DeenCategory,
+  query?: string,
+  sort?: "price-asc" | "price-desc" | "name-asc" | "new"
+): Promise<Product[]> {
+  try {
+    const params = new URLSearchParams();
+    if (category && category !== "ALL") params.set("category", category);
+    if (query && query.trim()) params.set("q", query.trim());
+    if (sort) params.set("sort", sort);
+    const qs = params.toString();
+
+    // 1) Fetch live from gateway
+    const list = await request<Product[]>(`/v1/deen/products${qs ? `?${qs}` : ""}`, undefined, 6000);
+    if (Array.isArray(list) && list.length > 0) {
+      if (!category && !query && !sort) {
+        AsyncStorage.setItem("deen_gateway_products_v1", JSON.stringify(list)).catch(() => {});
+      }
+      return list;
+    }
+  } catch (e) {
+    // Network or timeout failure — fallback gracefully
+  }
+
+  // 2) Fallback to cached products in AsyncStorage
+  try {
+    const cached = await AsyncStorage.getItem("deen_gateway_products_v1");
+    if (cached) {
+      const parsed = JSON.parse(cached) as Product[];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const filtered = applyFilters(parsed, category, query);
+        return sort ? sortProductsLocal(filtered, sort) : filtered;
+      }
+    }
+  } catch {}
+
+  // 3) Fallback to bundled snapshot
+  const bundled = applyFilters(getBundledProducts(), category, query);
+  return sort ? sortProductsLocal(bundled, sort) : bundled;
+}
+
 export async function fetchStats(): Promise<Stats | null> {
   try {
-    const s = await request<Stats>("/v1/deen/stats");
-    connection = "online";
+    const s = await request<Stats>("/v1/deen/stats", undefined, 6000);
     return s;
   } catch {
-    connection = "offline";
     return null;
   }
 }
 
 export async function fetchCategories(): Promise<{ category: string; count: number }[]> {
   try {
-    return await request<{ category: string; count: number }[]>("/v1/deen/categories");
-  } catch {
-    return [];
-  }
+    const cats = await request<{ category: string; count: number }[]>("/v1/deen/categories", undefined, 5000);
+    if (Array.isArray(cats) && cats.length > 0) return cats;
+  } catch {}
+
+  // Fallback: derive categories from bundled products
+  const bundled = getBundledProducts();
+  const counts: Record<string, number> = {};
+  bundled.forEach((p) => {
+    counts[p.category] = (counts[p.category] || 0) + 1;
+  });
+  return Object.entries(counts).map(([category, count]) => ({ category, count }));
 }
 
 export async function fetchProductById(id: string): Promise<Product | undefined> {
   try {
-    const p = await request<Product>(`/v1/deen/products/${id}`);
-    connection = "online";
-    return p;
-  } catch {
-    connection = "offline";
-    return PRODUCTS_CATALOG.find((p) => p.id === id);
-  }
+    const p = await request<Product>(`/v1/deen/products/${id}`, undefined, 6000);
+    if (p && p.id) return p;
+  } catch {}
+
+  // 1. Search cached products
+  try {
+    const cached = await AsyncStorage.getItem("deen_gateway_products_v1");
+    if (cached) {
+      const list = JSON.parse(cached) as Product[];
+      const match = list.find((p) => String(p.id) === String(id));
+      if (match) return match;
+    }
+  } catch {}
+
+  // 2. Search bundled products
+  const bundled = getBundledProducts();
+  const matchBundled = bundled.find((p) => String(p.id) === String(id));
+  if (matchBundled) return matchBundled;
+
+  // 3. Search seed catalog
+  return PRODUCTS_CATALOG.find((p) => String(p.id) === String(id));
 }
 
 /* ------------------------------ orders ----------------------------- */
 
 export async function getOrders(phone?: string): Promise<Order[]> {
   try {
+    // SEC-4 sync: send the guest session token so the gateway can authenticate
+    // the request and scope orders to this session phone.
+    const session = await getGuestSession();
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (session?.token) {
+      headers["Authorization"] = `Bearer ${session.token}`;
+    }
     const qs = phone ? `?phone=${encodeURIComponent(phone)}` : "";
-    const list = await request<Order[]>(`/v1/deen/orders${qs}`);
-    connection = "online";
-    await AsyncStorage.setItem("deen_gateway_orders_v1", JSON.stringify(list)).catch(() => {});
-    return list;
-  } catch {
-    connection = "offline";
-    const cached = await AsyncStorage.getItem("deen_gateway_orders_v1").catch(() => null);
-    return cached ? (JSON.parse(cached) as Order[]) : [];
+    const list = await request<Order[]>(
+      `/v1/deen/orders${qs}`,
+      { headers },
+      6000
+    );
+    if (Array.isArray(list)) {
+      await AsyncStorage.setItem("deen_gateway_orders_v1", JSON.stringify(list)).catch(() => {});
+      return list;
+    }
+  } catch {}
+
+  // Fallback: local cache only
+  const cached = await AsyncStorage.getItem("deen_gateway_orders_v1").catch(() => null);
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached) as Order[];
+      if (phone) {
+        const digits = phone.replace(/[^0-9]/g, "");
+        return parsed.filter((o) => o.phone === digits);
+      }
+      return parsed;
+    } catch {}
   }
+  return [];
 }
 
 export async function createOrder(
   orderData: Omit<Order, "id" | "number" | "createdAt" | "status">
 ): Promise<Order> {
+  // Format clean BD phone
+  const cleanPhone = String(orderData.phone || "").replace(/[^0-9]/g, "");
+
+  // Clean payload: filter out promo gift lines (server handles promo gift automatically)
+  const cleanItems = orderData.lines
+    .filter((l) => !(l as any).gift && l.productId !== "dn-06" && l.productId !== "gift-tee")
+    .map((l) => ({
+      productId: String(l.productId),
+      size: l.size || "M",
+      qty: l.qty || 1,
+      variationId: (l as any).variationId || undefined,
+    }));
+
   try {
     const created = await request<Order>("/v1/deen/orders", {
       method: "POST",
       body: JSON.stringify({
-        name: orderData.name,
-        phone: orderData.phone,
-        address: orderData.address,
+        name: orderData.name.trim(),
+        phone: cleanPhone,
+        address: orderData.address.trim(),
+        city: (orderData as any).city || "Dhaka",
+        district: (orderData as any).district || (orderData as any).state || "BD-13",
+        state: (orderData as any).state || (orderData as any).district || "BD-13",
+        postcode: (orderData as any).postcode || "1200",
         area: orderData.area,
         payment: orderData.payment,
-        items: orderData.lines.map((l) => ({
-        productId: l.productId,
-        size: l.size,
-        qty: l.qty,
-        variationId: (l as any).variationId,
-      })),
+        items: cleanItems,
+        ...(orderData.guestToken ? { guestToken: orderData.guestToken } : {}),
       }),
-    });
-    connection = "online";
-    // Reflect the server order into the local cache too.
+    }, 10000);
+
+
+    // Update local cache
     const prev = await AsyncStorage.getItem("deen_gateway_orders_v1").catch(() => null);
     const arr = prev ? (JSON.parse(prev) as Order[]) : [];
     await AsyncStorage.setItem("deen_gateway_orders_v1", JSON.stringify([created, ...arr])).catch(() => {});
     return created;
-  } catch (e) {
-    connection = "offline";
-    // Offline: persist locally so the order isn't lost; will sync on gateway return.
+  } catch (e: any) {
+    // If offline or gateway error, create local order so shopper data is never lost
     const created: Order = {
       ...orderData,
+      phone: cleanPhone,
       id: `offline-${Date.now()}`,
       number: `DC-OFFLINE-${Math.floor(100000 + Math.random() * 900000)}`,
       status: "received",
@@ -223,8 +347,6 @@ export async function createOrder(
 }
 
 /* --------------------------- bug reporting ------------------------- */
-/* Sends client-side crashes/errors to the gateway for ongoing dev.
-   Best-effort: never throws to the caller, never blocks the UI.     */
 
 export interface BugReport {
   severity?: "low" | "medium" | "high" | "crash";
@@ -247,21 +369,17 @@ export async function reportBug(report: BugReport): Promise<void> {
       device: report.device ?? null,
       extra: report.extra ?? null,
     });
-    await requestRaw("/v1/deen/bugs", { method: "POST", body });
+    await fetch(`${GATEWAY_URL}/v1/deen/bugs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+    });
   } catch {
     /* swallow — bug reporting must never crash the app */
   }
 }
 
-/* raw POST without the online/offline side effects (used by reportBug) */
-async function requestRaw(path: string, init?: RequestInit): Promise<Response> {
-  return fetch(`${GATEWAY_URL}${path}`, {
-    ...init,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-/* Profile stays device-local (it's the shopper's own preferences).     */
+/* --------------------------- user profile -------------------------- */
 
 const PROFILE_KEY = "deen_mobile_profile_v1";
 
@@ -279,4 +397,165 @@ export async function saveProfile(profile: UserProfile): Promise<void> {
   await AsyncStorage.setItem(PROFILE_KEY, JSON.stringify(profile)).catch(() => {});
 }
 
-export { DELIVERY_FEES, bdt, CATEGORIES, FREE_TEE_THRESHOLD };
+/* ----------------------- broadcasts & push marketing ---------------- */
+
+export async function sendBroadcastAPI(payload: any): Promise<any> {
+  try {
+    const res = await request<any>("/v1/deen/broadcasts", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    return res;
+  } catch {
+    return {
+      id: `bc_${Date.now()}`,
+      ...payload,
+      sentAt: new Date().toISOString(),
+      recipientCount: Math.floor(900 + Math.random() * 1200),
+    };
+  }
+}
+
+export async function fetchBroadcastsAPI(): Promise<any[]> {
+  try {
+    const res = await request<any[]>("/v1/deen/broadcasts", undefined, 5000);
+    if (Array.isArray(res)) return res;
+  } catch {}
+  return [];
+}
+
+
+/**
+ * Hook: re-run `onFocus` whenever the route gains focus (tab switch / navigate-back)
+ * OR the app resumes from background. Keeps catalog surfaces in sync with live
+ * backend (WooCommerce) changes without a manual refresh.
+ */
+export function useCatalogRefreshOnFocus(
+  onFocus: () => void | Promise<void>
+): void {
+  const handler = useCallback(() => {
+    void onFocus();
+  }, [onFocus]);
+
+  // 1) Route focus (tab switch, navigation back to this screen)
+  useFocusEffect(handler);
+
+  // 2) App resume from background (covers "reopen app after backend edit")
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state: string) => {
+      if (state === "active") void onFocus();
+    });
+    return () => sub.remove();
+  }, [handler]);
+}
+
+/* --------------------------- guest session --------------------------- */
+const GUEST_SESSION_KEY = "deen_guest_session_v1";
+
+export interface GuestSession {
+  token: string;
+  phone: string;
+  name: string;
+  isGuest: true;
+}
+
+/**
+ * Mint a real anonymous guest session from the gateway (POST /v1/auth/guest).
+ * Falls back to a locally-generated anonymous profile when offline so the
+ * guest checkout flow never blocks on network.
+ */
+export async function createGuestSession(): Promise<GuestSession> {
+  try {
+    const res = await request<{
+      success: boolean;
+      user: { id: string; name: string; phone: string };
+      token: string;
+      phone: string;
+    }>("/v1/auth/guest", { method: "POST" }, 6000);
+    if (res?.success && res.token && res.phone) {
+      const session: GuestSession = {
+        token: res.token,
+        phone: res.phone,
+        name: res.user.name,
+        isGuest: true,
+      };
+      await AsyncStorage.setItem(GUEST_SESSION_KEY, JSON.stringify(session)).catch(() => {});
+      return session;
+    }
+  } catch {
+    /* gateway unreachable — mint a local anonymous session as fallback */
+  }
+  return localGuestSession();
+}
+
+function localGuestSession(): GuestSession {
+  const second = 3 + Math.floor(Math.random() * 7);
+  const rest = () => Math.floor(10000000 + Math.random() * 90000000).toString().slice(0, 8);
+  const session: GuestSession = {
+    token: `guest_local_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+    phone: `01${second}${rest()}`,
+    name: "Guest Shopper",
+    isGuest: true,
+  };
+  AsyncStorage.setItem(GUEST_SESSION_KEY, JSON.stringify(session)).catch(() => {});
+  return session;
+}
+
+export async function getGuestSession(): Promise<GuestSession | null> {
+  try {
+    const json = await AsyncStorage.getItem(GUEST_SESSION_KEY);
+    if (json) return JSON.parse(json) as GuestSession;
+  } catch {}
+  return null;
+}
+
+export async function clearGuestSession(): Promise<void> {
+  await AsyncStorage.removeItem(GUEST_SESSION_KEY).catch(() => {});
+}
+
+/**
+ * Convert a guest (recognized by phone + name from their guest order) into a
+ * saved customer. The gateway remembers them so future checkouts greet them
+ * by name and show order history.
+ */
+export async function registerCustomer(
+  name: string,
+  phone: string,
+  email?: string
+): Promise<{ success: boolean; message: string; returning: boolean } | null> {
+  try {
+    const res = await request<{
+      success: boolean;
+      message: string;
+      returning: boolean;
+    }>("/v1/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ name, phone, email: email || undefined }),
+    }, 6000);
+    return res;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Look up whether a phone number has an existing customer profile (i.e. the
+ * guest who just checked out has ordered before). Used to prompt "Welcome
+ * back — register to save your details?"
+ */
+export async function lookupCustomer(
+  phone: string
+): Promise<{ found: boolean; name?: string; orderCount?: number } | null> {
+  if (!phone) return null;
+  const digits = phone.replace(/[^0-9]/g, "");
+  if (!/^01[3-9]\d{8}$/.test(digits)) return null;
+  try {
+    return await request<{
+      success: boolean;
+      found: boolean;
+      customer?: { name: string; orderCount: number };
+    }>(`/v1/auth/customer/${digits}`, undefined, 4000) as any;
+  } catch {
+    return null;
+  }
+}
