@@ -425,8 +425,10 @@ export function deenLogout(): void {
 }
 
 function issueSession(name: string, phone: string, provider: DeenSession["provider"], email?: string): DeenSession {
-  const s: DeenSession = { name, phone, exp: Date.now() + 7 * 86400000, provider, providers: [provider], email };
+  const s: DeenSession = { name, phone, exp: Date.now() + DUR_MS[deenGetSessionDuration()], provider, providers: [provider], email };
   save(AKEYS.session, s);
+  registerDevice(s);
+  logSecurity("login", `Signed in via ${provider === "otp" ? "phone OTP" : provider} · ${maskPhone(phone)}`);
   return s;
 }
 
@@ -490,6 +492,7 @@ export async function deenSendOtp(phone: string): Promise<void> {
     throw new Error("Enter a valid BD mobile number — 01XXXXXXXXX.");
   }
   await req("POST", "/v1/deen/auth/otp/send");
+  logSecurity("otp", `Verification code sent · ${maskPhone(clean)}`);
   const code = String(Math.floor(100000 + Math.random() * 900000));
   const store = otpStore();
   store[clean] = { code, exp: Date.now() + 5 * 60000 };
@@ -504,6 +507,15 @@ export async function deenSendOtp(phone: string): Promise<void> {
 export async function deenVerifyOtp(phone: string, code: string): Promise<DeenSession> {
   await req("POST", "/v1/deen/auth/otp/verify");
   const clean = phone.replace(/[^0-9]/g, "");
+
+  // brute-force lockout: 5 misses within 10 min → 45s cooldown
+  const locks = load<Record<string, { fails: number[]; cooldownUntil: number }>>(LOCKKEY, {});
+  const lock = locks[clean];
+  if (lock && lock.cooldownUntil > Date.now()) {
+    const secs = Math.ceil((lock.cooldownUntil - Date.now()) / 1000);
+    throw new Error(`Too many attempts — try again in ${secs}s.`);
+  }
+
   const store = otpStore();
   const rec = store[clean];
   if (!rec) throw new Error("No code was requested for this number — send a new one.");
@@ -512,9 +524,21 @@ export async function deenVerifyOtp(phone: string, code: string): Promise<DeenSe
     save(OTPKEY, store);
     throw new Error("That code expired. Request a fresh one.");
   }
-  if (rec.code !== code.trim()) throw new Error("That code doesn't match. Check the SMS and try again.");
+  if (rec.code !== code.trim()) {
+    const fails = [...(lock?.fails ?? []).filter((f) => Date.now() - f < 600000), Date.now()];
+    locks[clean] = { fails, cooldownUntil: fails.length >= 5 ? Date.now() + 45000 : 0 };
+    if (fails.length >= 5) logSecurity("lockout", `OTP lockout · ${maskPhone(clean)} · 5 failed attempts`);
+    save(LOCKKEY, locks);
+    throw new Error(
+      fails.length >= 5
+        ? "Too many wrong codes — verification paused for 45s."
+        : `That code doesn't match. ${5 - fails.length} attempts left.`
+    );
+  }
   delete store[clean];
   save(OTPKEY, store);
+  delete locks[clean];
+  save(LOCKKEY, locks);
   const known = users().find((u) => u.phone === clean);
   return issueSession(known?.name ?? "DEEN Customer", clean, "otp");
 }
@@ -543,7 +567,149 @@ export async function deenSocialLogin(account: SocialAccount): Promise<DeenSessi
     throw new Error("Verify your phone first — Google & Facebook link onto a phone-verified account from Profile.");
   }
   await req("POST", `/v1/deen/auth/${account.provider}`);
-  return issueSession(account.name, account.phone, account.provider, account.email);
+  const merged: DeenSession = {
+    ...(getDeenSession() as DeenSession),
+    providers: Array.from(new Set([...(getDeenSession()?.providers ?? []), account.provider])),
+    email: getDeenSession()?.email ?? account.email,
+  };
+  save(AKEYS.session, merged);
+  logSecurity("link", `${account.provider === "google" ? "Google" : "Facebook"} linked · ${account.email}`);
+  return merged;
+}
+
+/* ------------------------------------------------------------------ */
+/*  session management — device registry, refresh, revocation,         */
+/*  security log, brute-force lockout, configurable duration           */
+/* ------------------------------------------------------------------ */
+
+export type SessionDuration = "24h" | "7d" | "30d";
+
+const DUR_MS: Record<SessionDuration, number> = {
+  "24h": 86400000,
+  "7d": 7 * 86400000,
+  "30d": 30 * 86400000,
+};
+
+const DKEY = "deen.devices.v1";
+const SLOG = "deen.security.v1";
+const LOCKKEY = "deen.lock.v1";
+const DURKEY = "deen.sessionpref.v1";
+
+export interface DeenDevice {
+  id: string;
+  label: string;
+  platform: "android" | "ios" | "web";
+  method: string;
+  createdAt: number;
+  lastActive: number;
+  expiresAt: number;
+  current: boolean;
+}
+
+export interface DeenSecurityEvent {
+  id: string;
+  ts: number;
+  kind: "login" | "otp" | "revoke" | "refresh" | "link" | "lockout";
+  text: string;
+}
+
+const SEED_DEVICES: DeenDevice[] = [
+  { id: "dev-web-1", label: "Chrome · Windows 11", platform: "web", method: "otp", createdAt: Date.now() - 9 * 86400000, lastActive: Date.now() - 5 * 3600000, expiresAt: Date.now() - 2 * 86400000, current: false },
+  { id: "dev-ios-1", label: "iPhone 13 · DEEN app", platform: "ios", method: "google", createdAt: Date.now() - 21 * 86400000, lastActive: Date.now() - 2 * 86400000, expiresAt: Date.now() - 14 * 86400000, current: false },
+];
+
+function maskPhone(p: string): string {
+  const clean = p.replace(/[^0-9]/g, "");
+  return clean.length > 6 ? `${clean.slice(0, 3)}•••••${clean.slice(-3)}` : clean;
+}
+
+function logSecurity(kind: DeenSecurityEvent["kind"], text: string): void {
+  const log = load<DeenSecurityEvent[]>(SLOG, []);
+  log.unshift({ id: `ev-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`, ts: Date.now(), kind, text });
+  save(SLOG, log.slice(0, 25));
+}
+
+export function deenSecurityLog(): DeenSecurityEvent[] {
+  return load<DeenSecurityEvent[]>(SLOG, []);
+}
+
+export function deenGetSessionDuration(): SessionDuration {
+  return load<SessionDuration | null>(DURKEY, null) ?? "7d";
+}
+
+export function deenSetSessionDuration(d: SessionDuration): void {
+  save(DURKEY, d);
+  logSecurity("refresh", `Session lifetime set to ${d}`);
+}
+
+function registerDevice(session: DeenSession): void {
+  const all = load<DeenDevice[]>(DKEY, SEED_DEVICES);
+  const cur = all.find((d) => d.current);
+  if (cur) {
+    cur.method = session.provider;
+    cur.lastActive = Date.now();
+    cur.expiresAt = session.exp;
+  } else {
+    all.unshift({
+      id: `dev-${Date.now()}`,
+      label: "Pixel 8 · Expo app",
+      platform: "android",
+      method: session.provider,
+      createdAt: Date.now(),
+      lastActive: Date.now(),
+      expiresAt: session.exp,
+      current: true,
+    });
+  }
+  save(DKEY, all);
+}
+
+export function deenListDevices(): DeenDevice[] {
+  return load<DeenDevice[]>(DKEY, SEED_DEVICES).sort((a, b) => Number(b.current) - Number(a.current) || b.lastActive - a.lastActive);
+}
+
+export async function deenRevokeDevice(id: string): Promise<DeenDevice[]> {
+  await req("POST", "/v1/deen/auth/devices/revoke");
+  const all = load<DeenDevice[]>(DKEY, SEED_DEVICES);
+  const target = all.find((d) => d.id === id);
+  if (target?.current) throw new Error("This device holds your active session — sign out instead.");
+  save(DKEY, all.filter((d) => d.id !== id));
+  if (target) logSecurity("revoke", `Signed out ${target.label}`);
+  return deenListDevices();
+}
+
+export async function deenRevokeOthers(): Promise<DeenDevice[]> {
+  await req("POST", "/v1/deen/auth/devices/revoke-others");
+  const all = load<DeenDevice[]>(DKEY, SEED_DEVICES);
+  const removed = all.filter((d) => !d.current).length;
+  save(DKEY, all.filter((d) => d.current));
+  if (removed > 0) logSecurity("revoke", `Signed out ${removed} other device${removed > 1 ? "s" : ""}`);
+  return deenListDevices();
+}
+
+/* heartbeat touch — validates the token and records activity */
+export async function deenTouchSession(): Promise<DeenSession> {
+  const s = getDeenSession();
+  if (!s) throw new Error("No active session.");
+  const all = load<DeenDevice[]>(DKEY, SEED_DEVICES);
+  const cur = all.find((d) => d.current);
+  if (cur) {
+    cur.lastActive = Date.now();
+    save(DKEY, all);
+  }
+  return s;
+}
+
+/* manual refresh — slides the expiry forward by the chosen lifetime */
+export async function deenRefreshSession(): Promise<DeenSession> {
+  await req("POST", "/v1/deen/auth/refresh");
+  const s = getDeenSession();
+  if (!s) throw new Error("No active session to refresh — sign in again.");
+  const next: DeenSession = { ...s, exp: Date.now() + DUR_MS[deenGetSessionDuration()] };
+  save(AKEYS.session, next);
+  registerDevice(next);
+  logSecurity("refresh", `Token refreshed · valid ${deenGetSessionDuration()}`);
+  return next;
 }
 
 /* ------------------------------------------------------------------ */

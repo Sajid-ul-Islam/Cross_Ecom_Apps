@@ -16,9 +16,17 @@ import {
   deenLinkSocial,
   deenListOrders,
   deenListProducts,
+  deenGetSessionDuration,
+  deenListDevices,
   deenLogin,
   deenLogout,
+  deenRefreshSession,
   deenRegister,
+  deenRevokeDevice,
+  deenRevokeOthers,
+  deenSecurityLog,
+  deenSetSessionDuration,
+  deenTouchSession,
   deenValidateCoupon,
   DELIVERY_FEES,
   demoAccount,
@@ -50,6 +58,9 @@ import {
   type DeenSession,
   type DeenSms,
   type DeenPush,
+  type DeenDevice,
+  type DeenSecurityEvent,
+  type SessionDuration,
   type SocialAccount,
 } from "../api/deen";
 import { PHASES, type TaskStatus } from "../data";
@@ -65,6 +76,11 @@ import {
   IconBox,
   IconCheck,
   IconClock,
+  IconGlobe,
+  IconLock,
+  IconPhone,
+  IconRefresh,
+  IconShield,
   IconHeart,
   IconLogout,
   IconMinus,
@@ -392,6 +408,30 @@ function DeenPhone() {
     []
   );
 
+  /* session lifecycle — heartbeat validates the token; expiry triggers re-auth */
+  const [expired, setExpired] = useState(false);
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (!boot && session && !restoredRef.current) {
+      restoredRef.current = true;
+      toast("Session restored from SecureStore · token valid", "wire");
+    }
+  }, [boot, session, toast]);
+  useEffect(() => {
+    if (!session) return;
+    const t = window.setInterval(() => {
+      deenTouchSession()
+        .then(setSession)
+        .catch(() => {
+          deenLogout();
+          setSession(null);
+          setExpired(true);
+        });
+    }, 45000);
+    return () => window.clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.exp]);
+
   const recordVisit = (id: string) => {
     setRecents((prev) => [id, ...prev.filter((x) => x !== id)].slice(0, 8));
   };
@@ -631,6 +671,32 @@ function DeenPhone() {
                 )}
               </span>
             </button>
+          )}
+
+          {/* session-expired guard */}
+          {expired && !boot && (
+            <div
+              className="screen-up absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 px-9 text-center font-arch"
+              style={{ background: "rgba(12,14,28,0.92)", backdropFilter: "blur(5px)" }}
+            >
+              <span className="flex h-14 w-14 items-center justify-center rounded-full" style={{ background: T.indigo, color: "#fff" }}>
+                <IconLock size={24} />
+              </span>
+              <p className="font-disp text-[21px] text-white">Session expired</p>
+              <p className="text-[11.5px] leading-relaxed text-white/60">
+                Your token reached the end of its lifetime. Verify your phone to continue — your bag, wishlist and loyalty points are safe.
+              </p>
+              <button
+                onClick={() => {
+                  setExpired(false);
+                  setScreen({ name: "auth", returnTo: { name: "profile" } } as Screen);
+                }}
+                className="mt-1 cursor-pointer rounded-xl px-6 py-3 font-disp text-[13px] text-white transition-all hover:brightness-110 active:scale-95"
+                style={{ background: T.indigo }}
+              >
+                Verify phone
+              </button>
+            </div>
           )}
 
           {/* bottom nav */}
@@ -2084,6 +2150,26 @@ function OrdersScreen({ go, onCancel }: { go: (s: Screen) => void; onCancel: (id
 
 /* ---------------- profile ---------------- */
 
+function ago(ts: number): string {
+  const d = Date.now() - ts;
+  if (d < 60000) return "just now";
+  if (d < 3600000) return `${Math.floor(d / 60000)}m ago`;
+  if (d < 86400000) return `${Math.floor(d / 3600000)}h ago`;
+  return `${Math.floor(d / 86400000)}d ago`;
+}
+
+function validityLeft(exp: number): string {
+  const d = exp - Date.now();
+  if (d <= 0) return "expired";
+  const days = Math.floor(d / 86400000);
+  const hrs = Math.floor((d % 86400000) / 3600000);
+  if (days > 0) return `${days}d ${hrs}h left`;
+  const mins = Math.floor((d % 3600000) / 60000);
+  return hrs > 0 ? `${hrs}h ${mins}m left` : `${mins}m left`;
+}
+
+const METHOD_LABEL: Record<string, string> = { otp: "phone OTP", password: "password", google: "Google", facebook: "Facebook" };
+
 function ProfileScreen({
   go,
   session,
@@ -2137,6 +2223,72 @@ function ProfileScreen({
 
   const loyalty = computeLoyalty(orders ?? []);
   const providers = session?.providers ?? [];
+
+  /* session management */
+  const [devices, setDevices] = useState<DeenDevice[]>(() => (session ? deenListDevices() : []));
+  const [secLog, setSecLog] = useState<DeenSecurityEvent[]>(() => deenSecurityLog());
+  const [duration, setDuration] = useState<SessionDuration>(() => deenGetSessionDuration());
+  const [revoking, setRevoking] = useState<string | null>(null);
+  const [showLog, setShowLog] = useState(false);
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const t = window.setInterval(() => setTick((x) => x + 1), 30000);
+    return () => window.clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    if (session) {
+      setDevices(deenListDevices());
+      setSecLog(deenSecurityLog());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.exp, session?.providers?.length]);
+
+  const refreshNow = async () => {
+    try {
+      const s = await deenRefreshSession();
+      onSession(s);
+      setSecLog(deenSecurityLog());
+      setDevices(deenListDevices());
+      toast(`Token refreshed · valid ${duration}`, "mint");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Refresh failed", "coral");
+    }
+  };
+
+  const changeDuration = (d: SessionDuration) => {
+    setDuration(d);
+    deenSetSessionDuration(d);
+    setSecLog(deenSecurityLog());
+    toast(`New sign-ins will last ${d}`, "wire");
+  };
+
+  const revoke = async (id: string) => {
+    setRevoking(id);
+    try {
+      const list = await deenRevokeDevice(id);
+      setDevices(list);
+      setSecLog(deenSecurityLog());
+      toast("Device signed out", "wire");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Could not revoke", "coral");
+    } finally {
+      setRevoking(null);
+    }
+  };
+
+  const revokeOthers = async () => {
+    setRevoking("others");
+    try {
+      const list = await deenRevokeOthers();
+      setDevices(list);
+      setSecLog(deenSecurityLog());
+      toast("All other devices signed out", "mint");
+    } finally {
+      setRevoking(null);
+    }
+  };
 
   /* completion — five checkpoints, 20% each */
   const checks: { label: string; done: boolean; action: (() => void) | null }[] = [
@@ -2268,6 +2420,122 @@ function ProfileScreen({
             <span className="block text-white/40">1 pt per ৳10 spent · points land when the parcel is on its way</span>
           </p>
         </div>
+      </div>
+
+      {/* session & security */}
+      <div className="mt-3 rounded-xl border" style={{ borderColor: T.line, background: T.card }}>
+        <div className="flex items-center justify-between px-4 pt-3.5">
+          <p className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.12em]">
+            <span style={{ color: T.indigo }}><IconShield size={14} /></span> Session & security
+          </p>
+          {session ? (
+            <span className="flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[8.5px] font-bold uppercase tracking-[0.12em]" style={{ background: T.okTint, color: T.ok }}>
+              <span className="pulse-dot h-1 w-1 rounded-full" style={{ background: T.ok }} /> active
+            </span>
+          ) : (
+            <span className="rounded-full px-2 py-0.5 font-mono text-[8.5px] font-bold uppercase tracking-[0.12em]" style={{ background: T.sand, color: T.sandInk }}>
+              signed out
+            </span>
+          )}
+        </div>
+
+        {!session ? (
+          <div className="px-4 pb-4 pt-2">
+            <p className="text-[12px] leading-relaxed" style={{ color: T.sub }}>
+              Sign in with your phone to get a secured session — device registry, token refresh and one-tap revocation.
+            </p>
+            <button onClick={() => go({ name: "auth", returnTo: { name: "profile" } })} className="mt-2.5 cursor-pointer rounded-full px-4 py-2 text-[11px] font-bold text-white transition-transform active:scale-95" style={{ background: T.indigo }}>
+              Verify phone to sign in
+            </button>
+          </div>
+        ) : (
+          <div className="px-4 pb-4 pt-2.5">
+            {/* live token card */}
+            <div className="flex items-center justify-between gap-3 rounded-xl p-3.5" style={{ background: T.indigoDark }}>
+              <div className="min-w-0">
+                <p className="flex items-center gap-1.5 font-mono text-[8.5px] font-bold uppercase tracking-[0.18em] text-white/50">
+                  <IconClock size={11} /> token lifetime
+                </p>
+                <p className="mt-1 font-disp text-[17px] leading-none text-white">{validityLeft(session.exp)}</p>
+                <p className="mt-1 truncate font-mono text-[9px] text-white/55">
+                  via {METHOD_LABEL[session.provider]} · {session.phone.replace(/(\d{3})\d{5}(\d{3})/, "$1•••••$2")}
+                </p>
+              </div>
+              <button onClick={refreshNow} className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-3 py-2 font-mono text-[9px] font-bold uppercase tracking-[0.12em] text-white transition-all hover:brightness-110 active:scale-95" style={{ background: T.indigo }}>
+                <IconRefresh size={12} /> refresh
+              </button>
+            </div>
+
+            {/* session lifetime preference */}
+            <div className="mt-3 flex items-center gap-2.5">
+              <span className="font-mono text-[8.5px] font-bold uppercase tracking-[0.16em]" style={{ color: T.sub }}>sign-in lasts</span>
+              <div className="flex flex-1 gap-1 rounded-lg p-0.5" style={{ background: T.paper }}>
+                {(["24h", "7d", "30d"] as const).map((d) => (
+                  <button key={d} onClick={() => changeDuration(d)} className="flex-1 cursor-pointer rounded-md py-1 font-mono text-[9px] font-bold uppercase transition-all duration-200 active:scale-95" style={duration === d ? { background: T.indigo, color: "#fff" } : { color: T.sub }}>
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* device registry */}
+            <div className="mt-3.5 border-t pt-3" style={{ borderColor: T.line }}>
+              <div className="flex items-baseline justify-between">
+                <p className="font-mono text-[8.5px] font-bold uppercase tracking-[0.16em]" style={{ color: T.sub }}>devices · {devices.length}</p>
+                {devices.some((d) => !d.current) && (
+                  <button onClick={revokeOthers} disabled={revoking === "others"} className="cursor-pointer font-mono text-[8.5px] font-bold uppercase tracking-[0.12em] transition-colors disabled:opacity-50" style={{ color: T.crimson }}>
+                    {revoking === "others" ? "signing out…" : "sign out others"}
+                  </button>
+                )}
+              </div>
+              <div className="mt-2 space-y-1.5">
+                {devices.map((d) => (
+                  <div key={d.id} className="flex items-center gap-2.5 rounded-lg border px-2.5 py-2" style={{ borderColor: T.line, background: d.current ? T.indigoTint : "transparent" }}>
+                    <span className="shrink-0" style={{ color: d.current ? T.indigo : T.sub }}>
+                      {d.platform === "web" ? <IconGlobe size={15} /> : <IconPhone size={15} />}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[11.5px] font-bold">{d.label}</span>
+                      <span className="block font-mono text-[8.5px] uppercase tracking-[0.1em]" style={{ color: T.sub }}>
+                        {METHOD_LABEL[d.method] ?? d.method} · active {ago(d.lastActive)}
+                      </span>
+                    </span>
+                    {d.current ? (
+                      <span className="shrink-0 rounded-full px-2 py-0.5 font-mono text-[8px] font-bold uppercase tracking-[0.1em]" style={{ background: T.indigo, color: "#fff" }}>
+                        this device
+                      </span>
+                    ) : (
+                      <button onClick={() => revoke(d.id)} disabled={revoking === d.id} className="shrink-0 cursor-pointer rounded-md border px-2 py-1 font-mono text-[8px] font-bold uppercase tracking-[0.1em] transition-all active:scale-90 disabled:opacity-50" style={{ borderColor: T.crimson, color: T.crimson }}>
+                        {revoking === d.id ? "…" : "revoke"}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* security log */}
+            <button onClick={() => setShowLog((v) => !v)} className="mt-3 flex w-full cursor-pointer items-center justify-between border-t pt-2.5 text-left" style={{ borderColor: T.line }}>
+              <span className="font-mono text-[8.5px] font-bold uppercase tracking-[0.16em]" style={{ color: T.sub }}>
+                security log · {secLog.length} events
+              </span>
+              <span className="font-mono text-[10px]" style={{ color: T.indigo }}>{showLog ? "hide ▲" : "show ▼"}</span>
+            </button>
+            {showLog && (
+              <div className="screen-up mt-2 space-y-1 rounded-lg p-2.5 font-mono text-[9.5px] leading-relaxed" style={{ background: T.paper }}>
+                {secLog.length === 0 && <p style={{ color: T.sub }}>No events yet — sign-ins, codes and revocations land here.</p>}
+                {secLog.slice(0, 7).map((e) => (
+                  <p key={e.id} className="flex gap-2">
+                    <span className="shrink-0" style={{ color: e.kind === "revoke" || e.kind === "lockout" ? T.crimson : e.kind === "login" || e.kind === "link" ? T.ok : T.sub }}>
+                      {new Date(e.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                    <span className="truncate" style={{ color: T.ink }}>{e.text}</span>
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* recent orders */}
