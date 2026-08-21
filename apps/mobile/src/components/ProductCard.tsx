@@ -2,7 +2,9 @@ import React from "react";
 import { View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { Product } from "../types";
-import { Colors } from "../theme/colors";
+import { useTheme } from "../context/ThemeContext";
+import { useWishlist } from "../context/WishlistContext";
+import { Heart } from "./Icons";
 import { bdt } from "../services/gateway";
 
 interface ProductCardProps {
@@ -12,7 +14,11 @@ interface ProductCardProps {
 
 function ProductCardBase({ product, style }: ProductCardProps) {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
+  const { isInWishlist, toggleWishlist } = useWishlist();
   const [imgLoaded, setImgLoaded] = React.useState(false);
+
+  const isSaved = isInWishlist(product.id);
 
   const handlePress = () => {
     router.push({
@@ -24,17 +30,24 @@ function ProductCardBase({ product, style }: ProductCardProps) {
   const hasDiscount = product.salePrice && product.salePrice < product.price;
   const pct = product.salePct ?? (hasDiscount ? Math.round(((product.price - (product.salePrice || 0)) / product.price) * 100) : 0);
   const outOfStock = product.stockStatus === "outofstock";
+  const imageUri = product.images?.[0] || product.gallery?.[0] || "https://images.unsplash.com/photo-1542272604-780c96856592?w=800";
+  const displaySizes = product.sizes || [];
 
   return (
     <TouchableOpacity
-      style={[styles.card, style, outOfStock && styles.cardOOS]}
+      style={[
+        styles.card,
+        { backgroundColor: colors.card, borderColor: colors.border },
+        style,
+        outOfStock && styles.cardOOS,
+      ]}
       activeOpacity={0.88}
       onPress={handlePress}
       disabled={outOfStock}
     >
-      <View style={styles.imageWrapper}>
+      <View style={[styles.imageWrapper, { backgroundColor: colors.cardSecondary }]}>
         <Image
-          source={{ uri: product.images[0] }}
+          source={{ uri: imageUri }}
           style={styles.image}
           resizeMode="cover"
           fadeDuration={150}
@@ -43,80 +56,86 @@ function ProductCardBase({ product, style }: ProductCardProps) {
           onLoadEnd={() => setImgLoaded(true)}
         />
         {!imgLoaded && (
-          <View style={styles.imgPlaceholder}>
-            <ActivityIndicator size="small" color={Colors.indigo} />
+          <View style={[styles.imgPlaceholder, { backgroundColor: colors.cardSecondary }]}>
+            <ActivityIndicator size="small" color={colors.indigo} />
           </View>
         )}
         {product.isNew && (
-          <View style={styles.badgeNew}>
+          <View style={[styles.badgeNew, { backgroundColor: colors.indigo }]}>
             <Text style={styles.badgeNewText}>NEW</Text>
           </View>
         )}
         {pct > 0 && (
-          <View style={styles.badgeSale}>
+          <View style={[styles.badgeSale, { backgroundColor: colors.crimson }]}>
             <Text style={styles.badgeSaleText}>-{pct}%</Text>
           </View>
         )}
         {outOfStock && (
-          <View style={styles.badgeOOS}>
+          <View style={[styles.badgeOOS, { backgroundColor: colors.ink }]}>
             <Text style={styles.badgeOOSText}>SOLD OUT</Text>
           </View>
         )}
+
+        {/* Wishlist Heart Button */}
+        <TouchableOpacity
+          style={[styles.heartBtn, { backgroundColor: isDark ? "rgba(13, 17, 26, 0.85)" : "rgba(255, 255, 255, 0.85)" }]}
+          onPress={() => toggleWishlist(product)}
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+        >
+          <Heart size={14} color={isSaved ? colors.crimson : colors.ink} />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.info}>
-        <Text style={styles.category}>{product.category}</Text>
-        <Text style={styles.name} numberOfLines={2}>
+        <Text style={[styles.category, { color: colors.sub }]}>{product.category}</Text>
+        <Text style={[styles.name, { color: colors.ink }]} numberOfLines={2}>
           {product.name}
         </Text>
 
         <View style={styles.priceRow}>
-          <Text style={styles.price}>
+          <Text style={[styles.price, { color: isDark ? colors.indigo : colors.indigoDark }]}>
             {bdt(product.salePrice ?? product.price)}
           </Text>
           {hasDiscount && (
-            <Text style={styles.originalPrice}>{bdt(product.price)}</Text>
+            <Text style={[styles.originalPrice, { color: colors.faint }]}>{bdt(product.price)}</Text>
           )}
         </View>
 
         {product.rating > 0 && (
           <View style={styles.ratingRow}>
-            <Text style={styles.ratingStar}>★</Text>
-            <Text style={styles.ratingText}>{product.rating.toFixed(1)}</Text>
+            <Text style={[styles.ratingStar, { color: colors.denimStitch }]}>★</Text>
+            <Text style={[styles.ratingText, { color: colors.sub }]}>{product.rating.toFixed(1)}</Text>
           </View>
         )}
 
         <View style={styles.sizePreviewRow}>
-          {product.sizes.slice(0, 4).map((s) => (
-            <View key={s} style={styles.sizeChip}>
-              <Text style={styles.sizeChipText}>{s}</Text>
+          {displaySizes.slice(0, 4).map((s) => (
+            <View key={s} style={[styles.sizeChip, { backgroundColor: colors.paper, borderColor: colors.borderLight }]}>
+              <Text style={[styles.sizeChipText, { color: colors.sub }]}>{s}</Text>
             </View>
           ))}
-          {product.sizes.length > 4 && (
-            <Text style={styles.moreSizes}>+{product.sizes.length - 4}</Text>
+          {displaySizes.length > 4 && (
+            <Text style={[styles.moreSizes, { color: colors.faint }]}>+{displaySizes.length - 4}</Text>
           )}
         </View>
       </View>
     </TouchableOpacity>
   );
-};
+}
 
 /** Memoized so list re-renders only re-render changed cards (keeps grids snappy). */
 export const ProductCard = React.memo(ProductCardBase);
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.card,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: Colors.border,
     overflow: "hidden",
     marginBottom: 12,
   },
   imageWrapper: {
     width: "100%",
     aspectRatio: 0.9,
-    backgroundColor: Colors.cardSecondary,
     position: "relative",
   },
   image: {
@@ -131,13 +150,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: Colors.cardSecondary,
   },
   badgeNew: {
     position: "absolute",
     top: 8,
     left: 8,
-    backgroundColor: Colors.indigo,
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 4,
@@ -152,7 +169,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 8,
     right: 8,
-    backgroundColor: Colors.crimson,
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 4,
@@ -166,7 +182,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 8,
     left: 8,
-    backgroundColor: Colors.ink,
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 4,
@@ -177,6 +192,16 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.5,
   },
+  heartBtn: {
+    position: "absolute",
+    bottom: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   cardOOS: {
     opacity: 0.55,
   },
@@ -186,7 +211,6 @@ const styles = StyleSheet.create({
   category: {
     fontSize: 10,
     fontWeight: "700",
-    color: Colors.sub,
     letterSpacing: 0.5,
     marginBottom: 2,
     textTransform: "uppercase",
@@ -194,7 +218,6 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 13,
     fontWeight: "600",
-    color: Colors.ink,
     lineHeight: 18,
     marginBottom: 6,
     minHeight: 36,
@@ -208,11 +231,9 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 14,
     fontWeight: "800",
-    color: Colors.indigoDark,
   },
   originalPrice: {
     fontSize: 12,
-    color: Colors.faint,
     textDecorationLine: "line-through",
   },
   sizePreviewRow: {
@@ -223,19 +244,15 @@ const styles = StyleSheet.create({
   sizeChip: {
     paddingHorizontal: 5,
     paddingVertical: 2,
-    backgroundColor: Colors.paper,
     borderRadius: 3,
     borderWidth: 1,
-    borderColor: Colors.borderLight,
   },
   sizeChipText: {
     fontSize: 9,
     fontWeight: "600",
-    color: Colors.sub,
   },
   moreSizes: {
     fontSize: 9,
-    color: Colors.faint,
   },
   ratingRow: {
     flexDirection: "row",
@@ -245,11 +262,9 @@ const styles = StyleSheet.create({
   },
   ratingStar: {
     fontSize: 11,
-    color: Colors.denimStitch,
   },
   ratingText: {
     fontSize: 11,
     fontWeight: "700",
-    color: Colors.sub,
   },
 });

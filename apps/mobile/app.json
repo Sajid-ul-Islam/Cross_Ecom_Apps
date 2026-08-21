@@ -6,11 +6,11 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "deen",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#E06020"
+      "backgroundColor": "#000000"
     },
     "ios": {
       "supportsTablet": true,
@@ -19,7 +19,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#E06020"
+        "backgroundColor": "#000000"
       },
       "package": "com.deencommerce.app"
     },
@@ -41,9 +41,9 @@
       "gatewayUrl": "https://cross-ecom-apps.onrender.com",
       "gatewayApiKey": "",
       "eas": {
-        "projectId": "45da9018-181d-4415-a611-1cb971f61cca"
+        "projectId": "6e5914c5-c56c-4cc7-ad0b-f9bf6cf3d7bd"
       }
     },
-    "owner": "sajid.islam"
+    "owner": "b3ngali"
   }
 }
