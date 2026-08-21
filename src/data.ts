@@ -176,6 +176,231 @@ export const PRODUCTS: Product[] = [
 
 export const productById = (id: string) => PRODUCTS.find((p) => p.id === id);
 
+/* --------------------------- categories --------------------------- */
+
+export type Category = {
+  slug: string;
+  name: string;
+  tagline: string;
+  blurb: string;
+};
+
+export const CATEGORIES: Category[] = [
+  {
+    slug: "footwear",
+    name: "Footwear",
+    tagline: "Built for footpath chaos",
+    blurb:
+      "Sidewalks, rickshaws, monsoon puddles — everything on this shelf survives all three. Grippy soles, honest stitching.",
+  },
+  {
+    slug: "apparel",
+    name: "Apparel",
+    tagline: "Match-day knit, everyday wear",
+    blurb:
+      "Breathable knits cut for Dhaka humidity. Check the fit chart before you order — exchanges cost a rider trip.",
+  },
+  {
+    slug: "bags",
+    name: "Bags",
+    tagline: "Carry the whole day",
+    blurb:
+      "Waxed canvas and brass hardware that ages well. Every pack is hand-checked before it leaves the warehouse.",
+  },
+  {
+    slug: "audio",
+    name: "Audio",
+    tagline: "Tune the traffic out",
+    blurb:
+      "Noise-cancelling that turns a CNG ride into a listening room. Long batteries, because load-shedding is real.",
+  },
+  {
+    slug: "accessories",
+    name: "Accessories",
+    tagline: "Small things, kept on time",
+    blurb:
+      "Watches, straps and the little hardware of daily life — sized carefully so nothing needs sending back.",
+  },
+  {
+    slug: "home",
+    name: "Home",
+    tagline: "The cha upgrade",
+    blurb:
+      "Stoneware and small goods for the table. Packed with triple-layer bubble wrap — chips are on us, not you.",
+  },
+];
+
+export const catByProduct = (catName: string) =>
+  CATEGORIES.find((c) => c.name === catName);
+
+/* ----------------------- product details ----------------------- */
+
+export const DETAILS: Record<string, string[]> = {
+  "p-sneakers": [
+    "Flyknit upper with reinforced toe cage",
+    "Natural gum rubber outsole, 4mm lugs",
+    "Ortholite insole — removable, washable",
+    "True to size; half-size up for wide feet",
+  ],
+  "p-backpack": [
+    "18oz waxed canvas, vegetable-tanned leather",
+    "Solid brass buckles, YKK zippers",
+    "Padded 14\u2033 laptop sleeve + rain flap",
+    "Re-wax yearly — care tin included",
+  ],
+  "p-headphones": [
+    "40mm dynamic drivers, LDAC + AAC",
+    "38h battery, 10 min charge = 5h play",
+    "Multipoint Bluetooth 5.3, wear detection",
+    "Folds flat — hard case in the box",
+  ],
+  "p-watch": [
+    "Miyota quartz, sapphire-coated crystal",
+    "38mm brushed steel case, 5 ATM",
+    "Quick-release 20mm nylon NATO strap",
+    "Lume on hands and markers",
+  ],
+  "p-jersey": [
+    "160gsm moisture-wicking chevron knit",
+    "Athletic cut — size up for relaxed fit",
+    "Flatlock seams, no chafe on long rides",
+    "Machine wash cold, inside out",
+  ],
+  "p-mugs": [
+    "Hand-thrown speckled stoneware, set of 2",
+    "320ml — a proper long cha",
+    "Lead-free glaze, dishwasher + microwave safe",
+    "Each pair glazed slightly differently",
+  ],
+};
+
+/* -------------------------- size charts -------------------------- */
+
+export type FitChart = {
+  kind: "fit";
+  note: string;
+  head: string[];
+  /** column indexes holding cm values (converted when units = inches) */
+  unitCols: number[];
+  rows: string[][];
+  tips: string[];
+};
+
+export type SpecChart = {
+  kind: "specs";
+  note: string;
+  rows: [string, string][];
+  tips: string[];
+};
+
+export type SizeChartDef = FitChart | SpecChart;
+
+export const SIZE_CHARTS: Record<string, SizeChartDef> = {
+  Footwear: {
+    kind: "fit",
+    note: "Measure your foot in the evening — feet swell through the day.",
+    head: ["EU", "UK", "US (M)", "Foot length"],
+    unitCols: [3],
+    rows: [
+      ["39", "5.5", "6.5", "24.5"],
+      ["40", "6.5", "7.5", "25.2"],
+      ["41", "7", "8", "25.9"],
+      ["42", "8", "9", "26.6"],
+      ["43", "9", "10", "27.3"],
+      ["44", "9.5", "10.5", "28"],
+      ["45", "10.5", "11.5", "28.7"],
+    ],
+    tips: [
+      "Stand on paper, heel against a wall, mark the longest toe.",
+      "Measure both feet — fit the bigger one.",
+      "Between sizes? Go half a size up; socks in Dhaka winters exist.",
+    ],
+  },
+  Apparel: {
+    kind: "fit",
+    note: "Athletic cut. Want it relaxed over a t-shirt? Take one size up.",
+    head: ["Size", "Chest", "Length", "Shoulder"],
+    unitCols: [1, 2, 3],
+    rows: [
+      ["XS", "86", "66", "41"],
+      ["S", "92", "68", "43"],
+      ["M", "98", "70", "45"],
+      ["L", "104", "72", "47"],
+      ["XL", "110", "74", "49"],
+      ["XXL", "116", "76", "51"],
+    ],
+    tips: [
+      "Chest: tape around the fullest part, arms down.",
+      "Length: from the top of the shoulder to the hem.",
+      "Shoulder: seam to seam across the back.",
+    ],
+  },
+  Bags: {
+    kind: "specs",
+    note: "Carry-on friendly on every airline flying out of DAC.",
+    rows: [
+      ["Height", "42 cm"],
+      ["Width", "30 cm"],
+      ["Depth", "14 cm"],
+      ["Capacity", "18 L"],
+      ["Laptop sleeve", "up to 14\u2033"],
+      ["Weight", "0.92 kg"],
+    ],
+    tips: [
+      "Measure your everyday load — a full pack should sit on your hips, not your shoulders.",
+      "The waxed canvas loosens ~5% in the first month of use.",
+    ],
+  },
+  Audio: {
+    kind: "specs",
+    note: "Clamps lightly — glasses-friendly for long studio sessions.",
+    rows: [
+      ["Driver", "40 mm dynamic"],
+      ["Impedance", "32 \u03A9"],
+      ["Weight", "254 g"],
+      ["Battery", "38 h (ANC off)"],
+      ["Bluetooth", "5.3, multipoint"],
+      ["Folded size", "18 \u00D7 17 \u00D7 8 cm"],
+    ],
+    tips: [
+      "Headband adjusts 38\u201358 cm around the crown.",
+      "Ear pads are replaceable — spares ship with the case.",
+    ],
+  },
+  Accessories: {
+    kind: "specs",
+    note: "Sized for wrists 14\u201320 cm. The NATO strap has 7 holes.",
+    rows: [
+      ["Case diameter", "40 mm"],
+      ["Dial", "38 mm cream"],
+      ["Lug to lug", "46 mm"],
+      ["Strap width", "20 mm"],
+      ["Wrist range", "14 \u2013 20 cm"],
+      ["Water resistance", "5 ATM"],
+    ],
+    tips: [
+      "Wrist size: tape just under the wrist bone, snug but not tight.",
+      "Under 15 cm? We punch an extra hole on request — free.",
+    ],
+  },
+  Home: {
+    kind: "specs",
+    note: "Sold as a pair. Each glaze batch is a little different — that's the point.",
+    rows: [
+      ["Capacity", "320 ml"],
+      ["Height", "9.5 cm"],
+      ["Diameter", "8.5 cm"],
+      ["Weight", "340 g each"],
+      ["Glaze", "food-safe, lead-free"],
+      ["Care", "dishwasher + microwave"],
+    ],
+    tips: [
+      "Fits under standard espresso machine spouts (max 10 cm).",
+      "Hand-drying keeps the speckle glaze shining longer.",
+    ],
+  },
+};
+
 /* ------------------------ status + flow ------------------------ */
 
 export const STATUS_STEPS: { key: OrderStatus; label: string }[] = [

@@ -268,11 +268,24 @@ body {
   transform: none;
 }
 
+@keyframes kenburns {
+  from {
+    transform: scale(1) translateY(0);
+  }
+  to {
+    transform: scale(1.09) translateY(-1.5%);
+  }
+}
+.kenburns {
+  animation: kenburns 16s ease-in-out infinite alternate;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ticker-track,
   .route-dash,
   .pulse-dot,
-  .blink {
+  .blink,
+  .kenburns {
     animation: none;
   }
   .reveal {

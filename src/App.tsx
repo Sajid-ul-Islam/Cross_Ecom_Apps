@@ -11,6 +11,8 @@ import { Shop } from "./Shop";
 import { Orders } from "./Orders";
 import { ExchangeDesk } from "./Exchange";
 import { Fees } from "./Fees";
+import { ProductPage } from "./ProductPage";
+import { CategoryPage } from "./CategoryPage";
 import {
   IcBox,
   IcLogo,
@@ -20,7 +22,33 @@ import {
   IcTruck,
 } from "./icons";
 
-type Tab = "shop" | "orders" | "exchange" | "fees";
+/* ------------------------------ routing ------------------------------ */
+
+type Route =
+  | { view: "shop" }
+  | { view: "orders" }
+  | { view: "exchange" }
+  | { view: "fees" }
+  | { view: "product"; id: string }
+  | { view: "category"; slug: string };
+
+function parseHash(): Route {
+  const h = window.location.hash.replace(/^#\/?/, "");
+  const [a, b] = h.split("/");
+  if (a === "product" && b) return { view: "product", id: decodeURIComponent(b) };
+  if (a === "category" && b) return { view: "category", slug: decodeURIComponent(b) };
+  if (a === "orders") return { view: "orders" };
+  if (a === "exchange") return { view: "exchange" };
+  if (a === "fees") return { view: "fees" };
+  return { view: "shop" };
+}
+
+const routeKey = (r: Route) =>
+  r.view === "product"
+    ? `product:${r.id}`
+    : r.view === "category"
+      ? `category:${r.slug}`
+      : r.view;
 
 const TICKER = [
   "Rider update · BB-10490 crossed Airport Road — 40 min out",
@@ -29,6 +57,7 @@ const TICKER = [
   "Prepay the delivery fee → straight to the priority queue",
   "Same-day ৳120 · prepaid only · at your door tonight 6–10 PM",
   "Cash on delivery accepted on every standard order",
+  "New · every category has its own landing page now",
 ];
 
 /* --------------------- ambient delivery-route layer --------------------- */
@@ -80,24 +109,24 @@ function RouteBackdrop() {
   );
 }
 
-/* --------------------------------- tabs --------------------------------- */
+/* --------------------------------- nav --------------------------------- */
 
-function TabBtn({
+function TabLink({
   label,
   icon: Icon,
   badge,
   active,
-  onClick,
+  href,
 }: {
   label: string;
   icon: (p: { className?: string }) => React.ReactElement;
   badge?: number;
   active: boolean;
-  onClick: () => void;
+  href: string;
 }) {
   return (
-    <button
-      onClick={onClick}
+    <a
+      href={href}
       className={`relative flex shrink-0 items-center gap-2 rounded-lg border-2 px-3.5 py-2 text-sm font-bold transition ${
         active
           ? "border-ink bg-sun text-ink shadow-[2px_2px_0_0_var(--color-ink)]"
@@ -111,14 +140,14 @@ function TabBtn({
           {badge}
         </span>
       )}
-    </button>
+    </a>
   );
 }
 
 /* --------------------------------- shell --------------------------------- */
 
 function Shell() {
-  const [tab, setTab] = useState<Tab>("shop");
+  const [route, setRoute] = useState<Route>(parseHash);
   const [orders, setOrders] = useLS<Order[]>("bz.orders", seedOrders);
   const [exchanges, setExchanges] = useLS<Exchange[]>("bz.exchanges", seedExchanges);
   const [cart, setCart] = useLS<CartMap>("bz.cart", {});
@@ -126,20 +155,34 @@ function Shell() {
   const [cartPing, setCartPing] = useState(0);
 
   useEffect(() => {
+    const onHash = () => setRoute(parseHash());
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+
+  const key = routeKey(route);
+  useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [tab]);
+  }, [key]);
 
   const cartCount = Object.values(cart).reduce((a, b) => a + b, 0);
-
   const addOrder = (o: Order) => setOrders((l) => [o, ...l]);
   const addExchange = (e: Exchange) => setExchanges((l) => [e, ...l]);
 
-  const tabs: { id: Tab; label: string; icon: (p: { className?: string }) => React.ReactElement; badge?: number }[] = [
-    { id: "shop", label: "Shop", icon: IcBox },
-    { id: "orders", label: "My Orders", icon: IcReceipt, badge: orders.length },
-    { id: "exchange", label: "Exchange Desk", icon: IcSwap, badge: exchanges.length },
-    { id: "fees", label: "Delivery Fees", icon: IcTruck },
-  ];
+  const openBag = () => {
+    setCartPing((p) => p + 1);
+    window.location.hash = "#/shop";
+  };
+
+  const tabs = [
+    { id: "shop", label: "Shop", icon: IcBox, href: "#/" },
+    { id: "orders", label: "My Orders", icon: IcReceipt, href: "#/orders", badge: orders.length },
+    { id: "exchange", label: "Exchange Desk", icon: IcSwap, href: "#/exchange", badge: exchanges.length },
+    { id: "fees", label: "Delivery Fees", icon: IcTruck, href: "#/fees" },
+  ] as const;
+
+  const activeTab =
+    route.view === "product" || route.view === "category" ? "shop" : route.view;
 
   return (
     <div className="relative min-h-screen">
@@ -168,10 +211,7 @@ function Shell() {
         <header className="border-b-2 border-ink bg-pine text-[#e9f2e2]">
           <div className="mx-auto w-full max-w-7xl px-4">
             <div className="flex h-16 items-center justify-between gap-4">
-              <button
-                onClick={() => setTab("shop")}
-                className="flex items-center gap-2.5 transition hover:opacity-85"
-              >
+              <a href="#/" className="flex items-center gap-2.5 transition hover:opacity-85">
                 <IcLogo className="h-9 w-9" />
                 <span className="text-left">
                   <span className="font-display block text-xl font-extrabold leading-none tracking-tight">
@@ -181,28 +221,22 @@ function Shell() {
                     Dhaka order desk
                   </span>
                 </span>
-              </button>
+              </a>
 
               <nav className="hidden items-center gap-1 lg:flex">
                 {tabs.map((t) => (
-                  <TabBtn
+                  <TabLink
                     key={t.id}
                     label={t.label}
                     icon={t.icon}
-                    badge={t.badge}
-                    active={tab === t.id}
-                    onClick={() => setTab(t.id)}
+                    badge={"badge" in t ? t.badge : undefined}
+                    active={activeTab === t.id}
+                    href={t.href}
                   />
                 ))}
               </nav>
 
-              <button
-                onClick={() => {
-                  setTab("shop");
-                  setCartPing((p) => p + 1);
-                }}
-                className="btn btn-sun btn-sm"
-              >
+              <button onClick={openBag} className="btn btn-sun btn-sm">
                 <IcBox className="h-4 w-4" />
                 Bag
                 <span className="mono grid h-5 min-w-5 place-items-center rounded-full border-2 border-ink bg-tang px-1 text-[11px] font-bold text-[#fdf6ee]">
@@ -213,13 +247,13 @@ function Shell() {
 
             <nav className="scrollbar-none -mx-1 flex gap-1 overflow-x-auto pb-2.5 lg:hidden">
               {tabs.map((t) => (
-                <TabBtn
+                <TabLink
                   key={t.id}
                   label={t.label}
                   icon={t.icon}
-                  badge={t.badge}
-                  active={tab === t.id}
-                  onClick={() => setTab(t.id)}
+                  badge={"badge" in t ? t.badge : undefined}
+                  active={activeTab === t.id}
+                  href={t.href}
                 />
               ))}
             </nav>
@@ -228,26 +262,28 @@ function Shell() {
       </div>
 
       <main className="relative z-10 mx-auto w-full max-w-7xl px-4 pb-20">
-        <div key={tab} className="anim-fadeup">
-          {tab === "shop" && (
+        <div key={key} className="anim-fadeup">
+          {route.view === "shop" && (
             <Shop
               cart={cart}
               setCart={setCart}
               addOrder={addOrder}
-              onFees={() => setTab("fees")}
+              onFees={() => {
+                window.location.hash = "#/fees";
+              }}
               cartPing={cartPing}
             />
           )}
-          {tab === "orders" && (
+          {route.view === "orders" && (
             <Orders
               orders={orders}
               onExchange={(id) => {
                 setPresetOrder(id);
-                setTab("exchange");
+                window.location.hash = "#/exchange";
               }}
             />
           )}
-          {tab === "exchange" && (
+          {route.view === "exchange" && (
             <ExchangeDesk
               orders={orders}
               exchanges={exchanges}
@@ -256,9 +292,34 @@ function Shell() {
               onPresetConsumed={() => setPresetOrder(null)}
             />
           )}
-          {tab === "fees" && <Fees />}
+          {route.view === "fees" && <Fees />}
+          {route.view === "product" && (
+            <ProductPage
+              id={route.id}
+              cart={cart}
+              setCart={setCart}
+              onAddedToBag={() => {
+                setCartPing((p) => p + 1);
+                window.location.hash = "#/shop";
+              }}
+            />
+          )}
+          {route.view === "category" && (
+            <CategoryPage slug={route.slug} cart={cart} setCart={setCart} />
+          )}
         </div>
       </main>
+
+      {/* floating bag outside the shop view */}
+      {route.view !== "shop" && (
+        <button onClick={openBag} className="btn btn-sun fixed bottom-5 left-5 z-[60]" aria-label="Open bag">
+          <IcBox className="h-4.5 w-4.5" />
+          Bag
+          <span className="mono grid h-5 min-w-5 place-items-center rounded-full border-2 border-ink bg-tang px-1 text-[11px] font-bold text-[#fdf6ee]">
+            {cartCount}
+          </span>
+        </button>
+      )}
 
       <footer className="relative z-10 border-t-2 border-ink bg-pine text-[#e9f2e2]">
         <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-12 md:grid-cols-3">
@@ -268,8 +329,9 @@ function Shell() {
               <span className="font-display text-xl font-extrabold tracking-tight">BazarBox</span>
             </div>
             <p className="mt-3 max-w-xs text-sm font-medium leading-relaxed text-[#e9f2e2]/70">
-              A small Dhaka shop with its own riders, a noon cutoff, and an
-              exchange desk that asks for exactly one photo of the problem.
+              A small Dhaka shop with its own riders, a noon cutoff, an exchange
+              desk that asks for exactly one photo of the problem — and a
+              landing page for every aisle.
             </p>
             <p className="mono mt-4 flex items-center gap-2 text-sm font-bold text-sun">
               <IcScooter className="h-4.5 w-4.5" />

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import {
+  CATEGORIES,
   FEED,
   FEES,
   PRODUCTS,
@@ -142,7 +143,7 @@ function DispatchBoard({ onShop, onFees }: { onShop: () => void; onFees: () => v
 
 /* ------------------------------ product card ------------------------------ */
 
-function ProductCard({
+export function ProductCard({
   p,
   qty,
   onAdd,
@@ -156,11 +157,13 @@ function ProductCard({
   return (
     <article className="group overflow-hidden rounded-xl border-2 border-line bg-card transition duration-300 hover:-translate-y-1 hover:border-ink hover:shadow-[6px_6px_0_0_rgba(12,59,46,0.2)]">
       <div className="relative aspect-square overflow-hidden">
-        <Img
-          src={p.img}
-          alt={p.name}
-          className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.05]"
-        />
+        <a href={`#/product/${p.id}`} className="block h-full w-full" aria-label={`View ${p.name}`}>
+          <Img
+            src={p.img}
+            alt={p.name}
+            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.05]"
+          />
+        </a>
         {p.tag && (
           <span className="mono absolute left-3 top-3 rounded-md border-2 border-ink bg-sun px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
             {p.tag}
@@ -177,7 +180,14 @@ function ProductCard({
       </div>
       <div className="p-4">
         <p className="mono text-[10px] font-semibold uppercase tracking-[0.18em] text-moss">{p.cat}</p>
-        <h3 className="font-display mt-1 text-[17px] font-bold leading-snug">{p.name}</h3>
+        <h3 className="font-display mt-1 text-[17px] font-bold leading-snug">
+          <a
+            href={`#/product/${p.id}`}
+            className="transition hover:text-moss hover:underline hover:decoration-2 hover:underline-offset-2"
+          >
+            {p.name}
+          </a>
+        </h3>
         <p className="mt-1 line-clamp-1 text-xs font-medium text-ink/60">{p.blurb}</p>
         <div className="mt-3 flex items-center justify-between gap-2">
           <p className="mono text-[15px] font-bold">{fmt(p.price)}</p>
@@ -224,7 +234,6 @@ export function Shop({
   const toast = useToast();
   const shelfRef = useRef<HTMLDivElement>(null);
 
-  const [filter, setFilter] = useState("All");
   const [drawer, setDrawer] = useState(false);
   const [step, setStep] = useState<"cart" | "checkout">("cart");
   const [customer, setCustomer] = useLS("bz.customer", { name: "", phone: "" });
@@ -252,9 +261,6 @@ export function Shop({
   );
   const count = lines.reduce((a, l) => a + l.qty, 0);
   const subtotal = lines.reduce((a, l) => a + l.p.price * l.qty, 0);
-
-  const cats = useMemo(() => ["All", ...Array.from(new Set(PRODUCTS.map((p) => p.cat)))], []);
-  const shown = filter === "All" ? PRODUCTS : PRODUCTS.filter((p) => p.cat === filter);
 
   const setQty = (id: string, q: number) =>
     setCart((c) => {
@@ -343,25 +349,27 @@ export function Shop({
             <p className="overline text-moss">Fresh off the van</p>
             <h2 className="font-display text-3xl font-extrabold tracking-tight sm:text-4xl">The shelf</h2>
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            {cats.map((c) => (
-              <button
-                key={c}
-                onClick={() => setFilter(c)}
-                className={`mono rounded-lg border-2 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition ${
-                  filter === c
-                    ? "border-ink bg-pine text-[#e9f2e2] shadow-[2px_2px_0_0_var(--color-ink)]"
-                    : "border-line bg-card hover:border-ink"
-                }`}
-              >
-                {c}
-              </button>
-            ))}
+          <div className="flex flex-wrap justify-end gap-1.5">
+            {CATEGORIES.map((c) => {
+              const n = PRODUCTS.filter((p) => p.cat === c.name).length;
+              return (
+                <a
+                  key={c.slug}
+                  href={`#/category/${c.slug}`}
+                  className="group mono flex items-center gap-1.5 rounded-lg border-2 border-line bg-card px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition hover:-translate-y-0.5 hover:border-ink hover:shadow-[2px_2px_0_0_var(--color-ink)]"
+                >
+                  {c.name}
+                  <span className="rounded border border-line bg-paper px-1 text-[9px] font-bold text-ink/50 transition group-hover:bg-sun group-hover:text-ink">
+                    {n}
+                  </span>
+                </a>
+              );
+            })}
           </div>
         </div>
 
         <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
-          {shown.map((p, i) => (
+          {PRODUCTS.map((p, i) => (
             <Reveal key={p.id} delay={(i % 4) * 70}>
               <ProductCard
                 p={p}
