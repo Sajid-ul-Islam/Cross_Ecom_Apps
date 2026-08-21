@@ -1,10 +1,11 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { bdt } from "@/lib/api";
 
-export default function OrderSuccessPage() {
+function OrderSuccessContent() {
   const params = useSearchParams();
   const number = params.get("number") || "DC-???";
   const total = Number(params.get("total") || 0);
@@ -102,5 +103,20 @@ export default function OrderSuccessPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function OrderSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="container" style={{ padding: "80px 0", textAlign: "center" }}>
+          <div className="spinner" />
+          <p style={{ color: "var(--sub)", fontSize: 14 }}>Loading order details…</p>
+        </div>
+      }
+    >
+      <OrderSuccessContent />
+    </Suspense>
   );
 }

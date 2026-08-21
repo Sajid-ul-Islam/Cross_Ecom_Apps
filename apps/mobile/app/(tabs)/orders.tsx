@@ -145,7 +145,7 @@ export default function OrdersScreen() {
                     flexDirection: "row",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    backgroundColor: colors.surface2 || colors.paper,
+                    backgroundColor: colors.cardSecondary || colors.paper,
                     paddingHorizontal: 10,
                     paddingVertical: 6,
                     borderRadius: 6,

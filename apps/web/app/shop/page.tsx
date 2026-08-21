@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { fetchProducts, CATEGORIES, type Product, type Category } from "@/lib/api";
 import ProductCard from "@/components/ProductCard";
 
-export default function ShopPage() {
+function ShopContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
@@ -114,5 +114,20 @@ export default function ShopPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ShopPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="container" style={{ padding: "80px 0", textAlign: "center" }}>
+          <div className="spinner" />
+          <p style={{ color: "var(--sub)", fontSize: 14 }}>Loading shop…</p>
+        </div>
+      }
+    >
+      <ShopContent />
+    </Suspense>
   );
 }
