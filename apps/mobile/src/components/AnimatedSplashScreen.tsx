@@ -47,10 +47,11 @@ export function AnimatedSplashScreen({ onAnimationComplete }: { onAnimationCompl
       ]}
     >
       <Animated.Image 
-        source={require("../../assets/logo.png")} 
+        source={require("../../assets/icon.png")} 
         style={{ 
-          width: 200, 
-          height: 200, 
+          width: 140, 
+          height: 140, 
+          borderRadius: 28,
           opacity: logoOpacity,
           transform: [{ scale }] 
         }} 

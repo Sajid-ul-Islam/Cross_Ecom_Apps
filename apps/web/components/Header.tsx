@@ -37,8 +37,18 @@ export default function Header() {
     <header className="nav">
       <div className="container nav__inner">
         {/* Brand */}
-        <Link href="/" className="nav__brand">
-          <span style={{ fontSize: 22, letterSpacing: 3 }}>DEEN</span>
+        <Link href="/" className="nav__brand" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="DEEN Commerce"
+            style={{
+              height: 26,
+              width: "auto",
+              objectFit: "contain",
+              filter: isDark ? "invert(1) brightness(1.2)" : "none",
+            }}
+          />
         </Link>
 
         {/* Desktop links */}

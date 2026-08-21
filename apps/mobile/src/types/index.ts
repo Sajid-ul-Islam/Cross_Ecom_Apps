@@ -141,7 +141,6 @@ export interface DemoAccount {
   name: string;
   username: string;
   email: string;
-  password: string;
   phone: string;
   role: "customer" | "admin";
   accountType: AccountType;

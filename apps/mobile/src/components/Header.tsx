@@ -56,9 +56,9 @@ export const Header: React.FC<HeaderProps> = ({
           <View style={styles.brandContainer}>
             <View style={styles.brandRow}>
               <Image
-                source={require("../../assets/logo.png")}
+                source={require("../../assets/icon.png")}
                 style={styles.brandLogo}
-                resizeMode="contain"
+                resizeMode="cover"
               />
               <Text style={[styles.brandTitle, { color: isDark ? colors.indigo : colors.indigoDark }]}>
                 DEEN
