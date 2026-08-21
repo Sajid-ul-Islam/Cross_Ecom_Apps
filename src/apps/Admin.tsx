@@ -13,6 +13,7 @@ import {
   ORDER_STATUSES,
   type AdminSession,
   type Coupon,
+  type Customer,
   type Order,
   type OrderStatus,
   type Product,
@@ -33,7 +34,7 @@ import {
   IconUser,
 } from "../components/Icons";
 
-type Tab = "overview" | "orders" | "inventory" | "coupons";
+type Tab = "overview" | "orders" | "inventory" | "customers" | "coupons";
 
 const statusTone: Record<OrderStatus, string> = {
   pending: "text-amber border-amber/60",
@@ -189,12 +190,27 @@ function Console({ session, onLogout }: { session: AdminSession; onLogout: () =>
   const [savingPrice, setSavingPrice] = useState<string | null>(null);
   const [couponForm, setCouponForm] = useState({ code: "", type: "percent" as "percent" | "fixed", value: "", min: "" });
   const [couponBusy, setCouponBusy] = useState(false);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [custFilter, setCustFilter] = useState<"all" | "registered" | "guest">("all");
+  const [convertBusy, setConvertBusy] = useState<string | null>(null);
+  const [stockIns, setStockIns] = useState<Awaited<ReturnType<typeof gw.getStockInsights>> | null>(null);
+  const [custIns, setCustIns] = useState<Awaited<ReturnType<typeof gw.getCustomerInsights>> | null>(null);
 
   const refresh = async () => {
-    const [o, p, c] = await Promise.all([gw.listOrders(), gw.listAllProducts(), gw.listCoupons()]);
+    const [o, p, c, cu, si, ci] = await Promise.all([
+      gw.listOrders(),
+      gw.listAllProducts(),
+      gw.listCoupons(),
+      gw.listCustomers(),
+      gw.getStockInsights(),
+      gw.getCustomerInsights(),
+    ]);
     setOrders(o);
     setProducts(p);
     setCoupons(c);
+    setCustomers(cu);
+    setStockIns(si);
+    setCustIns(ci);
     setLoading(false);
   };
 
@@ -282,7 +298,21 @@ function Console({ session, onLogout }: { session: AdminSession; onLogout: () =>
     }
   };
 
+  const convertToRegistered = async (id: string, name: string) => {
+    setConvertBusy(id);
+    try {
+      await gw.convertGuest(id);
+      await refresh();
+      toast(`${name.split(" ")[0]} is now a registered customer`, "mint");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Conversion failed", "amber");
+    } finally {
+      setConvertBusy(null);
+    }
+  };
+
   const visibleOrders = statusFilter === "all" ? orders : orders.filter((o) => o.status === statusFilter);
+  const visibleCustomers = custFilter === "all" ? customers : customers.filter((c) => c.type === custFilter);
   const chartColors: Record<string, string> = { android: "#55d69b", web: "#66bce3", ios: "#64798f" };
 
   return (
@@ -312,6 +342,7 @@ function Console({ session, onLogout }: { session: AdminSession; onLogout: () =>
               ["overview", "overview", IconLayers],
               ["orders", `orders · ${orders.length}`, IconCart],
               ["inventory", `inventory · ${products.length}`, IconBox],
+              ["customers", `customers · ${customers.length}`, IconUser],
               ["coupons", `coupons · ${coupons.length}`, IconTag],
             ] as [Tab, string, (p: { size?: number; className?: string }) => React.ReactNode][]
           ).map(([t, label, Ico]) => (
@@ -482,8 +513,87 @@ function Console({ session, onLogout }: { session: AdminSession; onLogout: () =>
           )}
 
           {/* ---------------- inventory ---------------- */}
-          {tab === "inventory" && (
-            <div className="mt-8 overflow-x-auto border border-line bg-panel/70">
+          {tab === "inventory" && stockIns && (
+            <div className="mt-8">
+              {/* stock insights */}
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  { k: "retail value on hand", v: money(stockIns.retailValue), tone: "text-mint", Ico: IconLayers },
+                  { k: "units in stock", v: stockIns.units.toLocaleString(), tone: "text-ink", Ico: IconBox },
+                  { k: "low-stock SKUs", v: String(stockIns.low), tone: "text-amber", Ico: IconCart },
+                  { k: "out of stock", v: String(stockIns.out), tone: "text-coral", Ico: IconUser },
+                ].map(({ k, v, tone, Ico }) => (
+                  <div key={k} className="group border border-line bg-panel/70 p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-wire/40">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-faint">{k}</span>
+                      <Ico size={15} className="text-line transition-colors group-hover:text-wire" />
+                    </div>
+                    <p className={`mt-3 font-display text-3xl font-extrabold tracking-tight ${tone}`}>{v}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+                {/* health + category distribution */}
+                <div className="border border-line bg-panel/70 p-5">
+                  <div className="flex items-baseline justify-between">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-faint">inventory health</span>
+                    <span className={`font-display text-2xl font-extrabold ${stockIns.health >= 70 ? "text-mint" : "text-amber"}`}>{stockIns.health}%</span>
+                  </div>
+                  <div className="mt-3 h-2 overflow-hidden bg-bg/60">
+                    <div className="h-full bg-gradient-to-r from-mint to-wire transition-all duration-700" style={{ width: `${stockIns.health}%` }} />
+                  </div>
+                  <p className="mt-2 font-mono text-[10px] text-faint">share of SKUs above the {gw.STOCK_LOW}-unit reorder line</p>
+
+                  <p className="mt-5 font-mono text-[10px] uppercase tracking-[0.22em] text-faint">units by category</p>
+                  <div className="mt-3 space-y-2">
+                    {stockIns.byCategory.map((c) => {
+                      const max = Math.max(...stockIns.byCategory.map((x) => x.units));
+                      return (
+                        <div key={c.category} className="flex items-center gap-3">
+                          <span className="w-24 shrink-0 font-mono text-[10px] uppercase tracking-[0.1em] text-dim">{c.category}</span>
+                          <div className="h-2 flex-1 bg-bg/60">
+                            <div className="h-full bg-wire/70 transition-all duration-700" style={{ width: `${(c.units / max) * 100}%` }} />
+                          </div>
+                          <span className="w-10 shrink-0 text-right font-mono text-[11px] text-ink">{c.units}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* restock queue */}
+                <div className="border border-line bg-panel/70 p-5">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-amber">restock queue · ≤ {gw.STOCK_LOW} units</p>
+                  {stockIns.restock.length === 0 ? (
+                    <p className="mt-4 font-mono text-[12px] text-faint">everything is healthy. nothing to reorder.</p>
+                  ) : (
+                    <ul className="mt-3 space-y-2">
+                      {stockIns.restock.map((r) => (
+                        <li key={r.id} className="flex items-center gap-3 border border-linesoft bg-bg/40 px-3 py-2">
+                          <span className={`h-2 w-2 shrink-0 rounded-full ${r.stock === 0 ? "bg-coral" : "bg-amber"}`} />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-sans text-[12px] font-semibold text-ink">{r.name}</p>
+                            <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-faint">{r.sku}</p>
+                          </div>
+                          <span className={`font-mono text-[11px] font-semibold ${r.stock === 0 ? "text-coral" : "text-amber"}`}>
+                            {r.stock === 0 ? "out" : `${r.stock} left`}
+                          </span>
+                          <button
+                            onClick={() => nudgeStock(r.id, 20)}
+                            disabled={stockBusy === r.id}
+                            className="cursor-pointer border border-mint/50 px-2 py-1 font-mono text-[9px] uppercase tracking-[0.12em] text-mint transition-all hover:bg-mint/10 active:scale-95 disabled:opacity-30"
+                          >
+                            +20
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-4 overflow-x-auto border border-line bg-panel/70">
               <table className="w-full min-w-[760px] text-left">
                 <thead>
                   <tr className="border-b border-line font-mono text-[9px] uppercase tracking-[0.2em] text-faint">
@@ -552,6 +662,175 @@ function Console({ session, onLogout }: { session: AdminSession; onLogout: () =>
               <p className="border-t border-dashed border-line px-4 py-3 font-mono text-[10px] text-faint">
                 stock & price writes go gateway-first; WooCommerce stays the system of record.
               </p>
+              </div>
+            </div>
+          )}
+
+          {/* ---------------- customers ---------------- */}
+          {tab === "customers" && custIns && (
+            <div className="mt-8">
+              {/* customer insights */}
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  { k: "total customers", v: String(custIns.total), tone: "text-ink", Ico: IconUser },
+                  { k: "registered", v: String(custIns.registered), tone: "text-mint", Ico: IconCheck },
+                  { k: "guest", v: String(custIns.guest), tone: "text-amber", Ico: IconCart },
+                  { k: "new · 30 days", v: String(custIns.newThisMonth), tone: "text-wire", Ico: IconLayers },
+                ].map(({ k, v, tone, Ico }) => (
+                  <div key={k} className="group border border-line bg-panel/70 p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-wire/40">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[9px] uppercase tracking-[0.22em] text-faint">{k}</span>
+                      <Ico size={15} className="text-line transition-colors group-hover:text-wire" />
+                    </div>
+                    <p className={`mt-3 font-display text-3xl font-extrabold tracking-tight ${tone}`}>{v}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* registered vs guest split + spend behavior */}
+              <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
+                <div className="border border-line bg-panel/70 p-5">
+                  <div className="flex items-baseline justify-between">
+                    <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-faint">registered vs guest</span>
+                    <span className="font-mono text-[11px] text-mint">{custIns.registeredShare}% registered</span>
+                  </div>
+                  <div className="mt-3 flex h-3 overflow-hidden">
+                    <div className="bg-mint transition-all duration-700" style={{ width: `${custIns.registeredShare}%` }} title="registered" />
+                    <div className="bg-amber/80 transition-all duration-700" style={{ width: `${100 - custIns.registeredShare}%` }} title="guest" />
+                  </div>
+                  <div className="mt-2 flex items-center gap-5 font-mono text-[10px] text-dim">
+                    <span className="flex items-center gap-1.5"><span className="h-2 w-2 bg-mint" /> registered · app + account</span>
+                    <span className="flex items-center gap-1.5"><span className="h-2 w-2 bg-amber/80" /> guest · web checkout</span>
+                  </div>
+
+                  <p className="mt-5 font-mono text-[10px] uppercase tracking-[0.22em] text-faint">average spend by type</p>
+                  <div className="mt-3 space-y-2">
+                    {[
+                      { label: "registered", v: custIns.avgSpendRegistered, max: Math.max(custIns.avgSpendRegistered, custIns.avgSpendGuest), cls: "bg-mint" },
+                      { label: "guest", v: custIns.avgSpendGuest, max: Math.max(custIns.avgSpendRegistered, custIns.avgSpendGuest), cls: "bg-amber/80" },
+                    ].map((r) => (
+                      <div key={r.label} className="flex items-center gap-3">
+                        <span className="w-20 shrink-0 font-mono text-[10px] uppercase tracking-[0.1em] text-dim">{r.label}</span>
+                        <div className="h-2 flex-1 bg-bg/60">
+                          <div className={`h-full ${r.cls} transition-all duration-700`} style={{ width: `${r.max ? (r.v / r.max) * 100 : 0}%` }} />
+                        </div>
+                        <span className="w-16 shrink-0 text-right font-mono text-[11px] text-ink">{money(r.v)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-3 font-mono text-[10px] leading-relaxed text-faint">
+                    registered customers come from the Android app (phone OTP) or web accounts; guests check out on the web without an account.
+                  </p>
+                </div>
+
+                {/* guest recovery */}
+                <div className="border border-line bg-panel/70 p-5">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-amber">guest recovery · high-value, no account</p>
+                  {custIns.recovery.length === 0 ? (
+                    <p className="mt-4 font-mono text-[12px] text-faint">no high-value guests left to convert.</p>
+                  ) : (
+                    <ul className="mt-3 space-y-2">
+                      {custIns.recovery.map((g) => (
+                        <li key={g.id} className="flex items-center gap-3 border border-linesoft bg-bg/40 px-3 py-2">
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center bg-amber/15 font-display text-[12px] font-extrabold text-amber">
+                            {g.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-sans text-[12px] font-semibold text-ink">{g.name}</p>
+                            <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-faint">{g.orders} order{g.orders > 1 ? "s" : ""} · {money(g.spent)}</p>
+                          </div>
+                          <button
+                            onClick={() => convertToRegistered(g.id, g.name)}
+                            disabled={convertBusy === g.id}
+                            className="cursor-pointer border border-mint/50 px-2.5 py-1 font-mono text-[9px] uppercase tracking-[0.12em] text-mint transition-all hover:bg-mint/10 active:scale-95 disabled:opacity-30"
+                          >
+                            {convertBusy === g.id ? "…" : "convert"}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+
+              {/* top spenders + full registry */}
+              <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1.6fr]">
+                <div className="border border-line bg-panel/70 p-5">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-faint">top spenders</p>
+                  <ul className="mt-3 space-y-2.5">
+                    {custIns.topSpenders.map((c, i) => (
+                      <li key={c.id} className="flex items-center gap-3">
+                        <span className="w-5 shrink-0 font-display text-[16px] font-extrabold text-line">{i + 1}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="flex items-center gap-2 truncate font-sans text-[12px] font-semibold text-ink">
+                            {c.name}
+                            <span className={`border px-1.5 py-px font-mono text-[8px] uppercase tracking-[0.12em] ${c.type === "registered" ? "border-mint/50 text-mint" : "border-amber/50 text-amber"}`}>
+                              {c.type}
+                            </span>
+                          </p>
+                          <p className="font-mono text-[9px] uppercase tracking-[0.14em] text-faint">{c.orders} orders · via {c.source}</p>
+                        </div>
+                        <span className="font-mono text-[12px] font-semibold text-mint">{money(c.spent)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* registry table */}
+                <div className="overflow-x-auto border border-line bg-panel/70">
+                  <div className="flex items-center gap-2 border-b border-line px-4 py-3">
+                    {(["all", "registered", "guest"] as const).map((f) => (
+                      <button
+                        key={f}
+                        onClick={() => setCustFilter(f)}
+                        className={`cursor-pointer border px-3 py-1 font-mono text-[9px] uppercase tracking-[0.14em] transition-all active:scale-95 ${
+                          custFilter === f ? "border-wire/70 bg-wire/10 text-wire" : "border-line text-faint hover:border-faint hover:text-dim"
+                        }`}
+                      >
+                        {f}
+                      </button>
+                    ))}
+                    <span className="ml-auto font-mono text-[10px] text-faint">{visibleCustomers.length} shown</span>
+                  </div>
+                  <table className="w-full min-w-[620px] text-left">
+                    <thead>
+                      <tr className="border-b border-line font-mono text-[9px] uppercase tracking-[0.2em] text-faint">
+                        <th className="px-4 py-3">customer</th>
+                        <th className="px-4 py-3">type</th>
+                        <th className="px-4 py-3">source</th>
+                        <th className="px-4 py-3 text-center">orders</th>
+                        <th className="px-4 py-3 text-right">spent</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleCustomers.map((c) => (
+                        <tr key={c.id} className="border-b border-linesoft font-mono text-[12px] transition-colors last:border-b-0 hover:bg-panel2">
+                          <td className="px-4 py-3">
+                            <p className="font-sans text-[13px] font-semibold text-ink">{c.name}</p>
+                            <p className="text-[10px] text-faint">{c.email}</p>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`border px-2 py-0.5 font-mono text-[9px] uppercase tracking-[0.14em] ${c.type === "registered" ? "border-mint/50 text-mint" : "border-amber/50 text-amber"}`}>
+                              {c.type}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-dim">{c.source}</td>
+                          <td className="px-4 py-3 text-center text-ink">{c.orders}</td>
+                          <td className="px-4 py-3 text-right text-mint">{money(c.spent)}</td>
+                        </tr>
+                      ))}
+                      {visibleCustomers.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="px-4 py-8 text-center font-mono text-[12px] text-faint">no customers in this segment.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                  <p className="border-t border-dashed border-line px-4 py-3 font-mono text-[10px] text-faint">
+                    the registry grows automatically — every web checkout creates a guest, every app sign-in a registered customer.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
