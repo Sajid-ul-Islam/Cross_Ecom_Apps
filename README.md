@@ -31,6 +31,7 @@
 - [The exchange desk](#the-exchange-desk)
 - [Delivery & exchange fees](#delivery--exchange-fees)
 - [WooCommerce category covers](#woocommerce-category-covers)
+- [Mobile app (Expo / EAS)](#mobile-app-expo--eas)
 - [Quickstart](#quickstart)
 - [Project layout](#project-layout)
 - [Design system](#design-system)
@@ -123,6 +124,18 @@ cover. Resolution order:
 Requests time out at **4.5 s**; when a live catalog photo arrives it fades in
 over the studio cover, and a small badge reports which source supplied it.
 See `src/woocom.ts`.
+
+## Mobile app (Expo / EAS)
+
+The companion customer app lives in `apps/mobile` (project
+`@sajid.islam/deen-commerce`). A failed iOS `production` EAS build
+(`7502b36c`) was root-caused to an **end-of-life Expo SDK 51** — Apple has
+required Xcode 16 (iOS 18 SDK) binaries since April 2025, and EAS has retired
+the Xcode 15 images SDK 51 needs. The app now targets **SDK 55** (RN 0.83,
+React 19.2, expo-router v7); the stale SDK-51 lockfile was removed and
+`eas.json` pins the iOS image to `latest`. Full diagnosis, change table, and
+recovery commands (`npx expo install --fix`, `expo-doctor`, rebuild) are in
+[`apps/mobile/EAS-FIX.md`](./apps/mobile/EAS-FIX.md).
 
 ## Quickstart
 
