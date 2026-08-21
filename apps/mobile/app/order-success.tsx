@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { CheckCircle2, Package, ArrowRight, Home, PhoneCall } from "lucide-react-native";
+import { CheckCircle2, Package, ArrowRight, Home, PhoneCall } from "../src/components/Icons";
 import { Colors } from "../src/theme/colors";
 import { bdt } from "../src/services/gateway";
 

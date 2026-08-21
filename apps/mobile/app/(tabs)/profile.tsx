@@ -10,7 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { User, Phone, MapPin, Ruler, Bell, Save, Store, HelpCircle } from "lucide-react-native";
+import { User, Phone, MapPin, Ruler, Bell, Save, Store, HelpCircle } from "../../src/components/Icons";
 import { Header } from "../../src/components/Header";
 import { Colors } from "../../src/theme/colors";
 import { useProfile } from "../../src/context/ProfileContext";

@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ArrowRight, Sparkles, ShieldCheck, MapPin, Award, TrendingUp, Package, Tag, Users } from "lucide-react-native";
+import { ArrowRight, Sparkles, ShieldCheck, MapPin, Award, TrendingUp, Package, Tag, Users } from "../../src/components/Icons";
 import { Header } from "../../src/components/Header";
 import { FreeTeeBanner, DeliveryNoticeBanner } from "../../src/components/Banner";
 import { ProductCard } from "../../src/components/ProductCard";

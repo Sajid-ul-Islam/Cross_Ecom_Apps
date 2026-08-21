@@ -21,7 +21,7 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
-} from "lucide-react-native";
+} from "../../src/components/Icons";
 import { Colors } from "../../src/theme/colors";
 import { fetchProductById, bdt, FREE_TEE_THRESHOLD } from "../../src/services/gateway";
 import { Product, Variation } from "../../src/types";

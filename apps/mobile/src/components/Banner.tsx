@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { Gift, Truck } from "lucide-react-native";
+import { Gift, Truck } from "./Icons";
 import { Colors } from "../theme/colors";
 import { useCart } from "../context/CartContext";
 import { bdt } from "../services/gateway";
