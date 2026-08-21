@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Package, Clock, CheckCircle2, Truck, ShoppingBag, ArrowRight } from "lucide-react-native";
+import { Package, Clock, CheckCircle2, Truck, ShoppingBag, ArrowRight } from "../../src/components/Icons";
 import { Header } from "../../src/components/Header";
 import { Colors } from "../../src/theme/colors";
 import { useOrders } from "../../src/context/OrderContext";
