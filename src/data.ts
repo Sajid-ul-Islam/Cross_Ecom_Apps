@@ -541,6 +541,18 @@ export const DEV_LOG: DevLogEntry[] = [
       "Admin console JWT countdown badge with automatic sign-out at expiry",
     ],
   },
+  {
+    date: "BATCH 10",
+    title: "Admin BI — stock & customer insights",
+    tag: "P3+",
+    shipped: [
+      "Customer registry with two types — registered (app/phone OTP, web accounts) vs guest (web checkout)",
+      "Customer insights: registered/guest split, avg-spend-by-type, top spenders, 30-day new joins",
+      "Guest recovery queue — high-value guests convert to registered with one click",
+      "Stock insights: retail value on hand, units, low/out-of-stock, inventory health, units-by-category",
+      "Restock queue with one-tap +20 reorder; registry auto-grows on every order",
+    ],
+  },
 ];
 
 export interface NextUpGroup {
@@ -583,8 +595,8 @@ export const NEXT_UP: NextUpGroup[] = [
 ];
 
 export const CURRENT_CONTEXT = {
-  focus: "DEEN Android v1.3 — session management & security lifecycle live; P4 underway",
-  done: "P0 foundations · P1 middle API · P2 Expo Android (incl. push & recs) · P3 web + /admin · session security",
+  focus: "/admin v1.4 — stock & customer insights live (registered vs guest registry); P4 underway",
+  done: "P0 foundations · P1 middle API · P2 Expo Android (push · recs · sessions) · P3 web + /admin (now with BI)",
   inFlight: "P4 hardening (security audit started) · repo merge with Cross_Ecom_Apps (awaiting fetch)",
   nextMilestone: "E2E suites (Playwright + Maestro) and Sentry wiring",
   risks: [

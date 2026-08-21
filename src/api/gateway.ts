@@ -17,6 +17,8 @@ import {
   type CheckoutPayload,
   type Channel,
   type Coupon,
+  type Customer,
+  type CustomerType,
   type Order,
   type OrderStatus,
   type Product,
@@ -28,6 +30,7 @@ const KEYS = {
   coupons: "bw.coupons.v1",
   session: "bw.session.v1",
   customer: "bw.customer.v1",
+  customers: "bw.customers.v1",
 };
 
 function load<T>(key: string, fallback: T): T {
@@ -108,6 +111,28 @@ interface InventoryOverride {
 let orders: Order[] = load(KEYS.orders, SEED_ORDERS);
 let inventory: Record<string, InventoryOverride> = load(KEYS.inventory, {});
 let coupons: Coupon[] = load(KEYS.coupons, SEED_COUPONS);
+
+/* ------------------------------------------------------------------ */
+/*  customer registry — registered (app/phone) vs guest (web checkout) */
+/* ------------------------------------------------------------------ */
+
+const daysAgoC = (d: number) => new Date(Date.now() - d * 86400000).toISOString();
+
+const SEED_CUSTOMERS: Customer[] = [
+  { id: "c1", name: "Jonas Lindqvist", email: "jonas.l@nordmail.se", phone: "+46 70 123 4567", type: "registered", source: "android", joinedAt: daysAgoC(64), lastOrderAt: daysAgoC(1), orders: 5, spent: 641.2 },
+  { id: "c2", name: "Marco Delgado", email: "marco@alpenroute.ch", phone: "+41 79 555 0102", type: "registered", source: "android", joinedAt: daysAgoC(41), lastOrderAt: daysAgoC(4), orders: 3, spent: 388.6 },
+  { id: "c3", name: "Tomas Berg", email: "tomas@fjellpost.no", phone: "+47 912 34 567", type: "registered", source: "android", joinedAt: daysAgoC(33), lastOrderAt: daysAgoC(8), orders: 2, spent: 251 },
+  { id: "c4", name: "Chris Yoon", email: "chris.y@ridgeline.kr", phone: "+82 10 555 0199", type: "registered", source: "web", joinedAt: daysAgoC(20), lastOrderAt: daysAgoC(12), orders: 2, spent: 188 },
+  { id: "c5", name: "Amara Okafor", email: "amara@trailmail.co", type: "guest", source: "web", joinedAt: daysAgoC(0), lastOrderAt: daysAgoC(0), orders: 1, spent: 353 },
+  { id: "c6", name: "Priya Raman", email: "priya.r@summit.io", type: "guest", source: "web", joinedAt: daysAgoC(2), lastOrderAt: daysAgoC(2), orders: 1, spent: 284 },
+  { id: "c7", name: "Hana Sato", email: "hana.s@yama.jp", type: "guest", source: "web", joinedAt: daysAgoC(6), lastOrderAt: daysAgoC(6), orders: 1, spent: 116 },
+  { id: "c8", name: "Leila Haddad", email: "leila@wadioutdoors.com", type: "guest", source: "web", joinedAt: daysAgoC(10), lastOrderAt: daysAgoC(10), orders: 1, spent: 108 },
+];
+
+let customers: Customer[] = load(KEYS.customers, SEED_CUSTOMERS);
+
+/* stock threshold used across insights */
+export const STOCK_LOW = 8;
 
 /* ------------------------------------------------------------------ */
 /*  health — every app pings on boot                                   */
@@ -303,7 +328,28 @@ export async function createOrder(payload: CheckoutPayload): Promise<Order> {
   save(KEYS.inventory, inventory);
   orders = [order, ...orders];
   save(KEYS.orders, orders);
+  upsertCustomer(order);
   return order;
+}
+
+/* keep the customer registry in sync with incoming orders */
+function upsertCustomer(order: Order) {
+  const email = order.customerEmail.toLowerCase();
+  const existing = customers.find((c) => c.email.toLowerCase() === email);
+  if (existing) return;
+  const guest: Customer = {
+    id: `c-${Date.now()}`,
+    name: order.customerName,
+    email: order.customerEmail,
+    type: order.channel === "android" ? "registered" : "guest",
+    source: order.channel,
+    joinedAt: order.createdAt,
+    lastOrderAt: order.createdAt,
+    orders: 1,
+    spent: order.total,
+  };
+  customers = [guest, ...customers];
+  save(KEYS.customers, customers);
 }
 
 export async function listPublicOrders(email: string, channel: Channel | "web" = "web"): Promise<Order[]> {
@@ -417,6 +463,107 @@ export async function deleteCoupon(code: string): Promise<void> {
   requireAdmin();
   coupons = coupons.filter((c) => c.code !== code);
   save(KEYS.coupons, coupons);
+}
+
+/* ------------------------------------------------------------------ */
+/*  admin: customers + insights                                        */
+/* ------------------------------------------------------------------ */
+
+function recomputeCustomerStats(list: Customer[]): Customer[] {
+  return list.map((c) => {
+    const mine = orders.filter(
+      (o) => o.customerEmail.toLowerCase() === c.email.toLowerCase() && o.status !== "cancelled"
+    );
+    return {
+      ...c,
+      orders: mine.length,
+      spent: Math.round(mine.reduce((s, o) => s + o.total, 0) * 100) / 100,
+      lastOrderAt: mine.length ? mine.map((o) => o.createdAt).sort().reverse()[0] : c.lastOrderAt,
+    };
+  });
+}
+
+export async function listCustomers(): Promise<Customer[]> {
+  await track("GET", "/v1/customers", "admin");
+  requireAdmin();
+  return recomputeCustomerStats(customers).sort((a, b) => b.spent - a.spent);
+}
+
+export async function convertGuest(id: string): Promise<Customer> {
+  await track("POST", `/v1/customers/${id.slice(0, 6)}/convert`, "admin");
+  requireAdmin();
+  const c = customers.find((x) => x.id === id);
+  if (!c) throw new ApiError("NOT_FOUND", "Customer not found.");
+  if (c.type !== "guest") throw new ApiError("CONFLICT", "Already a registered customer.");
+  c.type = "registered";
+  c.joinedAt = new Date().toISOString();
+  customers = customers.map((x) => (x.id === id ? { ...c } : x));
+  save(KEYS.customers, customers);
+  return { ...c };
+}
+
+export async function getStockInsights(): Promise<{
+  skus: number;
+  units: number;
+  retailValue: number;
+  low: number;
+  out: number;
+  health: number;
+  restock: { id: string; sku: string; name: string; stock: number }[];
+  byCategory: { category: string; units: number }[];
+}> {
+  await track("GET", "/v1/insights/stock", "admin");
+  requireAdmin();
+  const all = SEED_PRODUCTS.map((p) => ({ ...p, stock: inventory[p.id]?.stock ?? p.stock }));
+  const units = all.reduce((s, p) => s + p.stock, 0);
+  const retailValue = Math.round(all.reduce((s, p) => s + p.stock * p.price, 0));
+  const low = all.filter((p) => p.stock > 0 && p.stock <= STOCK_LOW).length;
+  const out = all.filter((p) => p.stock === 0).length;
+  const health = Math.round(((all.length - low - out) / all.length) * 100);
+  const restock = all
+    .filter((p) => p.stock <= STOCK_LOW)
+    .sort((a, b) => a.stock - b.stock)
+    .slice(0, 6)
+    .map((p) => ({ id: p.id, sku: p.sku, name: p.name, stock: p.stock }));
+  const catMap = new Map<string, number>();
+  for (const p of all) catMap.set(p.category, (catMap.get(p.category) ?? 0) + p.stock);
+  const byCategory = [...catMap.entries()].map(([category, u]) => ({ category, units: u })).sort((a, b) => b.units - a.units);
+  return { skus: all.length, units, retailValue, low, out, health, restock, byCategory };
+}
+
+export async function getCustomerInsights(): Promise<{
+  total: number;
+  registered: number;
+  guest: number;
+  registeredShare: number;
+  newThisMonth: number;
+  avgSpendRegistered: number;
+  avgSpendGuest: number;
+  topSpenders: Customer[];
+  recovery: Customer[];
+}> {
+  await track("GET", "/v1/insights/customers", "admin");
+  requireAdmin();
+  const stats = recomputeCustomerStats(customers);
+  const registered = stats.filter((c) => c.type === "registered").length;
+  const guest = stats.filter((c) => c.type === "guest").length;
+  const monthAgo = Date.now() - 30 * 86400000;
+  const newThisMonth = stats.filter((c) => new Date(c.joinedAt).getTime() >= monthAgo).length;
+  const regSpent = stats.filter((c) => c.type === "registered" && c.orders > 0);
+  const guestSpent = stats.filter((c) => c.type === "guest" && c.orders > 0);
+  const avg = (arr: Customer[]) =>
+    arr.length ? Math.round((arr.reduce((s, c) => s + c.spent, 0) / arr.length) * 100) / 100 : 0;
+  return {
+    total: stats.length,
+    registered,
+    guest,
+    registeredShare: stats.length ? Math.round((registered / stats.length) * 100) : 0,
+    newThisMonth,
+    avgSpendRegistered: avg(regSpent),
+    avgSpendGuest: avg(guestSpent),
+    topSpenders: [...stats].filter((c) => c.orders > 0).sort((a, b) => b.spent - a.spent).slice(0, 4),
+    recovery: [...stats].filter((c) => c.type === "guest" && c.spent >= 100).sort((a, b) => b.spent - a.spent),
+  };
 }
 
 /* ------------------------------------------------------------------ */

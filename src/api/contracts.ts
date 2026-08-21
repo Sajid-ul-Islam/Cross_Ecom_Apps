@@ -63,6 +63,23 @@ export interface AdminSession {
   exp: number;
 }
 
+/* ---------------- customers ---------------- */
+
+export type CustomerType = "registered" | "guest";
+
+export interface Customer {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  type: CustomerType;
+  source: Channel;
+  joinedAt: string;
+  lastOrderAt?: string;
+  orders: number;
+  spent: number;
+}
+
 export interface CheckoutPayload {
   customerName: string;
   customerEmail: string;
