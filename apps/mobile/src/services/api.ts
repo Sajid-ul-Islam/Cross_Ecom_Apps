@@ -17,14 +17,14 @@ export const DELIVERY_OPTIONS: Record<DeliveryOptionKey, DeliveryOption> = {
     id: "dhaka_standard",
     name: "Inside Dhaka (Standard)",
     sub: "2-3 business days · Regular doorstep courier",
-    fee: 70,
+    fee: 50,
     estimatedDays: "2-3 Days",
   },
   dhaka_express: {
     id: "dhaka_express",
     name: "Dhaka Express (Same-Day / 24h)",
     sub: "Within 24 hours · Priority rush delivery in Dhaka",
-    fee: 150,
+    fee: 120,
     estimatedDays: "24 Hours",
     badge: "FASTEST",
   },
@@ -32,7 +32,7 @@ export const DELIVERY_OPTIONS: Record<DeliveryOptionKey, DeliveryOption> = {
     id: "outside_standard",
     name: "Outside Dhaka (All Districts)",
     sub: "3-5 business days · Steadfast / RedX home delivery",
-    fee: 130,
+    fee: 90,
     estimatedDays: "3-5 Days",
   },
   store_pickup: {
@@ -46,16 +46,16 @@ export const DELIVERY_OPTIONS: Record<DeliveryOptionKey, DeliveryOption> = {
 };
 
 export const DELIVERY_FEES: Record<string, number> = {
-  dhaka: 70,
-  outside: 130,
-  dhaka_standard: 70,
-  dhaka_express: 150,
-  outside_standard: 130,
+  dhaka: 50,
+  outside: 90,
+  dhaka_standard: 50,
+  dhaka_express: 120,
+  outside_standard: 90,
   store_pickup: 0,
 };
 
 export const getDeliveryFee = (area: string | DeliveryArea): number => {
-  return DELIVERY_FEES[area] ?? 70;
+  return DELIVERY_FEES[area] ?? 50;
 };
 
 export const bdt = (amount: number): string => {
