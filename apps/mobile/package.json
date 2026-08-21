@@ -4,9 +4,12 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
+    "export:android": "NODE_OPTIONS=\"--require ./scripts/node18-polyfill.cjs\" expo export -p android",
+    "build:apk": "eas build -p android --profile production-apk",
+    "build:android": "eas build -p android --profile preview",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
