@@ -259,7 +259,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       return { productId: prod.id, name: prod.name, sku: prod.sku, size: it.size, qty: it.qty, unit };
     });
     const subtotal = lines.reduce((s: number, l: any) => s + l.unit * l.qty, 0);
-    const delivery = area === "outside" ? 130 : 70;
+    const delivery = area === "outside" ? 150 : (area === "dhaka_express" ? 150 : (area === "store_pickup" || area === "pickup" ? 0 : 80));
     const gift = subtotal >= 3500;
 
     let wooId: number | undefined;

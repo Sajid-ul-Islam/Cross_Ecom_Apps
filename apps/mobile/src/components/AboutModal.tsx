@@ -8,7 +8,7 @@ import {
   StyleSheet,
   Dimensions,
 } from "react-native";
-import { X, Sparkles, Store, ShieldCheck, Heart } from "./Icons";
+import { X, Sparkles, Store, ShieldCheck, Heart, MapPin, PhoneCall, Truck } from "./Icons";
 import { Colors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 
@@ -79,6 +79,47 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
               <Text style={[styles.sectionBody, { marginTop: 10 }]}>
                 For us, the customer is the focus of our mindset and actions. This is where customers can find exactly the clothes they are looking for. It’s difficult to leave our site with an empty shopping cart.
               </Text>
+            </View>
+
+            {/* Contact Info */}
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <PhoneCall size={16} color={Colors.indigo} />
+                <Text style={styles.sectionTitle}>CONTACT US</Text>
+              </View>
+              <Text style={styles.sectionBody}>
+                Need help? Our customer support is available to assist you.
+              </Text>
+              <Text style={[styles.sectionBody, { marginTop: 8, fontWeight: "600", color: colors.ink }]}>
+                IVR: 09617-700500 (10 AM to 6 PM)
+              </Text>
+              <Text style={[styles.sectionBody, { marginTop: 4, fontWeight: "600", color: colors.ink }]}>
+                WhatsApp: 01952-700500
+              </Text>
+            </View>
+
+            {/* Outlets */}
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <MapPin size={16} color={Colors.indigo} />
+                <Text style={styles.sectionTitle}>OUR OUTLETS</Text>
+              </View>
+              
+              <Text style={[styles.sectionBody, { fontWeight: "bold", color: colors.ink, marginTop: 4 }]}>Mirpur 12 Outlet</Text>
+              <Text style={styles.sectionBody}>Level 3, Ramzannesa Super Market, Mirpur 12, Dhaka 1216.</Text>
+              <Text style={styles.sectionBody}>01972-627981</Text>
+
+              <Text style={[styles.sectionBody, { fontWeight: "bold", color: colors.ink, marginTop: 12 }]}>Wari Outlet</Text>
+              <Text style={styles.sectionBody}>Ground floor, 41 A.K. Famous Tower, Rankin Street, Wari, Dhaka 1203.</Text>
+              <Text style={styles.sectionBody}>01972-627983</Text>
+
+              <Text style={[styles.sectionBody, { fontWeight: "bold", color: colors.ink, marginTop: 12 }]}>Cumilla Outlet</Text>
+              <Text style={styles.sectionBody}>4th floor, QR Tower, Road Dharmasagor Side, Cumilla 3500.</Text>
+              <Text style={styles.sectionBody}>01972-627984</Text>
+
+              <Text style={[styles.sectionBody, { fontWeight: "bold", color: colors.ink, marginTop: 12 }]}>Sylhet Outlet</Text>
+              <Text style={styles.sectionBody}>54/A, Level 2, Block A, Kumarpara, Sylhet.</Text>
+              <Text style={styles.sectionBody}>01972-627985</Text>
             </View>
 
             {/* Section 3 */}

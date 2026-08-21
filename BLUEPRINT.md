@@ -159,3 +159,4 @@ curl https://cross-ecom-apps.onrender.com/v1/deen/snapshot -o apps/mobile/src/da
   - Mobile: `cd apps/mobile && npm run typecheck`
   - Gateway API: `cd apps/api && npm run typecheck`
 - Commit with clear descriptive messages; APKs are gitignored (`*.apk`, `*.aab`, `*.ipa`).
+\n### Recent Completed Work\n- Fetched real site contact data (WhatsApp, IVR) and integrated into AboutModal.\n- Extracted correct Outlets and delivery charges.\n- Guest session logic finalized.
