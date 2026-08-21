@@ -122,6 +122,8 @@ export interface Order {
   total: number;
   status: OrderStatus;
   isGuestOrder?: boolean;
+  /** Gateway-issued anonymous guest session token (when placed as a guest). */
+  guestToken?: string;
   createdAt: string;
 }
 

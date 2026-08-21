@@ -19,7 +19,7 @@ import { ProductCard } from "../../src/components/ProductCard";
 import { Sparkline, CategoryBars, Donut, KpiTile } from "../../src/components/Charts";
 import { Colors } from "../../src/theme/colors";
 import { useTheme } from "../../src/context/ThemeContext";
-import { fetchProducts, fetchStats, CATEGORIES, bdt } from "../../src/services/gateway";
+import { fetchProducts, fetchStats, CATEGORIES, bdt, useCatalogRefreshOnFocus } from "../../src/services/gateway";
 import { Product, DeenCategory, Stats } from "../../src/types";
 import { useProfile } from "../../src/context/ProfileContext";
 import { getCategoryInfo } from "../../src/data/categories";
@@ -48,6 +48,11 @@ export default function HomeScreen() {
       }
     } catch {}
   };
+
+  // Refresh catalog + admin stats whenever the home screen regains focus or
+  // the app resumes from background — keeps live WooCommerce changes (stock,
+  // new products, price edits) in sync without a manual pull-to-refresh.
+  useCatalogRefreshOnFocus(loadData);
 
   useEffect(() => {
     loadData();

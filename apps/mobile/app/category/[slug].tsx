@@ -27,7 +27,7 @@ import { Colors } from "../../src/theme/colors";
 import { useTheme } from "../../src/context/ThemeContext";
 import { ProductCard } from "../../src/components/ProductCard";
 import { SizeGuideModal } from "../../src/components/SizeGuideModal";
-import { fetchProducts, isGatewayConfigured } from "../../src/services/gateway";
+import { fetchProducts, isGatewayConfigured, useCatalogRefreshOnFocus } from "../../src/services/gateway";
 import { Product, DeenCategory } from "../../src/types";
 import { useCart } from "../../src/context/CartContext";
 import { useProfile } from "../../src/context/ProfileContext";
@@ -70,6 +70,10 @@ export default function CategoryLandingScreen() {
       setRefreshing(false);
     }
   };
+
+  // Refresh catalog whenever this category screen regains focus or the app
+  // resumes from background — surfaces live WooCommerce stock/product changes.
+  useCatalogRefreshOnFocus(loadCategoryProducts);
 
   useEffect(() => {
     setLoading(true);

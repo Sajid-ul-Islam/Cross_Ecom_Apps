@@ -29,7 +29,7 @@ import { useCart } from "../src/context/CartContext";
 import { useOrders } from "../src/context/OrderContext";
 import { useProfile } from "../src/context/ProfileContext";
 import { useRewards } from "../src/context/RewardsContext";
-import { bdt, DELIVERY_OPTIONS } from "../src/services/gateway";
+import { bdt, DELIVERY_OPTIONS, createGuestSession, getGuestSession } from "../src/services/gateway";
 import {
   DeliveryOptionKey,
   DeliverySlot,
@@ -64,9 +64,15 @@ export default function CheckoutScreen() {
   const [deliveryNotes, setDeliveryNotes] = useState(profile.deliveryNotes || "");
   const [payment, setPayment] = useState<PaymentMethod>("cod");
   const [isGuestMode, setIsGuestMode] = useState<boolean>(profile.isGuest);
+  const [guestSession, setGuestSession] = useState<null | Awaited<ReturnType<typeof getGuestSession>>>(null);
   const [redeemPoints, setRedeemPoints] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  // Eagerly load any persisted guest session.
+  useEffect(() => {
+    getGuestSession().then(setGuestSession);
+  }, []);
 
   useEffect(() => {
     if (!profile.isGuest) {
@@ -141,6 +147,7 @@ export default function CheckoutScreen() {
         delivery: deliveryFee,
         total,
         isGuestOrder: isGuestMode,
+        ...(guestSession?.token ? { guestToken: guestSession.token } : {}),
       });
 
       // Deduct coins if redeemed & earn coins for order
@@ -156,6 +163,8 @@ export default function CheckoutScreen() {
           orderId: created.id,
           orderNumber: created.number,
           total: String(created.total),
+          guestName: isGuestMode ? name.trim() : undefined,
+          guestPhone: isGuestMode ? digits : undefined,
         },
       });
     } catch (e: any) {
@@ -211,20 +220,24 @@ export default function CheckoutScreen() {
               </Text>
             </View>
             <TouchableOpacity
-              onPress={() => {
-                setIsGuestMode(!isGuestMode);
+              onPress={async () => {
                 if (!isGuestMode) {
-                  // Switching to guest: clear fields
-                  setName("");
-                  setPhone("");
+                  // Switching to guest: mint (or reuse) a real anonymous session
+                  const sess = await createGuestSession();
+                  setGuestSession(sess);
+                  setName(sess.name || "");
+                  setPhone(sess.phone || "");
                   setEmail("");
                   setAddress("");
+                  setIsGuestMode(true);
                 } else {
-                  // Switching to registered: prefill
+                  // Switching to registered: prefill from profile
+                  setGuestSession(null);
                   setName(profile.name);
                   setPhone(profile.phone);
                   setEmail(profile.email || "");
                   setAddress(profile.address);
+                  setIsGuestMode(false);
                 }
               }}
             >

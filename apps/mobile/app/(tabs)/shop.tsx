@@ -17,7 +17,7 @@ import { Header } from "../../src/components/Header";
 import { ProductCard } from "../../src/components/ProductCard";
 import { Colors } from "../../src/theme/colors";
 import { useTheme } from "../../src/context/ThemeContext";
-import { fetchProducts, CATEGORIES } from "../../src/services/gateway";
+import { fetchProducts, CATEGORIES, useCatalogRefreshOnFocus } from "../../src/services/gateway";
 import { Product, DeenCategory } from "../../src/types";
 import { getCategoryInfo } from "../../src/data/categories";
 
@@ -63,6 +63,11 @@ export default function ShopScreen() {
       setProducts(data);
     } catch {}
   };
+
+  // Refresh catalog whenever the shop screen regains focus or the app resumes
+  // from background — surfaces live WooCommerce stock/product changes without
+  // a manual pull-to-refresh.
+  useCatalogRefreshOnFocus(loadProducts);
 
   useEffect(() => {
     setLoading(true);
