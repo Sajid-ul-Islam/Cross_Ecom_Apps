@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Dimensions,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -29,28 +30,33 @@ export default function HomeScreen() {
   const isAdmin = profile.role === "admin" || profile.username === "admin";
   const [products, setProducts] = useState<Product[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadData = async () => {
+    try {
+      const p = await fetchProducts();
+      setProducts(p);
+      if (isAdmin) {
+        const s = await fetchStats();
+        setStats(s);
+      }
+    } catch {}
+  };
 
   useEffect(() => {
-    let active = true;
-    // Offline-first: products render from the bundled catalog immediately.
-    fetchProducts().then((p) => {
-      if (active) setProducts(p);
-    });
-    // Sales/BI data is ADMIN ONLY — customers never request it.
-    if (isAdmin) {
-      fetchStats()
-        .then((s) => active && setStats(s))
-        .catch(() => {});
-    }
-    return () => {
-      active = false;
-    };
+    loadData();
   }, [isAdmin]);
 
-  const newDrops = products.filter((p) => p.isNew || p.salePct);
-  const jeansCollection = products.filter((p) => p.category === "JEANS");
-  const festivePanjabi = products.filter((p) => p.category === "PANJABI");
-  const bestDeals = [...products].filter((p) => p.salePct).sort((a, b) => (b.salePct ?? 0) - (a.salePct ?? 0)).slice(0, 8);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  };
+
+  const newDrops = products.filter((p) => p.isNew || (p.salePct && p.salePct > 0)).slice(0, 10);
+  const jeansCollection = products.filter((p) => p.category === "JEANS").slice(0, 10);
+  const festivePanjabi = products.filter((p) => p.category === "PANJABI").slice(0, 10);
+  const bestDeals = [...products].filter((p) => (p.salePct || 0) > 0).sort((a, b) => (b.salePct ?? 0) - (a.salePct ?? 0)).slice(0, 8);
 
   const handleCategoryPress = (cat: DeenCategory) => {
     router.push({
@@ -66,7 +72,18 @@ export default function HomeScreen() {
       <Header />
       <DeliveryNoticeBanner />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.indigo}
+            colors={[Colors.indigo]}
+          />
+        }
+      >
         <FreeTeeBanner />
 
         {/* Hero Section */}

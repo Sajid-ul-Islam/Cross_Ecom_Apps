@@ -37,6 +37,7 @@ export default function ShopScreen() {
   const [sort, setSort] = useState<SortKey>("default");
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Debounce search input (200ms) so filtering large lists stays smooth.
   useEffect(() => {
@@ -50,13 +51,24 @@ export default function ShopScreen() {
     }
   }, [params.category]);
 
+  const loadProducts = async () => {
+    const sortParam = sort === "default" ? undefined : (sort as "price-asc" | "price-desc" | "name-asc" | "new");
+    try {
+      const data = await fetchProducts(selectedCategory, deferredQuery, sortParam);
+      setProducts(data);
+    } catch {}
+  };
+
   useEffect(() => {
     setLoading(true);
-    const sortParam = sort === "default" ? undefined : (sort as "price-asc" | "price-desc" | "name-asc" | "new");
-    fetchProducts(selectedCategory, deferredQuery, sortParam)
-      .then((data) => setProducts(data))
-      .finally(() => setLoading(false));
+    loadProducts().finally(() => setLoading(false));
   }, [selectedCategory, deferredQuery, sort]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadProducts();
+    setRefreshing(false);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -189,6 +201,8 @@ export default function ShopScreen() {
           columnWrapperStyle={styles.row}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          refreshing={refreshing}
+          onRefresh={handleRefresh}
           initialNumToRender={8}
           maxToRenderPerBatch={6}
           windowSize={5}

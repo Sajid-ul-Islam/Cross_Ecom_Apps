@@ -49,12 +49,13 @@ export default function CheckoutScreen() {
       setErrorMsg("Please provide your full name");
       return;
     }
-    if (!phone.trim() || phone.trim().length < 10) {
-      setErrorMsg("Please enter a valid 11-digit Bangladeshi mobile number");
+    const digits = phone.replace(/[^0-9]/g, "");
+    if (!/^01[3-9]\d{8}$/.test(digits)) {
+      setErrorMsg("Please enter a valid 11-digit BD mobile number (01XXXXXXXXX)");
       return;
     }
-    if (!address.trim() || address.trim().length < 6) {
-      setErrorMsg("Please enter a detailed delivery address");
+    if (!address.trim() || address.trim().length < 12) {
+      setErrorMsg("Please enter full delivery address (house/flat, road, area)");
       return;
     }
 
@@ -73,12 +74,12 @@ export default function CheckoutScreen() {
         variationId: item.variationId,
       }));
 
-      // Add free promotional gift if eligible
+      // Add free promotional gift note if eligible
       if (freeTeeEligible) {
         lines.push({
-          productId: "dn-06",
-          name: "DEEN 240 GSM Heavyweight Tee",
-          sku: "DN-TSH-HVY01",
+          productId: "gift-tee",
+          name: "Free Cotton T-shirt · Summer Fest",
+          sku: "GIFT-TEE",
           size: profile.topSize || "L",
           qty: 1,
           unit: 0,
@@ -87,9 +88,9 @@ export default function CheckoutScreen() {
       }
 
       const created = await placeOrder({
-        name,
-        phone,
-        address,
+        name: name.trim(),
+        phone: digits,
+        address: address.trim(),
         area,
         payment,
         lines,
@@ -103,8 +104,8 @@ export default function CheckoutScreen() {
         pathname: "/order-success",
         params: { orderId: created.id, orderNumber: created.number, total: String(created.total) },
       });
-    } catch (e) {
-      setErrorMsg("Failed to process order. Please try again.");
+    } catch (e: any) {
+      setErrorMsg(e?.message || "Failed to process order. Please check your network and try again.");
     } finally {
       setLoading(false);
     }
