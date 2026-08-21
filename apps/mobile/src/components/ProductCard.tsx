@@ -24,6 +24,8 @@ function ProductCardBase({ product, style }: ProductCardProps) {
   const hasDiscount = product.salePrice && product.salePrice < product.price;
   const pct = product.salePct ?? (hasDiscount ? Math.round(((product.price - (product.salePrice || 0)) / product.price) * 100) : 0);
   const outOfStock = product.stockStatus === "outofstock";
+  const imageUri = product.images?.[0] || product.gallery?.[0] || "https://images.unsplash.com/photo-1542272604-780c96856592?w=800";
+  const displaySizes = product.sizes || [];
 
   return (
     <TouchableOpacity
@@ -34,7 +36,7 @@ function ProductCardBase({ product, style }: ProductCardProps) {
     >
       <View style={styles.imageWrapper}>
         <Image
-          source={{ uri: product.images[0] }}
+          source={{ uri: imageUri }}
           style={styles.image}
           resizeMode="cover"
           fadeDuration={150}
@@ -87,13 +89,13 @@ function ProductCardBase({ product, style }: ProductCardProps) {
         )}
 
         <View style={styles.sizePreviewRow}>
-          {product.sizes.slice(0, 4).map((s) => (
+          {displaySizes.slice(0, 4).map((s) => (
             <View key={s} style={styles.sizeChip}>
               <Text style={styles.sizeChipText}>{s}</Text>
             </View>
           ))}
-          {product.sizes.length > 4 && (
-            <Text style={styles.moreSizes}>+{product.sizes.length - 4}</Text>
+          {displaySizes.length > 4 && (
+            <Text style={styles.moreSizes}>+{displaySizes.length - 4}</Text>
           )}
         </View>
       </View>

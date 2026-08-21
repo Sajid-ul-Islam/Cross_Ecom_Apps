@@ -47,34 +47,68 @@ export default function ProductDetailScreen() {
 
   useEffect(() => {
     if (!id) return;
+    let isMounted = true;
     setLoading(true);
-    fetchProductById(id).then((p) => {
-      if (p) {
-        setProduct(p);
-        const vars: Variation[] = p.variations ?? [];
-        setVariations(vars);
-        const gallery = p.gallery?.length ? p.gallery : p.images;
-        // Auto select user's preferred size if matching
-        const sizes = vars.length ? vars.map((v) => v.size) : p.sizes;
-        let initial = "";
-        if (p.category === "JEANS" && sizes.includes(profile.jeansSize)) initial = profile.jeansSize;
-        else if (sizes.includes(profile.topSize)) initial = profile.topSize;
-        else if (sizes.length > 0) initial = sizes[0];
-        setSelectedSize(initial);
-        const v = vars.find((x) => x.size === initial);
-        setSelectedVariationId(v?.id);
-      }
-      setLoading(false);
-    });
+    fetchProductById(id)
+      .then((p) => {
+        if (!isMounted) return;
+        if (p) {
+          setProduct(p);
+          const vars: Variation[] = p.variations ?? [];
+          setVariations(vars);
+          const sizes = vars.length > 0 ? vars.map((v) => v.size) : (p.sizes?.length ? p.sizes : ["Standard"]);
+          let initial = "";
+          if (p.category === "JEANS" && sizes.includes(profile.jeansSize)) initial = profile.jeansSize;
+          else if (sizes.includes(profile.topSize)) initial = profile.topSize;
+          else if (sizes.length > 0) initial = sizes[0];
+          setSelectedSize(initial);
+          const v = vars.find((x) => x.size === initial);
+          setSelectedVariationId(v?.id);
+        } else {
+          setProduct(null);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setProduct(null);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [id, profile]);
 
-  const galleryImages = product?.gallery?.length ? product.gallery : product?.images ?? [];
+  const rawGallery = product?.gallery?.length ? product.gallery : product?.images ?? [];
+  const galleryImages = rawGallery.length > 0 ? rawGallery : ["https://images.unsplash.com/photo-1542272604-780c96856592?w=800"];
 
-  if (loading || !product) {
+  if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.indigo} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!product) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.ink, marginBottom: 8 }}>
+            Product Unavailable
+          </Text>
+          <Text style={{ fontSize: 13, color: Colors.sub, marginBottom: 16, textAlign: "center" }}>
+            This item could not be loaded from the store.
+          </Text>
+          <TouchableOpacity
+            style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: Colors.indigo, borderRadius: 6 }}
+            onPress={() => router.replace("/(tabs)/shop")}
+          >
+            <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>BACK TO SHOP</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -211,7 +245,7 @@ export default function ProductDetailScreen() {
             </View>
 
             <View style={styles.sizeGrid}>
-              {product.sizes.map((s) => {
+              {(variations.length > 0 ? variations.map((v) => v.size) : (product.sizes?.length ? product.sizes : ["Standard"])).map((s) => {
                 const isSelected = selectedSize === s;
                 const varStock = variations.find((v) => v.size === s)?.stock;
                 const oos = varStock === "outofstock";

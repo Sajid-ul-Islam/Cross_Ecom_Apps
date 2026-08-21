@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -25,7 +26,14 @@ const STATUS_STEPS: { key: OrderStatus; label: string }[] = [
 
 export default function OrdersScreen() {
   const router = useRouter();
-  const { orders, loading } = useOrders();
+  const { orders, loading, refreshOrders } = useOrders();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refreshOrders();
+    setRefreshing(false);
+  };
 
   const getStepIndex = (st: OrderStatus) => {
     return STATUS_STEPS.findIndex((s) => s.key === st);
@@ -71,7 +79,18 @@ export default function OrdersScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <Header title="MY ORDERS" showSearch={false} />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.indigo}
+            colors={[Colors.indigo]}
+          />
+        }
+      >
         <View style={styles.ordersList}>
           {orders.map((order) => {
             const currentStepIdx = getStepIndex(order.status);

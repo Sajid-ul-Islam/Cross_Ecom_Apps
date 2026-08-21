@@ -1,10 +1,10 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { ShoppingBag, ArrowLeft, Search } from "./Icons";
 import { Colors } from "../theme/colors";
 import { useCart } from "../context/CartContext";
-import { getConnection } from "../services/gateway";
+import { getConnection, onConnectionChange, ConnectionState } from "../services/gateway";
 
 interface HeaderProps {
   title?: string;
@@ -25,7 +25,13 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const router = useRouter();
   const { totalItems } = useCart();
-  const connection = getConnection();
+  const [connection, setConnection] = useState<ConnectionState>(getConnection());
+
+  useEffect(() => {
+    const unsub = onConnectionChange(setConnection);
+    return unsub;
+  }, []);
+
   const live = connection === "online";
 
   return (
@@ -48,12 +54,13 @@ export const Header: React.FC<HeaderProps> = ({
                 style={styles.brandLogo}
                 resizeMode="contain"
               />
+              <Text style={styles.brandTitle}>DEEN</Text>
               <View style={[styles.connDot, { backgroundColor: live ? Colors.emerald : Colors.faint }]}>
                 <Text style={styles.connText}>{live ? "LIVE" : "OFFLINE"}</Text>
               </View>
             </View>
             {subtitle ? <Text style={styles.brandSubtitle}>{subtitle}</Text> : (
-              <Text style={styles.brandTag}>DENIM &amp; CO · BD</Text>
+              <Text style={styles.brandTag}>COMMERCE · DHAKA</Text>
             )}
           </View>
         )}
@@ -124,8 +131,9 @@ const styles = StyleSheet.create({
     color: Colors.indigoDark,
   },
   brandLogo: {
-    width: 92,
-    height: 30,
+    width: 26,
+    height: 26,
+    borderRadius: 6,
   },
   brandTag: {
     fontSize: 9,
