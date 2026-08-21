@@ -50,9 +50,48 @@ const channelTone: Record<string, string> = {
 };
 
 export function Admin() {
+  const toast = useToast();
   const [session, setSession] = useState<AdminSession | null>(() => gw.getSession());
+
+  /* session watchdog — expires the console when the JWT lifetime ends */
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      setSession((cur) => {
+        if (cur && cur.exp < Date.now()) {
+          gw.logout();
+          toast("Admin session expired — sign in again", "coral");
+          return null;
+        }
+        return cur;
+      });
+    }, 15000);
+    return () => window.clearInterval(t);
+  }, [toast]);
+
   if (!session) return <Login onSuccess={setSession} />;
   return <Console session={session} onLogout={() => { gw.logout(); setSession(null); }} />;
+}
+
+/* live JWT countdown for the console header */
+function SessionBadge({ exp }: { exp: number }) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const t = window.setInterval(() => setTick((x) => x + 1), 30000);
+    return () => window.clearInterval(t);
+  }, []);
+  const ms = exp - Date.now();
+  const hrs = Math.floor(ms / 3600000);
+  const mins = Math.max(0, Math.floor((ms % 3600000) / 60000));
+  const low = ms < 3600000;
+  return (
+    <span
+      className={`hidden items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.16em] sm:flex ${low ? "text-amber" : "text-mint"}`}
+      title="Admin JWT lifetime — the console signs you out when it ends"
+    >
+      <span className={`pulse-dot inline-block h-1.5 w-1.5 rounded-full ${low ? "bg-amber" : "bg-mint"}`} />
+      JWT · {hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`}
+    </span>
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -258,9 +297,7 @@ function Console({ session, onLogout }: { session: AdminSession; onLogout: () =>
             route group (admin) · RBAC · session {session.email}
           </span>
           <div className="ml-auto flex items-center gap-3">
-            <span className="hidden items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.16em] text-mint sm:flex">
-              <span className="pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-mint" /> JWT valid
-            </span>
+            <SessionBadge exp={session.exp} />
             <button
               onClick={onLogout}
               className="flex cursor-pointer items-center gap-1.5 border border-line px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-faint transition-colors hover:border-coral/60 hover:text-coral"

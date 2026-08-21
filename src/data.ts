@@ -88,7 +88,7 @@ export const PHASES: Phase[] = [
     tasks: [
       { id: "p4-1", label: "Sentry across api · web · mobile, release-bound sourcemaps", status: "todo", tag: "OBS" },
       { id: "p4-2", label: "Redis catalog cache + load test the gateway (k6)", status: "todo", tag: "PERF" },
-      { id: "p4-3", label: "Security audit — OWASP pass, secret rotation drill, webhook replay check", status: "todo", tag: "SECURITY" },
+      { id: "p4-3", label: "Security audit — OWASP pass, secret rotation drill, webhook replay check", status: "active", tag: "SECURITY" },
       { id: "p4-4", label: "E2E — Playwright (web/admin) + Maestro (Android) critical paths", status: "todo", tag: "QA" },
       { id: "p4-5", label: "Play Store production release", status: "todo", tag: "RELEASE" },
       { id: "p4-6", label: "Web deploy — CDN, analytics, Core Web Vitals budget", status: "todo", tag: "RELEASE" },
@@ -529,6 +529,18 @@ export const DEV_LOG: DevLogEntry[] = [
       "Notification center gains View-product actions; marketing pushes respect the profile toggle",
     ],
   },
+  {
+    date: "BATCH 09",
+    title: "Session management & security lifecycle",
+    tag: "P4 ⟶",
+    shipped: [
+      "Device registry — every sign-in registers a device; list, revoke, sign-out-others from Profile",
+      "Sliding token refresh + 45s heartbeat validation; expired sessions trigger an in-app re-auth guard",
+      "Configurable session lifetime (24h / 7d / 30d) with live countdown and a security event log",
+      "OTP brute-force lockout (5 misses → 45s cooldown) and masked audit events on the gateway",
+      "Admin console JWT countdown badge with automatic sign-out at expiry",
+    ],
+  },
 ];
 
 export interface NextUpGroup {
@@ -544,7 +556,7 @@ export const NEXT_UP: NextUpGroup[] = [
     items: [
       { label: "Sentry across api · web · mobile with release-bound sourcemaps", ref: "p4-1" },
       { label: "Redis catalog cache + k6 load test on the gateway", ref: "p4-2" },
-      { label: "Security audit — OWASP pass, secret rotation, webhook replay check", ref: "p4-3" },
+      { label: "Security audit — session lifecycle done; OWASP pass, secret rotation, webhook replay remain", ref: "p4-3" },
       { label: "E2E — Playwright (web/admin) + Maestro (Android) critical paths", ref: "p4-4" },
       { label: "Play Store production release · web deploy with CWV budget", ref: "p4-5" },
     ],
@@ -571,9 +583,9 @@ export const NEXT_UP: NextUpGroup[] = [
 ];
 
 export const CURRENT_CONTEXT = {
-  focus: "DEEN Android v1.2 — push notifications + personalized recommendations live",
-  done: "P0 foundations · P1 middle API · P2 Expo Android (incl. push & recs) · P3 web + /admin",
-  inFlight: "P4 prep · repo merge with Cross_Ecom_Apps (awaiting fetch)",
+  focus: "DEEN Android v1.3 — session management & security lifecycle live; P4 underway",
+  done: "P0 foundations · P1 middle API · P2 Expo Android (incl. push & recs) · P3 web + /admin · session security",
+  inFlight: "P4 hardening (security audit started) · repo merge with Cross_Ecom_Apps (awaiting fetch)",
   nextMilestone: "E2E suites (Playwright + Maestro) and Sentry wiring",
   risks: [
     "Gateway is still simulated in-browser — real endpoints must replace it surface-by-surface",
@@ -642,6 +654,7 @@ export const FUTURE_SCOPE: ScopeItem[] = [
 ];
 
 export const NEXT_SKILLS = [
+  { name: "Session security — registry, refresh, revocation", level: 76, note: "device attestation & real FCM keys are the next step up", tone: "mint" as const },
   { name: "E2E — Playwright & Maestro", level: 62, note: "critical-path suites per surface", tone: "coral" as const },
   { name: "Fastify production hardening", level: 70, note: "rate limits, caching, graceful deploy", tone: "amber" as const },
   { name: "Security — OWASP & key rotation", level: 66, note: "audit before real Woo keys go live", tone: "coral" as const },
