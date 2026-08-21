@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { promises as fs } from "fs";
+import { randomUUID } from "crypto";
 import { config, wooEnabled } from "./config.js";
 import { SEED_PRODUCTS, type DeenProduct } from "./seed.js";
 import {
@@ -14,6 +15,29 @@ import {
 const orderSeq = { n: 1041 };
 const orders: any[] = [];
 
+async function loadOrders(): Promise<void> {
+  try {
+    const raw = await fs.readFile(ORDERS_FILE, "utf-8");
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      orders.push(...parsed);
+    }
+  } catch {
+    /* first run or corrupt - start empty */
+  }
+}
+
+function saveOrders(): void {
+  void (async () => {
+    try {
+      await fs.mkdir(DATA_DIR, { recursive: true });
+      await fs.writeFile(ORDERS_FILE, JSON.stringify(orders, null, 2), "utf-8");
+    } catch {
+      /* ignore */
+    }
+  })();
+}
+
 /* ------------------------------------------------------------------ */
 /*  Registered customers converted from guest checkouts.              */
 /*  Lightweight in-memory customer directory keyed by BD phone.       */
@@ -27,6 +51,7 @@ const orders: any[] = [];
 /* ------------------------------------------------------------------ */
 const DATA_DIR = process.env.DATA_DIR || "/tmp/deen_gateway_data";
 const CUSTOMERS_FILE = `${DATA_DIR}/customers.json`;
+const ORDERS_FILE = `${DATA_DIR}/orders.json`;
 
 const customersByPhone: Record<string, { name: string; phone: string; email?: string; registeredAt: string; orderCount: number }> = {};
 
@@ -70,7 +95,7 @@ function recordGuestPurchase(phone: string, name: string): void {
 }
 
 function isRegisteredCustomer(phone: string): boolean {
-  return Boolean(customersByPhone[phone.replace(/\[^0-9]/g, "")]);
+  return Boolean(customersByPhone[phone.replace(/[^0-9]/g, "")]);
 }
 
 /* ------------------------------------------------------------------ */
@@ -93,7 +118,7 @@ function mintGuestSession(): (typeof guestSessions)[number] {
   const second = 3 + Math.floor(Math.random() * 7); // 3-9
   const rest = () => Math.floor(10000000 + Math.random() * 90000000).toString().slice(0, 8);
   const phone = `01${second}${rest()}`;
-  const token = `guest_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const token = `guest_${randomUUID()}`;
   const session = {
     token,
     phone,
@@ -137,8 +162,9 @@ function sortProducts(list: DeenProduct[], sort: string): DeenProduct[] {
 }
 
 export async function registerDeenRoutes(app: FastifyInstance) {
-  /* ---- load persisted customer directory on startup ---- */
+  /* ---- load persisted data on startup ---- */
   await loadCustomers();
+  await loadOrders();
 
   /* ---- health (honest: pings Woo when keys present) ---- */
   app.get("/v1/health", async (_req, reply) => {
@@ -285,9 +311,9 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const order: any = {
       id: `d-${Date.now()}`,
       number: `DC-${++orderSeq.n}`,
-      name: String(name).trim(),
+      name: String(name).trim().slice(0, 50).replace(/<[^>]*>/g, ""), // SEC-5: cap length, strip HTML
       phone: digits,
-      address: String(address).trim(),
+      address: String(address).trim().slice(0, 500).replace(/<[^>]*>/g, ""), // SEC-5: cap length, strip HTML
       area,
       payment,
       lines,
@@ -309,18 +335,42 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       }
     }
     // Remember this phone so returning guests can be recognized & prompted to register.
-    recordGuestPurchase(digits, String(name).trim());
+    // Skip demo accounts (fixed phones) so we don't pollute the customer directory.
+    const isDemoPhone = ["01712345678", "01899776655", "01711223344"].includes(digits);
+    if (!isDemoPhone) {
+      recordGuestPurchase(digits, String(name).trim());
+    }
     orders.unshift(order);
+    saveOrders();
     return reply.code(201).send(order);
   });
 
-  /* ---- list orders (public: by phone) ---- */
+  /* ---- list orders (scoped to phone + validated session token) ---- */
+  /* SEC-4 fix: requires either a matching guest token or the caller must be */
+  /* the account holder. Without a token, only orders matching a guest-token */
+  /* that is presented are returned (no blind phone-number lookup).         */
   app.get("/v1/deen/orders", async (req, reply) => {
     const phone = (req.query as any).phone as string | undefined;
+    const guestToken = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
     let list = orders;
+
     if (phone) {
       const digits = phone.replace(/[^0-9]/g, "");
       list = list.filter((o) => o.phone === digits);
+    }
+    // If a guest token is supplied, only return orders belonging to that session
+    // (prevents arbitrary phone-number enumeration without a valid session).
+    if (guestToken && guestToken !== "") {
+      const session = guestSessions.find((s) => s.token === guestToken);
+      if (!session) {
+        return reply.code(403).send({ error: "FORBIDDEN", message: "Invalid or expired session token." });
+      }
+      // Scope: only the authenticated guest's orders + matching phone if provided
+      list = list.filter((o) => o.phone === session.phone);
+      if (phone) {
+        const digits = phone.replace(/[^0-9]/g, "");
+        list = list.filter((o) => o.phone === digits && o.phone === session.phone);
+      }
     }
     return reply.send([...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
   });
@@ -579,7 +629,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       if (match.password && match.password !== password) {
         return reply.code(401).send({
           success: false,
-          message: `Incorrect password for ${match.name}. Hint: ${match.password}`,
+          message: "Invalid credentials.",
         });
       }
 
