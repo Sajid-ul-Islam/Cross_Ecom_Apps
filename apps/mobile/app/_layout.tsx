@@ -11,6 +11,8 @@ import { WishlistProvider } from "../src/context/WishlistContext";
 import { RewardsProvider } from "../src/context/RewardsContext";
 import { reportBug } from "../src/services/gateway";
 
+import { AnimatedSplashScreen } from "../src/components/AnimatedSplashScreen";
+
 // Global crash catcher: forwards uncaught JS errors to the gateway bug store
 // (best-effort; must never break the app). Wrapped to avoid native double-reg.
 if ((global as any).ErrorUtils && !(global as any).__deenCrashHandlerInstalled) {
@@ -71,6 +73,8 @@ function RootNavigator() {
 }
 
 export default function RootLayout() {
+  const [isSplashVisible, setSplashVisible] = React.useState(true);
+
   return (
     <SafeAreaProvider>
       <ThemeProvider>
@@ -82,6 +86,9 @@ export default function RootLayout() {
                   <CartProvider>
                     <OrderProvider>
                       <RootNavigator />
+                      {isSplashVisible && (
+                        <AnimatedSplashScreen onAnimationComplete={() => setSplashVisible(false)} />
+                      )}
                     </OrderProvider>
                   </CartProvider>
                 </ReturnProvider>

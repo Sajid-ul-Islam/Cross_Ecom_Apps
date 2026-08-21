@@ -13,6 +13,9 @@
 
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { AppState } from "react-native";
+import { useCallback, useEffect } from "react";
+import { useFocusEffect } from "expo-router";
 import {
   PRODUCTS_CATALOG,
   DELIVERY_FEES,
@@ -300,6 +303,7 @@ export async function createOrder(
         area: orderData.area,
         payment: orderData.payment,
         items: cleanItems,
+        ...(orderData.guestToken ? { guestToken: orderData.guestToken } : {}),
       }),
     }, 10000);
 
@@ -403,3 +407,138 @@ export async function fetchBroadcastsAPI(): Promise<any[]> {
   return [];
 }
 
+
+/**
+ * Hook: re-run `onFocus` whenever the route gains focus (tab switch / navigate-back)
+ * OR the app resumes from background. Keeps catalog surfaces in sync with live
+ * backend (WooCommerce) changes without a manual refresh.
+ */
+export function useCatalogRefreshOnFocus(
+  onFocus: () => void | Promise<void>
+): void {
+  const handler = useCallback(() => {
+    void onFocus();
+  }, [onFocus]);
+
+  // 1) Route focus (tab switch, navigation back to this screen)
+  useFocusEffect(handler);
+
+  // 2) App resume from background (covers "reopen app after backend edit")
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state: string) => {
+      if (state === "active") void onFocus();
+    });
+    return () => sub.remove();
+  }, [handler]);
+}
+
+/* --------------------------- guest session --------------------------- */
+const GUEST_SESSION_KEY = "deen_guest_session_v1";
+
+export interface GuestSession {
+  token: string;
+  phone: string;
+  name: string;
+  isGuest: true;
+}
+
+/**
+ * Mint a real anonymous guest session from the gateway (POST /v1/auth/guest).
+ * Falls back to a locally-generated anonymous profile when offline so the
+ * guest checkout flow never blocks on network.
+ */
+export async function createGuestSession(): Promise<GuestSession> {
+  try {
+    const res = await request<{
+      success: boolean;
+      user: { id: string; name: string; phone: string };
+      token: string;
+      phone: string;
+    }>("/v1/auth/guest", { method: "POST" }, 6000);
+    if (res?.success && res.token && res.phone) {
+      const session: GuestSession = {
+        token: res.token,
+        phone: res.phone,
+        name: res.user.name,
+        isGuest: true,
+      };
+      await AsyncStorage.setItem(GUEST_SESSION_KEY, JSON.stringify(session)).catch(() => {});
+      return session;
+    }
+  } catch {
+    /* gateway unreachable — mint a local anonymous session as fallback */
+  }
+  return localGuestSession();
+}
+
+function localGuestSession(): GuestSession {
+  const second = 3 + Math.floor(Math.random() * 7);
+  const rest = () => Math.floor(10000000 + Math.random() * 90000000).toString().slice(0, 8);
+  const session: GuestSession = {
+    token: `guest_local_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+    phone: `01${second}${rest()}`,
+    name: "Guest Shopper",
+    isGuest: true,
+  };
+  AsyncStorage.setItem(GUEST_SESSION_KEY, JSON.stringify(session)).catch(() => {});
+  return session;
+}
+
+export async function getGuestSession(): Promise<GuestSession | null> {
+  try {
+    const json = await AsyncStorage.getItem(GUEST_SESSION_KEY);
+    if (json) return JSON.parse(json) as GuestSession;
+  } catch {}
+  return null;
+}
+
+export async function clearGuestSession(): Promise<void> {
+  await AsyncStorage.removeItem(GUEST_SESSION_KEY).catch(() => {});
+}
+
+/**
+ * Convert a guest (recognized by phone + name from their guest order) into a
+ * saved customer. The gateway remembers them so future checkouts greet them
+ * by name and show order history.
+ */
+export async function registerCustomer(
+  name: string,
+  phone: string,
+  email?: string
+): Promise<{ success: boolean; message: string; returning: boolean } | null> {
+  try {
+    const res = await request<{
+      success: boolean;
+      message: string;
+      returning: boolean;
+    }>("/v1/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ name, phone, email: email || undefined }),
+    }, 6000);
+    return res;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Look up whether a phone number has an existing customer profile (i.e. the
+ * guest who just checked out has ordered before). Used to prompt "Welcome
+ * back — register to save your details?"
+ */
+export async function lookupCustomer(
+  phone: string
+): Promise<{ found: boolean; name?: string; orderCount?: number } | null> {
+  if (!phone) return null;
+  const digits = phone.replace(/[^0-9]/g, "");
+  if (!/^01[3-9]\d{8}$/.test(digits)) return null;
+  try {
+    return await request<{
+      success: boolean;
+      found: boolean;
+      customer?: { name: string; orderCount: number };
+    }>(`/v1/auth/customer/${digits}`, undefined, 4000) as any;
+  } catch {
+    return null;
+  }
+}

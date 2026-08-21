@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { promises as fs } from "fs";
 import { config, wooEnabled } from "./config.js";
 import { SEED_PRODUCTS, type DeenProduct } from "./seed.js";
 import {
@@ -12,6 +13,98 @@ import {
 
 const orderSeq = { n: 1041 };
 const orders: any[] = [];
+
+/* ------------------------------------------------------------------ */
+/*  Registered customers converted from guest checkouts.              */
+/*  Lightweight in-memory customer directory keyed by BD phone.       */
+/*  A guest who places an order and then registers is "remembered"    */
+/*  so on return we can greet them by name and show order history.    */
+/* ------------------------------------------------------------------ */
+/* ------------------------------------------------------------------ */
+/*  Customer directory persisted to disk (survives gateway restarts).     */
+/*  In-memory map + on-disk JSON write-back; load on startup, save on     */
+/*  every mutation. A read-only filesystem silently degrades to in-memory. */
+/* ------------------------------------------------------------------ */
+const DATA_DIR = process.env.DATA_DIR || "/tmp/deen_gateway_data";
+const CUSTOMERS_FILE = `${DATA_DIR}/customers.json`;
+
+const customersByPhone: Record<string, { name: string; phone: string; email?: string; registeredAt: string; orderCount: number }> = {};
+
+async function loadCustomers(): Promise<void> {
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    const raw = await fs.readFile(CUSTOMERS_FILE, "utf-8");
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object") {
+      Object.assign(customersByPhone, parsed);
+    }
+  } catch {
+    /* first run or corrupt file - start empty */
+  }
+}
+
+function saveCustomers(): void {
+  void (async () => {
+    try {
+      await fs.mkdir(DATA_DIR, { recursive: true });
+      await fs.writeFile(CUSTOMERS_FILE, JSON.stringify(customersByPhone, null, 2), "utf-8");
+    } catch {
+      /* ignore - in-memory copy stays authoritative */
+    }
+  })();
+}
+
+function recordGuestPurchase(phone: string, name: string): void {
+  const key = phone;
+  if (customersByPhone[key]) {
+    customersByPhone[key].orderCount += 1;
+  } else {
+    customersByPhone[key] = {
+      name: name.trim(),
+      phone,
+      registeredAt: new Date().toISOString(),
+      orderCount: 1,
+    };
+  }
+  saveCustomers();
+}
+
+function isRegisteredCustomer(phone: string): boolean {
+  return Boolean(customersByPhone[phone.replace(/\[^0-9]/g, "")]);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Anonymous guest sessions.                                         */
+/*  Unlike the fixed demo "guest" account, /v1/auth/guest mints a real */
+/*  anonymous session with a random phone + token so a guest checkout  */
+/*  is a genuine one-off identity (no shared hardcoded credentials).  */
+/*  Sessions live in-memory for the lifetime of the gateway process.   */
+/* ------------------------------------------------------------------ */
+const guestSessions: Array<{
+  token: string;
+  phone: string;
+  name: string;
+  createdAt: number;
+  orderId?: number;
+}> = [];
+
+function mintGuestSession(): (typeof guestSessions)[number] {
+  // Random BD mobile — 01[3-9]XXXXXXXXX, but anonymized (not tied to a person)
+  const second = 3 + Math.floor(Math.random() * 7); // 3-9
+  const rest = () => Math.floor(10000000 + Math.random() * 90000000).toString().slice(0, 8);
+  const phone = `01${second}${rest()}`;
+  const token = `guest_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const session = {
+    token,
+    phone,
+    name: "Guest Shopper",
+    createdAt: Date.now(),
+  };
+  guestSessions.push(session);
+  // Bound the in-memory store (defensive; guest sessions are ephemeral by design)
+  if (guestSessions.length > 5000) guestSessions.shift();
+  return session;
+}
 
 /* ------------------------------------------------------------------ */
 /*  Runtime catalog cache (gateway-side).                              */
@@ -44,6 +137,9 @@ function sortProducts(list: DeenProduct[], sort: string): DeenProduct[] {
 }
 
 export async function registerDeenRoutes(app: FastifyInstance) {
+  /* ---- load persisted customer directory on startup ---- */
+  await loadCustomers();
+
   /* ---- health (honest: pings Woo when keys present) ---- */
   app.get("/v1/health", async (_req, reply) => {
     const health = {
@@ -140,7 +236,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   /* ---- create order (public) ---- */
   app.post<{ Body: any }>("/v1/deen/orders", async (req, reply) => {
     const body = (req.body ?? {}) as any;
-    const { name, phone, address, area, payment, items } = body;
+    const { name, phone, address, area, payment, items, guestToken } = body;
     if (!name || !String(name).trim()) {
       return reply.code(422).send({ error: "VALIDATION", message: "Name is required." });
     }
@@ -205,6 +301,15 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     if (gift) {
       order.lines.push({ productId: "gift-tee", name: "Free Cotton T-shirt · Summer Fest", sku: "GIFT-TEE", size: "—", qty: 1, unit: 0, gift: true });
     }
+    if (guestToken) {
+      const session = guestSessions.find((s) => s.token === guestToken);
+      if (session) {
+        session.orderId = wooId;
+        order.guestToken = guestToken;
+      }
+    }
+    // Remember this phone so returning guests can be recognized & prompted to register.
+    recordGuestPurchase(digits, String(name).trim());
     orders.unshift(order);
     return reply.code(201).send(order);
   });
@@ -507,6 +612,116 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       message: "Account not found. Please use demo accounts (customer, vip, admin, guest).",
     });
   });
+
+  /* ---- anonymous guest session (real, minted identity) ---- */
+  /* Returns a single-use anonymous profile: random BD phone + bearer token. */
+  /* A guest checkout uses this identity instead of a shared hardcoded account. */
+  app.post("/v1/auth/guest", async (_req, reply) => {
+    const session = mintGuestSession();
+    return reply.code(201).send({
+      success: true,
+      message: "Anonymous guest session created.",
+      user: {
+        id: session.token,
+        name: session.name,
+        username: "guest",
+        email: "",
+        phone: session.phone,
+        role: "customer",
+        accountType: "guest",
+        isGuest: true,
+      },
+      token: session.token,
+      phone: session.phone,
+    });
+  });
+
+  /* ---- guest session lookup (resume in-flight guest) ---- */
+  app.get("/v1/auth/guest/:token", async (req, reply) => {
+    const session = guestSessions.find((s) => s.token === (req.params as any).token);
+    if (!session) {
+      return reply.code(404).send({ success: false, message: "Guest session not found." });
+    }
+    return reply.send({
+      success: true,
+      user: {
+        id: session.token,
+        name: session.name,
+        username: "guest",
+        email: "",
+        phone: session.phone,
+        role: "customer",
+        accountType: "guest",
+        isGuest: true,
+      },
+      token: session.token,
+      phone: session.phone,
+      createdAt: session.createdAt,
+    });
+  });
+
+  /* ---- register / convert a recognized guest into a customer ---- */
+  /* Body: { name, phone, email? } links the phone to a customer record
+     so future orders via that phone are greeted as a returning customer. */
+  app.post("/v1/auth/register", async (req, reply) => {
+    const b = (req.body as any) || {};
+    const name = String(b.name || "").trim();
+    const phone = String(b.phone || "").replace(/[^0-9]/g, "");
+    if (!name || name.length < 2) {
+      return reply.code(422).send({ success: false, message: "Name is required (min 2 chars)." });
+    }
+    if (!/^01[3-9]\d{8}$/.test(phone)) {
+      return reply.code(422).send({ success: false, message: "Enter a valid BD mobile number - 01XXXXXXXXX." });
+    }
+    const existing = customersByPhone[phone];
+    const wasGuest = Boolean(existing);
+    if (existing) {
+      if (b.email) existing.email = b.email;
+    } else {
+      customersByPhone[phone] = {
+        name,
+        phone,
+        email: b.email || undefined,
+        registeredAt: new Date().toISOString(),
+        orderCount: 0,
+      };
+    }
+    saveCustomers();
+    return reply.code(200).send({
+      success: true,
+      message: wasGuest
+        ? `Welcome back, ${name}! Your customer profile is now saved.`
+        : `Guest converted to customer. Welcome, ${name}!`,
+      user: {
+        id: `cus_${phone}`,
+        name: customersByPhone[phone].name,
+        username: name.toLowerCase().replace(/\s+/g, "."),
+        email: customersByPhone[phone].email || "",
+        phone: customersByPhone[phone].phone,
+        role: "customer",
+        accountType: "customer",
+        isGuest: false,
+        orderCount: customersByPhone[phone].orderCount,
+      },
+      token: `cus_${phone}_${Date.now()}`,
+      returning: wasGuest,
+    });
+  });
+
+  /* ---- lookup a customer by phone (recognition for checkout prompts) ---- */
+  app.get("/v1/auth/customer/:phone", async (req, reply) => {
+    const phone = String((req.params as any).phone || "").replace(/[^0-9]/g, "");
+    if (!/^01[3-9]\d{8}$/.test(phone)) {
+      return reply.code(422).send({ success: false, message: "Invalid phone number." });
+    }
+    const cust = customersByPhone[phone];
+    if (!cust) {
+      return reply.send({ success: true, found: false, phone });
+    }
+    return reply.send({
+      success: true,
+      found: true,
+      customer: cust,
+    });
+  });
 }
-
-

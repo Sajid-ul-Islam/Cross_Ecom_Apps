@@ -43,6 +43,7 @@ import { GiftCardModal } from "../../src/components/GiftCardModal";
 import { DenimCareGuideModal } from "../../src/components/DenimCareGuideModal";
 import { LoginModal } from "../../src/components/LoginModal";
 import { UserModeBar } from "../../src/components/UserModeBar";
+import { AboutModal } from "../../src/components/AboutModal";
 import { useRewards } from "../../src/context/RewardsContext";
 import { useWishlist } from "../../src/context/WishlistContext";
 
@@ -82,6 +83,7 @@ export default function ProfileScreen() {
   const [giftCardModalVisible, setGiftCardModalVisible] = useState(false);
   const [careGuideVisible, setCareGuideVisible] = useState(false);
   const [loginModalVisible, setLoginModalVisible] = useState(false);
+  const [aboutModalVisible, setAboutModalVisible] = useState(false);
 
   useEffect(() => {
     setName(profile.name);
@@ -661,6 +663,11 @@ export default function ProfileScreen() {
           <Text style={styles.reportBtnText}>REPORT A PROBLEM / BUG</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity style={[styles.reportBtn, { marginTop: 0 }]} onPress={() => setAboutModalVisible(true)}>
+          <Store size={16} color={Colors.indigo} />
+          <Text style={styles.reportBtnText}>ABOUT DEEN COMMERCE</Text>
+        </TouchableOpacity>
+
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Store size={16} color={Colors.indigo} />
@@ -720,6 +727,12 @@ export default function ProfileScreen() {
       <LoginModal
         visible={loginModalVisible}
         onClose={() => setLoginModalVisible(false)}
+      />
+
+      {/* About DEEN Modal */}
+      <AboutModal
+        visible={aboutModalVisible}
+        onClose={() => setAboutModalVisible(false)}
       />
     </SafeAreaView>
   );
