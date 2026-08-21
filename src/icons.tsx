@@ -171,6 +171,13 @@ export const IcTruck = ({ className }: P) => (
   </svg>
 );
 
+export const IcRuler = ({ className }: P) => (
+  <svg viewBox="0 0 24 24" className={className} {...S} aria-hidden>
+    <rect x="2.5" y="8.8" width="19" height="6.4" rx="1.6" />
+    <path d="M6.3 8.8v3.1M9.8 8.8v2.2M13.2 8.8v3.1M16.7 8.8v2.2" />
+  </svg>
+);
+
 export const IcStar = ({ className }: P) => (
   <svg viewBox="0 0 24 24" className={className} {...S} aria-hidden>
     <path d="M12 4l2.3 4.9 5.2.7-3.8 3.7.9 5.3L12 16l-4.6 2.6.9-5.3-3.8-3.7 5.2-.7z" />
