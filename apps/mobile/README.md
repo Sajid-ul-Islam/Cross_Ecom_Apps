@@ -100,12 +100,12 @@ Cross_Ecom_Apps/
 
 To enable rapid end-to-end testing of customer shopping, VIP loyalty, anonymous guest checkout, and store administrator analytics, 4 pre-configured test profiles are integrated:
 
-| Role | Username / Email | Password | BD Phone | Features & Access |
-| :--- | :--- | :--- | :--- | :--- |
-| 👤 **Regular Customer** | `customer`<br>*(or `tanvir@deen.com`)* | `deen1234` | `01712-345678` | **Tanvir Ahmed**<br>• Saved address: *Uttara, Dhaka*<br>• Sizes: Jeans `32`, Top `L`<br>• 1,250 DEEN Coins |
-| ⭐ **VIP Gold Shopper** | `vip`<br>*(or `vip@deen.com`)* | `deen1234` | `01899-776655` | **Sajid-ul Islam (VIP)**<br>• Saved address: *Banani, Dhaka*<br>• Sizes: Jeans `34`, Top `XL`<br>• 4,800 DEEN Coins (Gold Tier) |
-| 👑 **Store Admin & Merchant** | `admin`<br>*(or `admin@deen.com`)* | `admin123` | `01711-223344` | **DEEN Store Admin**<br>• **Live BI & Sales Analytics Dashboard** on Home<br>• **Push Broadcast Marketing Console**<br>• Full catalog & revenue access |
-| ⚡ **Guest Mode** | `guest` | *(None)* | `01911-000000` | **Guest Shopper**<br>• Anonymous fast checkout without registration |
+| Role | Username / Email | BD Phone | Features & Access |
+| :--- | :--- | :--- | :--- |
+| 👤 **Regular Customer** | `customer`<br>*(or `tanvir@deen.com`)* | `01712-345678` | **Tanvir Ahmed**<br>• Saved address: *Uttara, Dhaka*<br>• Sizes: Jeans `32`, Top `L`<br>• 1,250 DEEN Coins |
+| ⭐ **VIP Gold Shopper** | `vip`<br>*(or `vip@deen.com`)* | `01899-776655` | **Sajid-ul Islam (VIP)**<br>• Saved address: *Banani, Dhaka*<br>• Sizes: Jeans `34`, Top `XL`<br>• 4,800 DEEN Coins (Gold Tier) |
+| 👑 **Store Admin & Merchant** | `admin`<br>*(or `admin@deen.com`)* | `01711-223344` | **DEEN Store Admin**<br>• **Live BI & Sales Analytics Dashboard** on Home<br>• **Push Broadcast Marketing Console**<br>• Full catalog & revenue access |
+| ⚡ **Guest Mode** | `guest` | `01911-000000` | **Guest Shopper**<br>• Anonymous fast checkout without registration |
 
 ---
 

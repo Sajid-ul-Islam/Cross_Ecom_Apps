@@ -7,7 +7,19 @@ export default function Footer() {
         <div className="footer__grid">
           {/* Brand */}
           <div>
-            <div className="footer__brand-name">DEEN</div>
+            <div className="footer__brand-name" style={{ marginBottom: 12 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo.png"
+                alt="DEEN Commerce"
+                style={{
+                  height: 32,
+                  width: "auto",
+                  objectFit: "contain",
+                  filter: "invert(1) brightness(1.2)",
+                }}
+              />
+            </div>
             <p className="footer__tagline">
               Crafted for the modern Bangladeshi man — premium fabrics, honest
               pricing, delivered to your door.
