@@ -9,7 +9,7 @@ export default function Header() {
   const pathname = usePathname();
   const { totalItems } = useCart();
   const [isDark, setIsDark] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+
 
   useEffect(() => {
     const saved = localStorage.getItem("deen_theme");
@@ -29,7 +29,9 @@ export default function Header() {
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/shop", label: "Shop" },
+    { href: "/orders", label: "Track Order" },
   ];
+
 
   return (
     <header className="nav">

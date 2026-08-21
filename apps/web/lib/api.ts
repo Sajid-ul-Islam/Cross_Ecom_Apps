@@ -2,6 +2,55 @@
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
 
+const GUEST_TOKEN_KEY = "deen_web_guest_token";
+
+/**
+ * Returns a guest session token from localStorage, if present.
+ * SEC-4 sync: the orders endpoint now requires a valid session token.
+ */
+function getGuestToken(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(GUEST_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Ensures a guest session token exists, minting one from the gateway if needed.
+ * Falls back to null (orders will use cache) if the gateway is unreachable.
+ */
+async function ensureGuestToken(): Promise<string | null> {
+  const existing = getGuestToken();
+  if (existing) return existing;
+  try {
+    const res = await fetch(`${API_URL}/v1/auth/guest`, {
+      method: "POST",
+    });
+    if (!res.ok) return null;
+    const data: { token?: string } = await res.json();
+    if (data.token) {
+      localStorage.setItem(GUEST_TOKEN_KEY, data.token);
+      return data.token;
+    }
+  } catch {
+    // network offline — no token, orders will use cache
+  }
+  return null;
+}
+
+export async function fetchOrders(phone?: string): Promise<OrderResult[]> {
+  const token = await ensureGuestToken();
+  const qs = phone ? `?phone=${encodeURIComponent(phone)}` : "";
+  const res = await fetch(`${API_URL}/v1/deen/orders${qs}`, {
+    cache: "no-store",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) return [];
+  return res.json();
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -36,6 +85,11 @@ export interface OrderPayload {
   area: string;
   payment: string;
   items: OrderLine[];
+  email?: string;
+  city?: string;
+  district?: string;
+  state?: string;
+  guestToken?: string;
 }
 
 export interface OrderResult {
@@ -46,7 +100,15 @@ export interface OrderResult {
   subtotal: number;
   delivery: number;
   status: string;
+  payment: string;
+  paymentTitle?: string;
   createdAt: string;
+  name?: string;
+  phone?: string;
+  address?: string;
+  pathaoConsignmentId?: string;
+  pathaoTrackingUrl?: string;
+  lines?: { name: string; size: string; qty: number; unit: number; gift?: boolean }[];
 }
 
 export async function fetchProducts(params?: {
@@ -78,15 +140,20 @@ export async function fetchProduct(id: string): Promise<Product | null> {
 }
 
 export async function placeOrder(payload: OrderPayload): Promise<OrderResult> {
+  const token = getGuestToken();
   const res = await fetch(`${API_URL}/v1/deen/orders`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as any).message || "Order failed");
+    const err = (await res.json().catch(() => ({}))) as { message?: string };
+    throw new Error(err.message || "Order failed");
   }
+
   return res.json();
 }
 

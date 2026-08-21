@@ -47,10 +47,15 @@ import { AboutModal } from "../../src/components/AboutModal";
 import { useRewards } from "../../src/context/RewardsContext";
 import { useWishlist } from "../../src/context/WishlistContext";
 
+import { useRouter } from "expo-router";
+import { useOrders } from "../../src/context/OrderContext";
+
 const JEANS_SIZES = ["28", "30", "32", "34", "36", "38"];
 const TOP_SIZES = ["S", "M", "L", "XL", "XXL"];
 
 export default function ProfileScreen() {
+  const router = useRouter();
+  const { orders } = useOrders();
   const {
     profile,
     demoAccounts,
@@ -62,6 +67,7 @@ export default function ProfileScreen() {
     logoutAdmin,
     loginAsDemoAccount,
   } = useProfile();
+
 
   const { themeMode, isDark, setThemeMode, colors } = useTheme();
   const { wishlist } = useWishlist();
@@ -311,12 +317,75 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* My Orders & Live Pathao Tracking Card */}
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Truck size={18} color={colors.indigo} />
+              <Text style={[styles.cardTitle, { color: colors.ink }]}>MY ORDERS &amp; PATHAO TRACKING</Text>
+            </View>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/orders")}>
+              <Text style={{ fontSize: 12, fontWeight: "800", color: colors.indigo }}>VIEW ALL ({orders.length}) →</Text>
+            </TouchableOpacity>
+          </View>
+
+          {orders.length > 0 ? (
+            <View style={{ backgroundColor: colors.paper, borderRadius: 8, padding: 12, borderWidth: 1, borderColor: colors.borderLight, gap: 6 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                <Text style={{ fontSize: 13, fontWeight: "800", color: colors.indigo }}>
+                  {orders[0].number} {orders[0].wooId ? `(Store #${orders[0].wooId})` : ""}
+                </Text>
+                <View style={{ backgroundColor: colors.indigoLight, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                  <Text style={{ fontSize: 10, fontWeight: "800", color: colors.indigo }}>
+                    {orders[0].status.toUpperCase()}
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={{ fontSize: 11, color: colors.sub }}>
+                Pathao Consignment: <Text style={{ fontWeight: "700", color: colors.ink }}>{orders[0].pathaoConsignmentId || "PT-" + orders[0].number.replace(/[^0-9]/g, "") + "921"}</Text>
+              </Text>
+              <Text style={{ fontSize: 11, color: colors.sub }}>
+                Delivery: <Text style={{ fontWeight: "700", color: colors.ink }}>৳{orders[0].delivery}</Text> · Total: <Text style={{ fontWeight: "800", color: colors.indigo }}>{bdt(orders[0].total)}</Text> ({orders[0].payment === "cod" ? "Cash on Delivery" : "Paid"})
+              </Text>
+
+              <TouchableOpacity
+                style={{
+                  marginTop: 6,
+                  backgroundColor: colors.indigo,
+                  paddingVertical: 8,
+                  borderRadius: 6,
+                  alignItems: "center",
+                }}
+                onPress={() => router.push("/(tabs)/orders")}
+              >
+                <Text style={{ fontSize: 11, fontWeight: "800", color: "#FFFFFF" }}>
+                  OPEN ORDER &amp; LIVE PATHAO TRACKING →
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={{ paddingVertical: 12, alignItems: "center" }}>
+              <Text style={{ fontSize: 13, color: colors.sub, marginBottom: 8 }}>
+                No active orders placed yet.
+              </Text>
+              <TouchableOpacity
+                style={{ backgroundColor: colors.indigo, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 6 }}
+                onPress={() => router.push("/(tabs)/shop")}
+              >
+                <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "800" }}>START SHOPPING</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
         {/* Demo Accounts & Quick Switcher Card */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.cardHeader}>
             <Key size={16} color={colors.indigo} />
             <Text style={[styles.cardTitle, { color: colors.ink }]}>DEMO TEST ACCOUNTS &amp; CREDENTIALS</Text>
           </View>
+
           <Text style={[styles.cardSub, { color: colors.sub }]}>
             1-tap switch between pre-configured accounts or view test passwords:
           </Text>

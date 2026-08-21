@@ -96,21 +96,32 @@ export default function OrdersScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={Colors.indigo}
-            colors={[Colors.indigo]}
+            tintColor={colors.indigo}
+            colors={[colors.indigo]}
           />
         }
       >
         <View style={styles.ordersList}>
           {orders.map((order) => {
             const currentStepIdx = getStepIndex(order.status);
+            const pathaoId = order.pathaoConsignmentId || `PT-${order.number.replace(/[^0-9]/g, "")}921`;
+
             return (
-              <View key={order.id} style={styles.orderCard}>
+              <View key={order.id} style={[styles.orderCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 {/* Header */}
-                <View style={styles.orderHeader}>
+                <View style={[styles.orderHeader, { borderBottomColor: colors.borderLight }]}>
                   <View>
-                    <Text style={styles.orderNumber}>{order.number}</Text>
-                    <Text style={styles.orderDate}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      <Text style={[styles.orderNumber, { color: colors.indigo }]}>{order.number}</Text>
+                      {order.wooId && (
+                        <View style={{ backgroundColor: colors.indigoLight, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                          <Text style={{ fontSize: 9, fontWeight: "800", color: colors.indigo }}>
+                            STORE #{order.wooId}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={[styles.orderDate, { color: colors.sub }]}>
                       {new Date(order.createdAt).toLocaleDateString("en-US", {
                         day: "numeric",
                         month: "short",
@@ -121,11 +132,44 @@ export default function OrdersScreen() {
                     </Text>
                   </View>
 
-                  <View style={styles.statusBadge}>
-                    <Text style={styles.statusBadgeText}>
+                  <View style={[styles.statusBadge, { backgroundColor: colors.indigoLight }]}>
+                    <Text style={[styles.statusBadgeText, { color: colors.indigo }]}>
                       {order.status.toUpperCase()}
                     </Text>
                   </View>
+                </View>
+
+                {/* Pathao Consignment Bar */}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    backgroundColor: colors.surface2 || colors.paper,
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                    borderRadius: 6,
+                    marginVertical: 6,
+                    borderWidth: 1,
+                    borderColor: colors.borderLight,
+                  }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Truck size={13} color={colors.indigo} />
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: colors.ink }}>
+                      Pathao: <Text style={{ color: colors.indigo, fontWeight: "800" }}>{pathaoId}</Text>
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSelectedOrderForTracking(order);
+                      setTrackingModalVisible(true);
+                    }}
+                  >
+                    <Text style={{ fontSize: 11, fontWeight: "800", color: colors.indigo }}>
+                      Track →
+                    </Text>
+                  </TouchableOpacity>
                 </View>
 
                 {/* Progress Stepper */}
@@ -139,21 +183,23 @@ export default function OrdersScreen() {
                           <View
                             style={[
                               styles.stepDot,
-                              isDone && styles.stepDotDone,
-                              isCurrent && styles.stepDotCurrent,
+                              { backgroundColor: colors.paper, borderColor: colors.border },
+                              isDone && { backgroundColor: colors.emerald, borderColor: colors.emerald },
+                              isCurrent && { backgroundColor: colors.indigo, borderColor: colors.indigo },
                             ]}
                           >
                             {isDone ? (
                               <CheckCircle2 size={12} color="#FFFFFF" />
                             ) : (
-                              <View style={styles.stepDotInner} />
+                              <View style={[styles.stepDotInner, { backgroundColor: colors.border }]} />
                             )}
                           </View>
                           <Text
                             style={[
                               styles.stepLabel,
-                              isDone && styles.stepLabelDone,
-                              isCurrent && styles.stepLabelCurrent,
+                              { color: colors.faint },
+                              isDone && { color: colors.ink, fontWeight: "700" },
+                              isCurrent && { color: colors.indigo, fontWeight: "800" },
                             ]}
                           >
                             {step.label}
@@ -164,7 +210,8 @@ export default function OrdersScreen() {
                           <View
                             style={[
                               styles.stepLine,
-                              idx < currentStepIdx && styles.stepLineDone,
+                              { backgroundColor: colors.borderLight },
+                              idx < currentStepIdx && { backgroundColor: colors.emerald },
                             ]}
                           />
                         )}
@@ -174,116 +221,96 @@ export default function OrdersScreen() {
                 </View>
 
                 {/* Items preview */}
-                <View style={styles.itemsSummary}>
+                <View style={[styles.itemsSummary, { backgroundColor: colors.paper }]}>
                   {order.lines.map((l, i) => (
                     <View key={i} style={styles.orderLineItem}>
-                      <Text style={styles.orderLineQty}>{l.qty}x</Text>
-                      <Text style={styles.orderLineName} numberOfLines={1}>
+                      <Text style={[styles.orderLineQty, { color: colors.indigo }]}>{l.qty}x</Text>
+                      <Text style={[styles.orderLineName, { color: colors.ink }]} numberOfLines={1}>
                         {l.name} {l.size ? `(${l.size})` : ""}
                       </Text>
-                      <Text style={styles.orderLinePrice}>
+                      <Text style={[styles.orderLinePrice, { color: colors.ink }]}>
                         {l.gift ? "FREE" : bdt(l.unit * l.qty)}
                       </Text>
                     </View>
                   ))}
                 </View>
 
-                {/* Total and Payment */}
+                {/* Price Breakdown: Subtotal & Delivery Charge */}
+                <View
+                  style={{
+                    backgroundColor: colors.paper,
+                    padding: 8,
+                    borderRadius: 6,
+                    gap: 3,
+                    marginBottom: 6,
+                  }}
+                >
+                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                    <Text style={{ fontSize: 11, color: colors.sub }}>Subtotal:</Text>
+                    <Text style={{ fontSize: 11, fontWeight: "600", color: colors.ink }}>{bdt(order.subtotal)}</Text>
+                  </View>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                    <Text style={{ fontSize: 11, color: colors.sub }}>Delivery Charge:</Text>
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: colors.indigo }}>
+                      {order.delivery === 0 ? "FREE" : bdt(order.delivery)}
+                    </Text>
+                  </View>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: colors.borderLight, paddingTop: 4, marginTop: 2 }}>
+                    <Text style={{ fontSize: 12, fontWeight: "800", color: colors.ink }}>Total Payable:</Text>
+                    <Text style={{ fontSize: 13, fontWeight: "900", color: colors.indigo }}>{bdt(order.total)}</Text>
+                  </View>
+                </View>
+
+                {/* Payment & Address */}
                 <View style={styles.orderFooter}>
                   <View style={{ flex: 1, paddingRight: 8 }}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap", marginBottom: 2 }}>
-                      <Text style={styles.paymentInfo}>
-                        Paid via: <Text style={styles.bold}>{order.payment.toUpperCase()}</Text>
+                      <Text style={[styles.paymentInfo, { color: colors.sub }]}>
+                        Payment:{" "}
+                        <Text style={{ fontWeight: "800", color: order.payment === "cod" ? colors.amber : colors.emerald }}>
+                          {order.payment === "cod" ? "CASH ON DELIVERY" : order.payment.toUpperCase()}
+                        </Text>
                       </Text>
-                      {order.deliveryOption && DELIVERY_OPTIONS[order.deliveryOption] && (
-                        <View style={styles.delOptionBadge}>
-                          <Text style={styles.delOptionBadgeText}>
-                            {DELIVERY_OPTIONS[order.deliveryOption].name}
+                      {order.payment === "cod" && (
+                        <View style={{ backgroundColor: colors.amberLight || "#FEF3C7", paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3 }}>
+                          <Text style={{ fontSize: 8, fontWeight: "800", color: colors.amber || "#D97706" }}>
+                            UNPAID · PAY AT DOOR
                           </Text>
                         </View>
                       )}
-                      {order.isGuestOrder && (
-                        <View style={styles.guestBadge}>
-                          <Text style={styles.guestBadgeText}>GUEST</Text>
-                        </View>
-                      )}
                     </View>
-                    <Text style={styles.addressInfo} numberOfLines={1}>
-                      {order.address}
+                    <Text style={[styles.addressInfo, { color: colors.sub }]} numberOfLines={1}>
+                      📍 {order.address}
                     </Text>
                   </View>
-                  <Text style={styles.orderTotal}>{bdt(order.total)}</Text>
                 </View>
 
-                {/* Return & Exchange Section */}
-                {(() => {
-                  const ret = getReturnForOrder(order.id) || getReturnForOrder(order.number);
-                  if (ret) {
-                    return (
-                      <View style={styles.activeReturnBox}>
-                        <View style={styles.activeReturnHeader}>
-                          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                            <RotateCcw size={13} color={Colors.indigoDark} />
-                            <Text style={styles.activeReturnTitle}>
-                              {ret.type === "EXCHANGE" ? "EXCHANGE REQUEST" : "RETURN REQUEST"}
-                            </Text>
-                          </View>
-                          <View style={styles.retStatusBadge}>
-                            <Text style={styles.retStatusBadgeText}>
-                              {ret.status.replace("_", " ")}
-                            </Text>
-                          </View>
-                        </View>
+                {/* Action Buttons */}
+                <View style={[styles.orderActionsRow, { borderTopColor: colors.borderLight }]}>
+                  <TouchableOpacity
+                    style={[styles.trackBtn, { backgroundColor: colors.indigo }]}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setSelectedOrderForTracking(order);
+                      setTrackingModalVisible(true);
+                    }}
+                  >
+                    <Truck size={13} color="#FFFFFF" />
+                    <Text style={styles.trackBtnText}>TRACK ON PATHAO</Text>
+                  </TouchableOpacity>
 
-                        <Text style={styles.retTicketLine}>
-                          Ticket #{ret.ticketNumber} · {ret.reasonText}
-                        </Text>
-                        {ret.customerNotes ? (
-                          <Text style={styles.retNotes} numberOfLines={2}>
-                            "{ret.customerNotes}"
-                          </Text>
-                        ) : null}
-
-                        <View style={styles.retMetaRow}>
-                          <Text style={styles.retMetaText}>
-                            📸 {ret.images.length} Photos Attached
-                          </Text>
-                          <Text style={styles.retMetaText}>
-                            🚚 {ret.pickupMethod === "courier_pickup" ? "Doorstep Pickup" : "Studio Drop"}
-                          </Text>
-                        </View>
-                      </View>
-                    );
-                  }
-
-                  return (
-                    <View style={styles.orderActionsRow}>
-                      <TouchableOpacity
-                        style={styles.trackBtn}
-                        activeOpacity={0.8}
-                        onPress={() => {
-                          setSelectedOrderForTracking(order);
-                          setTrackingModalVisible(true);
-                        }}
-                      >
-                        <Truck size={13} color="#FFFFFF" />
-                        <Text style={styles.trackBtnText}>LIVE GPS TRACKING</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={styles.returnBtn}
-                        activeOpacity={0.8}
-                        onPress={() => {
-                          setSelectedOrderForReturn(order);
-                          setReturnModalVisible(true);
-                        }}
-                      >
-                        <RotateCcw size={13} color={Colors.indigo} />
-                        <Text style={styles.returnBtnText}>EXCHANGE / RETURN</Text>
-                      </TouchableOpacity>
-                    </View>
-                  );
-                })()}
+                  <TouchableOpacity
+                    style={[styles.returnBtn, { backgroundColor: colors.indigoLight, borderColor: colors.indigo }]}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setSelectedOrderForReturn(order);
+                      setReturnModalVisible(true);
+                    }}
+                  >
+                    <RotateCcw size={13} color={colors.indigo} />
+                    <Text style={[styles.returnBtnText, { color: colors.indigo }]}>EXCHANGE / RETURN</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             );
           })}

@@ -40,11 +40,16 @@ export const CourierTrackingModal: React.FC<CourierTrackingModalProps> = ({
   if (!order) return null;
   const { colors, isDark } = useTheme();
 
-  const trackingId = `ST-${order.number.replace(/[^0-9]/g, "")}921-DH`;
-  const riderName = "Kamal Hossain";
-  const riderPhone = "+8801711223344";
+  const trackingId = order.pathaoConsignmentId || `PT-${order.number.replace(/[^0-9]/g, "")}921`;
+  const trackingUrl = order.pathaoTrackingUrl || `https://merchant.pathao.com/tracking?consignment_id=${trackingId}`;
+  const riderName = "Pathao Express Delivery";
+  const riderPhone = "+8801877076200";
 
-  const handleCallRider = () => {
+  const handleOpenPathao = () => {
+    Linking.openURL(trackingUrl).catch(() => {});
+  };
+
+  const handleCallSupport = () => {
     Linking.openURL(`tel:${riderPhone}`);
   };
 
@@ -59,8 +64,8 @@ export const CourierTrackingModal: React.FC<CourierTrackingModalProps> = ({
                 <Truck size={18} color="#FFFFFF" />
               </View>
               <View>
-                <Text style={[styles.title, { color: colors.ink }]}>LIVE COURIER TRACKING</Text>
-                <Text style={[styles.subtitle, { color: colors.sub }]}>Steadfast Express · Tracking #{trackingId}</Text>
+                <Text style={[styles.title, { color: colors.ink }]}>PATHAO PARCEL TRACKING</Text>
+                <Text style={[styles.subtitle, { color: colors.sub }]}>Consignment #{trackingId}</Text>
               </View>
             </View>
 
@@ -79,14 +84,14 @@ export const CourierTrackingModal: React.FC<CourierTrackingModalProps> = ({
                 {/* Hub Node */}
                 <View style={styles.hubNode}>
                   <View style={styles.hubDot} />
-                  <Text style={styles.hubLabel}>Tejgaon Hub</Text>
+                  <Text style={styles.hubLabel}>Pathao Hub</Text>
                 </View>
 
                 {/* Courier Bike / Van in transit */}
                 <View style={styles.riderNode}>
                   <View style={styles.riderPill}>
                     <Navigation size={12} color="#FFFFFF" />
-                    <Text style={styles.riderPillText}>Rider Moving</Text>
+                    <Text style={styles.riderPillText}>In Transit</Text>
                   </View>
                 </View>
 
@@ -99,76 +104,77 @@ export const CourierTrackingModal: React.FC<CourierTrackingModalProps> = ({
 
               <View style={styles.etaBar}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                  <Clock size={14} color={Colors.emerald} />
-                  <Text style={styles.etaText}>ESTIMATED ARRIVAL: <Text style={styles.bold}>TODAY, 3:30 PM - 5:00 PM</Text></Text>
+                  <Clock size={14} color={colors.emerald} />
+                  <Text style={styles.etaText}>
+                    ESTIMATED ARRIVAL: <Text style={styles.bold}>24–48 HOURS</Text>
+                  </Text>
                 </View>
               </View>
             </View>
 
-            {/* Delivery Rider Contact Card */}
-            <View style={styles.riderCard}>
+            {/* Pathao Courier Action Bar */}
+            <View style={[styles.riderCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.riderInfoLeft}>
-                <View style={styles.riderAvatar}>
-                  <Text style={styles.riderAvatarText}>KH</Text>
+                <View style={[styles.riderAvatar, { backgroundColor: colors.indigoLight }]}>
+                  <Text style={[styles.riderAvatarText, { color: colors.indigo }]}>PT</Text>
                 </View>
                 <View>
-                  <Text style={styles.riderName}>{riderName}</Text>
-                  <Text style={styles.riderRole}>Steadfast Courier Rider · ⭐ 4.9 (840+ drops)</Text>
-                  <Text style={styles.riderVehicle}>Bike No: Dhaka Metro-HA 24-8902</Text>
+                  <Text style={[styles.riderName, { color: colors.ink }]}>Pathao Courier</Text>
+                  <Text style={[styles.riderRole, { color: colors.sub }]}>Consignment: {trackingId}</Text>
+                  <Text style={[styles.riderVehicle, { color: colors.indigo }]}>
+                    Payment: {order.payment === "cod" ? "COD (Pay on Delivery)" : "Paid"} · ৳{order.total}
+                  </Text>
                 </View>
               </View>
 
-              <TouchableOpacity style={styles.callBtn} onPress={handleCallRider}>
-                <PhoneCall size={14} color="#FFFFFF" />
-                <Text style={styles.callBtnText}>CALL</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <TouchableOpacity
+                  style={[styles.callBtn, { backgroundColor: colors.indigo }]}
+                  onPress={handleOpenPathao}
+                >
+                  <Text style={styles.callBtnText}>TRACK LIVE</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Delivery Milestones Timeline */}
-            <View style={styles.timelineCard}>
-              <Text style={styles.timelineTitle}>SHIPMENT MILESTONES</Text>
+            <View style={[styles.timelineCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.timelineTitle, { color: colors.sub }]}>SHIPMENT MILESTONES</Text>
 
               <View style={styles.milestoneItem}>
-                <View style={[styles.milestoneDot, styles.milestoneDotDone]}>
+                <View style={[styles.milestoneDot, styles.milestoneDotDone, { backgroundColor: colors.indigo }]}>
                   <CheckCircle2 size={12} color="#FFFFFF" />
                 </View>
                 <View style={styles.milestoneContent}>
-                  <Text style={styles.milestoneHeading}>Out for Delivery with Courier Rider</Text>
-                  <Text style={styles.milestoneSub}>Rider Kamal Hossain is on route to your delivery address in Dhaka</Text>
-                  <Text style={styles.milestoneTime}>Today, 11:20 AM</Text>
+                  <Text style={[styles.milestoneHeading, { color: colors.ink }]}>Order Placed & Assigned to Pathao</Text>
+                  <Text style={[styles.milestoneSub, { color: colors.sub }]}>Consignment ID {trackingId} generated for doorstep dispatch</Text>
+                  <Text style={[styles.milestoneTime, { color: colors.sub }]}>{new Date(order.createdAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}</Text>
                 </View>
               </View>
 
               <View style={styles.milestoneItem}>
-                <View style={[styles.milestoneDot, styles.milestoneDotDone]}>
+                <View style={[styles.milestoneDot, styles.milestoneDotDone, { backgroundColor: colors.emerald }]}>
                   <CheckCircle2 size={12} color="#FFFFFF" />
                 </View>
                 <View style={styles.milestoneContent}>
-                  <Text style={styles.milestoneHeading}>Departed DEEN Tejgaon Fulfillment Center</Text>
-                  <Text style={styles.milestoneSub}>Sorted and assigned to express delivery dispatch</Text>
-                  <Text style={styles.milestoneTime}>Today, 08:45 AM</Text>
-                </View>
-              </View>
-
-              <View style={styles.milestoneItem}>
-                <View style={[styles.milestoneDot, styles.milestoneDotDone]}>
-                  <CheckCircle2 size={12} color="#FFFFFF" />
-                </View>
-                <View style={styles.milestoneContent}>
-                  <Text style={styles.milestoneHeading}>Quality Inspection &amp; Packing Completed</Text>
-                  <Text style={styles.milestoneSub}>Handcrafted Japanese-grade selvedge inspected &amp; sealed</Text>
-                  <Text style={styles.milestoneTime}>Yesterday, 06:15 PM</Text>
+                  <Text style={[styles.milestoneHeading, { color: colors.ink }]}>Quality Inspection & Packing</Text>
+                  <Text style={[styles.milestoneSub, { color: colors.sub }]}>Handcrafted garments sealed with tamper-proof DEEN packaging</Text>
+                  <Text style={[styles.milestoneTime, { color: colors.sub }]}>Fulfillment Center</Text>
                 </View>
               </View>
             </View>
 
-            {/* Delivery Address Summary */}
-            <View style={styles.addressBox}>
-              <MapPin size={16} color={Colors.indigo} />
+            {/* Delivery & Payment Summary */}
+            <View style={[styles.addressBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <MapPin size={16} color={colors.indigo} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.addressTitle}>DELIVERING TO:</Text>
-                <Text style={styles.addressText}>{order.name} · {order.phone}</Text>
-                <Text style={styles.addressSub}>{order.address}</Text>
+                <Text style={[styles.addressTitle, { color: colors.sub }]}>DELIVERING TO:</Text>
+                <Text style={[styles.addressText, { color: colors.ink }]}>{order.name} · {order.phone}</Text>
+                <Text style={[styles.addressSub, { color: colors.sub }]}>{order.address}</Text>
+                <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.borderLight, flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ fontSize: 12, color: colors.sub }}>Delivery Fee: <Text style={{ fontWeight: "700", color: colors.ink }}>৳{order.delivery}</Text></Text>
+                  <Text style={{ fontSize: 12, color: colors.sub }}>Method: <Text style={{ fontWeight: "700", color: colors.emerald }}>{order.payment === "cod" ? "Cash on Delivery" : "Prepaid"}</Text></Text>
+                </View>
               </View>
             </View>
           </ScrollView>

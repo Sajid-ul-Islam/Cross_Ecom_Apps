@@ -8,16 +8,22 @@ export default function OrderSuccessPage() {
   const params = useSearchParams();
   const number = params.get("number") || "DC-???";
   const total = Number(params.get("total") || 0);
+  const delivery = Number(params.get("delivery") || 80);
   const wooId = params.get("wooId");
+  const payment = params.get("payment") || "Cash on Delivery (COD)";
+  const consignment = params.get("consignment") || `PT-${number.replace(/[^0-9]/g, "")}921`;
+  const trackingUrl =
+    params.get("tracking") ||
+    `https://merchant.pathao.com/tracking?consignment_id=${consignment}`;
 
   return (
-    <div className="container">
+    <div className="container" style={{ paddingBottom: 80 }}>
       <div className="success-card">
         <div className="success-icon">🎉</div>
         <h1 className="success-title">Order Confirmed!</h1>
         <p className="success-sub">
-          Thank you! Your order has been placed and our team will contact you
-          shortly for confirmation.
+          Thank you! Your order has been placed into our live system and assigned
+          to <strong>Pathao Courier</strong> for express delivery.
         </p>
 
         {/* Order details */}
@@ -28,57 +34,71 @@ export default function OrderSuccessPage() {
           </div>
           {wooId && (
             <div className="success-detail-row">
-              <span>Store Order #</span>
-              <span>#{wooId}</span>
+              <span>WooCommerce Order #</span>
+              <span style={{ fontWeight: 800 }}>#{wooId}</span>
             </div>
           )}
           <div className="success-detail-row">
-            <span>Total</span>
-            <span>{bdt(total)}</span>
+            <span>Delivery Charge</span>
+            <span style={{ fontWeight: 700 }}>{delivery === 0 ? "FREE" : bdt(delivery)}</span>
+          </div>
+          <div className="success-detail-row">
+            <span>Total Payable</span>
+            <span style={{ fontWeight: 900, color: "var(--indigo)" }}>{bdt(total)}</span>
+          </div>
+          <div className="success-detail-row">
+            <span>Payment Method</span>
+            <span style={{ fontWeight: 700, color: "var(--emerald)" }}>{payment}</span>
           </div>
           <div className="success-detail-row">
             <span>Status</span>
-            <span style={{ color: "var(--emerald)" }}>✅ Received</span>
+            <span style={{ color: "var(--emerald)", fontWeight: 700 }}>✅ Received & Processing</span>
           </div>
         </div>
 
-        {/* What's next */}
+        {/* Pathao Courier Tracking Box */}
         <div
           style={{
-            background: "var(--indigo-light)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-sm)",
-            padding: "16px",
+            background: "var(--surface-2)",
+            border: "1px solid var(--indigo)",
+            borderRadius: "var(--radius)",
+            padding: "18px 20px",
             textAlign: "left",
-            marginBottom: 28,
+            marginBottom: 24,
           }}
         >
-          <p style={{ fontSize: 13, fontWeight: 800, color: "var(--indigo)", marginBottom: 8 }}>
-            What happens next?
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 900, color: "var(--indigo)", letterSpacing: 0.5 }}>
+              🚚 PATHAO COURIER TRACKING
+            </span>
+            <span style={{ fontSize: 11, background: "var(--indigo)", color: "#fff", padding: "2px 8px", borderRadius: 4, fontWeight: 800 }}>
+              EXPRESS
+            </span>
+          </div>
+          <p style={{ fontSize: 13, color: "var(--ink)", marginBottom: 4 }}>
+            Consignment ID: <strong>{consignment}</strong>
           </p>
-          {[
-            "📞 Our team will call you within 1–2 hours to confirm",
-            "📦 Order packed and dispatched same or next day",
-            "🚚 Dhaka: 24–48h · Outside Dhaka: 3–5 days",
-          ].map((s) => (
-            <p key={s} style={{ fontSize: 13, color: "var(--sub)", marginBottom: 6 }}>
-              {s}
-            </p>
-          ))}
+          <p style={{ fontSize: 12, color: "var(--sub)", marginBottom: 14 }}>
+            Estimated delivery: <strong>24–48 hours</strong> (Dhaka) / <strong>3–5 days</strong> (Outside Dhaka).
+          </p>
+          <a
+            href={trackingUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary btn-full"
+            style={{ textAlign: "center" }}
+          >
+            🔍 Track Live on Pathao →
+          </a>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <Link href="/shop" className="btn btn-primary btn-full btn-lg">
+          <Link href="/orders" className="btn btn-outline btn-full btn-lg">
+            📋 View My Orders & Tracking
+          </Link>
+          <Link href="/shop" className="btn btn-ghost btn-full">
             Continue Shopping
           </Link>
-          <a
-            href="https://wa.me/8801877076200"
-            target="_blank"
-            rel="noopener"
-            className="btn btn-outline btn-full"
-          >
-            💬 Message Us on WhatsApp
-          </a>
         </div>
       </div>
     </div>

@@ -34,8 +34,8 @@ export default function CartPage() {
   const [deliveryArea, setDeliveryArea] = useState("dhaka_standard");
   const delivery = DELIVERY_OPTIONS.find((d) => d.id === deliveryArea)!;
   const total = subtotal + delivery.fee;
-  const freeTeeSoon = subtotal < 3500 && subtotal > 0;
   const freeTeeGap = 3500 - subtotal;
+
 
   if (items.length === 0) {
     return (
