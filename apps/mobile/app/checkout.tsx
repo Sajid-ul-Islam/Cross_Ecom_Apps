@@ -18,7 +18,7 @@ import {
   CreditCard,
   Check,
   Lock,
-} from "lucide-react-native";
+} from "../src/components/Icons";
 import { Colors } from "../src/theme/colors";
 import { useCart } from "../src/context/CartContext";
 import { useOrders } from "../src/context/OrderContext";

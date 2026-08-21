@@ -1,6 +1,6 @@
 import React from "react";
 import { Tabs } from "expo-router";
-import { Home, Compass, ShoppingBag, Clock, User } from "lucide-react-native";
+import { Home, Compass, ShoppingBag, Clock, User } from "../../src/components/Icons";
 import { Colors } from "../../src/theme/colors";
 import { useCart } from "../../src/context/CartContext";
 

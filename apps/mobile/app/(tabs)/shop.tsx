@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Search, X, SlidersHorizontal, ArrowDownNarrowWide, ArrowUpNarrowWide } from "lucide-react-native";
+import { Search, X, SlidersHorizontal, ArrowDownNarrowWide, ArrowUpNarrowWide } from "../../src/components/Icons";
 import { Header } from "../../src/components/Header";
 import { ProductCard } from "../../src/components/ProductCard";
 import { Colors } from "../../src/theme/colors";

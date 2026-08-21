@@ -1,6 +1,15 @@
-# EAS build fix — iOS `production` failure (build `7502b36c`)
+# EAS build fixes — `@sajid.islam/deen-commerce`
 
-## Diagnosis
+Two consecutive failures, two different root causes, both diagnosed statically
+(no log access) and fixed in-repo:
+
+1. **iOS `production` (`7502b36c`)** — end-of-life SDK 51 → upgraded to SDK 55.
+2. **Android `production-apk` (`3d6cae6a`)** — unresolvable `lucide-react-native`
+   peer under React 19 → replaced with an in-house SVG icon module.
+
+## Build 1 — iOS `production` (`7502b36c`, SDK 51)
+
+### Diagnosis
 
 The failed build ran **Expo SDK 51** (`sdkVersion: 51.0.0` in the build metadata).
 SDK 51 can no longer produce an App Store build:
@@ -19,7 +28,7 @@ Static audit confirmed the JS side was otherwise sound: every import
 a valid `bundleIdentifier` + `eas.projectId`, and the router entry
 (`expo-router/entry`) is intact.
 
-## Fix applied
+### Fix applied
 
 | change | why |
 | ------ | --- |
@@ -29,7 +38,7 @@ a valid `bundleIdentifier` + `eas.projectId`, and the router entry
 | deleted `package-lock.json` | SDK-51-resolved lockfile; must regenerate against the new manifest |
 | `eas.json` → `"ios": { "image": "latest" }`, `cli >= 16` | explicit Xcode 16+ image, modern EAS baseline |
 
-## Recover locally (required once, ~5 min)
+### Recover locally (required once, ~5 min)
 
 ```bash
 cd apps/mobile
@@ -49,8 +58,46 @@ npx eas-cli@latest submit --platform ios --latest
 If `expo install --fix` adjusts any companion version beyond what is pinned in
 `package.json`, commit the resulting manifest + lockfile before rebuilding.
 
+## Build 2 — Android `production-apk` (`3d6cae6a`, SDK 55)
+
+The SDK 55 upgrade landed (commit `1f72104`), but the Android APK build then
+failed at the **install step**, before Gradle ever ran:
+
+- The manifest pinned `lucide-react-native ^0.394.0` (mid-2024). That line
+  declares `react ^16.5 || ^17 || ^18` as a peer, which is **unresolvable
+  against React 19.2.0** (required by SDK 55).
+- No lockfile is committed (it was deliberately removed with the SDK 51
+  manifest), so EAS runs a plain `npm install` — which aborts with
+  `ERESOLVE could not resolve` on the lucide peer conflict. The failure is
+  platform-agnostic; Android was simply retried first.
+
+### Fix applied
+
+| change | why |
+| ------ | --- |
+| removed `lucide-react-native` | its React-18 peer range can never resolve on SDK 55 |
+| added `src/components/Icons.tsx` | 41 hand-drawn 24×24 stroke icons on `react-native-svg` (already a dependency) — same `<Icon size color strokeWidth />` API, zero new peers |
+| repointed all 10 icon import sites | drop-in swap from `lucide-react-native` to the local module |
+| removed `eas-cli` from devDependencies | EAS docs recommend installing it globally; it only added install-graph risk |
+
+The remaining dependency set is exactly what `npx expo install --fix`
+verified for SDK 55, so the peer graph is now fully resolvable under React 19.
+
+### Recover locally (required once)
+
+```bash
+cd apps/mobile
+npx expo install --fix   # no-op sanity pass, regenerates package-lock.json
+npx expo-doctor          # expect 0 problems
+git add package-lock.json   # commit the lockfile so EAS runs npm ci
+npx eas build --platform android --profile production-apk
+```
+
+Committing the lockfile matters: it turns the EAS install step into a
+deterministic `npm ci` instead of a fresh resolution on every build.
+
 ## Rollback
 
-The previous state is one commit behind (`9686f5a`). SDK 51 builds cannot be
-repaired on EAS — do not roll the manifest back; roll forward with `--fix` if a
-dep conflicts instead.
+The pre-SDK-55 state is at `9686f5a`. SDK 51 builds cannot be repaired on EAS —
+do not roll the manifest back; roll forward with `--fix` if a dep conflicts
+instead.

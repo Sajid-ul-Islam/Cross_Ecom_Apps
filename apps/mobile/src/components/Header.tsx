@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, StatusBar, Image } from "react-native";
 import { useRouter } from "expo-router";
-import { ShoppingBag, ArrowLeft, Search } from "lucide-react-native";
+import { ShoppingBag, ArrowLeft, Search } from "./Icons";
 import { Colors } from "../theme/colors";
 import { useCart } from "../context/CartContext";
 import { getConnection } from "../services/gateway";

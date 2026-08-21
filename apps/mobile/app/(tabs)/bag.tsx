@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Gift, ShieldCheck } from "lucide-react-native";
+import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Gift, ShieldCheck } from "../../src/components/Icons";
 import { Header } from "../../src/components/Header";
 import { FreeTeeBanner } from "../../src/components/Banner";
 import { Colors } from "../../src/theme/colors";

@@ -128,13 +128,22 @@ See `src/woocom.ts`.
 ## Mobile app (Expo / EAS)
 
 The companion customer app lives in `apps/mobile` (project
-`@sajid.islam/deen-commerce`). A failed iOS `production` EAS build
-(`7502b36c`) was root-caused to an **end-of-life Expo SDK 51** — Apple has
-required Xcode 16 (iOS 18 SDK) binaries since April 2025, and EAS has retired
-the Xcode 15 images SDK 51 needs. The app now targets **SDK 55** (RN 0.83,
-React 19.2, expo-router v7); the stale SDK-51 lockfile was removed and
-`eas.json` pins the iOS image to `latest`. Full diagnosis, change table, and
-recovery commands (`npx expo install --fix`, `expo-doctor`, rebuild) are in
+`@sajid.islam/deen-commerce`). Two failed EAS builds were root-caused and
+fixed in-repo:
+
+- **iOS `production`** failed on **end-of-life Expo SDK 51** — Apple has
+  required Xcode 16 (iOS 18 SDK) binaries since April 2025, and EAS retired
+  the Xcode 15 images SDK 51 needs. The app now targets **SDK 55** (RN 0.83,
+  React 19.2, expo-router v7) with `eas.json` pinning the iOS image to
+  `latest`.
+- **Android `production-apk`** then failed at the install step:
+  `lucide-react-native@0.394` peers on React ≤18, which can never resolve
+  under React 19. The dependency was removed entirely and replaced with an
+  in-house 41-glyph stroke icon set on `react-native-svg` — same API, zero
+  third-party peer surface left in the app.
+
+Full diagnosis, change tables, and recovery commands
+(`npx expo install --fix`, `expo-doctor`, lockfile commit, rebuild) are in
 [`apps/mobile/EAS-FIX.md`](./apps/mobile/EAS-FIX.md).
 
 ## Quickstart
