@@ -37,6 +37,9 @@ import {
   OrderItemLine,
 } from "../src/types";
 
+import { BD_DISTRICTS, BdDistrict } from "../src/data/districts";
+import { Modal } from "react-native";
+
 const DELIVERY_SLOTS: { key: DeliverySlot; label: string; time: string }[] = [
   { key: "any", label: "Anytime", time: "9:00 AM – 9:00 PM" },
   { key: "morning", label: "Morning", time: "9:00 AM – 1:00 PM" },
@@ -56,6 +59,12 @@ export default function CheckoutScreen() {
   const [name, setName] = useState(profile.name || "");
   const [phone, setPhone] = useState(profile.phone || "");
   const [email, setEmail] = useState(profile.email || "");
+  const [district, setDistrict] = useState<BdDistrict>(
+    BD_DISTRICTS.find((d) => d.code === "BD-13") || BD_DISTRICTS[0]
+  );
+  const [districtModalOpen, setDistrictModalOpen] = useState(false);
+  const [districtSearch, setDistrictSearch] = useState("");
+  const [city, setCity] = useState("Dhaka");
   const [address, setAddress] = useState(profile.address || "");
   const [selectedArea, setSelectedArea] = useState<DeliveryOptionKey>(
     (params.area as DeliveryOptionKey) || profile.area || "dhaka_standard"
@@ -68,6 +77,7 @@ export default function CheckoutScreen() {
   const [redeemPoints, setRedeemPoints] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
 
   // Eagerly load any persisted guest session.
   useEffect(() => {
@@ -94,15 +104,19 @@ export default function CheckoutScreen() {
       setErrorMsg("Please provide your full name");
       return;
     }
-    const digits = phone.replace(/[^0-9]/g, "");
-    if (!/^01[3-9]\d{8}$/.test(digits)) {
-      setErrorMsg("Please enter a valid 11-digit BD mobile number (01XXXXXXXXX)");
+    let digits = phone.replace(/[^0-9]/g, "");
+    if (digits.startsWith("880") && digits.length === 13) {
+      digits = digits.slice(2);
+    }
+    if (digits.length !== 11 || !digits.startsWith("0") || !/^01[3-9]\d{8}$/.test(digits)) {
+      setErrorMsg("Phone number must be an 11-digit Bangladeshi mobile number starting with 0 (e.g. 01XXXXXXXXX)");
       return;
     }
-    if (selectedArea !== "store_pickup" && (!address.trim() || address.trim().length < 12)) {
+    if (selectedArea !== "store_pickup" && (!address.trim() || address.trim().length < 8)) {
       setErrorMsg("Please enter full delivery address (house/flat, road, area)");
       return;
     }
+
 
     setErrorMsg("");
     setLoading(true);
@@ -137,6 +151,10 @@ export default function CheckoutScreen() {
         phone: digits,
         email: email.trim() || undefined,
         address: selectedArea === "store_pickup" ? "DEEN Flagship Studio, Banani, Dhaka (Store Pickup)" : address.trim(),
+        city: selectedArea === "store_pickup" ? "Dhaka" : (city.trim() || district.name),
+        district: district.code,
+        state: district.code,
+        postcode: "1200",
         area: selectedArea,
         deliveryOption: selectedArea,
         deliverySlot,
@@ -148,7 +166,8 @@ export default function CheckoutScreen() {
         total,
         isGuestOrder: isGuestMode,
         ...(guestSession?.token ? { guestToken: guestSession.token } : {}),
-      });
+      } as any);
+
 
       // Deduct coins if redeemed & earn coins for order
       if (redeemPoints && coinDiscountBDT > 0) {
@@ -378,19 +397,60 @@ export default function CheckoutScreen() {
             })}
           </View>
 
-          {/* Delivery Address Field (if not Store Pickup) */}
+          {/* Delivery Address Fields (if not Store Pickup) */}
           {selectedArea !== "store_pickup" ? (
-            <View style={[styles.field, { marginTop: 14 }]}>
-              <Text style={styles.label}>Street Delivery Address *</Text>
-              <TextInput
-                style={[styles.input, styles.multilineInput]}
-                value={address}
-                onChangeText={setAddress}
-                multiline
-                numberOfLines={3}
-                placeholder="House / Flat #, Road #, Sector / Area, District, Postcode"
-                placeholderTextColor={Colors.faint}
-              />
+            <View style={{ marginTop: 14, gap: 10 }}>
+              {/* District / State Selector */}
+              <View style={styles.field}>
+                <Text style={styles.label}>District / State (All 64 BD Districts) *</Text>
+                <TouchableOpacity
+                  style={[
+                    styles.input,
+                    {
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      backgroundColor: colors.card,
+                      borderColor: colors.indigo,
+                      borderWidth: 1.5,
+                    },
+                  ]}
+                  onPress={() => setDistrictModalOpen(true)}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: colors.ink }}>
+                    📍 {district.name} ({district.code})
+                  </Text>
+                  <Text style={{ fontSize: 12, fontWeight: "800", color: colors.indigo }}>
+                    CHANGE ▼
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* City / Thana Field */}
+              <View style={styles.field}>
+                <Text style={styles.label}>City / Thana / Area *</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.card, color: colors.ink }]}
+                  value={city}
+                  onChangeText={setCity}
+                  placeholder="e.g. Banani / Mirpur / Dhanmondi / Agrabad"
+                  placeholderTextColor={Colors.faint}
+                />
+              </View>
+
+              {/* Street Address */}
+              <View style={styles.field}>
+                <Text style={styles.label}>Street Delivery Address *</Text>
+                <TextInput
+                  style={[styles.input, styles.multilineInput, { backgroundColor: colors.card, color: colors.ink }]}
+                  value={address}
+                  onChangeText={setAddress}
+                  multiline
+                  numberOfLines={3}
+                  placeholder="House / Flat #, Road #, Sector / Area details..."
+                  placeholderTextColor={Colors.faint}
+                />
+              </View>
             </View>
           ) : (
             <View style={styles.pickupNotice}>
@@ -595,6 +655,113 @@ export default function CheckoutScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      {/* District Selection Modal */}
+      <Modal
+        visible={districtModalOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setDistrictModalOpen(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
+          <View
+            style={{
+              backgroundColor: colors.paper,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              maxHeight: "85%",
+              padding: 20,
+            }}
+          >
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <View>
+                <Text style={{ fontSize: 16, fontWeight: "900", color: colors.ink }}>
+                  SELECT DISTRICT (64 DISTRICTS)
+                </Text>
+                <Text style={{ fontSize: 12, color: colors.sub }}>
+                  Used for WooCommerce state & Pathao delivery routing
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={{ padding: 6 }}
+                onPress={() => setDistrictModalOpen(false)}
+              >
+                <Text style={{ fontSize: 18, fontWeight: "800", color: colors.ink }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Search Input */}
+            <TextInput
+              style={{
+                backgroundColor: colors.card,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: colors.border,
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                fontSize: 14,
+                color: colors.ink,
+                marginBottom: 12,
+              }}
+              placeholder="Search district name..."
+              placeholderTextColor={Colors.faint}
+              value={districtSearch}
+              onChangeText={setDistrictSearch}
+            />
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 400 }}>
+              {BD_DISTRICTS.filter((d) =>
+                d.name.toLowerCase().includes(districtSearch.toLowerCase()) ||
+                d.code.toLowerCase().includes(districtSearch.toLowerCase())
+              ).map((d) => {
+                const isSelected = district.code === d.code;
+                return (
+                  <TouchableOpacity
+                    key={d.code}
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      paddingVertical: 12,
+                      paddingHorizontal: 14,
+                      borderRadius: 8,
+                      backgroundColor: isSelected ? colors.indigoLight : "transparent",
+                      borderBottomWidth: 1,
+                      borderBottomColor: colors.borderLight,
+                    }}
+                    onPress={() => {
+                      setDistrict(d);
+                      if (d.code === "BD-13") {
+                        setSelectedArea("dhaka_standard");
+                        if (city === "Chittagong" || !city) setCity("Dhaka");
+                      } else {
+                        setSelectedArea("outside_standard");
+                        if (city === "Dhaka" || !city) setCity(d.name);
+                      }
+                      setDistrictModalOpen(false);
+                      setDistrictSearch("");
+                    }}
+                  >
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <Text style={{ fontSize: 14, fontWeight: isSelected ? "800" : "600", color: isSelected ? colors.indigo : colors.ink }}>
+                        {d.name}
+                      </Text>
+                      {d.code === "BD-13" && (
+                        <View style={{ backgroundColor: colors.indigo, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3 }}>
+                          <Text style={{ fontSize: 9, fontWeight: "800", color: "#FFFFFF" }}>DHAKA ৳80</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: isSelected ? colors.indigo : colors.sub }}>
+                      {d.code} {isSelected ? "✓" : ""}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

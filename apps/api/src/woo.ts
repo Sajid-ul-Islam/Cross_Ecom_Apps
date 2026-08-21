@@ -244,13 +244,19 @@ export async function fetchWooCategoryList(): Promise<{ category: string; count:
 }
 
 export async function pushWooOrder(order: unknown): Promise<{ id: number }> {
-  const res = await wooFetch("orders", {});
-  // wooFetch does GET; orders are POST → use raw fetch
   const { site, consumerKey, consumerSecret } = config.woo;
   const url = new URL(`${site.replace(/\/$/, "")}/wp-json/wc/v3/orders`);
   url.searchParams.set("consumer_key", consumerKey);
   url.searchParams.set("consumer_secret", consumerSecret);
-  const r = await fetch(url.toString(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(order) });
-  if (!r.ok) throw new Error(`Woo order create failed: ${r.status}`);
+  const r = await fetch(url.toString(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(order),
+  });
+  if (!r.ok) {
+    const errBody = await r.text().catch(() => "");
+    throw new Error(`Woo order create failed: ${r.status} ${errBody.slice(0, 200)}`);
+  }
   return (await r.json()) as { id: number };
 }
+

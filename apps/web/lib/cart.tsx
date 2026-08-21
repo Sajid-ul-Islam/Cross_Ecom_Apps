@@ -27,7 +27,8 @@ interface CartCtx {
 
 const CartContext = createContext<CartCtx | undefined>(undefined);
 const STORAGE_KEY = "@deen_web_cart_v1";
-const FREE_TEE_THRESHOLD = 3500;
+export const FREE_TEE_THRESHOLD = 3500;
+
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);

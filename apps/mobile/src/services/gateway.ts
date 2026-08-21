@@ -255,14 +255,26 @@ export async function fetchProductById(id: string): Promise<Product | undefined>
 
 export async function getOrders(phone?: string): Promise<Order[]> {
   try {
+    // SEC-4 sync: send the guest session token so the gateway can authenticate
+    // the request and scope orders to this session phone.
+    const session = await getGuestSession();
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (session?.token) {
+      headers["Authorization"] = `Bearer ${session.token}`;
+    }
     const qs = phone ? `?phone=${encodeURIComponent(phone)}` : "";
-    const list = await request<Order[]>(`/v1/deen/orders${qs}`, undefined, 6000);
+    const list = await request<Order[]>(
+      `/v1/deen/orders${qs}`,
+      { headers },
+      6000
+    );
     if (Array.isArray(list)) {
       await AsyncStorage.setItem("deen_gateway_orders_v1", JSON.stringify(list)).catch(() => {});
       return list;
     }
   } catch {}
 
+  // Fallback: local cache only
   const cached = await AsyncStorage.getItem("deen_gateway_orders_v1").catch(() => null);
   if (cached) {
     try {
@@ -300,12 +312,17 @@ export async function createOrder(
         name: orderData.name.trim(),
         phone: cleanPhone,
         address: orderData.address.trim(),
+        city: (orderData as any).city || "Dhaka",
+        district: (orderData as any).district || (orderData as any).state || "BD-13",
+        state: (orderData as any).state || (orderData as any).district || "BD-13",
+        postcode: (orderData as any).postcode || "1200",
         area: orderData.area,
         payment: orderData.payment,
         items: cleanItems,
         ...(orderData.guestToken ? { guestToken: orderData.guestToken } : {}),
       }),
     }, 10000);
+
 
     // Update local cache
     const prev = await AsyncStorage.getItem("deen_gateway_orders_v1").catch(() => null);

@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+
 import { useCart } from "@/lib/cart";
 import { placeOrder, bdt } from "@/lib/api";
+import { BD_DISTRICTS } from "@/lib/districts";
 
 const DELIVERY_FEES: Record<string, number> = {
   dhaka_standard: 80,
@@ -15,11 +17,11 @@ const DELIVERY_FEES: Record<string, number> = {
 const DELIVERY_LABELS: Record<string, string> = {
   dhaka_standard: "Dhaka Standard (24–48h) · ৳80",
   outside: "Outside Dhaka (3–5 days) · ৳150",
-  pickup: "Store Pickup · FREE",
+  pickup: "Store Pickup (Banani, Dhaka) · FREE",
 };
 
 const PAYMENT_OPTIONS = [
-  { id: "cod", label: "Cash on Delivery", icon: "💵" },
+  { id: "cod", label: "Cash on Delivery (COD)", icon: "💵" },
   { id: "bkash", label: "bKash", icon: "📱" },
   { id: "nagad", label: "Nagad", icon: "📲" },
   { id: "card", label: "Card / Bank", icon: "💳" },
@@ -31,6 +33,8 @@ export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart();
 
   const [area, setArea] = useState(searchParams.get("area") || "dhaka_standard");
+  const [district, setDistrict] = useState("BD-13"); // default Dhaka
+  const [city, setCity] = useState("Dhaka");
   const [payment, setPayment] = useState("cod");
   const [form, setForm] = useState({ name: "", phone: "", address: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -40,12 +44,30 @@ export default function CheckoutPage() {
   const delivery = DELIVERY_FEES[area] ?? 80;
   const total = subtotal + delivery;
 
+  // Auto sync delivery fee if district changes
+  const handleDistrictChange = (dCode: string) => {
+    setDistrict(dCode);
+    if (dCode === "BD-13") {
+      setArea("dhaka_standard");
+      if (city === "Chittagong" || !city) setCity("Dhaka");
+    } else {
+      setArea("outside");
+      const dObj = BD_DISTRICTS.find((d) => d.code === dCode);
+      if (city === "Dhaka" || !city) setCity(dObj ? dObj.name : "");
+    }
+  };
+
   const validate = () => {
     const e: Record<string, string> = {};
     if (!form.name.trim()) e.name = "Full name is required";
-    const digits = form.phone.replace(/[^0-9]/g, "");
-    if (!/^01[3-9]\d{8}$/.test(digits)) e.phone = "Enter a valid BD number — 01XXXXXXXXX";
-    if (form.address.trim().length < 12) e.address = "Full delivery address required (house, road, area)";
+    let digits = form.phone.replace(/[^0-9]/g, "");
+    if (digits.startsWith("880") && digits.length === 13) {
+      digits = digits.slice(2);
+    }
+    if (digits.length !== 11 || !digits.startsWith("0") || !/^01[3-9]\d{8}$/.test(digits)) {
+      e.phone = "Must be an 11-digit Bangladeshi number starting with 0 (e.g. 01XXXXXXXXX)";
+    }
+    if (form.address.trim().length < 8) e.address = "Full delivery address required (house, road, area)";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -57,10 +79,18 @@ export default function CheckoutPage() {
     setLoading(true);
     setApiError("");
     try {
+      let cleanPhone = form.phone.replace(/[^0-9]/g, "");
+      if (cleanPhone.startsWith("880") && cleanPhone.length === 13) {
+        cleanPhone = cleanPhone.slice(2);
+      }
       const result = await placeOrder({
         name: form.name.trim(),
-        phone: form.phone.replace(/[^0-9]/g, ""),
+        phone: cleanPhone,
         address: form.address.trim(),
+
+        city: city.trim() || (BD_DISTRICTS.find((d) => d.code === district)?.name || "Dhaka"),
+        district,
+        state: district,
         area,
         payment,
         items: items.map((i) => ({
@@ -71,12 +101,14 @@ export default function CheckoutPage() {
       });
       clearCart();
       router.push(
-        `/order-success?id=${result.id}&number=${result.number}&total=${result.total}&wooId=${result.wooId || ""}`
+        `/order-success?id=${result.id}&number=${result.number}&total=${result.total}&wooId=${result.wooId || ""}&delivery=${result.delivery}&payment=${encodeURIComponent(result.paymentTitle || result.payment)}&consignment=${result.pathaoConsignmentId || ""}&tracking=${encodeURIComponent(result.pathaoTrackingUrl || "")}`
       );
-    } catch (err: any) {
-      setApiError(err.message || "Order failed. Please try again.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Order failed. Please try again.";
+      setApiError(msg);
       setLoading(false);
     }
+
   };
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
@@ -161,18 +193,49 @@ export default function CheckoutPage() {
               <h2 style={{ fontSize: 16, fontWeight: 800, color: "var(--ink)", marginBottom: 20 }}>
                 📍 Delivery Address
               </h2>
+
+              {/* District Dropdown (All 64 BD Districts) */}
               <div className="form-group">
-                <label className="form-label">Full Address *</label>
+                <label className="form-label">District / State (All 64 BD Districts) *</label>
+                <select
+                  className="form-select"
+                  value={district}
+                  onChange={(e) => handleDistrictChange(e.target.value)}
+                >
+                  {BD_DISTRICTS.map((d) => (
+                    <option key={d.code} value={d.code}>
+                      {d.name} ({d.code}) {d.code === "BD-13" ? "— Inside Dhaka" : "— Outside Dhaka"}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* City / Thana Field */}
+              <div className="form-group" style={{ marginTop: 16 }}>
+                <label className="form-label">City / Thana / Area *</label>
+                <input
+                  className="form-input"
+                  placeholder="e.g. Banani, Mirpur, Dhanmondi, Agrabad…"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                />
+              </div>
+
+              {/* Street Address */}
+              <div className="form-group" style={{ marginTop: 16 }}>
+                <label className="form-label">Street Address *</label>
                 <textarea
                   className="form-textarea"
-                  placeholder="House no., road, area, city…"
+                  placeholder="House/flat no., road details, landmark…"
                   value={form.address}
                   onChange={set("address")}
                 />
                 {errors.address && <p className="form-error">{errors.address}</p>}
               </div>
+
+              {/* Delivery Method */}
               <div className="form-group" style={{ marginTop: 16 }}>
-                <label className="form-label">Delivery Method</label>
+                <label className="form-label">Delivery Service</label>
                 <select
                   className="form-select"
                   value={area}
@@ -211,13 +274,18 @@ export default function CheckoutPage() {
                 ))}
               </div>
               {payment === "cod" && (
-                <p style={{ fontSize: 12, color: "var(--sub)", marginTop: 12 }}>
-                  Pay cash when your order arrives. No advance payment required.
-                </p>
+                <div style={{ marginTop: 12, padding: "10px 14px", background: "var(--surface-2)", borderRadius: 6, border: "1px solid var(--border)" }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", marginBottom: 2 }}>
+                    💵 Cash on Delivery (COD)
+                  </p>
+                  <p style={{ fontSize: 12, color: "var(--sub)" }}>
+                    Pay total {bdt(total)} cash when your parcel is delivered to your doorstep.
+                  </p>
+                </div>
               )}
               {(payment === "bkash" || payment === "nagad") && (
                 <p style={{ fontSize: 12, color: "var(--sub)", marginTop: 12 }}>
-                  Our team will call you with the payment number after order confirmation.
+                  Our team will call you with the official merchant number after order confirmation.
                 </p>
               )}
             </div>
@@ -228,7 +296,7 @@ export default function CheckoutPage() {
               className="btn btn-primary btn-full btn-lg"
               disabled={loading}
             >
-              {loading ? "Placing Order…" : `Place Order · ${bdt(total)}`}
+              {loading ? "Placing Order…" : `Confirm Order · ${bdt(total)}`}
             </button>
           </div>
 
@@ -268,16 +336,30 @@ export default function CheckoutPage() {
 
             <div style={{ borderTop: "1px solid var(--border)", marginTop: 16, paddingTop: 16 }}>
               <div className="summary-row"><span>Subtotal</span><span>{bdt(subtotal)}</span></div>
-              <div className="summary-row"><span>Delivery</span><span>{delivery === 0 ? "FREE" : bdt(delivery)}</span></div>
+              <div className="summary-row">
+                <span>Delivery ({area === "outside" ? "Outside Dhaka" : "Dhaka"})</span>
+                <span style={{ fontWeight: 700, color: "var(--indigo)" }}>
+                  {delivery === 0 ? "FREE" : bdt(delivery)}
+                </span>
+              </div>
               {subtotal >= 3500 && (
                 <div className="summary-row" style={{ color: "var(--emerald)" }}>
-                  <span>🎁 Free Tee</span><span>৳0</span>
+                  <span>🎁 Free Summer Tee</span><span>৳0</span>
                 </div>
               )}
               <div className="summary-row summary-row--total">
-                <span>Total</span>
+                <span>Total Payable</span>
                 <span style={{ color: "var(--indigo)" }}>{bdt(total)}</span>
               </div>
+            </div>
+
+            <div style={{ marginTop: 16, padding: "12px", background: "var(--surface-2)", borderRadius: 6 }}>
+              <p style={{ fontSize: 11, fontWeight: 800, color: "var(--indigo)", letterSpacing: 0.5 }}>
+                🚚 PATHAO COURIER DISPATCH
+              </p>
+              <p style={{ fontSize: 12, color: "var(--sub)", marginTop: 4 }}>
+                Instant consignment creation with real-time SMS & GPS parcel tracking.
+              </p>
             </div>
           </div>
         </div>

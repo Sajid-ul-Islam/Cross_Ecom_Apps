@@ -116,16 +116,23 @@ export interface Order {
   deliverySlot?: DeliverySlot;
   deliveryNotes?: string;
   payment: PaymentMethod;
+  paymentTitle?: string;
+  paymentStatus?: string;
   lines: OrderItemLine[];
   subtotal: number;
   delivery: number;
   total: number;
   status: OrderStatus;
+  courier?: string;
+  pathaoConsignmentId?: string;
+  pathaoTrackingUrl?: string;
+  wooId?: number;
   isGuestOrder?: boolean;
   /** Gateway-issued anonymous guest session token (when placed as a guest). */
   guestToken?: string;
   createdAt: string;
 }
+
 
 export type AccountType = "guest" | "customer" | "admin";
 

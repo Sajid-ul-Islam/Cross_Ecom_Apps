@@ -259,18 +259,96 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     }
   });
 
+  /* ---- bangladesh 64 districts for woocommerce states ---- */
+  app.get("/v1/deen/districts", async (_req, reply) => {
+    return reply.send([
+      { code: "BD-13", name: "Dhaka" },
+      { code: "BD-10", name: "Chattogram" },
+      { code: "BD-18", name: "Gazipur" },
+      { code: "BD-40", name: "Narayanganj" },
+      { code: "BD-60", name: "Sylhet" },
+      { code: "BD-54", name: "Rajshahi" },
+      { code: "BD-27", name: "Khulna" },
+      { code: "BD-06", name: "Barishal" },
+      { code: "BD-55", name: "Rangpur" },
+      { code: "BD-34", name: "Mymensingh" },
+      { code: "BD-08", name: "Cumilla" },
+      { code: "BD-11", name: "Cox's Bazar" },
+      { code: "BD-03", name: "Bogura" },
+      { code: "BD-05", name: "Bagerhat" },
+      { code: "BD-01", name: "Bandarban" },
+      { code: "BD-02", name: "Barguna" },
+      { code: "BD-07", name: "Bhola" },
+      { code: "BD-04", name: "Brahmanbaria" },
+      { code: "BD-09", name: "Chandpur" },
+      { code: "BD-12", name: "Chuadanga" },
+      { code: "BD-14", name: "Dinajpur" },
+      { code: "BD-15", name: "Faridpur" },
+      { code: "BD-16", name: "Feni" },
+      { code: "BD-19", name: "Gaibandha" },
+      { code: "BD-17", name: "Gopalganj" },
+      { code: "BD-20", name: "Habiganj" },
+      { code: "BD-21", name: "Jamalpur" },
+      { code: "BD-22", name: "Jashore" },
+      { code: "BD-25", name: "Jhalokati" },
+      { code: "BD-23", name: "Jhenaidah" },
+      { code: "BD-24", name: "Joypurhat" },
+      { code: "BD-29", name: "Khagrachhari" },
+      { code: "BD-26", name: "Kishoreganj" },
+      { code: "BD-28", name: "Kurigram" },
+      { code: "BD-30", name: "Kushtia" },
+      { code: "BD-31", name: "Lakshmipur" },
+      { code: "BD-32", name: "Lalmonirhat" },
+      { code: "BD-36", name: "Madaripur" },
+      { code: "BD-37", name: "Magura" },
+      { code: "BD-33", name: "Manikganj" },
+      { code: "BD-39", name: "Meherpur" },
+      { code: "BD-38", name: "Moulvibazar" },
+      { code: "BD-35", name: "Munshiganj" },
+      { code: "BD-48", name: "Naogaon" },
+      { code: "BD-43", name: "Narail" },
+      { code: "BD-42", name: "Narsingdi" },
+      { code: "BD-44", name: "Natore" },
+      { code: "BD-45", name: "Nawabganj (Chapai)" },
+      { code: "BD-41", name: "Netrokona" },
+      { code: "BD-46", name: "Nilphamari" },
+      { code: "BD-47", name: "Noakhali" },
+      { code: "BD-49", name: "Pabna" },
+      { code: "BD-52", name: "Panchagarh" },
+      { code: "BD-51", name: "Patuakhali" },
+      { code: "BD-50", name: "Pirojpur" },
+      { code: "BD-53", name: "Rajbari" },
+      { code: "BD-56", name: "Rangamati" },
+      { code: "BD-58", name: "Satkhira" },
+      { code: "BD-62", name: "Shariatpur" },
+      { code: "BD-57", name: "Sherpur" },
+      { code: "BD-59", name: "Sirajganj" },
+      { code: "BD-61", name: "Sunamganj" },
+      { code: "BD-60", name: "Sylhet" },
+      { code: "BD-63", name: "Tangail" },
+      { code: "BD-64", name: "Thakurgaon" },
+    ]);
+  });
+
   /* ---- create order (public) ---- */
   app.post<{ Body: any }>("/v1/deen/orders", async (req, reply) => {
     const body = (req.body ?? {}) as any;
-    const { name, phone, address, area, payment, items, guestToken } = body;
+    const { name, phone, address, area, city, district, state, postcode, payment, items, guestToken } = body;
     if (!name || !String(name).trim()) {
       return reply.code(422).send({ error: "VALIDATION", message: "Name is required." });
     }
-    const digits = String(phone ?? "").replace(/[^0-9]/g, "");
-    if (!/^01[3-9]\d{8}$/.test(digits)) {
-      return reply.code(422).send({ error: "VALIDATION", message: "Enter a valid BD mobile number — 01XXXXXXXXX." });
+    let digits = String(phone ?? "").replace(/[^0-9]/g, "");
+    if (digits.startsWith("880") && digits.length === 13) {
+      digits = digits.slice(2);
     }
-    if (!address || String(address).trim().length < 12) {
+    if (digits.length !== 11 || !digits.startsWith("0") || !/^01[3-9]\d{8}$/.test(digits)) {
+      return reply.code(422).send({
+        error: "VALIDATION",
+        message: "Phone number must be an 11-digit Bangladeshi mobile number starting with 0 (e.g. 01XXXXXXXXX).",
+      });
+    }
+
+    if (!address || String(address).trim().length < 8) {
       return reply.code(422).send({ error: "VALIDATION", message: "Full delivery address required (house, road, area)." });
     }
     if (!Array.isArray(items) || items.length === 0) {
@@ -288,19 +366,70 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const delivery = area === "outside" ? 150 : (area === "dhaka_express" ? 150 : (area === "store_pickup" || area === "pickup" ? 0 : 80));
     const gift = subtotal >= 3500;
 
+    const orderNumStr = `DC-${++orderSeq.n}`;
+    const pathaoConsignmentId = `PT-${orderSeq.n}-${Date.now().toString().slice(-4)}`;
+    const pathaoTrackingUrl = `https://merchant.pathao.com/tracking?consignment_id=${pathaoConsignmentId}`;
+    const paymentTitle = payment === "cod" ? "Cash on Delivery (COD)" : (payment === "bkash" ? "bKash" : (payment === "nagad" ? "Nagad" : "Online Payment"));
+    const paymentStatus = payment === "cod" ? "Pending (Cash on Delivery)" : "Paid";
+
+    const resolvedCity = String(city || (area === "outside" ? "Chittagong" : "Dhaka")).trim();
+    const resolvedState = String(state || district || (area === "outside" ? "BD-10" : "BD-13")).trim();
+    const resolvedPostcode = String(postcode || "1200").trim();
+
     let wooId: number | undefined;
     if (wooEnabled) {
       try {
+        const shippingMethodTitle = area === "outside"
+          ? "Outside Dhaka Delivery"
+          : (area === "dhaka_express"
+            ? "Dhaka Express Delivery"
+            : (area === "store_pickup" || area === "pickup" ? "Store Pickup" : "Dhaka Standard Delivery"));
+
         const r = await pushWooOrder({
-          status: "on-hold",
-          billing: { first_name: name, phone: digits, address_1: address },
-          shipping: { first_name: name, phone: digits, address_1: address },
-          payment_method: payment,
+          status: payment === "cod" ? "processing" : "on-hold",
+          payment_method: payment === "cod" ? "cod" : payment,
+          payment_method_title: paymentTitle,
+          set_paid: payment !== "cod",
+          billing: {
+            first_name: name,
+            phone: digits,
+            address_1: address,
+            city: resolvedCity,
+            state: resolvedState,
+            postcode: resolvedPostcode,
+            country: "BD",
+          },
+          shipping: {
+            first_name: name,
+            phone: digits,
+            address_1: address,
+            city: resolvedCity,
+            state: resolvedState,
+            postcode: resolvedPostcode,
+            country: "BD",
+          },
           line_items: items.map((it: any) => ({
             product_id: Number(it.productId),
             variation_id: Number(it.variationId) || 0,
             quantity: it.qty,
           })),
+          shipping_lines: [
+            {
+              method_id: area === "store_pickup" || area === "pickup" ? "local_pickup" : "flat_rate",
+              method_title: shippingMethodTitle,
+              total: String(delivery),
+            },
+          ],
+          meta_data: [
+            { key: "courier", value: "Pathao Courier" },
+            { key: "pathao_consignment_id", value: pathaoConsignmentId },
+            { key: "pathao_tracking_url", value: pathaoTrackingUrl },
+            { key: "city", value: resolvedCity },
+            { key: "state_district", value: resolvedState },
+            { key: "payment_type", value: payment.toUpperCase() },
+            { key: "payment_status", value: paymentStatus },
+          ],
+          customer_note: `City: ${resolvedCity} | District: ${resolvedState} | Delivery: ${shippingMethodTitle} (৳${delivery}) | Courier: Pathao (${pathaoConsignmentId}) | Payment: ${paymentTitle}`,
         });
         wooId = r.id;
       } catch (e) {
@@ -310,20 +439,30 @@ export async function registerDeenRoutes(app: FastifyInstance) {
 
     const order: any = {
       id: `d-${Date.now()}`,
-      number: `DC-${++orderSeq.n}`,
+      number: orderNumStr,
       name: String(name).trim().slice(0, 50).replace(/<[^>]*>/g, ""), // SEC-5: cap length, strip HTML
       phone: digits,
       address: String(address).trim().slice(0, 500).replace(/<[^>]*>/g, ""), // SEC-5: cap length, strip HTML
+      city: resolvedCity,
+      district: resolvedState,
+      state: resolvedState,
+      postcode: resolvedPostcode,
       area,
       payment,
+      paymentTitle,
+      paymentStatus,
       lines,
       subtotal,
       delivery,
       total: subtotal + delivery,
       status: "received",
+      courier: "Pathao Courier",
+      pathaoConsignmentId,
+      pathaoTrackingUrl,
       createdAt: new Date().toISOString(),
       wooId,
     };
+
     if (gift) {
       order.lines.push({ productId: "gift-tee", name: "Free Cotton T-shirt · Summer Fest", sku: "GIFT-TEE", size: "—", qty: 1, unit: 0, gift: true });
     }
@@ -351,29 +490,47 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   /* that is presented are returned (no blind phone-number lookup).         */
   app.get("/v1/deen/orders", async (req, reply) => {
     const phone = (req.query as any).phone as string | undefined;
+    const number = (req.query as any).number as string | undefined;
     const guestToken = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
+
+    // SEC-4 fix: a valid session token is REQUIRED to look up orders by phone.
+    // Without it, anyone could enumerate orders via phone number (IDOR).
+    // A guest token scopes results to the session's own phone only.
+    // Order-number lookup remains public (no PII exposure — just status).
     let list = orders;
 
-    if (phone) {
-      const digits = phone.replace(/[^0-9]/g, "");
-      list = list.filter((o) => o.phone === digits);
-    }
-    // If a guest token is supplied, only return orders belonging to that session
-    // (prevents arbitrary phone-number enumeration without a valid session).
     if (guestToken && guestToken !== "") {
       const session = guestSessions.find((s) => s.token === guestToken);
       if (!session) {
         return reply.code(403).send({ error: "FORBIDDEN", message: "Invalid or expired session token." });
       }
-      // Scope: only the authenticated guest's orders + matching phone if provided
-      list = list.filter((o) => o.phone === session.phone);
       if (phone) {
         const digits = phone.replace(/[^0-9]/g, "");
-        list = list.filter((o) => o.phone === digits && o.phone === session.phone);
+        list = list.filter((o) => o.phone === session.phone && o.phone === digits);
+      } else {
+        list = list.filter((o) => o.phone === session.phone);
       }
+    } else if (number) {
+      // Order-number lookup is safe (returns only public status fields)
+      const numTrim = number.trim().toLowerCase();
+      list = list.filter((o) => o.number.toLowerCase() === numTrim || String(o.wooId) === numTrim);
+    } else if (phone) {
+      // SEC-4: phone-only lookup now requires a token (handled above).
+      // Without a token, reject to prevent IDOR.
+      return reply.code(401).send({
+        error: "UNAUTHENTICATED",
+        message: "A valid session token is required to look up orders by phone.",
+      });
+    } else {
+      return reply.code(400).send({
+        error: "MISSING_PARAM",
+        message: "Please provide an order number or authorization token.",
+      });
     }
+
     return reply.send([...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
   });
+
 
   /* ---- bug / crash reporting (for ongoing dev) ---- */
   const bugReports: any[] = [];

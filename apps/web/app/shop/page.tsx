@@ -28,9 +28,14 @@ export default function ShopPage() {
   const handleCategory = (cat: Category) => {
     setCategory(cat);
     const params = new URLSearchParams(searchParams.toString());
-    cat === "ALL" ? params.delete("category") : params.set("category", cat);
+    if (cat === "ALL") {
+      params.delete("category");
+    } else {
+      params.set("category", cat);
+    }
     router.replace(`/shop?${params.toString()}`, { scroll: false });
   };
+
 
   const SORT_OPTIONS = [
     { value: "default", label: "Default" },
