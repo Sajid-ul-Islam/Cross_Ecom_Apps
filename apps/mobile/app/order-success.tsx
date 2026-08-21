@@ -5,12 +5,13 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  Alert,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { CheckCircle2, Package, ArrowRight, Home, PhoneCall } from "lucide-react-native";
+import { CheckCircle2, Package, ArrowRight, Home, PhoneCall } from "../src/components/Icons";
 import { Colors } from "../src/theme/colors";
-import { bdt } from "../src/services/gateway";
+import { bdt, lookupCustomer, registerCustomer } from "../src/services/gateway";
 
 export default function OrderSuccessScreen() {
   const router = useRouter();
@@ -18,7 +19,10 @@ export default function OrderSuccessScreen() {
     orderId?: string;
     orderNumber?: string;
     total?: string;
+    guestName?: string;
+    guestPhone?: string;
   }>();
+  const isGuestCheckout = Boolean(params.guestName && params.guestPhone);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -102,9 +106,65 @@ export default function OrderSuccessScreen() {
             <Home size={18} color={Colors.indigoDark} />
             <Text style={styles.homeBtnText}>BACK TO HOME</Text>
           </TouchableOpacity>
+
+          {/* Guest-to-customer: prompt to save the profile (COD orders supported) */}
+          {isGuestCheckout && (
+            <GuestSavePrompt
+              name={params.guestName || ""}
+              phone={params.guestPhone || ""}
+            />
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+
+function GuestSavePrompt({ name, phone }: { name: string; phone: string }) {
+  const router = useRouter();
+  const [checking, setChecking] = React.useState(false);
+  const [saved, setSaved] = React.useState(false);
+
+  const handleSave = async () => {
+    setChecking(true);
+    try {
+      // If this phone already has a profile, no need to re-register.
+      const existing = await lookupCustomer(phone);
+      if (existing?.found) {
+        setSaved(true);
+      } else {
+        const res = await registerCustomer(name, phone);
+        if (res?.success) setSaved(true);
+      }
+      // Brief confirmation, then go home (COD orders are already placed).
+      if (!saved) {
+        Alert.alert("Saved", "Your details are saved. Next checkout will greet you by name.");
+      }
+    } catch (e) {
+      Alert.alert("Saved", "Your order is placed (COD). Profile save skipped — you can save later from your profile.");
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  if (saved) return null;
+
+  return (
+    <View style={styles.guestPromptCard}>
+      <Text style={styles.guestPromptTitle}>Save this order to your profile?</Text>
+      <Text style={styles.guestPromptSub}>
+        Save your guest checkout so next time DEEN greets you by name and shows your order history.
+      </Text>
+      <View style={styles.guestPromptRow}>
+        <TouchableOpacity style={styles.guestSaveBtn} activeOpacity={0.85} onPress={handleSave} disabled={checking}>
+          <Text style={styles.guestSaveBtnText}>{checking ? "Saving…" : "Save My Profile"}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.guestSkipBtn} activeOpacity={0.7} onPress={() => setSaved(true)}>
+          <Text style={styles.guestSkipBtnText}>Maybe later</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
@@ -264,5 +324,52 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
     letterSpacing: 1,
+  },
+  guestPromptCard: {
+    width: "100%",
+    backgroundColor: Colors.card,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 16,
+    marginTop: 8,
+  },
+  guestPromptTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: Colors.ink,
+    marginBottom: 4,
+  },
+  guestPromptSub: {
+    fontSize: 11,
+    color: Colors.sub,
+    lineHeight: 16,
+    marginBottom: 12,
+  },
+  guestPromptRow: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "center",
+  },
+  guestSaveBtn: {
+    flex: 1,
+    backgroundColor: Colors.indigo,
+    paddingVertical: 11,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  guestSaveBtnText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  guestSkipBtn: {
+    paddingVertical: 8,
+  },
+  guestSkipBtnText: {
+    color: Colors.sub,
+    fontSize: 12,
+    fontWeight: "600",
   },
 });

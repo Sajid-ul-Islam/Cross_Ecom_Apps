@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   StyleSheet,
   Dimensions,
   ActivityIndicator,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -21,22 +23,43 @@ import {
   Layers,
   ChevronDown,
   ChevronUp,
-} from "lucide-react-native";
+  Ruler,
+  Maximize2,
+  CheckCircle2,
+  Check,
+  Star,
+  Store,
+  BookOpen,
+  MessageCircle,
+} from "../../src/components/Icons";
 import { Colors } from "../../src/theme/colors";
-import { fetchProductById, bdt, FREE_TEE_THRESHOLD } from "../../src/services/gateway";
+import { useTheme } from "../../src/context/ThemeContext";
+import { fetchProductById, fetchProducts, bdt, FREE_TEE_THRESHOLD } from "../../src/services/gateway";
 import { Product, Variation } from "../../src/types";
 import { useCart } from "../../src/context/CartContext";
 import { useProfile } from "../../src/context/ProfileContext";
+import { useWishlist } from "../../src/context/WishlistContext";
+import { SizeGuideModal } from "../../src/components/SizeGuideModal";
+import { ImageLightboxModal } from "../../src/components/ImageLightboxModal";
+import { CompleteTheLook } from "../../src/components/CompleteTheLook";
+import { StoreStockModal } from "../../src/components/StoreStockModal";
+import { ProductReviewsModal } from "../../src/components/ProductReviewsModal";
+import { DenimCareGuideModal } from "../../src/components/DenimCareGuideModal";
+import { WhatsAppConciergeButton } from "../../src/components/WhatsAppConciergeButton";
 
 const { width } = Dimensions.get("window");
+const IMAGE_HEIGHT = Math.round(width * 1.16);
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const { addToCart, totalItems } = useCart();
   const { profile } = useProfile();
+  const { isInWishlist, toggleWishlist } = useWishlist();
 
   const [product, setProduct] = useState<Product | null>(null);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [variations, setVariations] = useState<Variation[]>([]);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string>("");
@@ -44,37 +67,96 @@ export default function ProductDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [addedNotice, setAddedNotice] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>("fabric");
+  const [sizeGuideVisible, setSizeGuideVisible] = useState(false);
+  const [lightboxVisible, setLightboxVisible] = useState(false);
+  const [stockModalVisible, setStockModalVisible] = useState(false);
+  const [reviewsModalVisible, setReviewsModalVisible] = useState(false);
+  const [careGuideVisible, setCareGuideVisible] = useState(false);
+
+  const galleryScrollRef = useRef<ScrollView>(null);
+
+  const isWishlisted = product ? isInWishlist(product.id) : false;
 
   useEffect(() => {
     if (!id) return;
+    let isMounted = true;
     setLoading(true);
-    fetchProductById(id).then((p) => {
-      if (p) {
-        setProduct(p);
-        const vars: Variation[] = p.variations ?? [];
-        setVariations(vars);
-        const gallery = p.gallery?.length ? p.gallery : p.images;
-        // Auto select user's preferred size if matching
-        const sizes = vars.length ? vars.map((v) => v.size) : p.sizes;
-        let initial = "";
-        if (p.category === "JEANS" && sizes.includes(profile.jeansSize)) initial = profile.jeansSize;
-        else if (sizes.includes(profile.topSize)) initial = profile.topSize;
-        else if (sizes.length > 0) initial = sizes[0];
-        setSelectedSize(initial);
-        const v = vars.find((x) => x.size === initial);
-        setSelectedVariationId(v?.id);
-      }
-      setLoading(false);
-    });
+    fetchProductById(id)
+      .then((p) => {
+        if (!isMounted) return;
+        if (p) {
+          setProduct(p);
+          const vars: Variation[] = p.variations ?? [];
+          setVariations(vars);
+          const sizes = vars.length > 0 ? vars.map((v) => v.size) : (p.sizes?.length ? p.sizes : ["Standard"]);
+          let initial = "";
+          if (p.category === "JEANS" && sizes.includes(profile.jeansSize)) initial = profile.jeansSize;
+          else if (sizes.includes(profile.topSize)) initial = profile.topSize;
+          else if (sizes.length > 0) initial = sizes[0];
+          setSelectedSize(initial);
+          const v = vars.find((x) => x.size === initial);
+          setSelectedVariationId(v?.id);
+        } else {
+          setProduct(null);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setProduct(null);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [id, profile]);
 
-  const galleryImages = product?.gallery?.length ? product.gallery : product?.images ?? [];
+  const rawGallery = product?.gallery?.length ? product.gallery : product?.images ?? [];
+  const galleryImages = rawGallery.length > 0 ? rawGallery : ["https://images.unsplash.com/photo-1542272604-780c96856592?w=800"];
 
-  if (loading || !product) {
+  const handleGalleryScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const nextIdx = Math.round(offsetX / width);
+    if (nextIdx !== activeImageIdx && nextIdx >= 0 && nextIdx < galleryImages.length) {
+      setActiveImageIdx(nextIdx);
+    }
+  };
+
+  const jumpToGalleryImage = (idx: number) => {
+    setActiveImageIdx(idx);
+    galleryScrollRef.current?.scrollTo({
+      x: idx * width,
+      animated: true,
+    });
+  };
+
+  if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={Colors.indigo} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!product) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.ink, marginBottom: 8 }}>
+            Product Unavailable
+          </Text>
+          <Text style={{ fontSize: 13, color: Colors.sub, marginBottom: 16, textAlign: "center" }}>
+            This item could not be loaded from the store.
+          </Text>
+          <TouchableOpacity
+            style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: Colors.indigo, borderRadius: 6 }}
+            onPress={() => router.replace("/(tabs)/shop")}
+          >
+            <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>BACK TO SHOP</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -106,29 +188,36 @@ export default function ProductDetailScreen() {
     setExpandedSection((prev) => (prev === section ? null : section));
   };
 
+  const savedSizeMatch =
+    product.category === "JEANS"
+      ? profile.jeansSize
+      : profile.topSize;
+
+  const isSavedMatch = selectedSize === savedSizeMatch;
+
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      {/* Custom Navigation Header */}
-      <View style={styles.navBar}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
+      {/* Top Header */}
+      <View style={[styles.navBar, { backgroundColor: colors.paper, borderBottomColor: colors.border }]}>
         <TouchableOpacity
-          style={styles.iconBtn}
+          style={[styles.iconBtn, { backgroundColor: colors.cardSecondary }]}
           onPress={() => router.back()}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <ArrowLeft size={20} color={Colors.ink} />
+          <ArrowLeft size={20} color={colors.ink} />
         </TouchableOpacity>
 
-        <Text style={styles.navTitle} numberOfLines={1}>
+        <Text style={[styles.navTitle, { color: colors.ink }]} numberOfLines={1}>
           {product.sku}
         </Text>
 
         <TouchableOpacity
-          style={styles.bagBtn}
+          style={[styles.bagBtn, { backgroundColor: colors.cardSecondary }]}
           onPress={() => router.push("/(tabs)/bag")}
         >
-          <ShoppingBag size={20} color={Colors.ink} />
+          <ShoppingBag size={20} color={colors.ink} />
           {totalItems > 0 && (
-            <View style={styles.badge}>
+            <View style={[styles.badge, { backgroundColor: colors.indigo }]}>
               <Text style={styles.badgeText}>{totalItems}</Text>
             </View>
           )}
@@ -144,35 +233,110 @@ export default function ProductDetailScreen() {
       )}
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* Main Product Image Carousel */}
-        <View style={styles.imageGallery}>
-          <Image
-            source={{ uri: galleryImages[activeImageIdx] || product.images[0] }}
-            style={styles.mainImage}
-            resizeMode="cover"
-          />
-
-          {/* Thumbnail switcher */}
-          <View style={styles.thumbRow}>
+        {/* Superior Image Gallery Carousel */}
+        <View style={styles.galleryWrapper}>
+          <ScrollView
+            ref={galleryScrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={handleGalleryScroll}
+            scrollEventThrottle={16}
+            style={styles.galleryScroll}
+          >
             {galleryImages.map((img, idx) => (
               <TouchableOpacity
                 key={idx}
-                style={[styles.thumbBtn, activeImageIdx === idx && styles.thumbBtnActive]}
-                onPress={() => setActiveImageIdx(idx)}
+                activeOpacity={0.95}
+                onPress={() => setLightboxVisible(true)}
+                style={styles.slideItem}
               >
-                <Image source={{ uri: img }} style={styles.thumbImage} resizeMode="cover" />
+                <Image
+                  source={{ uri: img }}
+                  style={styles.mainHeroImage}
+                  resizeMode="cover"
+                />
               </TouchableOpacity>
             ))}
+          </ScrollView>
+
+          {/* Floating Image Counter Badge */}
+          <View style={styles.imageCounterBadge}>
+            <Text style={styles.imageCounterText}>
+              {activeImageIdx + 1} / {galleryImages.length}
+            </Text>
           </View>
+
+          {/* Floating Zoom & Lightbox Button */}
+          <TouchableOpacity
+            style={styles.zoomPill}
+            activeOpacity={0.8}
+            onPress={() => setLightboxVisible(true)}
+          >
+            <Maximize2 size={13} color="#FFFFFF" />
+            <Text style={styles.zoomPillText}>TAP TO ZOOM</Text>
+          </TouchableOpacity>
+
+          {/* Wishlist Floating Button */}
+          <TouchableOpacity
+            style={[styles.wishlistBtn, isWishlisted && styles.wishlistBtnActive]}
+            onPress={() => product && toggleWishlist(product)}
+          >
+            <Heart
+              size={18}
+              color={isWishlisted ? Colors.crimson : Colors.ink}
+            />
+          </TouchableOpacity>
+
+          {/* Dots Indicator */}
+          {galleryImages.length > 1 && (
+            <View style={styles.dotsRow}>
+              {galleryImages.map((_, idx) => (
+                <View
+                  key={idx}
+                  style={[styles.dot, activeImageIdx === idx && styles.dotActive]}
+                />
+              ))}
+            </View>
+          )}
         </View>
 
-        {/* Product Meta */}
+        {/* Thumbnail Selector Strip */}
+        {galleryImages.length > 1 && (
+          <View style={styles.thumbStripWrapper}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.thumbStrip}
+            >
+              {galleryImages.map((img, idx) => {
+                const isSelected = activeImageIdx === idx;
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[styles.thumbBtn, isSelected && styles.thumbBtnActive]}
+                    onPress={() => jumpToGalleryImage(idx)}
+                  >
+                    <Image source={{ uri: img }} style={styles.thumbImage} resizeMode="cover" />
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Product Meta & Details */}
         <View style={styles.metaContainer}>
           <View style={styles.categoryRow}>
             <Text style={styles.categoryText}>{product.category}</Text>
             {product.isNew && (
               <View style={styles.newPill}>
                 <Text style={styles.newPillText}>NEW DROP</Text>
+              </View>
+            )}
+            {product.fabric && (
+              <View style={styles.craftBadge}>
+                <Text style={styles.craftBadgeText}>ARTISANAL</Text>
               </View>
             )}
           </View>
@@ -203,18 +367,35 @@ export default function ProductDetailScreen() {
             <Text style={styles.fabricHighlightText}>{product.fabric}</Text>
           </View>
 
-          {/* Size Selector */}
+          {/* Size Selector with Size Chart Trigger */}
           <View style={styles.sizeSection}>
             <View style={styles.sizeHeader}>
-              <Text style={styles.sizeSectionTitle}>SELECT SIZE</Text>
-              <Text style={styles.sizeGuideHint}>Fits True to Size (BD)</Text>
+              <View style={styles.sizeTitleWrap}>
+                <Text style={styles.sizeSectionTitle}>SELECT SIZE</Text>
+                <Text style={styles.sizeGuideHint}>
+                  {product.category === "JEANS"
+                    ? "Waist Size (Inches)"
+                    : "Standard Fit (BD)"}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.sizeGuideBtn}
+                activeOpacity={0.8}
+                onPress={() => setSizeGuideVisible(true)}
+              >
+                <Ruler size={14} color={Colors.indigoDark} />
+                <Text style={styles.sizeGuideBtnText}>SIZE CHART</Text>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.sizeGrid}>
-              {product.sizes.map((s) => {
+              {(variations.length > 0 ? variations.map((v) => v.size) : (product.sizes?.length ? product.sizes : ["Standard"])).map((s) => {
                 const isSelected = selectedSize === s;
                 const varStock = variations.find((v) => v.size === s)?.stock;
                 const oos = varStock === "outofstock";
+                const isUserPref = s === savedSizeMatch;
+
                 return (
                   <TouchableOpacity
                     key={s}
@@ -227,33 +408,102 @@ export default function ProductDetailScreen() {
                     disabled={oos}
                     onPress={() => handleSizeSelect(s)}
                   >
-                    <Text style={[styles.sizeOptionText, isSelected && styles.sizeOptionTextActive, oos && styles.sizeOptionTextDisabled]}>
+                    <Text
+                      style={[
+                        styles.sizeOptionText,
+                        isSelected && styles.sizeOptionTextActive,
+                        oos && styles.sizeOptionTextDisabled,
+                      ]}
+                    >
                       {s}
                     </Text>
+                    {isUserPref && !isSelected && (
+                      <View style={styles.prefDot} />
+                    )}
                   </TouchableOpacity>
                 );
               })}
             </View>
-            {selectedSize && (
-              <Text style={styles.sizeStockHint}>
-                {(() => {
-                  const v = variations.find((x) => x.size === selectedSize);
-                  if (!v) return product.stockStatus === "outofstock" ? "Out of stock" : "In stock";
-                  return v.stock === "outofstock" ? "❌ Out of stock in this size" : "✓ In stock";
-                })()}
-              </Text>
-            )}
+
+            {/* Profile Fit Helper & Stock Status */}
+            <View style={styles.sizeStatusRow}>
+              {selectedSize && (
+                <Text style={styles.sizeStockHint}>
+                  {(() => {
+                    const v = variations.find((x) => x.size === selectedSize);
+                    if (!v) return product.stockStatus === "outofstock" ? "❌ Out of stock" : "✓ In stock · Ready for express delivery";
+                    return v.stock === "outofstock" ? "❌ Out of stock in this size" : "✓ In stock · Ready to dispatch";
+                  })()}
+                </Text>
+              )}
+
+              {isSavedMatch && (
+                <View style={styles.savedFitPill}>
+                  <Sparkles size={11} color={Colors.indigo} />
+                  <Text style={styles.savedFitPillText}>Matches Your Fit Profile</Text>
+                </View>
+              )}
+            </View>
           </View>
 
           {/* Free Gift Promo Tag */}
           <View style={styles.promoTag}>
             <Sparkles size={16} color={Colors.emerald} />
             <Text style={styles.promoTagText}>
-              Eligible for <Text style={styles.bold}>FREE 240 GSM T-Shirt</Text> on total orders over ৳3,500.
+              Eligible for <Text style={styles.bold}>FREE Heavyweight Tee</Text> on cart subtotal over ৳3,500.
             </Text>
           </View>
 
           {/* Accordion Details */}
+          {/* Complete the Look Outfit Builder */}
+          <CompleteTheLook currentProduct={product} allProducts={allProducts} />
+
+          {/* WhatsApp Stylist Concierge */}
+          <WhatsAppConciergeButton
+            productName={product.name}
+            category={product.category}
+          />
+
+          {/* Quick Action Portals: Physical Store Stock, Reviews, Denim Care */}
+          <View style={styles.quickFeaturesGrid}>
+            <TouchableOpacity
+              style={styles.featurePillCard}
+              activeOpacity={0.8}
+              onPress={() => setStockModalVisible(true)}
+            >
+              <Store size={15} color={Colors.indigoDark} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.featurePillTitle}>OUTLET INVENTORY</Text>
+                <Text style={styles.featurePillSub}>Check stock at Banani &amp; Mirpur</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.featurePillCard}
+              activeOpacity={0.8}
+              onPress={() => setReviewsModalVisible(true)}
+            >
+              <Star size={15} color={Colors.amber} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.featurePillTitle}>FIT REVIEWS (4.9 ⭐)</Text>
+                <Text style={styles.featurePillSub}>Customer fit photos &amp; feedback</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.featurePillCard}
+              activeOpacity={0.8}
+              onPress={() => setCareGuideVisible(true)}
+            >
+              <BookOpen size={15} color={Colors.indigoDark} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.featurePillTitle}>DENIM CARE GUIDE</Text>
+                <Text style={styles.featurePillSub}>First soak &amp; fading handbook</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Accordion Specs & Policy */}
           <View style={styles.accordionContainer}>
             {/* Fabric & Specs */}
             <TouchableOpacity
@@ -297,7 +547,7 @@ export default function ProductDetailScreen() {
                   • Wash inside-out in cold water (below 30°C){"\n"}
                   • Use mild color-safe liquid detergent{"\n"}
                   • Do not bleach or tumble dry; line dry in shade{"\n"}
-                  • Authentic indigo will develop unique fade patterns over time
+                  • Authentic indigo will develop unique personal fades over time
                 </Text>
               </View>
             )}
@@ -317,10 +567,11 @@ export default function ProductDetailScreen() {
             {expandedSection === "shipping" && (
               <View style={styles.accordionBody}>
                 <Text style={styles.accordionBodyText}>
-                  • Inside Dhaka: ৳70 (Delivered within 24-48 hours){"\n"}
-                  • Outside Dhaka: ৳130 (Delivered within 3-5 days){"\n"}
-                  • Cash on Delivery (COD), bKash &amp; Nagad accepted{"\n"}
-                  • 7-day hassle-free size exchange policy
+                  • Inside Dhaka Standard: ৳70 (2-3 Days){"\n"}
+                  • Dhaka Express: ৳150 (Within 24 Hours){"\n"}
+                  • Outside Dhaka: ৳130 (Nationwide Courier · 3-5 Days){"\n"}
+                  • Store Pickup: FREE (Banani Flagship Studio){"\n"}
+                  • 7-Day Hassle-Free Size Exchange Guaranteed
                 </Text>
               </View>
             )}
@@ -347,6 +598,49 @@ export default function ProductDetailScreen() {
           <Text style={styles.buyNowBtnText}>BUY NOW ({bdt(currentPrice)})</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Size Guide Modal */}
+      <SizeGuideModal
+        visible={sizeGuideVisible}
+        onClose={() => setSizeGuideVisible(false)}
+        category={product.category}
+        selectedSize={selectedSize}
+        onSelectSize={handleSizeSelect}
+        savedUserSize={savedSizeMatch}
+      />
+
+      {/* Fullscreen Image Lightbox Modal */}
+      <ImageLightboxModal
+        visible={lightboxVisible}
+        onClose={() => setLightboxVisible(false)}
+        images={galleryImages}
+        initialIndex={activeImageIdx}
+        productName={product.name}
+      />
+      {/* Store Stock Modal */}
+      {product && (
+        <StoreStockModal
+          visible={stockModalVisible}
+          product={product}
+          selectedSize={selectedSize}
+          onClose={() => setStockModalVisible(false)}
+        />
+      )}
+
+      {/* Product Reviews Modal */}
+      {product && (
+        <ProductReviewsModal
+          visible={reviewsModalVisible}
+          product={product}
+          onClose={() => setReviewsModalVisible(false)}
+        />
+      )}
+
+      {/* Denim Care Guide Modal */}
+      <DenimCareGuideModal
+        visible={careGuideVisible}
+        onClose={() => setCareGuideVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -429,30 +723,113 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 40,
   },
-  imageGallery: {
-    width: "100%",
+  galleryWrapper: {
+    width: width,
+    height: IMAGE_HEIGHT,
     backgroundColor: Colors.cardSecondary,
     position: "relative",
   },
-  mainImage: {
+  galleryScroll: {
     width: width,
-    height: width * 1.1,
+    height: IMAGE_HEIGHT,
   },
-  thumbRow: {
+  slideItem: {
+    width: width,
+    height: IMAGE_HEIGHT,
+  },
+  mainHeroImage: {
+    width: width,
+    height: IMAGE_HEIGHT,
+  },
+  imageCounterBadge: {
     position: "absolute",
-    bottom: 12,
+    top: 14,
     left: 16,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  imageCounterText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  zoomPill: {
+    position: "absolute",
+    bottom: 16,
+    right: 16,
     flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(0, 0, 0, 0.65)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 14,
+  },
+  zoomPillText: {
+    color: "#FFFFFF",
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  wishlistBtn: {
+    position: "absolute",
+    top: 14,
+    right: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  wishlistBtnActive: {
+    backgroundColor: "#FFFFFF",
+  },
+  dotsRow: {
+    position: "absolute",
+    bottom: 16,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(255, 255, 255, 0.45)",
+  },
+  dotActive: {
+    width: 16,
+    backgroundColor: "#FFFFFF",
+  },
+  thumbStripWrapper: {
+    backgroundColor: Colors.paper,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  thumbStrip: {
     gap: 8,
   },
   thumbBtn: {
-    width: 48,
-    height: 48,
+    width: 56,
+    height: 56,
     borderRadius: 6,
-    borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.6)",
+    borderWidth: 1.5,
+    borderColor: Colors.border,
     overflow: "hidden",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: Colors.cardSecondary,
   },
   thumbBtnActive: {
     borderColor: Colors.indigo,
@@ -485,6 +862,17 @@ const styles = StyleSheet.create({
   },
   newPillText: {
     color: "#FFFFFF",
+    fontSize: 9,
+    fontWeight: "800",
+  },
+  craftBadge: {
+    backgroundColor: Colors.amberLight,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  craftBadgeText: {
+    color: Colors.amber,
     fontSize: 9,
     fontWeight: "800",
   },
@@ -552,7 +940,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 10,
+  },
+  sizeTitleWrap: {
+    flex: 1,
   },
   sizeSectionTitle: {
     fontSize: 12,
@@ -563,6 +954,24 @@ const styles = StyleSheet.create({
   sizeGuideHint: {
     fontSize: 11,
     color: Colors.sub,
+    marginTop: 2,
+  },
+  sizeGuideBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: Colors.indigoLight,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.indigo,
+  },
+  sizeGuideBtnText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: Colors.indigoDark,
+    letterSpacing: 0.5,
   },
   sizeGrid: {
     flexDirection: "row",
@@ -578,6 +987,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     minWidth: 50,
     alignItems: "center",
+    position: "relative",
   },
   sizeOptionActive: {
     backgroundColor: Colors.indigoDark,
@@ -599,11 +1009,41 @@ const styles = StyleSheet.create({
     color: Colors.faint,
     textDecorationLine: "line-through",
   },
-  sizeStockHint: {
+  prefDot: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.indigo,
+  },
+  sizeStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginTop: 8,
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  sizeStockHint: {
     fontSize: 11,
     fontWeight: "700",
     color: Colors.sub,
+  },
+  savedFitPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: Colors.indigoLight,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  savedFitPillText: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: Colors.indigoDark,
   },
   promoTag: {
     flexDirection: "row",
@@ -655,6 +1095,31 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.sub,
     lineHeight: 20,
+  },
+  quickFeaturesGrid: {
+    gap: 8,
+    marginVertical: 8,
+  },
+  featurePillCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.card,
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 10,
+  },
+  featurePillTitle: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: Colors.ink,
+    letterSpacing: 0.5,
+  },
+  featurePillSub: {
+    fontSize: 10,
+    color: Colors.sub,
+    marginTop: 1,
   },
   bottomBar: {
     flexDirection: "row",
