@@ -18,6 +18,7 @@
     "expo-router": "~55.0.18",
     "expo-status-bar": "~55.0.6",
     "react": "19.2.8",
+    "react-dom": "19.2.8",
     "react-native": "0.83.10",
     "react-native-gesture-handler": "~2.30.0",
     "react-native-safe-area-context": "~5.6.2",
@@ -27,8 +28,13 @@
   "devDependencies": {
     "@babel/core": "^7.26.0",
     "@types/react": "~19.2.8",
+    "@types/react-dom": "~19.2.0",
     "babel-preset-expo": "~55.0.24",
     "typescript": "~5.9.2"
+  },
+  "overrides": {
+    "react": "$react",
+    "react-dom": "$react-dom"
   },
   "private": true
 }
