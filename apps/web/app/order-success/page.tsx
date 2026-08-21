@@ -9,7 +9,7 @@ function OrderSuccessContent() {
   const params = useSearchParams();
   const number = params.get("number") || "DC-???";
   const total = Number(params.get("total") || 0);
-  const delivery = Number(params.get("delivery") || 80);
+  const delivery = Number(params.get("delivery") || 50);
   const wooId = params.get("wooId");
   const payment = params.get("payment") || "Cash on Delivery (COD)";
   const consignment = params.get("consignment") || `PT-${number.replace(/[^0-9]/g, "")}921`;

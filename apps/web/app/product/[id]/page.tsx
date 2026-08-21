@@ -266,7 +266,7 @@ export default function ProductDetailPage() {
           {/* Trust micro-badges */}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {[
-              "🚚 Dhaka delivery ৳80 (24–48h) · Outside Dhaka ৳150 (3–5 days)",
+              "🚚 Dhaka delivery ৳50 (24–48h) · Outside Dhaka ৳90 (3–5 days)",
               "🔄 7-day easy returns",
               "✅ Authentic DEEN quality guaranteed",
             ].map((t) => (

@@ -48,7 +48,7 @@ interface ProfileContextType {
   loginAsDemoAccount: (id: string) => Promise<void>;
   loginWithCredentials: (
     identifier: string,
-    password: string
+    password?: string
   ) => Promise<{ success: boolean; message: string; account?: DemoAccount }>;
   loading: boolean;
 }
@@ -188,7 +188,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const loginWithCredentials = async (
     identifier: string,
-    password: string
+    _password?: string
   ): Promise<{ success: boolean; message: string; account?: DemoAccount }> => {
     const cleanId = identifier.trim().toLowerCase();
     const cleanPhone = identifier.replace(/[^0-9]/g, "");
@@ -202,13 +202,6 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
 
     if (matched) {
-      if (matched.password && matched.password !== password.trim()) {
-        return {
-          success: false,
-          message: `Incorrect password for ${matched.name}. (Hint: ${matched.password})`,
-        };
-      }
-
       await loginAsDemoAccount(matched.id);
       return {
         success: true,

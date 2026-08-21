@@ -9,7 +9,7 @@ This codebase contains:
 
 1. **WooCommerce Order Placement**:
    - Order creation must always include `city`, `state` (from the 64 Bangladesh districts), `postcode`, and `country: "BD"` in both `billing` and `shipping`.
-   - Include `shipping_lines` with delivery charge: `৳80` for Dhaka, `৳150` for Outside Dhaka, `৳0` for Store Pickup.
+   - Include `shipping_lines` with delivery charge: `৳50` for Dhaka, `৳90` for Outside Dhaka, `৳0` for Store Pickup.
    - For COD (`cod`), `payment_method_title` is `Cash on Delivery (COD)` with `set_paid: false`.
 
 2. **Pathao Logistics Tracking**:

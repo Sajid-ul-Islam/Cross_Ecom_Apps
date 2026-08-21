@@ -9,14 +9,14 @@ import { placeOrder, bdt } from "@/lib/api";
 import { BD_DISTRICTS } from "@/lib/districts";
 
 const DELIVERY_FEES: Record<string, number> = {
-  dhaka_standard: 80,
-  outside: 150,
+  dhaka_standard: 50,
+  outside: 90,
   pickup: 0,
 };
 
 const DELIVERY_LABELS: Record<string, string> = {
-  dhaka_standard: "Dhaka Standard (24–48h) · ৳80",
-  outside: "Outside Dhaka (3–5 days) · ৳150",
+  dhaka_standard: "Dhaka Standard (24–48h) · ৳50",
+  outside: "Outside Dhaka (3–5 days) · ৳90",
   pickup: "Store Pickup (Banani, Dhaka) · FREE",
 };
 
@@ -41,7 +41,7 @@ function CheckoutContent() {
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
 
-  const delivery = DELIVERY_FEES[area] ?? 80;
+  const delivery = DELIVERY_FEES[area] ?? 50;
   const total = subtotal + delivery;
 
   // Auto sync delivery fee if district changes

@@ -363,7 +363,14 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       return { productId: prod.id, name: prod.name, sku: prod.sku, size: it.size, qty: it.qty, unit };
     });
     const subtotal = lines.reduce((s: number, l: any) => s + l.unit * l.qty, 0);
-    const delivery = area === "outside" ? 150 : (area === "dhaka_express" ? 150 : (area === "store_pickup" || area === "pickup" ? 0 : 80));
+    const delivery =
+      area === "outside" || area === "outside_standard"
+        ? 90
+        : area === "dhaka_express"
+        ? 120
+        : area === "store_pickup" || area === "pickup"
+        ? 0
+        : 50;
     const gift = subtotal >= 3500;
 
     const orderNumStr = `DC-${++orderSeq.n}`;
@@ -697,7 +704,6 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       name: "Tanvir Ahmed",
       username: "customer",
       email: "tanvir@deen.com",
-      password: "deen1234",
       phone: "01712-345678",
       role: "customer",
       accountType: "customer",
@@ -714,7 +720,6 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       name: "Sajid-ul Islam",
       username: "vip",
       email: "vip@deen.com",
-      password: "deen1234",
       phone: "01899-776655",
       role: "customer",
       accountType: "customer",
@@ -731,7 +736,6 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       name: "DEEN Store Admin",
       username: "admin",
       email: "admin@deen.com",
-      password: "admin123",
       phone: "01711-223344",
       role: "admin",
       accountType: "admin",
@@ -748,12 +752,11 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       name: "Guest Shopper",
       username: "guest",
       email: "",
-      password: "",
       phone: "01911-000000",
       role: "customer",
       accountType: "guest",
       badge: "GUEST CHECKOUT",
-      description: "Anonymous guest mode without password or account registration requirement.",
+      description: "Anonymous guest mode without account registration requirement.",
       address: "Mirpur DOHS, Road 9, Dhaka",
       area: "dhaka_standard",
       jeansSize: "32",
@@ -772,7 +775,6 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   app.post("/v1/auth/login", async (req, reply) => {
     const b = (req.body as any) || {};
     const identifier = (b.identifier || b.username || b.phone || b.email || "").toString().trim().toLowerCase();
-    const password = (b.password || "").toString().trim();
 
     const cleanPhone = identifier.replace(/[^0-9]/g, "");
     const match = DEMO_ACCOUNTS.find((acc) => {
@@ -783,13 +785,6 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     });
 
     if (match) {
-      if (match.password && match.password !== password) {
-        return reply.code(401).send({
-          success: false,
-          message: "Invalid credentials.",
-        });
-      }
-
       return reply.send({
         success: true,
         message: `Authenticated as ${match.name}`,

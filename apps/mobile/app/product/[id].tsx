@@ -567,9 +567,9 @@ export default function ProductDetailScreen() {
             {expandedSection === "shipping" && (
               <View style={styles.accordionBody}>
                 <Text style={styles.accordionBodyText}>
-                  • Inside Dhaka Standard: ৳70 (2-3 Days){"\n"}
-                  • Dhaka Express: ৳150 (Within 24 Hours){"\n"}
-                  • Outside Dhaka: ৳130 (Nationwide Courier · 3-5 Days){"\n"}
+                  • Inside Dhaka Standard: ৳50 (2-3 Days){"\n"}
+                  • Dhaka Express: ৳120 (Within 24 Hours){"\n"}
+                  • Outside Dhaka: ৳90 (Nationwide Courier · 3-5 Days){"\n"}
                   • Store Pickup: FREE (Banani Flagship Studio){"\n"}
                   • 7-Day Hassle-Free Size Exchange Guaranteed
                 </Text>

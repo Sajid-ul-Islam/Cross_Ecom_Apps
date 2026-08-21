@@ -383,11 +383,11 @@ export default function ProfileScreen() {
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.cardHeader}>
             <Key size={16} color={colors.indigo} />
-            <Text style={[styles.cardTitle, { color: colors.ink }]}>DEMO TEST ACCOUNTS &amp; CREDENTIALS</Text>
+            <Text style={[styles.cardTitle, { color: colors.ink }]}>DEMO TEST ACCOUNTS &amp; ROLES</Text>
           </View>
 
           <Text style={[styles.cardSub, { color: colors.sub }]}>
-            1-tap switch between pre-configured accounts or view test passwords:
+            1-tap instant switcher between pre-configured customer and admin accounts:
           </Text>
 
           <View style={styles.demoGrid}>
@@ -436,7 +436,7 @@ export default function ProfileScreen() {
                     User: <Text style={{ fontWeight: "700" }}>{acc.username}</Text>
                   </Text>
                   <Text style={[styles.demoPillPass, { color: colors.sub }]}>
-                    Pass: <Text style={{ fontWeight: "700" }}>{acc.password || "(None)"}</Text> · {acc.phone}
+                    {acc.phone} · <Text style={{ fontWeight: "700" }}>{acc.badge}</Text>
                   </Text>
                 </TouchableOpacity>
               );
