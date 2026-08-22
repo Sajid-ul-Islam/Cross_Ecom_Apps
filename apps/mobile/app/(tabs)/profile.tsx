@@ -312,7 +312,7 @@ export default function ProfileScreen() {
               onPress={() => setLoginModalVisible(true)}
             >
               <Key size={15} color={colors.indigo} />
-              <Text style={styles.modeBtnTextAuth}>DEMO SIGN IN</Text>
+              <Text style={styles.modeBtnTextAuth}>SIGN IN</Text>
             </TouchableOpacity>
           </View>
         </View>

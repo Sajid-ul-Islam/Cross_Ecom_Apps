@@ -49,7 +49,7 @@ export default function TabLayout() {
           title: "Bag",
           tabBarBadge: totalItems > 0 ? totalItems : undefined,
           tabBarBadgeStyle: {
-            backgroundColor: colors.crimson,
+            backgroundColor: colors.indigo,
             fontSize: 10,
             fontWeight: "800",
             color: "#FFFFFF",

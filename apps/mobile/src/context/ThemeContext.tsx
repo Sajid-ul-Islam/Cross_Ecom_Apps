@@ -31,7 +31,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } catch (e) {
         console.error("Failed to load theme mode", e);
       } finally {
-        setLoaded(false);
+        setLoaded(true);
       }
     })();
   }, []);
