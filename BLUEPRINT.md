@@ -16,32 +16,32 @@ WooCommerce. Built to be handed between autonomous coding agents — read this f
 ```
 apps/
   mobile/            Expo SDK 55 app (package com.deencommerce.app)
-    app/(tabs)/      home (index), shop, bag, orders, profile
-    app/category/[slug]  dedicated collection landing with craft banner & filtering
-    app/product/[id] product detail (real Woo variations / size chart / bundle builder)
-    app/checkout     COD / bKash / Nagad / VIP coins redemption / slots
-    app/_layout.tsx  Root — 8 context providers + global crash reporter (ErrorUtils)
+    app/(tabs)/      home(index), shop, bag, orders, profile
+    app/product/[id] product detail (real Woo variations / per-size stock)
+    app/checkout     COD / bKash / Nagad
+    app/_layout.tsx  Root — providers + global crash reporter (ErrorUtils)
     src/
-      components/    UserModeBar, LoginModal, AdminBroadcastModal, ReturnExchangeModal,
-                     SizeGuideModal, WishlistModal, DailyRewardsModal, GiftCardModal,
-                     CourierTrackingModal, StoreStockModal, ProductReviewsModal,
-                     DenimCareGuideModal, CompleteTheLook, Header, ProductCard, Charts, Icons
-      context/       ThemeContext, ProfileContext, CartContext, OrderContext,
-                     WishlistContext, RewardsContext, ReturnContext, NotificationContext
-      services/      gateway.ts (Render REST API client), catalog.ts, api.ts (demo fallbacks)
-      theme/         colors.ts (LightColors, DarkColors, ThemeColors)
-      types/         index.ts (Product, Order, UserProfile, DemoAccount, ReturnExchangeRequest, etc.)
-      data/          catalog.snapshot.json (826 live products), categories.ts
-      assets/        icon.png, splash.png, adaptive-icon.png, logo.png
-    eas.json         preview (internal APK) + production + production-apk profiles
-  api/               Fastify gateway
-    src/index.ts     server bootstrap (PORT from env)
-    src/routes.ts    /v1/deen/* & /v1/auth/* endpoints
-    src/woo.ts       WooCommerce client (read-only key OK), 5-min catalog cache
-    src/seed.ts      seed catalog (fallback when Woo unreachable)
-    src/config.ts    env loading (WOO_SITE, WOO_CONSUMER_KEY/SECRET, GATEWAY_API_KEY)
-    .env             gitignored — holds Woo keys (NEVER commit)
-    Dockerfile       node:20-alpine, CMD npm start
+      services/gateway.ts  HTTP client: fetchProducts (offline-first), fetchStats (admin),
+                           createOrder, getOrders, reportBug
+      services/catalog.ts  lazy loader for bundled snapshot
+      services/api.ts      local fallback catalog + DEFAULT_PROFILE
+      context/             Cart / Order / Profile (role derived from username)
+      components/          Header (logo), ProductCard (memoized), Charts (admin BI), Banner,
+                           Icons (in-house SVG set on react-native-svg — replaced
+                           lucide-react-native, whose React <=18 peer broke installs on SDK 55)
+      types/index.ts       Product, Stats, Order, UserProfile(+role), CartItem(+variationId)
+      data/catalog.snapshot.json  826 live products (regenerate via gateway /v1/deen/snapshot)
+      assets/              icon.png, splash.png, adaptive-icon.png (orange plates), logo.png (real)
+    eas.json              preview (internal APK) + production + production-apk profiles
+  api/                Fastify gateway
+    src/index.ts      server bootstrap (PORT from env)
+    src/routes.ts     /v1/deen/* endpoints (products, product, categories, stats, snapshot,
+                      orders, bugs)
+    src/woo.ts        WooCommerce client (read-only key OK), 5-min catalog cache
+    src/seed.ts       seed catalog (fallback when Woo unreachable)
+    src/config.ts     env loading (WOO_SITE, WOO_CONSUMER_KEY/SECRET, GATEWAY_API_KEY)
+    .env              gitignored — holds Woo keys (NEVER commit)
+    Dockerfile        node:20-alpine, CMD npm start
 .github/workflows/keepalive.yml   pings gateway /v1/health every 10 min (free-tier sleep fix)
 render.yaml          Render Blueprint — deploys apps/api as Docker Web Service
 README.md            Human overview & user guide
@@ -77,25 +77,68 @@ SafeAreaProvider
 | GET | `/v1/deen/broadcasts` | — | List past marketing push broadcasts |
 | POST | `/v1/deen/returns` | — | Submit size exchange / return ticket with photos |
 | GET | `/v1/deen/returns` | — | List return tickets by order or phone |
-| GET | `/v1/auth/demo-accounts` | — | List pre-configured demo credentials |
-| POST | `/v1/auth/login` | — | Authenticate customer, VIP, or admin |
+| GET | `/v1/auth/demo-accounts` | — | REMOVED (no demo users) |
+| POST | `/v1/auth/login` | — | Real WordPress login (username+password) → token + role (admin/customer) |
+| GET | `/v1/auth/me` | Bearer token | Resume authenticated session (user + role) |
+| POST | `/v1/auth/guest` | — | Mint a real anonymous guest session (random BD phone) |
 | POST | `/v1/deen/bugs` | — | **Bug report sink** (crash/feedback collection) |
 | GET | `/v1/deen/bugs?severity=` | — | List collected reports (in-memory, last 500) |
 
 `gatewayUrl` is configured in `apps/mobile/app.json` `extra.gatewayUrl` (currently the Render URL: `https://cross-ecom-apps.onrender.com`). Never hardcode it in source.
 
-## Demo Test Profiles
-- **👤 Regular Customer**: `customer` · Phone: `01712-345678` (Tanvir Ahmed)
-- **⭐ VIP Gold Shopper**: `vip` · Phone: `01899-776655` (Sajid-ul Islam)
-- **👑 Store Admin & Merchant**: `admin` · Phone: `01711-223344` (DEEN Admin)
-- **⚡ Guest Mode**: `guest` · Phone: `01911-000000` (Anonymous Guest)
+## Authentication (real, no demos)
+- **No demo/test accounts.** Every login is a real WordPress user on `deencommerce.com`.
+- `POST /v1/auth/login {username, password}` → gateway exchanges creds for a WP session cookie via `wp-login.php`, then reads the user + roles from `wp/v2/users/me`.
+  - `roles` containing `administrator` or `shop_manager` (or username `admin`) → `role: "admin"` (sees BI dashboard, broadcasts).
+  - everyone else → `role: "customer"`.
+  - Returns `{ success, token, user:{username, name, email, role, wpUserId, wpRoles} }`. Token stored in AsyncStorage; `GET /v1/auth/me` resumes it.
+- Mobile `LoginModal` is a real username/password form → `login()` in `ProfileContext` → gateway. `logout()` clears the token.
+- Guest checkout still works (anonymous `POST /v1/auth/guest` session) for users who skip sign-in.
+- **Out-of-stock products are NEVER shown to customers**: `/v1/deen/products` filters `stockStatus==="outofstock"` by default (opt-in `?includeOOS=1` for admin/debug), and `/v1/deen/snapshot` (bundled offline catalog) is regenerated OOS-free. Mobile `applyFilters` also drops OOS as a client-side safety net.
 
-## Roles & 3-Way Mode Switcher
-- `UserProfile.role` is derived from active mode: `admin` vs `customer` (registered vs guest).
-- `UserModeBar.tsx` rendered at the top of the **Home feed** and **Profile screen** enables instant 1-tap switching:
-  - `👑 Admin Panel`: Displays live BI analytics sparklines, revenue KPIs, and broadcast marketing button.
-  - `👤 Registered User`: Displays personalized feed, saved address book, VIP points, and size profile.
-  - `⚡ Guest User`: Simulates first-time visitor with instant fast checkout.
+## Roles (admin vs customer)
+- `profile.role === "admin"` (from WP) unlocks the BI dashboard on Home + broadcast button.
+- Customers never see sales/BI data.
+
+## Security & Audit Notes
+- **CORS** is allowlist-based (`apps/api/src/index.ts`): only configured `allowedOrigins` are
+  reflected; `*` is never used (prevents arbitrary-site cookie calls).
+- **Auth rate limiting**: `/v1/auth/*` is protected by a sliding-window limiter
+  (`_rateLimitHook`, 20 req/min/IP by default) — invoked in `build()`.
+- **`wpLogin`**: exchanges WP credentials for a `wordpress_logged_in_*` cookie via
+  `wp-login.php`, then reads the user from `/wp/v2/users/me` using **only that cookie**
+  (no plaintext Basic-Auth header is sent). The cookie authenticates the `/users/me` call.
+- **No secrets in source**: Woo keys come from `process.env` (`.env`, gitignored). A
+  `test-env.ts` scratch file exists but is gitignored and must never ship.
+- **Order exact-match**: app-placed orders push Woo `state` as `BD-XX` district codes
+  (verified against a real website order: `BD-11` = Cox's Bazar), payment title
+  `Cash on delivery`, and the same Woo meta keys as the website.
+
+## Cashback Logic (must match the live site)
+The live `deencommerce.com` store auto-applies a cart cashback that the app must replicate
+so app orders match website orders exactly:
+- Subtotal **> ৳2500** → **−৳500** cashback
+- Subtotal **> ৳3000** → **−৳700** cashback (higher tier replaces the lower)
+The store implements this via WooCommerce coupons/auto-apply (16,954 coupons exist; the
+tier coupons are gated by `minimum_amount`). Because the gateway holds a **read-only** Woo
+key, the app cannot create coupons — the gateway must compute
+`cashback = subtotal>=3000 ? 700 : subtotal>=2500 ? 500 : 0` and send it to Woo as a
+`coupon_lines` entry on the order, and the mobile cart/checkout UI must display the
+deduction. (Implementation pending — logic documented here for exact-match compliance.)
+
+## Local Android Build (no EAS cloud, no admin)
+A fully-local APK build toolchain is installed at `C:\Users\deenb\tools`:
+- Temurin **JDK 17**, Android **cmdline-tools**, **platform-tools**, **build-tools 34.0.0**,
+  **platforms/android-34**, plus an **emulator** + `system-images;android-34;google_apis;x86_64`
+  (AVD `deen_pixel` stored on `H:\android-avd` to avoid C: space limits).
+- Env: `JAVA_HOME`, `ANDROID_HOME` (setx + `~/.bashrc`). `eas build --local` is blocked on
+  Windows, so the path is `expo prebuild --platform android` →
+  `cd android && ./gradlew.bat assembleRelease`. Known fixes: copy
+  `node_modules/expo/node_modules/expo-modules-autolinking/android/expo-gradle-plugin` into
+  the top-level autolinking dir; delete duplicate `styles.xml` `AppTheme`; remove duplicate
+  `ic_launcher*.webp` launchers. Full runbook: `references/local-android-build.md` in the
+  `expo-react-native` skill.
+
 
 ## Bug Collection System
 - Mobile: global `ErrorUtils` handler in `app/_layout.tsx` forwards uncaught JS errors to `POST /v1/deen/bugs` (severity `crash`/`high`). Never blocks the UI.
@@ -115,6 +158,12 @@ cd apps/mobile
 eas build --platform android --profile production-apk   # installable APK
 eas build --platform android --profile preview          # internal/distribution
 ```
+The app is on **Expo SDK 55** (RN 0.83, React 19.2, expo-router v7) — Node 20/22/24 all
+work, the old Node-20-only pin was for SDK 51 and is no longer needed. Commit
+`package-lock.json` so EAS installs are deterministic. Android multi-worker export
+crashes under git-bash → use `--max-workers 1` (EAS cloud build avoids this).
+History + diagnosis of the two fixed build failures (iOS SDK-51 EOL, Android
+lucide peer conflict) lives in `apps/mobile/EAS-FIX.md`.
 
 ## Regenerating the Bundled Catalog
 To refresh the offline snapshot with latest WooCommerce changes:
@@ -129,7 +178,7 @@ curl https://cross-ecom-apps.onrender.com/v1/deen/snapshot -o apps/mobile/src/da
 - [x] Replaced incompatible third-party icon packages with zero-dependency SVG icon system.
 - [x] Multi-tier theme engine: automatic OS dark/light inheritance + manual switcher.
 - [x] 3-Way user mode switcher (Admin Panel Mode ↔ Registered User ↔ Guest Mode).
-- [x] Demo test accounts & interactive credential sign-in modal.
+- [x] Real WordPress auth (demo/test accounts removed — see Authentication).
 - [x] In-app notification center & Admin marketing push broadcast console.
 - [x] Customer size exchanges & returns portal with multi-photo uploads and live tracking.
 - [x] Dedicated category landing pages with craft highlights and filter chips.

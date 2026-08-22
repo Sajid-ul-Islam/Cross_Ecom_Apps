@@ -25,6 +25,7 @@ import {
   Lock,
   Sparkles,
   Key,
+  LogOut,
   Gift,
   Heart,
   BookOpen,
@@ -58,14 +59,12 @@ export default function ProfileScreen() {
   const { orders } = useOrders();
   const {
     profile,
-    demoAccounts,
-    activeDemoId,
     updateProfile,
     switchToGuestMode,
     registerCustomer,
-    loginAsAdmin,
-    logoutAdmin,
-    loginAsDemoAccount,
+    login,
+    logout,
+    isLoggedIn,
   } = useProfile();
 
 
@@ -379,78 +378,38 @@ export default function ProfileScreen() {
           )}
         </View>
 
-        {/* Demo Accounts & Quick Switcher Card */}
+        {/* Account Sign-In Card */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.cardHeader}>
             <Key size={16} color={colors.indigo} />
-            <Text style={[styles.cardTitle, { color: colors.ink }]}>DEMO TEST ACCOUNTS &amp; ROLES</Text>
+            <Text style={[styles.cardTitle, { color: colors.ink }]}>YOUR ACCOUNT</Text>
           </View>
 
           <Text style={[styles.cardSub, { color: colors.sub }]}>
-            1-tap instant switcher between pre-configured customer and admin accounts:
+            {isLoggedIn
+              ? `Signed in as ${profile.name || profile.username}.`
+              : "Sign in with your deencommerce.com account to sync your orders and profile."}
           </Text>
 
-          <View style={styles.demoGrid}>
-            {demoAccounts.map((acc) => {
-              const isCurrent =
-                activeDemoId === acc.id ||
-                (acc.id === "admin" && profile.role === "admin") ||
-                (acc.id === "guest" && profile.isGuest);
-
-              return (
-                <TouchableOpacity
-                  key={acc.id}
-                  style={[
-                    styles.demoPillCard,
-                    {
-                      backgroundColor: isCurrent ? colors.indigoLight : colors.cardSecondary,
-                      borderColor: isCurrent ? colors.indigo : colors.border,
-                    },
-                  ]}
-                  activeOpacity={0.8}
-                  onPress={() => loginAsDemoAccount(acc.id)}
-                >
-                  <View style={styles.demoPillHeader}>
-                    <Text
-                      style={[
-                        styles.demoPillRole,
-                        { color: isCurrent ? colors.indigoDark : colors.ink },
-                      ]}
-                    >
-                      {acc.id === "customer"
-                        ? "👤 Regular Customer"
-                        : acc.id === "vip"
-                        ? "⭐ VIP Gold Shopper"
-                        : acc.id === "admin"
-                        ? "👑 Store Admin"
-                        : "⚡ Guest Mode"}
-                    </Text>
-                    {isCurrent && (
-                      <View style={[styles.activeTag, { backgroundColor: colors.emerald }]}>
-                        <Text style={styles.activeTagText}>ACTIVE</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  <Text style={[styles.demoPillUser, { color: colors.ink }]}>
-                    User: <Text style={{ fontWeight: "700" }}>{acc.username}</Text>
-                  </Text>
-                  <Text style={[styles.demoPillPass, { color: colors.sub }]}>
-                    {acc.phone} · <Text style={{ fontWeight: "700" }}>{acc.badge}</Text>
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          <TouchableOpacity
-            style={[styles.openLoginBtn, { backgroundColor: colors.indigo }]}
-            activeOpacity={0.88}
-            onPress={() => setLoginModalVisible(true)}
-          >
-            <Lock size={15} color="#FFFFFF" />
-            <Text style={styles.openLoginBtnText}>OPEN FULL DEMO SIGN-IN PORTAL</Text>
-          </TouchableOpacity>
+          {isLoggedIn ? (
+            <TouchableOpacity
+              style={[styles.openLoginBtn, { backgroundColor: colors.cardSecondary, borderColor: colors.border }]}
+              activeOpacity={0.88}
+              onPress={() => logout()}
+            >
+              <LogOut size={15} color={colors.ink} />
+              <Text style={[styles.openLoginBtnText, { color: colors.ink }]}>LOG OUT</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.openLoginBtn, { backgroundColor: colors.indigo }]}
+              activeOpacity={0.88}
+              onPress={() => setLoginModalVisible(true)}
+            >
+              <Lock size={15} color="#FFFFFF" />
+              <Text style={styles.openLoginBtnText}>SIGN IN</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Store Admin Switcher */}
@@ -472,12 +431,12 @@ export default function ProfileScreen() {
                 <Sparkles size={16} color="#FFFFFF" />
                 <Text style={styles.broadcastBtnText}>📢 SEND MARKETING BROADCAST PUSH</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.adminLogoutBtn} onPress={logoutAdmin}>
+              <TouchableOpacity style={styles.adminLogoutBtn} onPress={logout}>
                 <Text style={styles.adminLogoutText}>LOG OUT ADMIN</Text>
               </TouchableOpacity>
             </View>
           ) : (
-            <TouchableOpacity style={styles.adminLoginBtn} onPress={loginAsAdmin}>
+            <TouchableOpacity style={styles.adminLoginBtn} onPress={() => setLoginModalVisible(true)}>
               <Text style={styles.adminLoginText}>LOGIN AS STORE ADMIN</Text>
             </TouchableOpacity>
           )}
