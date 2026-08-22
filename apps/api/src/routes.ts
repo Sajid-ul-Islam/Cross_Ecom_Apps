@@ -184,7 +184,12 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const category = (req.query as any).category as string | undefined;
     const q = (req.query as any).q as string | undefined;
     const sort = (req.query as any).sort as string | undefined;
+    // Customers never see out-of-stock products. Opt-in only (admin/debug).
+    const includeOOS = (req.query as any).includeOOS === "1" || (req.query as any).includeOOS === "true";
     let list = await getCatalog();
+    if (!includeOOS) {
+      list = list.filter((p) => (p.stockStatus || "instock") !== "outofstock");
+    }
     if (category && category !== "ALL" && category !== "OTHER") {
       list = list.filter((p) => p.category === category);
     }
@@ -203,8 +208,12 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   });
 
   /* ---- full snapshot (for bundling into the app as offline catalog) ---- */
+  /* Excludes out-of-stock so the bundled/offline base matches the live
+     customer view (no OOS products shown to customers anywhere). */
   app.get("/v1/deen/snapshot", async (_req, reply) => {
-    const list = await getCatalog();
+    const list = (await getCatalog()).filter(
+      (p) => (p.stockStatus || "instock") !== "outofstock"
+    );
     return reply.send({
       generatedAt: new Date().toISOString(),
       count: list.length,
@@ -333,7 +342,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   /* ---- create order (public) ---- */
   app.post<{ Body: any }>("/v1/deen/orders", async (req, reply) => {
     const body = (req.body ?? {}) as any;
-    const { name, phone, address, area, city, district, state, postcode, payment, items, guestToken } = body;
+    const { name, lastName, phone, email, address, area, city, district, state, postcode, payment, items, guestToken } = body;
     if (!name || !String(name).trim()) {
       return reply.code(422).send({ error: "VALIDATION", message: "Name is required." });
     }
@@ -376,7 +385,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const orderNumStr = `DC-${++orderSeq.n}`;
     const pathaoConsignmentId = `PT-${orderSeq.n}-${Date.now().toString().slice(-4)}`;
     const pathaoTrackingUrl = `https://merchant.pathao.com/tracking?consignment_id=${pathaoConsignmentId}`;
-    const paymentTitle = payment === "cod" ? "Cash on Delivery (COD)" : (payment === "bkash" ? "bKash" : (payment === "nagad" ? "Nagad" : "Online Payment"));
+    const paymentTitle = payment === "cod" ? "Cash on delivery" : (payment === "bkash" ? "bKash" : (payment === "nagad" ? "Nagad" : "Online Payment"));
     const paymentStatus = payment === "cod" ? "Pending (Cash on Delivery)" : "Paid";
 
     const resolvedCity = String(city || (area === "outside" ? "Chittagong" : "Dhaka")).trim();
@@ -393,12 +402,15 @@ export async function registerDeenRoutes(app: FastifyInstance) {
             : (area === "store_pickup" || area === "pickup" ? "Store Pickup" : "Dhaka Standard Delivery"));
 
         const r = await pushWooOrder({
+          created_via: "checkout",
           status: payment === "cod" ? "processing" : "on-hold",
           payment_method: payment === "cod" ? "cod" : payment,
           payment_method_title: paymentTitle,
           set_paid: payment !== "cod",
           billing: {
             first_name: name,
+            last_name: lastName || name,
+            email: email || `${digits}@deencommerce.com`,
             phone: digits,
             address_1: address,
             city: resolvedCity,
@@ -408,6 +420,8 @@ export async function registerDeenRoutes(app: FastifyInstance) {
           },
           shipping: {
             first_name: name,
+            last_name: lastName || name,
+            email: email || `${digits}@deencommerce.com`,
             phone: digits,
             address_1: address,
             city: resolvedCity,
@@ -435,6 +449,10 @@ export async function registerDeenRoutes(app: FastifyInstance) {
             { key: "state_district", value: resolvedState },
             { key: "payment_type", value: payment.toUpperCase() },
             { key: "payment_status", value: paymentStatus },
+            { key: "_shipping_phone_2", value: "" },
+            { key: "is_vat_exempt", value: "no" },
+            { key: "wt_pklist_order_language", value: "en_US" },
+            { key: "_gtm_server_side_order_sent", value: new Date().toISOString().slice(0, 19).replace("T", " ") },
           ],
           customer_note: `City: ${resolvedCity} | District: ${resolvedState} | Delivery: ${shippingMethodTitle} (৳${delivery}) | Courier: Pathao (${pathaoConsignmentId}) | Payment: ${paymentTitle}`,
         });
@@ -697,122 +715,97 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     return reply.send(list);
   });
 
-  /* ---- Demo Accounts & Authentication ---- */
-  const DEMO_ACCOUNTS = [
-    {
-      id: "customer",
-      name: "Tanvir Ahmed",
-      username: "customer",
-      email: "tanvir@deen.com",
-      phone: "01712-345678",
-      role: "customer",
-      accountType: "customer",
-      badge: "REGULAR CUSTOMER",
-      description: "Standard registered account with saved addresses in Uttara & fit preferences.",
-      address: "House 42, Road 11, Sector 4, Uttara, Dhaka",
-      area: "dhaka_standard",
-      jeansSize: "32",
-      topSize: "L",
-      coins: 1250,
-    },
-    {
-      id: "vip",
-      name: "Sajid-ul Islam",
-      username: "vip",
-      email: "vip@deen.com",
-      phone: "01899-776655",
-      role: "customer",
-      accountType: "customer",
-      badge: "VIP ELITE GOLD",
-      description: "Gold loyalty tier member with express Dhaka delivery and 4,800 VIP coins.",
-      address: "Plot 68, Kemal Ataturk Ave, Banani, Dhaka",
-      area: "dhaka_express",
-      jeansSize: "34",
-      topSize: "XL",
-      coins: 4800,
-    },
-    {
-      id: "admin",
-      name: "DEEN Store Admin",
-      username: "admin",
-      email: "admin@deen.com",
-      phone: "01711-223344",
-      role: "admin",
-      accountType: "admin",
-      badge: "STORE ADMIN & BI",
-      description: "Full store operator with BI metrics, order analytics, push broadcasts & catalog control.",
-      address: "DEEN HQ, Plot 12, Banani Commercial Area, Dhaka",
-      area: "dhaka_standard",
-      jeansSize: "32",
-      topSize: "L",
-      coins: 9999,
-    },
-    {
-      id: "guest",
-      name: "Guest Shopper",
-      username: "guest",
-      email: "",
-      phone: "01911-000000",
-      role: "customer",
-      accountType: "guest",
-      badge: "GUEST CHECKOUT",
-      description: "Anonymous guest mode without account registration requirement.",
-      address: "Mirpur DOHS, Road 9, Dhaka",
-      area: "dhaka_standard",
-      jeansSize: "32",
-      topSize: "L",
-      coins: 0,
-    },
-  ];
+  /* ------------------------------------------------------------------ */
+  /*  Authentication — real WordPress login (username + password).      */
+  /*  The gateway exchanges creds for a WP session cookie via           */
+  /*  wp-login.php, then reads the user + roles from wp/v2/users/me.    */
+  /*  Admin = WP 'administrator'/'shop_manager' role (or user 'admin'). */
+  /*  No demo accounts — every login is a real WordPress user.          */
+  /* ------------------------------------------------------------------ */
+  const authSessions = new Map<string, any>();
 
-  app.get("/v1/auth/demo-accounts", async (_req, reply) => {
+  async function wpLogin(
+    username: string,
+    password: string
+  ): Promise<{ id: number; name: string; email: string; roles: string[] } | null> {
+    const { site } = config.woo;
+    const base = site.replace(/\/$/, "");
+    try {
+      const loginRes = await fetch(`${base}/wp-login.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          log: username,
+          pwd: password,
+          rememberme: "forever",
+          redirect_to: `${base}/wp-admin/`,
+        }).toString(),
+        redirect: "manual",
+      });
+      const setCookie = loginRes.headers.get("set-cookie") || "";
+      const loggedIn = setCookie
+        .split(",")
+        .find((c) => c.includes("wordpress_logged_in_"));
+      if (!loggedIn) return null; // invalid creds → no logged-in cookie
+      const cookieVal = loggedIn.split(";")[0];
+      const meRes = await fetch(`${base}/wp-json/wp/v2/users/me`, {
+        headers: {
+          Cookie: cookieVal,
+          Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`,
+        },
+      });
+      if (!meRes.ok) return null;
+      const me = (await meRes.json()) as any;
+      return { id: me.id, name: me.name, email: me.email, roles: me.roles || [] };
+    } catch (e) {
+      console.error("[gateway] WP login error:", (e as Error).message);
+      return null;
+    }
+  }
+  app.post("/v1/auth/login", async (req, reply) => {
+    const b = (req.body as any) || {};
+    const username = String(b.username || b.identifier || b.email || "").trim();
+    const password = String(b.password || "");
+    if (!username || !password) {
+      return reply.code(422).send({ success: false, message: "Username and password are required." });
+    }
+
+    const wpUser = await wpLogin(username, password);
+    if (!wpUser) {
+      return reply.code(401).send({ success: false, message: "Invalid WordPress username or password." });
+    }
+
+    const isAdmin =
+      wpUser.roles.includes("administrator") ||
+      wpUser.roles.includes("shop_manager") ||
+      username.toLowerCase() === "admin";
+    const user = {
+      id: `wp_${wpUser.id}`,
+      name: wpUser.name,
+      username,
+      email: wpUser.email,
+      role: isAdmin ? "admin" : "customer",
+      accountType: isAdmin ? "admin" : "customer",
+      wpUserId: wpUser.id,
+      wpRoles: wpUser.roles,
+    };
+    const token = `wp_${randomUUID()}`;
+    authSessions.set(token, { ...user, token });
     return reply.send({
       success: true,
-      accounts: DEMO_ACCOUNTS,
+      message: `Authenticated as ${user.name}`,
+      user,
+      token,
     });
   });
 
-  app.post("/v1/auth/login", async (req, reply) => {
-    const b = (req.body as any) || {};
-    const identifier = (b.identifier || b.username || b.phone || b.email || "").toString().trim().toLowerCase();
-
-    const cleanPhone = identifier.replace(/[^0-9]/g, "");
-    const match = DEMO_ACCOUNTS.find((acc) => {
-      const uMatch = acc.username.toLowerCase() === identifier;
-      const eMatch = acc.email.toLowerCase() === identifier;
-      const pMatch = cleanPhone && acc.phone.replace(/[^0-9]/g, "") === cleanPhone;
-      return uMatch || eMatch || pMatch;
-    });
-
-    if (match) {
-      return reply.send({
-        success: true,
-        message: `Authenticated as ${match.name}`,
-        user: match,
-        token: `mock_jwt_${match.id}_${Date.now()}`,
-      });
-    }
-
-    if (cleanPhone.length >= 10 || identifier.includes("@")) {
-      return reply.send({
-        success: true,
-        message: `Authenticated as custom user ${identifier}`,
-        user: {
-          id: `usr_${Date.now()}`,
-          name: identifier.split("@")[0] || "Custom Shopper",
-          username: identifier,
-          phone: identifier,
-          role: "customer",
-          accountType: "customer",
-        },
-        token: `mock_jwt_custom_${Date.now()}`,
-      });
-    }
-
-    return reply.code(404).send({
-      success: false,
-      message: "Account not found. Please use demo accounts (customer, vip, admin, guest).",
-    });
+  /* Resume an authenticated session (Bearer token → user). */
+  app.get("/v1/auth/me", async (req, reply) => {
+    const token = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
+    if (!token) return reply.code(401).send({ success: false, message: "Authorization token required." });
+    const session = authSessions.get(token);
+    if (!session) return reply.code(401).send({ success: false, message: "Invalid or expired session." });
+    return reply.send({ success: true, user: session });
   });
 
   /* ---- anonymous guest session (real, minted identity) ---- */

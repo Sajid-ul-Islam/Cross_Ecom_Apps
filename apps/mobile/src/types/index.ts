@@ -136,23 +136,6 @@ export interface Order {
 
 export type AccountType = "guest" | "customer" | "admin";
 
-export interface DemoAccount {
-  id: string;
-  name: string;
-  username: string;
-  email: string;
-  phone: string;
-  role: "customer" | "admin";
-  accountType: AccountType;
-  badge: string;
-  description: string;
-  address: string;
-  area: DeliveryOptionKey;
-  jeansSize: string;
-  topSize: string;
-  coins?: number;
-}
-
 export interface SavedAddress {
   id: string;
   label: string; // e.g. "Home", "Office"
