@@ -12,10 +12,11 @@ function OrderSuccessContent() {
   const delivery = Number(params.get("delivery") || 50);
   const wooId = params.get("wooId");
   const payment = params.get("payment") || "Cash on Delivery (COD)";
-  const consignment = params.get("consignment") || `PT-${number.replace(/[^0-9]/g, "")}921`;
+  const consignment = params.get("consignment");
+  const hasConsignment = Boolean(consignment && consignment.trim().length > 0);
   const trackingUrl =
     params.get("tracking") ||
-    `https://merchant.pathao.com/tracking?consignment_id=${consignment}`;
+    (hasConsignment ? `https://merchant.pathao.com/tracking?consignment_id=${consignment}` : "");
 
   return (
     <div className="container" style={{ paddingBottom: 80 }}>
@@ -23,8 +24,7 @@ function OrderSuccessContent() {
         <div className="success-icon">🎉</div>
         <h1 className="success-title">Order Confirmed!</h1>
         <p className="success-sub">
-          Thank you! Your order has been placed into our live system and assigned
-          to <strong>Pathao Courier</strong> for express delivery.
+          Thank you! Your order has been placed into our live system and is being prepared for dispatch.
         </p>
 
         {/* Order details */}
@@ -57,41 +57,64 @@ function OrderSuccessContent() {
           </div>
         </div>
 
-        {/* Pathao Courier Tracking Box */}
-        <div
-          style={{
-            background: "var(--surface-2)",
-            border: "1px solid var(--indigo)",
-            borderRadius: "var(--radius)",
-            padding: "18px 20px",
-            textAlign: "left",
-            marginBottom: 24,
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: 13, fontWeight: 900, color: "var(--indigo)", letterSpacing: 0.5 }}>
-              🚚 PATHAO COURIER TRACKING
-            </span>
-            <span style={{ fontSize: 11, background: "var(--indigo)", color: "#fff", padding: "2px 8px", borderRadius: 4, fontWeight: 800 }}>
-              EXPRESS
-            </span>
-          </div>
-          <p style={{ fontSize: 13, color: "var(--ink)", marginBottom: 4 }}>
-            Consignment ID: <strong>{consignment}</strong>
-          </p>
-          <p style={{ fontSize: 12, color: "var(--sub)", marginBottom: 14 }}>
-            Estimated delivery: <strong>24–48 hours</strong> (Dhaka) / <strong>3–5 days</strong> (Outside Dhaka).
-          </p>
-          <a
-            href={trackingUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-primary btn-full"
-            style={{ textAlign: "center" }}
+        {/* Pathao Courier Tracking Box (only if consignment ID exists) */}
+        {hasConsignment ? (
+          <div
+            style={{
+              background: "var(--surface-2)",
+              border: "1px solid var(--indigo)",
+              borderRadius: "var(--radius)",
+              padding: "18px 20px",
+              textAlign: "left",
+              marginBottom: 24,
+            }}
           >
-            🔍 Track Live on Pathao →
-          </a>
-        </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 13, fontWeight: 900, color: "var(--indigo)", letterSpacing: 0.5 }}>
+                🚚 PATHAO COURIER TRACKING
+              </span>
+              <span style={{ fontSize: 11, background: "var(--indigo)", color: "#fff", padding: "2px 8px", borderRadius: 4, fontWeight: 800 }}>
+                EXPRESS
+              </span>
+            </div>
+            <p style={{ fontSize: 13, color: "var(--ink)", marginBottom: 4 }}>
+              Consignment ID: <strong>{consignment}</strong>
+            </p>
+            <p style={{ fontSize: 12, color: "var(--sub)", marginBottom: 14 }}>
+              Estimated delivery: <strong>24–48 hours</strong> (Dhaka) / <strong>3–5 days</strong> (Outside Dhaka).
+            </p>
+            <a
+              href={trackingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-primary btn-full"
+              style={{ textAlign: "center" }}
+            >
+              🔍 Track Live on Pathao →
+            </a>
+          </div>
+        ) : (
+          <div
+            style={{
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius)",
+              padding: "14px 18px",
+              textAlign: "left",
+              marginBottom: 24,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: 14 }}>📦</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
+                Preparing for Courier Dispatch
+              </span>
+            </div>
+            <p style={{ fontSize: 12, color: "var(--sub)", margin: 0 }}>
+              Your order is being packed. Pathao tracking link will activate once the parcel is handed over.
+            </p>
+          </div>
+        )}
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <Link href="/orders" className="btn btn-outline btn-full btn-lg">

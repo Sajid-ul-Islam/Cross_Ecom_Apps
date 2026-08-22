@@ -104,7 +104,8 @@ export default function OrdersScreen() {
         <View style={styles.ordersList}>
           {orders.map((order) => {
             const currentStepIdx = getStepIndex(order.status);
-            const pathaoId = order.pathaoConsignmentId || `PT-${order.number.replace(/[^0-9]/g, "")}921`;
+            const hasPathao = Boolean(order.pathaoConsignmentId);
+            const pathaoId = order.pathaoConsignmentId;
 
             return (
               <View key={order.id} style={[styles.orderCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -139,7 +140,7 @@ export default function OrdersScreen() {
                   </View>
                 </View>
 
-                {/* Pathao Consignment Bar */}
+                {/* Logistics / Courier Bar */}
                 <View
                   style={{
                     flexDirection: "row",
@@ -155,21 +156,27 @@ export default function OrdersScreen() {
                   }}
                 >
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                    <Truck size={13} color={colors.indigo} />
+                    <Truck size={13} color={hasPathao ? colors.indigo : colors.sub} />
                     <Text style={{ fontSize: 11, fontWeight: "700", color: colors.ink }}>
-                      Pathao: <Text style={{ color: colors.indigo, fontWeight: "800" }}>{pathaoId}</Text>
+                      {hasPathao ? (
+                        <>Pathao: <Text style={{ color: colors.indigo, fontWeight: "800" }}>{pathaoId}</Text></>
+                      ) : (
+                        <Text style={{ color: colors.sub, fontWeight: "600" }}>Delivery: Preparing Dispatch</Text>
+                      )}
                     </Text>
                   </View>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setSelectedOrderForTracking(order);
-                      setTrackingModalVisible(true);
-                    }}
-                  >
-                    <Text style={{ fontSize: 11, fontWeight: "800", color: colors.indigo }}>
-                      Track →
-                    </Text>
-                  </TouchableOpacity>
+                  {hasPathao && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedOrderForTracking(order);
+                        setTrackingModalVisible(true);
+                      }}
+                    >
+                      <Text style={{ fontSize: 11, fontWeight: "800", color: colors.indigo }}>
+                        Track →
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
 
                 {/* Progress Stepper */}

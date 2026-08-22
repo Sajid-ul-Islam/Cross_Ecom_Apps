@@ -2,6 +2,21 @@
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
 
+/** Shared gateway key — sent as x-api-key on every request. */
+const GATEWAY_API_KEY = process.env.NEXT_PUBLIC_GATEWAY_API_KEY || "";
+
+/**
+ * Drop-in replacement for fetch() that always includes the gateway x-api-key
+ * header so no endpoint is accidentally called without authentication.
+ */
+function apiFetch(input: string, init?: RequestInit): Promise<Response> {
+  const headers: Record<string, string> = {
+    ...(init?.headers as Record<string, string>),
+  };
+  if (GATEWAY_API_KEY) headers["x-api-key"] = GATEWAY_API_KEY;
+  return fetch(input, { ...init, headers });
+}
+
 const GUEST_TOKEN_KEY = "deen_web_guest_token";
 
 /**
@@ -25,7 +40,7 @@ async function ensureGuestToken(): Promise<string | null> {
   const existing = getGuestToken();
   if (existing) return existing;
   try {
-    const res = await fetch(`${API_URL}/v1/auth/guest`, {
+    const res = await apiFetch(`${API_URL}/v1/auth/guest`, {
       method: "POST",
     });
     if (!res.ok) return null;
@@ -44,7 +59,7 @@ export async function fetchOrders(phone?: string): Promise<OrderResult[]> {
   try {
     const token = await ensureGuestToken();
     const qs = phone ? `?phone=${encodeURIComponent(phone)}` : "";
-    const res = await fetch(`${API_URL}/v1/deen/orders${qs}`, {
+    const res = await apiFetch(`${API_URL}/v1/deen/orders${qs}`, {
       cache: "no-store",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
@@ -128,7 +143,7 @@ export async function fetchProducts(params?: {
     if (params?.search) qs.set("search", params.search);
     if (params?.sort) qs.set("sort", params.sort);
     if (params?.per_page) qs.set("per_page", String(params.per_page));
-    const res = await fetch(
+    const res = await apiFetch(
       `${API_URL}/v1/deen/products${qs.toString() ? "?" + qs.toString() : ""}`,
       { next: { revalidate: 60 } }
     );
@@ -141,7 +156,7 @@ export async function fetchProducts(params?: {
 
 export async function fetchProduct(id: string): Promise<Product | null> {
   try {
-    const res = await fetch(`${API_URL}/v1/deen/products/${id}`, {
+    const res = await apiFetch(`${API_URL}/v1/deen/products/${id}`, {
       next: { revalidate: 60 },
     });
     if (!res.ok) return null;
@@ -153,7 +168,7 @@ export async function fetchProduct(id: string): Promise<Product | null> {
 
 export async function placeOrder(payload: OrderPayload): Promise<OrderResult> {
   const token = getGuestToken();
-  const res = await fetch(`${API_URL}/v1/deen/orders`, {
+  const res = await apiFetch(`${API_URL}/v1/deen/orders`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -184,3 +199,40 @@ export const CATEGORIES = [
   "ACCESSORIES",
 ] as const;
 export type Category = (typeof CATEGORIES)[number];
+
+/* ----------------------------- payments ---------------------------- */
+
+export async function initiatePayment(
+  orderId: string,
+  paymentMethod: "bkash" | "nagad" | "card" | "online",
+  amount?: number
+): Promise<{ success: boolean; transaction?: any; merchantNumber: string; instruction: string; verificationUrl: string }> {
+  const res = await apiFetch(`${API_URL}/v1/deen/payments/initiate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ orderId, paymentMethod, amount }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { message?: string };
+    throw new Error(err.message || "Payment initiation failed");
+  }
+  return res.json();
+}
+
+export async function verifyPayment(
+  orderId: string,
+  trxId: string,
+  paymentMethod: "bkash" | "nagad" | "card" | "online" = "bkash",
+  senderPhone?: string
+): Promise<{ success: boolean; message: string; order?: OrderResult }> {
+  const res = await apiFetch(`${API_URL}/v1/deen/payments/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ orderId, trxId, paymentMethod, senderPhone }),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { message?: string };
+    throw new Error(err.message || "Payment verification failed");
+  }
+  return res.json();
+}

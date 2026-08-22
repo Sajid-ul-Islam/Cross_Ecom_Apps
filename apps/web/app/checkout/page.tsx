@@ -15,9 +15,9 @@ const DELIVERY_FEES: Record<string, number> = {
 };
 
 const DELIVERY_LABELS: Record<string, string> = {
-  dhaka_standard: "Dhaka Standard (24–48h) · ৳50",
-  outside: "Outside Dhaka (3–5 days) · ৳90",
-  pickup: "Store Pickup (Banani, Dhaka) · FREE",
+  dhaka_standard: "Home Delivery (24–48h) · ৳50",
+  outside: "Home Delivery (Outside Dhaka, 3–5 days) · ৳90",
+  pickup: "Store Pickup (Banani Studio) · FREE",
 };
 
 const PAYMENT_OPTIONS = [
@@ -204,7 +204,7 @@ function CheckoutContent() {
                 >
                   {BD_DISTRICTS.map((d) => (
                     <option key={d.code} value={d.code}>
-                      {d.name} ({d.code}) {d.code === "BD-13" ? "— Inside Dhaka" : "— Outside Dhaka"}
+                      {d.name} ({d.code}) {d.code === "BD-13" ? "— Standard Delivery (৳50)" : "— Regional Shipping (৳90)"}
                     </option>
                   ))}
                 </select>

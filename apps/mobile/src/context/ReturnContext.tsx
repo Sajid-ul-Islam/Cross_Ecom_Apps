@@ -32,7 +32,7 @@ const INITIAL_RETURNS: ReturnExchangeRequest[] = [
     ],
     pickupMethod: "courier_pickup",
     pickupAddress: "House 14, Road 7, Sector 3, Uttara, Dhaka",
-    contactPhone: "01711223344",
+    contactPhone: "01952700500",
     customerName: "Sajid Islam",
     status: "PICKUP_SCHEDULED",
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),

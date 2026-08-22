@@ -342,7 +342,11 @@ export default function ProfileScreen() {
               </View>
 
               <Text style={{ fontSize: 11, color: colors.sub }}>
-                Pathao Consignment: <Text style={{ fontWeight: "700", color: colors.ink }}>{orders[0].pathaoConsignmentId || "PT-" + orders[0].number.replace(/[^0-9]/g, "") + "921"}</Text>
+                {orders[0].pathaoConsignmentId ? (
+                  <>Pathao Consignment: <Text style={{ fontWeight: "700", color: colors.ink }}>{orders[0].pathaoConsignmentId}</Text></>
+                ) : (
+                  <>Delivery Status: <Text style={{ fontWeight: "700", color: colors.ink }}>Preparing Dispatch</Text></>
+                )}
               </Text>
               <Text style={{ fontSize: 11, color: colors.sub }}>
                 Delivery: <Text style={{ fontWeight: "700", color: colors.ink }}>৳{orders[0].delivery}</Text> · Total: <Text style={{ fontWeight: "800", color: colors.indigo }}>{bdt(orders[0].total)}</Text> ({orders[0].payment === "cod" ? "Cash on Delivery" : "Paid"})
@@ -359,7 +363,7 @@ export default function ProfileScreen() {
                 onPress={() => router.push("/(tabs)/orders")}
               >
                 <Text style={{ fontSize: 11, fontWeight: "800", color: "#FFFFFF" }}>
-                  OPEN ORDER &amp; LIVE PATHAO TRACKING →
+                  {orders[0].pathaoConsignmentId ? "OPEN ORDER & LIVE PATHAO TRACKING →" : "VIEW ORDER DETAILS →"}
                 </Text>
               </TouchableOpacity>
             </View>

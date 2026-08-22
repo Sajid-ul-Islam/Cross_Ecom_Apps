@@ -8,14 +8,14 @@ import { useState } from "react";
 const DELIVERY_OPTIONS = [
   {
     id: "dhaka_standard",
-    label: "Dhaka Standard",
+    label: "Home Delivery",
     sub: "24–48 hours",
     fee: 50,
     icon: "🛵",
   },
   {
     id: "outside",
-    label: "Outside Dhaka",
+    label: "Home Delivery (Outside Dhaka)",
     sub: "3–5 business days",
     fee: 90,
     icon: "📦",
