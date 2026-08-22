@@ -15,14 +15,14 @@ export const FREE_TEE_THRESHOLD = 3500;
 export const DELIVERY_OPTIONS: Record<DeliveryOptionKey, DeliveryOption> = {
   dhaka_standard: {
     id: "dhaka_standard",
-    name: "Inside Dhaka (Standard)",
+    name: "Home Delivery",
     sub: "2-3 business days · Regular doorstep courier",
     fee: 50,
     estimatedDays: "2-3 Days",
   },
   dhaka_express: {
     id: "dhaka_express",
-    name: "Dhaka Express (Same-Day / 24h)",
+    name: "Express Home Delivery (Same-Day / 24h)",
     sub: "Within 24 hours · Priority rush delivery in Dhaka",
     fee: 120,
     estimatedDays: "24 Hours",
@@ -30,8 +30,8 @@ export const DELIVERY_OPTIONS: Record<DeliveryOptionKey, DeliveryOption> = {
   },
   outside_standard: {
     id: "outside_standard",
-    name: "Outside Dhaka (All Districts)",
-    sub: "3-5 business days · Steadfast / RedX home delivery",
+    name: "Home Delivery (Outside Dhaka)",
+    sub: "3-5 business days · Steadfast / Pathao home delivery",
     fee: 90,
     estimatedDays: "3-5 Days",
   },

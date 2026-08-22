@@ -14,11 +14,22 @@ export const config = {
   authRateLimit: Number(process.env.AUTH_RATE_LIMIT ?? 20),
   logLevel: (process.env.LOG_LEVEL as "info" | "debug" | "warn" | "error") ?? "info",
   woo: {
-    site: process.env.WOO_SITE ?? "https://deencommerce.bd",
+    site: process.env.WOO_SITE ?? "https://deencommerce.com",
     consumerKey: process.env.WOO_CONSUMER_KEY ?? "",
     consumerSecret: process.env.WOO_CONSUMER_SECRET ?? "",
+  },
+  pathao: {
+    baseUrl: process.env.PATHAO_BASE_URL ?? "https://hermes-api.pathao.com",
+    clientId: process.env.PATHAO_CLIENT_ID ?? "",
+    clientSecret: process.env.PATHAO_CLIENT_SECRET ?? "",
+    username: process.env.PATHAO_USERNAME ?? "",
+    password: process.env.PATHAO_PASSWORD ?? "",
+    storeId: process.env.PATHAO_STORE_ID ?? "",
   },
 };
 
 /** True when live WooCommerce credentials are present. */
 export const wooEnabled = Boolean(config.woo.consumerKey && config.woo.consumerSecret);
+/** True when Pathao credentials are present. */
+export const pathaoEnabled = Boolean(config.pathao.clientId && config.pathao.clientSecret && config.pathao.username && config.pathao.password);
+

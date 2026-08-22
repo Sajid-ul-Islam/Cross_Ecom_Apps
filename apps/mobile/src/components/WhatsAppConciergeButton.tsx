@@ -26,7 +26,7 @@ export const WhatsAppConciergeButton: React.FC<WhatsAppConciergeProps> = ({
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
 
-  const phone = "+8801711223344";
+  const phone = "+8801952700500";
   const defaultMsg = productName
     ? `Hi DEEN Stylist! I need fit & sizing consultation for "${productName}" (${category}).`
     : customText || "Hi DEEN Stylist! I need assistance with custom fit and raw denim care.";
@@ -85,7 +85,7 @@ export const WhatsAppConciergeButton: React.FC<WhatsAppConciergeProps> = ({
             <View style={styles.dialogActions}>
               <TouchableOpacity style={styles.actionCallBtn} onPress={handleDirectCall}>
                 <PhoneCall size={14} color="#FFFFFF" />
-                <Text style={styles.actionCallBtnText}>CALL HOTLINE (01711-223344)</Text>
+                <Text style={styles.actionCallBtnText}>CALL HOTLINE (01952-700500)</Text>
               </TouchableOpacity>
             </View>
           </View>

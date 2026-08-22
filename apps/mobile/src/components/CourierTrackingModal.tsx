@@ -40,13 +40,16 @@ export const CourierTrackingModal: React.FC<CourierTrackingModalProps> = ({
   if (!order) return null;
   const { colors, isDark } = useTheme();
 
-  const trackingId = order.pathaoConsignmentId || `PT-${order.number.replace(/[^0-9]/g, "")}921`;
-  const trackingUrl = order.pathaoTrackingUrl || `https://merchant.pathao.com/tracking?consignment_id=${trackingId}`;
+  const hasConsignment = Boolean(order.pathaoConsignmentId);
+  const trackingId = order.pathaoConsignmentId || "Awaiting Courier Dispatch";
+  const trackingUrl = order.pathaoTrackingUrl || (hasConsignment ? `https://merchant.pathao.com/tracking?consignment_id=${trackingId}` : "");
   const riderName = "Pathao Express Delivery";
   const riderPhone = "+8801877076200";
 
   const handleOpenPathao = () => {
-    Linking.openURL(trackingUrl).catch(() => {});
+    if (trackingUrl) {
+      Linking.openURL(trackingUrl).catch(() => {});
+    }
   };
 
   const handleCallSupport = () => {
