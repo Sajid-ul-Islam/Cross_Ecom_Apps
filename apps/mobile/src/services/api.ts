@@ -37,8 +37,8 @@ export const DELIVERY_OPTIONS: Record<DeliveryOptionKey, DeliveryOption> = {
   },
   store_pickup: {
     id: "store_pickup",
-    name: "Store Pickup (Banani Studio)",
-    sub: "Ready within 2 hours · Free collection from outlet",
+    name: "Store Pickup (Mirpur 12 Outlet)",
+    sub: "Ready within 2 hours · Free collection from store",
     fee: 0,
     estimatedDays: "Ready in 2h",
     badge: "FREE",

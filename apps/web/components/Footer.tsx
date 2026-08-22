@@ -74,11 +74,12 @@ export default function Footer() {
             <p className="footer__col-title">Contact</p>
             <ul className="footer__links">
               <li style={{ color: "var(--sub)", fontSize: 13 }}>
-                📍 Plot 68, Kemal Ataturk Ave,<br />Banani, Dhaka 1213
+                📍 Ramzannesa Super Market, Mirpur 12, Dhaka 1216<br />
+                <span style={{ fontSize: 11, color: "var(--brand)" }}>Outlets: Mirpur 12 · Wari · Cumilla · Sylhet</span>
               </li>
               <li style={{ marginTop: 8 }}>
-                <a href="tel:+8801877076200" style={{ fontSize: 13 }}>
-                  📞 +880 1877-076200
+                <a href="tel:+8801952700500" style={{ fontSize: 13 }}>
+                  📞 +880 1952-700500
                 </a>
               </li>
               <li>

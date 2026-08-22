@@ -113,11 +113,11 @@ export const DenimCareGuideModal: React.FC<DenimCareGuideModalProps> = ({ visibl
                 </View>
                 <View>
                   <Text style={styles.chapterTitle}>CHAINSTITCH HEMMING &amp; REPAIRS</Text>
-                  <Text style={styles.chapterSub}>Banani Flagship Studio Craft Services</Text>
+                  <Text style={styles.chapterSub}>DEEN Outlet Craft & Repair Services</Text>
                 </View>
               </View>
               <Text style={styles.chapterBody}>
-                Need your selvedge inseam hemmed with authentic vintage Union Special chainstitching? Drop by our Banani Studio for complimentary chainstitch hemming and crotch blow-out repairs.
+                Need your selvedge inseam hemmed with authentic vintage chainstitching? Drop by our Mirpur 12 Studio or physical outlets for complimentary chainstitch hemming and crotch blow-out repairs.
               </Text>
             </View>
           </ScrollView>

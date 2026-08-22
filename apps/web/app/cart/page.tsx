@@ -23,7 +23,7 @@ const DELIVERY_OPTIONS = [
   {
     id: "pickup",
     label: "Store Pickup",
-    sub: "Banani, Dhaka — Same day",
+    sub: "Mirpur 12 Outlet — Ready in 2h",
     fee: 0,
     icon: "🏪",
   },
