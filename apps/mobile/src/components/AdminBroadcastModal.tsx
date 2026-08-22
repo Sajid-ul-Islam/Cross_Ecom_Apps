@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -26,14 +26,15 @@ import { Colors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useNotifications } from "../context/NotificationContext";
 import { BroadcastAudience, NotificationType } from "../types";
+import { fetchPushStatsAPI } from "../services/gateway";
 
 const { width, height } = Dimensions.get("window");
 
 const AUDIENCES: { key: BroadcastAudience; label: string; count: string }[] = [
-  { key: "ALL", label: "All Customers", count: "1,420 Shoppers" },
-  { key: "REGISTERED", label: "VIP Registered Members", count: "640 Members" },
-  { key: "GUEST", label: "Guest Shoppers", count: "780 Visitors" },
-  { key: "DHAKA_ONLY", label: "Dhaka Express Region", count: "950 Shoppers" },
+  { key: "ALL", label: "All Customers", count: "All Active Devices" },
+  { key: "REGISTERED", label: "VIP Registered Members", count: "Verified Shoppers" },
+  { key: "GUEST", label: "Guest Shoppers", count: "Recent Visitors" },
+  { key: "DHAKA_ONLY", label: "Dhaka Express Region", count: "Dhaka Metro Hub" },
 ];
 
 const NOTIF_TYPES: { key: NotificationType; label: string; badgeColor: string }[] = [
@@ -49,7 +50,7 @@ interface AdminBroadcastModalProps {
 }
 
 export const AdminBroadcastModal: React.FC<AdminBroadcastModalProps> = ({ visible, onClose }) => {
-  const { broadcasts, sendBroadcast } = useNotifications();
+  const { broadcasts, sendBroadcast, refreshBroadcasts } = useNotifications();
   const { colors, isDark } = useTheme();
 
   const [activeTab, setActiveTab] = useState<"compose" | "history">("compose");
@@ -64,6 +65,16 @@ export const AdminBroadcastModal: React.FC<AdminBroadcastModalProps> = ({ visibl
   const [actionLabel, setActionLabel] = useState("Shop Selvedge Drop");
   const [sending, setSending] = useState(false);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
+  const [pushStats, setPushStats] = useState<{ totalDevices?: number; byArea?: { dhaka: number; outsideDhaka: number } } | null>(null);
+
+  useEffect(() => {
+    if (visible) {
+      void refreshBroadcasts();
+      void fetchPushStatsAPI().then((st) => {
+        if (st?.success) setPushStats(st);
+      });
+    }
+  }, [visible]);
 
   const handleSend = async () => {
     if (!title.trim() || !body.trim()) {
@@ -84,7 +95,7 @@ export const AdminBroadcastModal: React.FC<AdminBroadcastModalProps> = ({ visibl
         sentBy: "Admin",
       });
 
-      setSuccessNotice(`🎉 Broadcast dispatched to ${bc.recipientCount?.toLocaleString()} shoppers!`);
+      setSuccessNotice(`🎉 Push broadcast dispatched to ${bc.recipientCount?.toLocaleString()} shoppers!`);
       setTimeout(() => {
         setSuccessNotice(null);
         setActiveTab("history");
@@ -95,6 +106,7 @@ export const AdminBroadcastModal: React.FC<AdminBroadcastModalProps> = ({ visibl
       setSending(false);
     }
   };
+
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -147,6 +159,21 @@ export const AdminBroadcastModal: React.FC<AdminBroadcastModalProps> = ({ visibl
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
             {activeTab === "compose" ? (
               <>
+                {/* Live Push Network Status */}
+                <View style={[styles.networkStatusCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <View style={styles.networkStatusLeft}>
+                    <View style={[styles.liveDot, { backgroundColor: colors.emerald }]} />
+                    <View>
+                      <Text style={[styles.networkStatusTitle, { color: colors.ink }]}>EXPO PUSH NETWORK ACTIVE</Text>
+                      <Text style={[styles.networkStatusSub, { color: colors.sub }]}>
+                        {pushStats?.totalDevices
+                          ? `${pushStats.totalDevices} registered device(s) ready for instant push`
+                          : "Live device push delivery engine active"}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
                 {/* 1. Target Audience */}
                 <View style={styles.section}>
                   <Text style={styles.sectionLabel}>1. SELECT TARGET AUDIENCE</Text>
@@ -700,5 +727,33 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
     color: Colors.ink,
+  },
+  networkStatusCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  networkStatusLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  liveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  networkStatusTitle: {
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+  },
+  networkStatusSub: {
+    fontSize: 11,
+    marginTop: 1,
   },
 });

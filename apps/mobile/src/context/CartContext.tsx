@@ -84,11 +84,33 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, 0);
 
   const totalItems = cart.reduce((acc, item) => acc + item.qty, 0);
-  const freeTeeEligible = subtotal >= FREE_TEE_THRESHOLD;
-  const freeTeeGap = Math.max(0, FREE_TEE_THRESHOLD - subtotal);
 
-  const getDeliveryFee = (area: DeliveryArea) => DELIVERY_FEES[area] ?? 70;
-  const calculateTotal = (area: DeliveryArea) => subtotal + getDeliveryFee(area);
+  // Cashback campaign calculation:
+  // - ৳500 cashback on ৳2,500+
+  // - ৳700 cashback on ৳3,000+
+  let cashbackAmount = 0;
+  let cashbackTier = 0;
+  let cashbackGap = 0;
+
+  if (subtotal >= 3000) {
+    cashbackAmount = 700;
+    cashbackTier = 2;
+    cashbackGap = 0;
+  } else if (subtotal >= 2500) {
+    cashbackAmount = 500;
+    cashbackTier = 1;
+    cashbackGap = 3000 - subtotal; // to reach ৳700 tier
+  } else {
+    cashbackAmount = 0;
+    cashbackTier = 0;
+    cashbackGap = 2500 - subtotal; // to reach ৳500 tier
+  }
+
+  const freeTeeEligible = cashbackAmount > 0;
+  const freeTeeGap = cashbackGap;
+
+  const getDeliveryFee = (area: DeliveryArea) => DELIVERY_FEES[area] ?? 50;
+  const calculateTotal = (area: DeliveryArea) => Math.max(0, subtotal - cashbackAmount) + getDeliveryFee(area);
 
   return (
     <CartContext.Provider
@@ -100,11 +122,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clearCart,
         subtotal,
         totalItems,
+        cashbackAmount,
+        cashbackTier,
+        cashbackGap,
         freeTeeEligible,
         freeTeeGap,
         getDeliveryFee,
         calculateTotal,
-      }}
+      } as any}
     >
       {children}
     </CartContext.Provider>

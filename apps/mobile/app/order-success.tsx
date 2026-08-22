@@ -10,6 +10,7 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CheckCircle2, Package, ArrowRight, Home, PhoneCall } from "../src/components/Icons";
+import { LottieAnimation } from "../src/components/LottieAnimation";
 import { Colors } from "../src/theme/colors";
 import { bdt, lookupCustomer, registerCustomer } from "../src/services/gateway";
 
@@ -27,9 +28,9 @@ export default function OrderSuccessScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Success Icon */}
+        {/* Animated Lottie Success Icon */}
         <View style={styles.iconCircle}>
-          <CheckCircle2 size={48} color={Colors.emerald} />
+          <LottieAnimation type="success" size={84} loop={false} />
         </View>
 
         <Text style={styles.title}>ORDER PLACED SUCCESSFULLY!</Text>

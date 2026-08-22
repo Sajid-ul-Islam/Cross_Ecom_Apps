@@ -39,7 +39,7 @@
         "origin": false
       },
       "gatewayUrl": "https://cross-ecom-apps.onrender.com",
-      "gatewayApiKey": "",
+      "gatewayApiKey": "fa002b126085801f23d9375d94409752503639919e39690c42877fc58c624973",
       "eas": {
         "projectId": "45da9018-181d-4415-a611-1cb971f61cca"
       }

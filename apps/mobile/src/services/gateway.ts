@@ -367,11 +367,8 @@ export async function reportBug(report: BugReport): Promise<void> {
       device: report.device ?? null,
       extra: report.extra ?? null,
     });
-    await fetch(`${GATEWAY_URL}/v1/deen/bugs`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body,
-    });
+    // Use request() so x-api-key is injected automatically (same as every other call).
+    await request<unknown>("/v1/deen/bugs", { method: "POST", body }, 5000).catch(() => {});
   } catch {
     /* swallow — bug reporting must never crash the app */
   }
@@ -397,10 +394,48 @@ export async function saveProfile(profile: UserProfile): Promise<void> {
 
 /* ----------------------- broadcasts & push marketing ---------------- */
 
+export async function registerPushTokenAPI(
+  token: string,
+  details?: { phone?: string; area?: string; device?: { platform?: string; osVersion?: string; model?: string } }
+): Promise<boolean> {
+  if (!token) return false;
+  try {
+    const res = await request<{ success: boolean }>("/v1/deen/push/register-token", {
+      method: "POST",
+      body: JSON.stringify({
+        token,
+        phone: details?.phone,
+        area: details?.area,
+        device: details?.device,
+      }),
+    }, 5000);
+    return Boolean(res?.success);
+  } catch {
+    return false;
+  }
+}
+
+export async function fetchPushStatsAPI(): Promise<any> {
+  const token = await getAuthToken();
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  try {
+    return await request<any>("/v1/deen/push/stats", { headers }, 5000);
+  } catch {
+    return null;
+  }
+}
+
 export async function sendBroadcastAPI(payload: any): Promise<any> {
+  const token = await getAuthToken();
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
   try {
     const res = await request<any>("/v1/deen/broadcasts", {
       method: "POST",
+      headers,
       body: JSON.stringify(payload),
     });
     return res;
@@ -421,6 +456,7 @@ export async function fetchBroadcastsAPI(): Promise<any[]> {
   } catch {}
   return [];
 }
+
 
 
 /**
@@ -623,3 +659,42 @@ export async function logout(): Promise<void> {
 
 const AUTH_TOKEN_KEY = "deen_auth_token";
 const AUTH_USER_KEY = "deen_auth_user";
+
+/* ----------------------------- payments ---------------------------- */
+
+export interface PaymentInitiationResult {
+  success: boolean;
+  transaction?: any;
+  merchantNumber: string;
+  instruction: string;
+  verificationUrl: string;
+}
+
+export async function initiatePaymentAPI(
+  orderId: string,
+  paymentMethod: "bkash" | "nagad" | "card" | "online",
+  amount?: number
+): Promise<PaymentInitiationResult> {
+  return request<PaymentInitiationResult>("/v1/deen/payments/initiate", {
+    method: "POST",
+    body: JSON.stringify({ orderId, paymentMethod, amount }),
+  }, 8000);
+}
+
+export async function verifyPaymentAPI(
+  orderId: string,
+  trxId: string,
+  paymentMethod: "bkash" | "nagad" | "card" | "online" = "bkash",
+  senderPhone?: string
+): Promise<{ success: boolean; message: string; order?: Order }> {
+  return request<{ success: boolean; message: string; order?: Order }>("/v1/deen/payments/verify", {
+    method: "POST",
+    body: JSON.stringify({ orderId, trxId, paymentMethod, senderPhone }),
+  }, 8000);
+}
+
+export async function checkPaymentStatusAPI(
+  orderId: string
+): Promise<{ success: boolean; paymentStatus: string; transactionId?: string; status: string }> {
+  return request<any>(`/v1/deen/payments/${orderId}`, undefined, 5000);
+}

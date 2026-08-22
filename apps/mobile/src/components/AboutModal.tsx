@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  Linking,
 } from "react-native";
 import { X, Sparkles, Store, ShieldCheck, Heart, MapPin, PhoneCall, Truck } from "./Icons";
 import { Colors } from "../theme/colors";
@@ -85,17 +86,56 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>
                 <PhoneCall size={16} color={Colors.indigo} />
-                <Text style={styles.sectionTitle}>CONTACT US</Text>
+                <Text style={styles.sectionTitle}>CONTACT &amp; COMMUNITY</Text>
               </View>
               <Text style={styles.sectionBody}>
-                Need help? Our customer support is available to assist you.
+                Need help or styling advice? Connect directly with us:
               </Text>
               <Text style={[styles.sectionBody, { marginTop: 8, fontWeight: "600", color: colors.ink }]}>
-                IVR: 09617-700500 (10 AM to 6 PM)
+                WhatsApp &amp; Hotline: 01952-700500
               </Text>
               <Text style={[styles.sectionBody, { marginTop: 4, fontWeight: "600", color: colors.ink }]}>
-                WhatsApp: 01952-700500
+                Facebook: facebook.com/deencommerce
               </Text>
+              <Text style={[styles.sectionBody, { marginTop: 4, fontWeight: "600", color: colors.ink }]}>
+                Instagram: instagram.com/deencommerce
+              </Text>
+
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#1877F2",
+                    paddingVertical: 10,
+                    paddingHorizontal: 8,
+                    borderRadius: 8,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  onPress={() => Linking.openURL("https://www.facebook.com/deencommerce")}
+                >
+                  <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 11 }}>
+                    FACEBOOK →
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#E1306C",
+                    paddingVertical: 10,
+                    paddingHorizontal: 8,
+                    borderRadius: 8,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                  onPress={() => Linking.openURL("https://www.instagram.com/deencommerce")}
+                >
+                  <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 11 }}>
+                    INSTAGRAM →
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Outlets */}
