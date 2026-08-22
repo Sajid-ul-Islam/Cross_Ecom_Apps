@@ -151,7 +151,7 @@ export const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
 
             {savedUserSize && (
               <View style={styles.savedMatchBadge}>
-                <Sparkles size={13} color={Colors.indigo} />
+                <Sparkles size={13} color={colors.indigo} />
                 <Text style={styles.savedMatchText}>Saved Size: {savedUserSize}</Text>
               </View>
             )}
@@ -246,7 +246,7 @@ export const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
             {/* How to Measure Guidelines */}
             <View style={styles.guideCard}>
               <View style={styles.guideHeader}>
-                <Info size={15} color={Colors.indigo} />
+                <Info size={15} color={colors.indigo} />
                 <Text style={styles.guideTitle}>HOW TO MEASURE ACCURATELY</Text>
               </View>
 
@@ -289,7 +289,7 @@ export const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
 
             {/* Hassle Free Exchange Promise */}
             <View style={styles.policyCard}>
-              <CheckCircle2 size={16} color={Colors.emerald} />
+              <CheckCircle2 size={16} color={colors.emerald} />
               <Text style={styles.policyText}>
                 Size didn't fit perfectly? Enjoy our <Text style={styles.bold}>7-Day Free Size Exchange</Text> across Bangladesh.
               </Text>

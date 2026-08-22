@@ -171,8 +171,8 @@ export default function CategoryLandingScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={Colors.indigo}
-            colors={[Colors.indigo]}
+            tintColor={colors.indigo}
+            colors={[colors.indigo]}
           />
         }
         ListHeaderComponent={
@@ -212,7 +212,7 @@ export default function CategoryLandingScreen() {
                 activeOpacity={0.8}
                 onPress={() => setSizeGuideVisible(true)}
               >
-                <Ruler size={15} color={Colors.indigo} />
+                <Ruler size={15} color={colors.indigo} />
                 <Text style={styles.sizeGuideActionText}>
                   VIEW {categoryInfo.name} SIZE CHART &amp; FIT GUIDE
                 </Text>
@@ -298,7 +298,7 @@ export default function CategoryLandingScreen() {
         ListEmptyComponent={
           loading ? (
             <View style={styles.emptyWrap}>
-              <ActivityIndicator size="large" color={Colors.indigo} />
+              <ActivityIndicator size="large" color={colors.indigo} />
               <Text style={styles.emptyText}>Loading collection...</Text>
             </View>
           ) : (

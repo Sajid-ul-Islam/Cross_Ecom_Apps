@@ -85,7 +85,7 @@ export const WishlistModal: React.FC<WishlistModalProps> = ({ visible, onClose }
             {wishlist.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <View style={styles.emptyIconCircle}>
-                  <Heart size={36} color={Colors.faint} />
+                  <Heart size={36} color={colors.faint} />
                 </View>
                 <Text style={styles.emptyTitle}>Your Wishlist is Empty</Text>
                 <Text style={styles.emptySub}>
@@ -107,7 +107,7 @@ export const WishlistModal: React.FC<WishlistModalProps> = ({ visible, onClose }
                 <View style={styles.actionsBar}>
                   <Text style={styles.itemsCountText}>{wishlist.length} ITEMS SAVED</Text>
                   <TouchableOpacity style={styles.moveAllBtn} onPress={handleMoveAllToBag}>
-                    <ShoppingBag size={13} color={Colors.indigo} />
+                    <ShoppingBag size={13} color={colors.indigo} />
                     <Text style={styles.moveAllText}>MOVE ALL TO BAG</Text>
                   </TouchableOpacity>
                 </View>
@@ -163,7 +163,7 @@ export const WishlistModal: React.FC<WishlistModalProps> = ({ visible, onClose }
                             onPress={() => removeFromWishlist(item.id)}
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                           >
-                            <Trash2 size={15} color={Colors.sub} />
+                            <Trash2 size={15} color={colors.sub} />
                           </TouchableOpacity>
                         </View>
                       </View>

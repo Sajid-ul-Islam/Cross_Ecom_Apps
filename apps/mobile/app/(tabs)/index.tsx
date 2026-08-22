@@ -17,7 +17,7 @@ import { Header } from "../../src/components/Header";
 import { FreeTeeBanner, DeliveryNoticeBanner } from "../../src/components/Banner";
 import { ProductCard } from "../../src/components/ProductCard";
 import { Sparkline, CategoryBars, Donut, KpiTile } from "../../src/components/Charts";
-import { Colors, ThemeColors } from "../../src/theme/colors";
+import { ThemeColors } from "../../src/theme/colors";
 import { useTheme } from "../../src/context/ThemeContext";
 import { fetchProducts, fetchStats, CATEGORIES, bdt, useCatalogRefreshOnFocus } from "../../src/services/gateway";
 import { Product, DeenCategory, Stats } from "../../src/types";
@@ -90,8 +90,8 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={Colors.indigo}
-            colors={[Colors.indigo]}
+            tintColor={colors.indigo}
+            colors={[colors.indigo]}
           />
         }
       >
@@ -135,11 +135,11 @@ export default function HomeScreen() {
           <View style={styles.insightsCard}>
             <View style={styles.insightsHeader}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <TrendingUp size={16} color={Colors.indigo} />
+                <TrendingUp size={16} color={colors.indigo} />
                 <Text style={styles.insightsTitle}>STORE INSIGHTS · ADMIN</Text>
               </View>
-              <View style={[styles.modePill, { backgroundColor: stats.mode === "live" ? Colors.emeraldLight : Colors.amberLight }]}>
-                <Text style={[styles.modePillText, { color: stats.mode === "live" ? Colors.emerald : Colors.amber }]}>
+              <View style={[styles.modePill, { backgroundColor: stats.mode === "live" ? colors.emeraldLight : colors.amberLight }]}>
+                <Text style={[styles.modePillText, { color: stats.mode === "live" ? colors.emerald : colors.amber }]}>
                   {stats.mode === "live" ? "LIVE · deencommerce.com" : "SEED"}
                 </Text>
               </View>
@@ -147,9 +147,9 @@ export default function HomeScreen() {
 
             {/* KPI row */}
             <View style={styles.kpiRow}>
-              <KpiTile label="Products" value={String(stats.store.totalProducts)} sub="in catalog" accent={Colors.indigo} />
-              <KpiTile label="On Sale" value={String(stats.store.onSale)} sub={`${Math.round((stats.store.onSale / (stats.store.totalProducts || 1)) * 100)}% off`} accent={Colors.crimson} />
-              <KpiTile label="Avg Price" value={bdt(stats.store.avgPrice)} sub="per item" accent={Colors.denimStitch} />
+              <KpiTile label="Products" value={String(stats.store.totalProducts)} sub="in catalog" accent={colors.indigo} />
+              <KpiTile label="On Sale" value={String(stats.store.onSale)} sub={`${Math.round((stats.store.onSale / (stats.store.totalProducts || 1)) * 100)}% off`} accent={colors.crimson} />
+              <KpiTile label="Avg Price" value={bdt(stats.store.avgPrice)} sub="per item" accent={colors.denimStitch} />
             </View>
 
             {/* Sales sparkline */}
@@ -158,7 +158,7 @@ export default function HomeScreen() {
                 <Text style={styles.blockTitle}>SALES · {stats.sales.period}</Text>
                 <Text style={styles.blockValue}>{bdt(stats.sales.totalSales)}</Text>
               </View>
-              <Sparkline data={salesSeries} width={width - 64} height={56} color={Colors.indigo} />
+              <Sparkline data={salesSeries} width={width - 64} height={56} color={colors.indigo} />
               <View style={styles.blockFooter}>
                 <Text style={styles.footText}>📦 {stats.sales.orders} orders</Text>
                 <Text style={styles.footText}>👥 {stats.sales.newCustomers} visitors</Text>
@@ -179,7 +179,7 @@ export default function HomeScreen() {
                   value={stats.store.totalProducts - stats.store.outOfStock}
                   total={stats.store.totalProducts}
                   label="In Stock"
-                  color={Colors.emerald}
+                  color={colors.emerald}
                 />
               </View>
             </View>
@@ -190,8 +190,8 @@ export default function HomeScreen() {
                 <Text style={styles.blockTitle}>TOP DEALS THIS MONTH</Text>
                 {stats.topSellers.slice(0, 3).map((t, i) => (
                   <View key={i} style={styles.topRow}>
-                    <View style={[styles.topRank, { backgroundColor: i === 0 ? Colors.denimStitch : Colors.cardSecondary }]}>
-                      <Text style={[styles.topRankText, { color: i === 0 ? "#fff" : Colors.sub }]}>{i + 1}</Text>
+                    <View style={[styles.topRank, { backgroundColor: i === 0 ? colors.denimStitch : colors.cardSecondary }]}>
+                      <Text style={[styles.topRankText, { color: i === 0 ? "#fff" : colors.sub }]}>{i + 1}</Text>
                     </View>
                     <Text style={styles.topName} numberOfLines={1}>{t.name}</Text>
                   </View>
@@ -337,19 +337,19 @@ export default function HomeScreen() {
         {/* Brand Authenticity Footer Card */}
         <View style={styles.brandTrustCard}>
           <View style={styles.trustItem}>
-            <Award size={20} color={Colors.indigo} />
+            <Award size={20} color={colors.indigo} />
             <Text style={styles.trustTitle}>Authentic Quality</Text>
             <Text style={styles.trustDesc}>Pre-shrunk premium indigo textiles with guaranteed dye-fastness.</Text>
           </View>
           <View style={styles.trustDivider} />
           <View style={styles.trustItem}>
-            <ShieldCheck size={20} color={Colors.emerald} />
+            <ShieldCheck size={20} color={colors.emerald} />
             <Text style={styles.trustTitle}>e-CAB Registered</Text>
             <Text style={styles.trustDesc}>Trusted e-commerce brand with official registration &amp; COD nationwide.</Text>
           </View>
           <View style={styles.trustDivider} />
           <View style={styles.trustItem}>
-            <MapPin size={20} color={Colors.crimson} />
+            <MapPin size={20} color={colors.crimson} />
             <Text style={styles.trustTitle}>Flagship Stores</Text>
             <Text style={styles.trustDesc}>Mirpur 12 (Dhaka) · Wari (Dhaka) · Cumilla Outlets</Text>
           </View>
