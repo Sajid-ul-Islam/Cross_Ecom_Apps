@@ -15,6 +15,91 @@ import {
 const orderSeq = { n: 1041 };
 const orders: any[] = [];
 
+/**
+ * Canonical WooCommerce Bangladesh state codes (BD-01 .. BD-64).
+ * The live site stores orders with `state: "BD-11"` etc., NOT the district
+ * name. We must mirror that exactly so app-placed orders are indistinguishable
+ * from website-placed ones.
+ */
+export const BD_STATES: { code: string; name: string }[] = [
+  { code: "BD-01", name: "Bagerhat" },
+  { code: "BD-02", name: "Bandarban" },
+  { code: "BD-03", name: "Barguna" },
+  { code: "BD-04", name: "Barishal" },
+  { code: "BD-05", name: "Bhola" },
+  { code: "BD-06", name: "Bogura" },
+  { code: "BD-07", name: "Brahmanbaria" },
+  { code: "BD-08", name: "Chandpur" },
+  { code: "BD-09", name: "Chattogram" },
+  { code: "BD-10", name: "Chuadanga" },
+  { code: "BD-11", name: "Cox's Bazar" },
+  { code: "BD-12", name: "Cumilla" },
+  { code: "BD-13", name: "Dhaka" },
+  { code: "BD-14", name: "Dinajpur" },
+  { code: "BD-15", name: "Faridpur" },
+  { code: "BD-16", name: "Feni" },
+  { code: "BD-17", name: "Gaibandha" },
+  { code: "BD-18", name: "Gazipur" },
+  { code: "BD-19", name: "Gopalganj" },
+  { code: "BD-20", name: "Habiganj" },
+  { code: "BD-21", name: "Jamalpur" },
+  { code: "BD-22", name: "Jashore" },
+  { code: "BD-23", name: "Jhalokati" },
+  { code: "BD-24", name: "Jhenaidah" },
+  { code: "BD-25", name: "Joypurhat" },
+  { code: "BD-26", name: "Khagrachhari" },
+  { code: "BD-27", name: "Khulna" },
+  { code: "BD-28", name: "Kishoreganj" },
+  { code: "BD-29", name: "Kurigram" },
+  { code: "BD-30", name: "Kushtia" },
+  { code: "BD-31", name: "Lakshmipur" },
+  { code: "BD-32", name: "Lalmonirhat" },
+  { code: "BD-33", name: "Madaripur" },
+  { code: "BD-34", name: "Magura" },
+  { code: "BD-35", name: "Manikganj" },
+  { code: "BD-36", name: "Meherpur" },
+  { code: "BD-37", name: "Moulvibazar" },
+  { code: "BD-38", name: "Munshiganj" },
+  { code: "BD-39", name: "Mymensingh" },
+  { code: "BD-40", name: "Naogaon" },
+  { code: "BD-41", name: "Narail" },
+  { code: "BD-42", name: "Narsingdi" },
+  { code: "BD-43", name: "Natore" },
+  { code: "BD-44", name: "Nawabganj (Chapai)" },
+  { code: "BD-45", name: "Netrokona" },
+  { code: "BD-46", name: "Nilphamari" },
+  { code: "BD-47", name: "Noakhali" },
+  { code: "BD-48", name: "Pabna" },
+  { code: "BD-49", name: "Panchagarh" },
+  { code: "BD-50", name: "Patuakhali" },
+  { code: "BD-51", name: "Pirojpur" },
+  { code: "BD-52", name: "Rajbari" },
+  { code: "BD-53", name: "Rajshahi" },
+  { code: "BD-54", name: "Rangamati" },
+  { code: "BD-55", name: "Rangpur" },
+  { code: "BD-56", name: "Satkhira" },
+  { code: "BD-57", name: "Shariatpur" },
+  { code: "BD-58", name: "Sherpur" },
+  { code: "BD-59", name: "Sirajganj" },
+  { code: "BD-60", name: "Sunamganj" },
+  { code: "BD-61", name: "Sylhet" },
+  { code: "BD-62", name: "Tangail" },
+  { code: "BD-63", name: "Thakurgaon" },
+];
+
+const BD_STATE_BY_NAME: Record<string, string> = Object.fromEntries(
+  BD_STATES.map((s) => [s.name.toLowerCase(), s.code])
+);
+
+/** Normalize a district input to the canonical WooCommerce `BD-XX` state code. */
+export function normalizeState(input?: string): string {
+  if (!input) return "BD-13"; // Dhaka default
+  const v = String(input).trim();
+  if (/^BD-\d{2}$/i.test(v)) return v.toUpperCase();
+  const lower = v.toLowerCase().replace(/\s+/g, " ");
+  return BD_STATE_BY_NAME[lower] ?? "BD-13";
+}
+
 async function loadOrders(): Promise<void> {
   try {
     const raw = await fs.readFile(ORDERS_FILE, "utf-8");
@@ -269,74 +354,9 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   });
 
   /* ---- bangladesh 64 districts for woocommerce states ---- */
+  /* ---- bangladesh 64 districts for woocommerce states (matches live site BD-XX codes) ---- */
   app.get("/v1/deen/districts", async (_req, reply) => {
-    return reply.send([
-      { code: "BD-13", name: "Dhaka" },
-      { code: "BD-10", name: "Chattogram" },
-      { code: "BD-18", name: "Gazipur" },
-      { code: "BD-40", name: "Narayanganj" },
-      { code: "BD-60", name: "Sylhet" },
-      { code: "BD-54", name: "Rajshahi" },
-      { code: "BD-27", name: "Khulna" },
-      { code: "BD-06", name: "Barishal" },
-      { code: "BD-55", name: "Rangpur" },
-      { code: "BD-34", name: "Mymensingh" },
-      { code: "BD-08", name: "Cumilla" },
-      { code: "BD-11", name: "Cox's Bazar" },
-      { code: "BD-03", name: "Bogura" },
-      { code: "BD-05", name: "Bagerhat" },
-      { code: "BD-01", name: "Bandarban" },
-      { code: "BD-02", name: "Barguna" },
-      { code: "BD-07", name: "Bhola" },
-      { code: "BD-04", name: "Brahmanbaria" },
-      { code: "BD-09", name: "Chandpur" },
-      { code: "BD-12", name: "Chuadanga" },
-      { code: "BD-14", name: "Dinajpur" },
-      { code: "BD-15", name: "Faridpur" },
-      { code: "BD-16", name: "Feni" },
-      { code: "BD-19", name: "Gaibandha" },
-      { code: "BD-17", name: "Gopalganj" },
-      { code: "BD-20", name: "Habiganj" },
-      { code: "BD-21", name: "Jamalpur" },
-      { code: "BD-22", name: "Jashore" },
-      { code: "BD-25", name: "Jhalokati" },
-      { code: "BD-23", name: "Jhenaidah" },
-      { code: "BD-24", name: "Joypurhat" },
-      { code: "BD-29", name: "Khagrachhari" },
-      { code: "BD-26", name: "Kishoreganj" },
-      { code: "BD-28", name: "Kurigram" },
-      { code: "BD-30", name: "Kushtia" },
-      { code: "BD-31", name: "Lakshmipur" },
-      { code: "BD-32", name: "Lalmonirhat" },
-      { code: "BD-36", name: "Madaripur" },
-      { code: "BD-37", name: "Magura" },
-      { code: "BD-33", name: "Manikganj" },
-      { code: "BD-39", name: "Meherpur" },
-      { code: "BD-38", name: "Moulvibazar" },
-      { code: "BD-35", name: "Munshiganj" },
-      { code: "BD-48", name: "Naogaon" },
-      { code: "BD-43", name: "Narail" },
-      { code: "BD-42", name: "Narsingdi" },
-      { code: "BD-44", name: "Natore" },
-      { code: "BD-45", name: "Nawabganj (Chapai)" },
-      { code: "BD-41", name: "Netrokona" },
-      { code: "BD-46", name: "Nilphamari" },
-      { code: "BD-47", name: "Noakhali" },
-      { code: "BD-49", name: "Pabna" },
-      { code: "BD-52", name: "Panchagarh" },
-      { code: "BD-51", name: "Patuakhali" },
-      { code: "BD-50", name: "Pirojpur" },
-      { code: "BD-53", name: "Rajbari" },
-      { code: "BD-56", name: "Rangamati" },
-      { code: "BD-58", name: "Satkhira" },
-      { code: "BD-62", name: "Shariatpur" },
-      { code: "BD-57", name: "Sherpur" },
-      { code: "BD-59", name: "Sirajganj" },
-      { code: "BD-61", name: "Sunamganj" },
-      { code: "BD-60", name: "Sylhet" },
-      { code: "BD-63", name: "Tangail" },
-      { code: "BD-64", name: "Thakurgaon" },
-    ]);
+    return reply.send(BD_STATES);
   });
 
   /* ---- create order (public) ---- */
@@ -389,7 +409,9 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const paymentStatus = payment === "cod" ? "Pending (Cash on Delivery)" : "Paid";
 
     const resolvedCity = String(city || (area === "outside" ? "Chittagong" : "Dhaka")).trim();
-    const resolvedState = String(state || district || (area === "outside" ? "BD-10" : "BD-13")).trim();
+    // CRITICAL: the live site stores Woo state as "BD-XX" codes, never the district
+    // name. Normalize whatever the app sends (name or code) to the canonical BD-XX.
+    const resolvedState = normalizeState(state || district || (area === "outside" ? "BD-10" : "BD-13"));
     const resolvedPostcode = String(postcode || "1200").trim();
 
     let wooId: number | undefined;
@@ -499,11 +521,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       }
     }
     // Remember this phone so returning guests can be recognized & prompted to register.
-    // Skip demo accounts (fixed phones) so we don't pollute the customer directory.
-    const isDemoPhone = ["01712345678", "01899776655", "01711223344"].includes(digits);
-    if (!isDemoPhone) {
-      recordGuestPurchase(digits, String(name).trim());
-    }
+    recordGuestPurchase(digits, String(name).trim());
     orders.unshift(order);
     saveOrders();
     return reply.code(201).send(order);
