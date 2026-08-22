@@ -774,7 +774,6 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       const meRes = await fetch(`${base}/wp-json/wp/v2/users/me`, {
         headers: {
           Cookie: cookieVal,
-          Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`,
         },
       });
       if (!meRes.ok) return null;
