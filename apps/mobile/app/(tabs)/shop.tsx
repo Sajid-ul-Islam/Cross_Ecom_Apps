@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -12,23 +12,15 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Search, X, SlidersHorizontal, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowRight, Layers } from "../../src/components/Icons";
+import { Search, X, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowRight } from "../../src/components/Icons";
 import { Header } from "../../src/components/Header";
 import { ProductCard } from "../../src/components/ProductCard";
-import { Colors } from "../../src/theme/colors";
 import { useTheme } from "../../src/context/ThemeContext";
 import { fetchProducts, CATEGORIES, useCatalogRefreshOnFocus } from "../../src/services/gateway";
 import { Product, DeenCategory } from "../../src/types";
 import { getCategoryInfo } from "../../src/data/categories";
 
 type SortKey = "default" | "price-asc" | "price-desc" | "name-asc" | "new";
-const SORT_LABELS: Record<SortKey, string> = {
-  default: "Featured",
-  "price-asc": "Price ↑",
-  "price-desc": "Price ↓",
-  "name-asc": "A–Z",
-  new: "Newest",
-};
 
 export default function ShopScreen() {
   const router = useRouter();
@@ -43,6 +35,7 @@ export default function ShopScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const styles = createStyles(colors);
 
   // Debounce search input (200ms) so filtering large lists stays smooth.
   useEffect(() => {
@@ -85,27 +78,27 @@ export default function ShopScreen() {
       <Header title="SHOP COLLECTION" showSearch={false} />
 
       {/* Search Bar */}
-      <View style={styles.searchSection}>
-        <View style={styles.searchBar}>
-          <Search size={18} color={Colors.sub} />
+      <View style={[styles.searchSection, { backgroundColor: colors.paper }]}>
+        <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Search size={18} color={colors.sub} />
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: colors.ink }]}
             placeholder="Search jeans, panjabi, shirts, fabric..."
-            placeholderTextColor={Colors.faint}
+            placeholderTextColor={colors.faint}
             value={searchQuery}
             onChangeText={setSearchQuery}
             clearButtonMode="while-editing"
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <X size={16} color={Colors.sub} />
+              <X size={16} color={colors.sub} />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
       {/* Category Pills */}
-      <View style={styles.categoriesContainer}>
+      <View style={[styles.categoriesContainer, { borderBottomColor: colors.border }]}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -116,11 +109,19 @@ export default function ShopScreen() {
             return (
               <TouchableOpacity
                 key={cat}
-                style={[styles.categoryChip, active && styles.categoryChipActive]}
+                style={[
+                  styles.categoryChip,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                  active && [styles.categoryChipActive, { backgroundColor: colors.indigoDark, borderColor: colors.indigoDark }],
+                ]}
                 activeOpacity={0.75}
                 onPress={() => setSelectedCategory(cat)}
               >
-                <Text style={[styles.categoryChipText, active && styles.categoryChipTextActive]}>
+                <Text style={[
+                  styles.categoryChipText,
+                  { color: colors.sub },
+                  active && styles.categoryChipTextActive,
+                ]}>
                   {cat}
                 </Text>
               </TouchableOpacity>
@@ -132,40 +133,80 @@ export default function ShopScreen() {
       {/* Sort Bar */}
       <View style={styles.sortBar}>
         <TouchableOpacity
-          style={[styles.sortChip, sort === "default" && styles.sortChipActive]}
+          style={[
+            styles.sortChip,
+            { backgroundColor: colors.card, borderColor: colors.border },
+            sort === "default" && [styles.sortChipActive, { backgroundColor: colors.indigoDark, borderColor: colors.indigoDark }],
+          ]}
           activeOpacity={0.7}
           onPress={() => setSort("default")}
         >
-          <Text style={[styles.sortChipText, sort === "default" && styles.sortChipTextActive]}>Featured</Text>
+          <Text style={[
+            styles.sortChipText,
+            { color: colors.sub },
+            sort === "default" && styles.sortChipTextActive,
+          ]}>
+            Featured
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.sortChip, sort === "price-asc" && styles.sortChipActive]}
+          style={[
+            styles.sortChip,
+            { backgroundColor: colors.card, borderColor: colors.border },
+            sort === "price-asc" && [styles.sortChipActive, { backgroundColor: colors.indigoDark, borderColor: colors.indigoDark }],
+          ]}
           activeOpacity={0.7}
           onPress={() => setSort("price-asc")}
         >
-          <ArrowUpNarrowWide size={13} color={sort === "price-asc" ? "#fff" : Colors.sub} />
-          <Text style={[styles.sortChipText, sort === "price-asc" && styles.sortChipTextActive]}>Price</Text>
+          <ArrowUpNarrowWide size={13} color={sort === "price-asc" ? "#fff" : colors.sub} />
+          <Text style={[
+            styles.sortChipText,
+            { color: colors.sub },
+            sort === "price-asc" && styles.sortChipTextActive,
+          ]}>
+            Price
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.sortChip, sort === "price-desc" && styles.sortChipActive]}
+          style={[
+            styles.sortChip,
+            { backgroundColor: colors.card, borderColor: colors.border },
+            sort === "price-desc" && [styles.sortChipActive, { backgroundColor: colors.indigoDark, borderColor: colors.indigoDark }],
+          ]}
           activeOpacity={0.7}
           onPress={() => setSort("price-desc")}
         >
-          <ArrowDownNarrowWide size={13} color={sort === "price-desc" ? "#fff" : Colors.sub} />
-          <Text style={[styles.sortChipText, sort === "price-desc" && styles.sortChipTextActive]}>Price</Text>
+          <ArrowDownNarrowWide size={13} color={sort === "price-desc" ? "#fff" : colors.sub} />
+          <Text style={[
+            styles.sortChipText,
+            { color: colors.sub },
+            sort === "price-desc" && styles.sortChipTextActive,
+          ]}>
+            Price
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.sortChip, sort === "name-asc" && styles.sortChipActive]}
+          style={[
+            styles.sortChip,
+            { backgroundColor: colors.card, borderColor: colors.border },
+            sort === "name-asc" && [styles.sortChipActive, { backgroundColor: colors.indigoDark, borderColor: colors.indigoDark }],
+          ]}
           activeOpacity={0.7}
           onPress={() => setSort("name-asc")}
         >
-          <Text style={[styles.sortChipText, sort === "name-asc" && styles.sortChipTextActive]}>A–Z</Text>
+          <Text style={[
+            styles.sortChipText,
+            { color: colors.sub },
+            sort === "name-asc" && styles.sortChipTextActive,
+          ]}>
+            A–Z
+          </Text>
         </TouchableOpacity>
       </View>
 
       {/* Header with Result Count */}
       <View style={styles.metaRow}>
-        <Text style={styles.resultCount}>
+        <Text style={[styles.resultCount, { color: colors.sub }]}>
           SHOWING {products.length} {products.length === 1 ? "PRODUCT" : "PRODUCTS"}
         </Text>
         {(selectedCategory !== "ALL" || searchQuery.length > 0) && (
@@ -176,25 +217,25 @@ export default function ShopScreen() {
               setSearchQuery("");
             }}
           >
-            <Text style={styles.clearBtnText}>Clear filters</Text>
+            <Text style={[styles.clearBtnText, { color: colors.crimson }]}>Clear filters</Text>
           </TouchableOpacity>
         )}
       </View>
 
       {/* Products Grid or Loading */}
       {loading ? (
-        <View style={styles.centerContainer}>
-          <ActivityIndicator size="large" color={Colors.indigo} />
-          <Text style={styles.loadingText}>Fetching DEEN catalog...</Text>
+        <View style={[styles.centerContainer, { flex: 1 }]}>
+          <ActivityIndicator size="large" color={colors.indigo} />
+          <Text style={[styles.loadingText, { color: colors.sub }]}>Fetching DEEN catalog...</Text>
         </View>
       ) : products.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyTitle}>No products found</Text>
-          <Text style={styles.emptySub}>
+        <View style={[styles.emptyContainer, { flex: 1 }]}>
+          <Text style={[styles.emptyTitle, { color: colors.ink }]}>No products found</Text>
+          <Text style={[styles.emptySub, { color: colors.sub }]}>
             Try changing your search terms or selecting another category.
           </Text>
           <TouchableOpacity
-            style={styles.resetBtn}
+            style={[styles.resetBtn, { backgroundColor: colors.indigo }]}
             onPress={() => {
               setSelectedCategory("ALL");
               setSearchQuery("");
@@ -220,7 +261,7 @@ export default function ShopScreen() {
           ListHeaderComponent={
             selectedCategory !== "ALL" ? (
               <TouchableOpacity
-                style={styles.categoryHeroBanner}
+                style={[styles.categoryHeroBanner, { backgroundColor: colors.indigoDark }]}
                 activeOpacity={0.88}
                 onPress={() =>
                   router.push({
@@ -240,7 +281,7 @@ export default function ShopScreen() {
                     <Text style={styles.categoryHeroTitle}>
                       {getCategoryInfo(selectedCategory).title}
                     </Text>
-                    <View style={styles.landingPageLink}>
+                    <View style={[styles.landingPageLink, { backgroundColor: colors.indigo }]}>
                       <Text style={styles.landingPageLinkText}>Full Page</Text>
                       <ArrowRight size={12} color="#FFFFFF" />
                     </View>
@@ -263,218 +304,192 @@ export default function ShopScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.paper,
-  },
-  searchSection: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: Colors.paper,
-  },
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.card,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    height: 42,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 8,
-  },
-  input: {
-    flex: 1,
-    fontSize: 13,
-    color: Colors.ink,
-    height: "100%",
-  },
-  categoriesContainer: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    paddingBottom: 8,
-  },
-  categoryScroll: {
-    paddingHorizontal: 16,
-    gap: 6,
-  },
-  categoryChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  categoryChipActive: {
-    backgroundColor: Colors.indigoDark,
-    borderColor: Colors.indigoDark,
-  },
-  categoryChipText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.sub,
-    letterSpacing: 0.5,
-  },
-  categoryChipTextActive: {
-    color: "#FFFFFF",
-  },
-  sortBar: {
-    flexDirection: "row",
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-  },
-  sortChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 16,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  sortChipActive: {
-    backgroundColor: Colors.indigoDark,
-    borderColor: Colors.indigoDark,
-  },
-  sortChipText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.sub,
-  },
-  sortChipTextActive: {
-    color: "#FFFFFF",
-  },
-  metaRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  resultCount: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: Colors.sub,
-    letterSpacing: 1,
-  },
-  clearBtn: {
-    paddingVertical: 2,
-  },
-  clearBtnText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: Colors.crimson,
-  },
-  scrollContent: {
-    paddingBottom: 24,
-    paddingHorizontal: 16,
-  },
-  row: {
-    justifyContent: "space-between",
-  },
-  gridItem: {
-    width: "48%",
-    marginBottom: 12,
-  },
-  centerContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-  },
-  loadingText: {
-    fontSize: 12,
-    color: Colors.sub,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
-    gap: 8,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: Colors.ink,
-  },
-  emptySub: {
-    fontSize: 12,
-    color: Colors.sub,
-    textAlign: "center",
-    lineHeight: 18,
-    marginBottom: 8,
-  },
-  resetBtn: {
-    backgroundColor: Colors.indigo,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 6,
-  },
-  resetBtnText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-  },
-  categoryHeroBanner: {
-    height: 120,
-    borderRadius: 10,
-    overflow: "hidden",
-    backgroundColor: Colors.indigoDark,
-    position: "relative",
-    marginBottom: 14,
-  },
-  categoryHeroImage: {
-    width: "100%",
-    height: "100%",
-  },
-  categoryHeroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(10, 20, 15, 0.6)",
-  },
-  categoryHeroContent: {
-    position: "absolute",
-    bottom: 12,
-    left: 12,
-    right: 12,
-  },
-  categoryHeroTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
-  categoryHeroTitle: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-    flex: 1,
-    marginRight: 8,
-  },
-  landingPageLink: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: Colors.indigo,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  landingPageLinkText: {
-    color: "#FFFFFF",
-    fontSize: 9,
-    fontWeight: "800",
-  },
-  categoryHeroSub: {
-    color: "rgba(255, 255, 255, 0.85)",
-    fontSize: 10,
-    lineHeight: 14,
-  },
-});
+function createStyles(colors: any) {
+  return StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.paper,
+    },
+    searchSection: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+    },
+    searchBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      height: 42,
+      borderWidth: 1,
+      gap: 8,
+    },
+    input: {
+      flex: 1,
+      fontSize: 13,
+      height: "100%",
+    },
+    categoriesContainer: {
+      paddingBottom: 8,
+    },
+    categoryScroll: {
+      paddingHorizontal: 16,
+      gap: 6,
+    },
+    categoryChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 6,
+      borderWidth: 1,
+    },
+    categoryChipActive: {},
+    categoryChipText: {
+      fontSize: 11,
+      fontWeight: "700",
+      letterSpacing: 0.5,
+    },
+    categoryChipTextActive: {
+      color: "#FFFFFF",
+    },
+    sortBar: {
+      flexDirection: "row",
+      gap: 6,
+      paddingHorizontal: 16,
+      paddingBottom: 8,
+    },
+    sortChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 3,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 16,
+      borderWidth: 1,
+    },
+    sortChipActive: {},
+    sortChipText: {
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    sortChipTextActive: {
+      color: "#FFFFFF",
+    },
+    metaRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+    },
+    resultCount: {
+      fontSize: 10,
+      fontWeight: "800",
+      letterSpacing: 1,
+    },
+    clearBtn: {
+      paddingVertical: 2,
+    },
+    clearBtnText: {
+      fontSize: 11,
+      fontWeight: "600",
+    },
+    scrollContent: {
+      paddingBottom: 24,
+      paddingHorizontal: 16,
+    },
+    row: {
+      justifyContent: "space-between",
+    },
+    gridItem: {
+      width: "48%",
+      marginBottom: 12,
+    },
+    centerContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 12,
+    },
+    loadingText: {
+      fontSize: 12,
+    },
+    emptyContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 32,
+      gap: 8,
+    },
+    emptyTitle: {
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    emptySub: {
+      fontSize: 12,
+      textAlign: "center",
+      lineHeight: 18,
+      marginBottom: 8,
+    },
+    resetBtn: {
+      paddingVertical: 10,
+      paddingHorizontal: 18,
+      borderRadius: 6,
+    },
+    resetBtnText: {
+      color: "#FFFFFF",
+      fontSize: 11,
+      fontWeight: "800",
+      letterSpacing: 0.8,
+    },
+    categoryHeroBanner: {
+      height: 120,
+      borderRadius: 10,
+      overflow: "hidden",
+      position: "relative",
+      marginBottom: 14,
+    },
+    categoryHeroImage: {
+      width: "100%",
+      height: "100%",
+    },
+    categoryHeroOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(10, 20, 15, 0.6)",
+    },
+    categoryHeroContent: {
+      position: "absolute",
+      bottom: 12,
+      left: 12,
+      right: 12,
+    },
+    categoryHeroTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 4,
+    },
+    categoryHeroTitle: {
+      color: "#FFFFFF",
+      fontSize: 14,
+      fontWeight: "900",
+      letterSpacing: 0.5,
+      flex: 1,
+      marginRight: 8,
+    },
+    landingPageLink: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 4,
+    },
+    landingPageLinkText: {
+      color: "#FFFFFF",
+      fontSize: 9,
+      fontWeight: "800",
+    },
+    categoryHeroSub: {
+      color: "rgba(255, 255, 255, 0.85)",
+      fontSize: 10,
+      lineHeight: 14,
+    },
+  });
+}
