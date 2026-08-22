@@ -382,7 +382,7 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
                 >
                   <Store size={16} color={pickupMethod === "studio_dropoff" ? Colors.indigoDark : Colors.sub} />
                   <Text style={[styles.handoverTitle, pickupMethod === "studio_dropoff" && styles.handoverTitleActive]}>
-                    Banani Flagship Studio Drop
+                    DEEN Outlet Dropoff (4 Outlets)
                   </Text>
                   <Text style={styles.handoverSub}>Instant on-spot inspection &amp; size swap</Text>
                 </TouchableOpacity>

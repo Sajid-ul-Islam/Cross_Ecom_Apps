@@ -54,8 +54,8 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: "notif_5",
     type: "BROADCAST",
-    title: "📣 Banani Flagship Studio Now Open for 2h Pickups",
-    body: "Select 'Store Pickup' at checkout to collect your orders free of charge from Plot 68, Kemal Ataturk Ave, Banani.",
+    title: "📣 Mirpur 12 Flagship Outlet Now Open for Pickups",
+    body: "Select 'Store Pickup' at checkout to collect your orders free of charge from Ramzannesa Super Market, Mirpur 12.",
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(), // 3 days ago
     read: true,
     actionUrl: "/(tabs)/profile",
@@ -79,8 +79,8 @@ const INITIAL_BROADCASTS: BroadcastMessage[] = [
   },
   {
     id: "bc_2",
-    title: "📣 Banani Flagship Studio Now Open for 2h Pickups",
-    body: "Select 'Store Pickup' at checkout to collect your orders free of charge from Plot 68, Kemal Ataturk Ave, Banani.",
+    title: "📣 Mirpur 12 Flagship Outlet Now Open for Pickups",
+    body: "Select 'Store Pickup' at checkout to collect your orders free of charge from Ramzannesa Super Market, Mirpur 12.",
     type: "BROADCAST",
     audience: "DHAKA_ONLY",
     actionUrl: "/(tabs)/profile",

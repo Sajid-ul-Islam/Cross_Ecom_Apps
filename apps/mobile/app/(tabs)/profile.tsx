@@ -707,19 +707,29 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.storeLocation}>
-            <Text style={styles.storeName}>📍 Mirpur 12 Flagship Outlet</Text>
-            <Text style={styles.storeAddr}>Plot 1, Block C, Section 12, Mirpur, Dhaka-1216</Text>
+            <Text style={styles.storeName}>📍 Mirpur 12 (Flagship Outlet)</Text>
+            <Text style={styles.storeAddr}>2nd Floor, Ramzannesa Super Market, Mirpur 12, Dhaka-1216</Text>
           </View>
 
           <View style={styles.storeLocation}>
-            <Text style={styles.storeName}>📍 Banani Studio (Pickup Point)</Text>
-            <Text style={styles.storeAddr}>Plot 68, Kemal Ataturk Ave, Banani, Dhaka</Text>
+            <Text style={styles.storeName}>📍 Wari Outlet (Dhaka South)</Text>
+            <Text style={styles.storeAddr}>Ground Floor, 41 A.K Famous Tower, Rankin St, Wari, Dhaka-1203</Text>
+          </View>
+
+          <View style={styles.storeLocation}>
+            <Text style={styles.storeName}>📍 Cumilla Outlet</Text>
+            <Text style={styles.storeAddr}>4th Floor, QR Tower, Badurtola, Cumilla</Text>
+          </View>
+
+          <View style={styles.storeLocation}>
+            <Text style={styles.storeName}>📍 Sylhet Outlet</Text>
+            <Text style={styles.storeAddr}>Block-A, House-54/2, Kumar Para, Sylhet</Text>
           </View>
 
           <View style={styles.supportBox}>
             <HelpCircle size={16} color={Colors.indigo} />
             <Text style={styles.supportText}>
-              Customer Hotline: <Text style={styles.bold}>+880 9613-827282</Text> (10 AM - 8 PM)
+              Customer Hotline & WhatsApp: <Text style={styles.bold}>+880 1952-700500</Text> (10 AM - 10 PM)
             </Text>
           </View>
         </View>

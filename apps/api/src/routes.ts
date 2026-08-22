@@ -400,8 +400,8 @@ const broadcasts: any[] = [
   },
   {
     id: "bc_init_2",
-    title: "📣 Banani Flagship Studio Now Open for 2h Pickups",
-    body: "Select 'Store Pickup' at checkout to collect your orders free of charge from Plot 68, Kemal Ataturk Ave, Banani.",
+    title: "📣 Mirpur 12 Flagship Outlet Now Open for Pickups",
+    body: "Select 'Store Pickup' at checkout to collect your orders free of charge from Ramzannesa Super Market, Mirpur 12.",
     type: "BROADCAST",
     audience: "DHAKA_ONLY",
     actionUrl: "/(tabs)/profile",

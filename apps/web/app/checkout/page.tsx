@@ -17,7 +17,7 @@ const DELIVERY_FEES: Record<string, number> = {
 const DELIVERY_LABELS: Record<string, string> = {
   dhaka_standard: "Home Delivery (24–48h) · ৳50",
   outside: "Home Delivery (Outside Dhaka, 3–5 days) · ৳90",
-  pickup: "Store Pickup (Banani Studio) · FREE",
+  pickup: "Store Pickup (Mirpur 12 Outlet) · FREE",
 };
 
 const PAYMENT_OPTIONS = [

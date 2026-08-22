@@ -150,7 +150,7 @@ export default function CheckoutScreen() {
         name: name.trim(),
         phone: digits,
         email: email.trim() || undefined,
-        address: selectedArea === "store_pickup" ? "DEEN Flagship Studio, Banani, Dhaka (Store Pickup)" : address.trim(),
+        address: selectedArea === "store_pickup" ? "DEEN Flagship Outlet, Ramzannesa Super Market, Mirpur 12, Dhaka (Store Pickup)" : address.trim(),
         city: selectedArea === "store_pickup" ? "Dhaka" : (city.trim() || district.name),
         district: district.code,
         state: district.code,
@@ -456,7 +456,7 @@ export default function CheckoutScreen() {
             <View style={styles.pickupNotice}>
               <Text style={styles.pickupNoticeTitle}>📍 Outlet Collection Point:</Text>
               <Text style={styles.pickupNoticeText}>
-                DEEN Flagship Studio, Plot 68, Kemal Ataturk Ave, Banani, Dhaka. Open 10 AM - 9 PM daily.
+                DEEN Mirpur 12 Outlet, 2nd Floor, Ramzannesa Super Market, Mirpur 12, Dhaka-1216. Open 10 AM - 9:30 PM daily.
               </Text>
             </View>
           )}

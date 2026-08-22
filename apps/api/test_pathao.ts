@@ -16,9 +16,10 @@ async function runPathaoTests() {
   console.log("\n2. Fetching Merchant Stores (/aladdin/api/v1/stores)...");
   const stores = await getPathaoStores();
   if (stores && stores.data) {
-    console.log(`  ✔ Successfully fetched stores: ${stores.data.data?.length ?? stores.data.length ?? 0} store(s) found.`);
-    if (stores.data.data?.[0]) {
-      console.log(`    First store: [ID: ${stores.data.data[0].store_id}] "${stores.data.data[0].store_name}"`);
+    const list = stores.data.data ?? stores.data;
+    console.log(`  ✔ Successfully fetched stores: ${list.length} store(s) found:`);
+    for (const s of list) {
+      console.log(`    • [ID: ${s.store_id}] "${s.store_name}" | Address: ${s.store_address}`);
     }
   } else {
     console.log("  ℹ Stores endpoint response:", JSON.stringify(stores));
