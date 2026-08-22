@@ -134,8 +134,9 @@ Live gateway: `https://cross-ecom-apps.onrender.com/`
 | `GET` | `/v1/deen/broadcasts` | — | List past broadcasts |
 | `POST` | `/v1/deen/returns` | — | Submit return/exchange ticket with photos |
 | `GET` | `/v1/deen/returns` | — | Retrieve return tickets by phone/order |
-| `GET` | `/v1/auth/demo-accounts` | — | List demo test credentials |
-| `POST` | `/v1/auth/login` | — | Authenticate customer, VIP, or admin |
+| `GET` | `/v1/auth/demo-accounts` | — | REMOVED (no demo users) |
+| `POST` | `/v1/auth/login` | — | Real WordPress login (username+password) → token + role |
+| `GET` | `/v1/auth/me` | Bearer token | Resume authenticated session |
 | `POST` | `/v1/auth/guest` | — | Mint a real anonymous guest session |
 | `POST` | `/v1/deen/bugs` | — | Crash & bug report sink |
 
@@ -143,35 +144,33 @@ Live gateway: `https://cross-ecom-apps.onrender.com/`
 
 - Order number format: `DC-{seq}` (e.g. `DC-1042`)
 - Pathao consignment ID: `PT-{orderNumber}-{suffix}` → tracking at `https://merchant.pathao.com/tracking?consignment_id=...`
-- Must include `city`, `state` (BD-XX district code), `postcode`, `country: "BD"` in `billing` & `shipping`
+- Must include `city`, `state` (BD-XX district code), `postcode`, `country: "BD"` in `billing` & `shipping`, plus `email` and `last_name`
 - Delivery fees: **৳50** Dhaka standard, **৳90** outside Dhaka, **৳0** store pickup
-- COD: `set_paid: false`, `payment_method_title: "Cash on Delivery (COD)"`
+- COD: `set_paid: false`, `payment_method_title: "Cash on delivery"` (matches the website exactly), `created_via: "checkout"`, Woo metas `_shipping_phone_2` / `is_vat_exempt` / `wt_pklist_order_language` / `_gtm_server_side_order_sent`
 
 ---
 
-## 🔑 Demo Test Accounts & Credentials
+## 🔑 Authentication (real, no demos)
 
-| Role | Username / Email | BD Phone | Key Details |
-| :--- | :--- | :--- | :--- |
-| 👤 **Regular Customer** | `customer` / `tanvir@deen.com` | `01712-345678` | Tanvir Ahmed — 1,250 DEEN Coins |
-| ⭐ **VIP Gold Shopper** | `vip` / `vip@deen.com` | `01899-776655` | Sajid-ul Islam — 4,800 Coins (Gold) |
-| 👑 **Store Admin** | `admin` / `admin@deen.com` | `01711-223344` | BI dashboard, broadcast console |
-| ⚡ **Guest Mode** | `guest` | `01911-000000` | Anonymous fast checkout |
+Every login is a **real WordPress user** on `deencommerce.com`:
+
+- `POST /v1/auth/login { username, password }` → gateway does a cookie-exchange against `wp-login.php` and reads the user from `wp/v2/users/me`.
+  - WP `administrator` / `shop_manager` role (or username `admin`) → **admin** (BI dashboard, broadcasts).
+  - Otherwise → **customer**.
+- Token is stored on device; `GET /v1/auth/me` resumes the session.
+- Guest checkout remains available (anonymous `POST /v1/auth/guest` session).
+- **Out-of-stock products are hidden from customers** everywhere: `/v1/deen/products` filters them by default (`?includeOOS=1` opt-in for admin), and the bundled offline snapshot is OOS-free.
 
 > **Live site contact:** WhatsApp `01952-700500`, IVR `09617-700500`
 > **Outlets:** Mirpur, Wari, Cumilla, Sylhet
 
 ---
 
-## 🎛️ 3-Way User Operating Modes
+## 🎛️ User Modes
 
-Toggle via `UserModeBar.tsx` on Home & Profile:
-
-1. **👑 Admin Panel Mode** — Live BI sparklines, revenue KPIs, broadcast marketing console
-2. **👤 Registered User Mode** — Saved addresses, order history, VIP coins, size profile
-3. **⚡ Guest User Mode** — Anonymous fast checkout (real random session, no shared creds)
-
----
+- **👑 Admin** — unlocked only by logging in as a WordPress admin; sees live BI dashboard + broadcast console on Home.
+- **👤 Customer** — signed in with a real WordPress account; saved addresses, order history, profile.
+- **⚡ Guest** — anonymous fast checkout (real random session, no shared creds).
 
 ## Deployment
 
