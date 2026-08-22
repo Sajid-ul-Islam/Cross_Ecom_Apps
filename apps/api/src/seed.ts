@@ -34,7 +34,7 @@ export interface DeenProduct {
   isNew?: boolean;
 }
 
-export const DELIVERY_FEES = { dhaka: 70, outside: 130 } as const;
+export const DELIVERY_FEES = { dhaka: 50, outside: 90, store_pickup: 0 } as const;
 export const FREE_TEE_THRESHOLD = 3500;
 export const CDN = "https://image.deencommerce.com/wp-content/uploads";
 

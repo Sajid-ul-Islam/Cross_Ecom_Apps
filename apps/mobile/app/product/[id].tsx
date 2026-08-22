@@ -474,7 +474,7 @@ export default function ProductDetailScreen() {
               <Store size={15} color={Colors.indigoDark} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.featurePillTitle}>OUTLET INVENTORY</Text>
-                <Text style={styles.featurePillSub}>Check stock at Banani &amp; Mirpur</Text>
+                <Text style={styles.featurePillSub}>Check stock at 4 Outlets</Text>
               </View>
             </TouchableOpacity>
 
@@ -567,10 +567,10 @@ export default function ProductDetailScreen() {
             {expandedSection === "shipping" && (
               <View style={styles.accordionBody}>
                 <Text style={styles.accordionBodyText}>
-                  • Inside Dhaka Standard: ৳50 (2-3 Days){"\n"}
-                  • Dhaka Express: ৳120 (Within 24 Hours){"\n"}
-                  • Outside Dhaka: ৳90 (Nationwide Courier · 3-5 Days){"\n"}
-                  • Store Pickup: FREE (Banani Flagship Studio){"\n"}
+                  • Home Delivery: ৳50 (2-3 Days){"\n"}
+                  • Express Home Delivery: ৳120 (Within 24 Hours){"\n"}
+                  • Outside Dhaka (Home Delivery): ৳90 (Nationwide Courier · 3-5 Days){"\n"}
+                  • Store Pickup: FREE (Mirpur 12 Flagship Outlet){"\n"}
                   • 7-Day Hassle-Free Size Exchange Guaranteed
                 </Text>
               </View>

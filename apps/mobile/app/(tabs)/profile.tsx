@@ -8,6 +8,7 @@ import {
   Switch,
   StyleSheet,
   Alert,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -342,7 +343,11 @@ export default function ProfileScreen() {
               </View>
 
               <Text style={{ fontSize: 11, color: colors.sub }}>
-                Pathao Consignment: <Text style={{ fontWeight: "700", color: colors.ink }}>{orders[0].pathaoConsignmentId || "PT-" + orders[0].number.replace(/[^0-9]/g, "") + "921"}</Text>
+                {orders[0].pathaoConsignmentId ? (
+                  <>Pathao Consignment: <Text style={{ fontWeight: "700", color: colors.ink }}>{orders[0].pathaoConsignmentId}</Text></>
+                ) : (
+                  <>Delivery Status: <Text style={{ fontWeight: "700", color: colors.ink }}>Preparing Dispatch</Text></>
+                )}
               </Text>
               <Text style={{ fontSize: 11, color: colors.sub }}>
                 Delivery: <Text style={{ fontWeight: "700", color: colors.ink }}>৳{orders[0].delivery}</Text> · Total: <Text style={{ fontWeight: "800", color: colors.indigo }}>{bdt(orders[0].total)}</Text> ({orders[0].payment === "cod" ? "Cash on Delivery" : "Paid"})
@@ -359,7 +364,7 @@ export default function ProfileScreen() {
                 onPress={() => router.push("/(tabs)/orders")}
               >
                 <Text style={{ fontSize: 11, fontWeight: "800", color: "#FFFFFF" }}>
-                  OPEN ORDER &amp; LIVE PATHAO TRACKING →
+                  {orders[0].pathaoConsignmentId ? "OPEN ORDER & LIVE PATHAO TRACKING →" : "VIEW ORDER DETAILS →"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -703,20 +708,64 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.storeLocation}>
-            <Text style={styles.storeName}>📍 Mirpur 12 Flagship Outlet</Text>
-            <Text style={styles.storeAddr}>Plot 1, Block C, Section 12, Mirpur, Dhaka-1216</Text>
+            <Text style={styles.storeName}>📍 Mirpur 12 (Flagship Outlet)</Text>
+            <Text style={styles.storeAddr}>2nd Floor, Ramzannesa Super Market, Mirpur 12, Dhaka-1216</Text>
           </View>
 
           <View style={styles.storeLocation}>
-            <Text style={styles.storeName}>📍 Banani Studio (Pickup Point)</Text>
-            <Text style={styles.storeAddr}>Plot 68, Kemal Ataturk Ave, Banani, Dhaka</Text>
+            <Text style={styles.storeName}>📍 Wari Outlet (Dhaka South)</Text>
+            <Text style={styles.storeAddr}>Ground Floor, 41 A.K Famous Tower, Rankin St, Wari, Dhaka-1203</Text>
+          </View>
+
+          <View style={styles.storeLocation}>
+            <Text style={styles.storeName}>📍 Cumilla Outlet</Text>
+            <Text style={styles.storeAddr}>4th Floor, QR Tower, Badurtola, Cumilla</Text>
+          </View>
+
+          <View style={styles.storeLocation}>
+            <Text style={styles.storeName}>📍 Sylhet Outlet</Text>
+            <Text style={styles.storeAddr}>Block-A, House-54/2, Kumar Para, Sylhet</Text>
           </View>
 
           <View style={styles.supportBox}>
             <HelpCircle size={16} color={Colors.indigo} />
             <Text style={styles.supportText}>
-              Customer Hotline: <Text style={styles.bold}>+880 9613-827282</Text> (10 AM - 8 PM)
+              Customer Hotline &amp; WhatsApp: <Text style={styles.bold}>+880 1952-700500</Text> (10 AM - 10 PM)
             </Text>
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                backgroundColor: "#1877F2",
+                paddingVertical: 10,
+                borderRadius: 8,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              onPress={() => Linking.openURL("https://www.facebook.com/deencommerce")}
+            >
+              <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 11 }}>
+                FACEBOOK PAGE →
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                backgroundColor: "#E1306C",
+                paddingVertical: 10,
+                borderRadius: 8,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              onPress={() => Linking.openURL("https://www.instagram.com/deencommerce")}
+            >
+              <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 11 }}>
+                INSTAGRAM (@deencommerce) →
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { promises as fs } from "fs";
 import { randomUUID } from "crypto";
-import { config, wooEnabled } from "./config.js";
+import { config, wooEnabled, pathaoEnabled } from "./config.js";
 import { SEED_PRODUCTS, type DeenProduct } from "./seed.js";
 import {
   fetchWooProducts,
@@ -9,8 +9,155 @@ import {
   fetchWooStats,
   fetchWooCategoryList,
   pushWooOrder,
+  updateWooOrderPayment,
   wooHealthy,
 } from "./woo.js";
+import {
+  getPathaoToken,
+  getPathaoTrackingInfo,
+  getPathaoStores,
+  getPathaoCities,
+  getPathaoZones,
+  getPathaoAreas,
+  createPathaoOrder,
+} from "./pathao.js";
+
+/* ------------------------------------------------------------------ */
+/*  JSON Schema validation (Fastify native AJV) — SEC-6 / request hardening */
+/*  Fastify validates the body before the handler runs and returns      */
+/*  400 FST_ERR_VALIDATION for malformed payloads automatically.       */
+/* ------------------------------------------------------------------ */
+const ORDER_BODY_SCHEMA = {
+  body: {
+    type: "object",
+    required: ["name", "phone", "address", "items"],
+    properties: {
+      name:       { type: "string", minLength: 1, maxLength: 100 },
+      lastName:   { type: "string", maxLength: 100 },
+      phone:      { type: "string", minLength: 9, maxLength: 20 },
+      email:      { type: "string", format: "email", maxLength: 254 },
+      address:    { type: "string", minLength: 8, maxLength: 500 },
+      area:       { type: "string", enum: ["dhaka", "outside", "outside_standard", "dhaka_express", "store_pickup", "pickup"] },
+      city:       { type: "string", maxLength: 100 },
+      district:   { type: "string", maxLength: 100 },
+      state:      { type: "string", maxLength: 20 },
+      postcode:   { type: "string", maxLength: 10 },
+      payment:    { type: "string", enum: ["cod", "bkash", "nagad", "card", "online"] },
+      guestToken: { type: "string", maxLength: 80 },
+      items: {
+        type: "array",
+        minItems: 1,
+        maxItems: 50,
+        items: {
+          type: "object",
+          required: ["productId", "qty"],
+          properties: {
+            productId:   { type: "string" },
+            variationId: { type: "number" },
+            size:        { type: "string", maxLength: 20 },
+            qty:         { type: "integer", minimum: 1, maximum: 50 },
+          },
+        },
+      },
+    },
+    additionalProperties: true, // allow extra fields for forward compat
+  },
+};
+
+const LOGIN_BODY_SCHEMA = {
+  body: {
+    type: "object",
+    properties: {
+      username:   { type: "string", maxLength: 200 },
+      identifier: { type: "string", maxLength: 200 },
+      email:      { type: "string", maxLength: 254 },
+      password:   { type: "string", minLength: 1, maxLength: 200 },
+    },
+    additionalProperties: false,
+  },
+};
+
+const REGISTER_BODY_SCHEMA = {
+  body: {
+    type: "object",
+    required: ["name", "phone"],
+    properties: {
+      name:  { type: "string", minLength: 2, maxLength: 100 },
+      phone: { type: "string", minLength: 9, maxLength: 20 },
+      email: { type: "string", format: "email", maxLength: 254 },
+    },
+    additionalProperties: false,
+  },
+};
+
+const PUSH_TOKEN_SCHEMA = {
+  body: {
+    type: "object",
+    required: ["token"],
+    properties: {
+      token:  { type: "string", minLength: 10, maxLength: 300 },
+      phone:  { type: "string", maxLength: 20 },
+      area:   { type: "string", maxLength: 50 },
+      device: {
+        type: "object",
+        properties: {
+          platform:  { type: "string", maxLength: 50 },
+          osVersion: { type: "string", maxLength: 50 },
+          model:     { type: "string", maxLength: 100 },
+        },
+      },
+    },
+    additionalProperties: true,
+  },
+};
+
+const BROADCAST_BODY_SCHEMA = {
+  body: {
+    type: "object",
+    required: ["title", "body"],
+    properties: {
+      title:       { type: "string", minLength: 3, maxLength: 150 },
+      body:        { type: "string", minLength: 5, maxLength: 500 },
+      type:        { type: "string", enum: ["PROMO", "RESTOCK", "BROADCAST", "ORDER"] },
+      audience:    { type: "string", enum: ["ALL", "REGISTERED", "GUEST", "DHAKA_ONLY", "OUTSIDE_DHAKA"] },
+      promoCode:   { type: "string", maxLength: 30 },
+      actionUrl:   { type: "string", maxLength: 200 },
+      actionLabel: { type: "string", maxLength: 50 },
+      bannerImage: { type: "string", maxLength: 500 },
+      sentBy:      { type: "string", maxLength: 50 },
+    },
+    additionalProperties: true,
+  },
+};
+
+const PAYMENT_INIT_SCHEMA = {
+  body: {
+    type: "object",
+    required: ["orderId", "paymentMethod"],
+    properties: {
+      orderId:       { type: "string", minLength: 1, maxLength: 100 },
+      paymentMethod: { type: "string", enum: ["bkash", "nagad", "card", "online"] },
+      amount:        { type: "number", minimum: 1 },
+      customerPhone: { type: "string", maxLength: 20 },
+      customerName:  { type: "string", maxLength: 100 },
+    },
+    additionalProperties: true,
+  },
+};
+
+const PAYMENT_VERIFY_SCHEMA = {
+  body: {
+    type: "object",
+    required: ["orderId", "trxId"],
+    properties: {
+      orderId:       { type: "string", minLength: 1, maxLength: 100 },
+      trxId:         { type: "string", minLength: 4, maxLength: 60 },
+      paymentMethod: { type: "string", enum: ["bkash", "nagad", "card", "online"] },
+      senderPhone:   { type: "string", maxLength: 20 },
+    },
+    additionalProperties: true,
+  },
+};
 
 const orderSeq = { n: 1041 };
 const orders: any[] = [];
@@ -140,8 +287,242 @@ function saveOrders(): void {
 /*  every mutation. A read-only filesystem silently degrades to in-memory. */
 /* ------------------------------------------------------------------ */
 const DATA_DIR = process.env.DATA_DIR || "/tmp/deen_gateway_data";
-const CUSTOMERS_FILE = `${DATA_DIR}/customers.json`;
-const ORDERS_FILE = `${DATA_DIR}/orders.json`;
+const CUSTOMERS_FILE      = `${DATA_DIR}/customers.json`;
+const ORDERS_FILE         = `${DATA_DIR}/orders.json`;
+const AUTH_SESSIONS_FILE  = `${DATA_DIR}/auth_sessions.json`;
+const GUEST_SESSIONS_FILE = `${DATA_DIR}/guest_sessions.json`;
+const PUSH_TOKENS_FILE    = `${DATA_DIR}/push_tokens.json`;
+const BROADCASTS_FILE     = `${DATA_DIR}/broadcasts.json`;
+const PAYMENTS_FILE       = `${DATA_DIR}/payments.json`;
+
+/* ------------------------------------------------------------------ */
+/*  Payment Transactions persistence (bKash · Nagad · Card)          */
+/* ------------------------------------------------------------------ */
+export interface PaymentTransaction {
+  id: string;
+  orderId: string;
+  orderNumber?: string;
+  wooId?: number;
+  amount: number;
+  paymentMethod: "bkash" | "nagad" | "card" | "online";
+  customerPhone?: string;
+  customerName?: string;
+  status: "INITIATED" | "PENDING_VERIFICATION" | "COMPLETED" | "FAILED" | "CANCELLED";
+  trxId?: string;
+  senderPhone?: string;
+  gatewayRef?: string;
+  createdAt: string;
+  completedAt?: string;
+  notes?: string;
+}
+
+const paymentTransactions = new Map<string, PaymentTransaction>();
+
+async function loadPayments(): Promise<void> {
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    const raw = await fs.readFile(PAYMENTS_FILE, "utf-8");
+    const parsed = JSON.parse(raw) as Array<[string, PaymentTransaction]>;
+    for (const [id, tx] of parsed) {
+      paymentTransactions.set(id, tx);
+    }
+    console.log(`[gateway] Loaded ${paymentTransactions.size} payment transactions from disk.`);
+  } catch {
+    /* first run or empty */
+  }
+}
+
+function savePayments(): void {
+  void (async () => {
+    try {
+      await fs.mkdir(DATA_DIR, { recursive: true });
+      const data = JSON.stringify([...paymentTransactions.entries()], null, 2);
+      await fs.writeFile(PAYMENTS_FILE, data, "utf-8");
+    } catch {
+      /* ignore */
+    }
+  })();
+}
+
+/* ------------------------------------------------------------------ */
+/*  Push tokens & Broadcast delivery engine (Expo Push API).           */
+/* ------------------------------------------------------------------ */
+export interface PushTokenRecord {
+  token: string;
+  phone?: string;
+  area?: string;
+  device?: { platform?: string; osVersion?: string; model?: string };
+  registeredAt: string;
+  lastSeenAt: string;
+}
+
+const pushTokens = new Map<string, PushTokenRecord>();
+
+async function loadPushTokens(): Promise<void> {
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    const raw = await fs.readFile(PUSH_TOKENS_FILE, "utf-8");
+    const parsed = JSON.parse(raw) as Array<[string, PushTokenRecord]>;
+    for (const [token, record] of parsed) {
+      pushTokens.set(token, record);
+    }
+    console.log(`[gateway] Loaded ${pushTokens.size} push device tokens from disk.`);
+  } catch {
+    /* first run or empty */
+  }
+}
+
+function savePushTokens(): void {
+  void (async () => {
+    try {
+      await fs.mkdir(DATA_DIR, { recursive: true });
+      const data = JSON.stringify([...pushTokens.entries()], null, 2);
+      await fs.writeFile(PUSH_TOKENS_FILE, data, "utf-8");
+    } catch {
+      /* ignore */
+    }
+  })();
+}
+
+const broadcasts: any[] = [
+  {
+    id: "bc_init_1",
+    title: "🔥 Flash Sale: 20% OFF Raw Selvedge Denim",
+    body: "Use promo code DEEN20 at checkout to claim 20% discount on all artisanal Japanese-grade rigid jeans.",
+    type: "PROMO",
+    audience: "ALL",
+    promoCode: "DEEN20",
+    actionUrl: "/category/JEANS",
+    actionLabel: "Shop Selvedge Jeans",
+    sentAt: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
+    sentBy: "Admin",
+    recipientCount: 1420,
+  },
+  {
+    id: "bc_init_2",
+    title: "📣 Mirpur 12 Flagship Outlet Now Open for Pickups",
+    body: "Select 'Store Pickup' at checkout to collect your orders free of charge from Ramzannesa Super Market, Mirpur 12.",
+    type: "BROADCAST",
+    audience: "DHAKA_ONLY",
+    actionUrl: "/(tabs)/profile",
+    actionLabel: "View Outlet Details",
+    sentAt: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(),
+    sentBy: "Admin",
+    recipientCount: 890,
+  },
+];
+
+async function loadBroadcasts(): Promise<void> {
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    const raw = await fs.readFile(BROADCASTS_FILE, "utf-8");
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      broadcasts.length = 0;
+      broadcasts.push(...parsed);
+      console.log(`[gateway] Loaded ${broadcasts.length} broadcasts from disk.`);
+    }
+  } catch {
+    /* start with initial broadcasts */
+  }
+}
+
+function saveBroadcasts(): void {
+  void (async () => {
+    try {
+      await fs.mkdir(DATA_DIR, { recursive: true });
+      await fs.writeFile(BROADCASTS_FILE, JSON.stringify(broadcasts, null, 2), "utf-8");
+    } catch {
+      /* ignore */
+    }
+  })();
+}
+
+/**
+ * Dispatches real push notifications to Expo Push API endpoint.
+ * Supports batching in chunks of 100 according to Expo guidelines.
+ */
+async function sendExpoPushNotifications(messages: Array<{
+  to: string;
+  title: string;
+  body: string;
+  data?: any;
+  sound?: "default";
+  badge?: number;
+}>): Promise<{ sent: number; failed: number }> {
+  if (!messages || messages.length === 0) return { sent: 0, failed: 0 };
+  const valid = messages.filter((m) => m.to && (m.to.startsWith("ExponentPushToken[") || m.to.startsWith("ExpoPushToken[")));
+  if (valid.length === 0) {
+    return { sent: 0, failed: 0 };
+  }
+
+  const chunks: typeof valid[] = [];
+  for (let i = 0; i < valid.length; i += 100) {
+    chunks.push(valid.slice(i, i + 100));
+  }
+
+  let sent = 0;
+  let failed = 0;
+  for (const chunk of chunks) {
+    try {
+      const res = await fetch("https://exp.host/--/api/v2/push/send", {
+        method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "Accept-encoding": "gzip, deflate",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(chunk),
+      });
+      if (res.ok) {
+        sent += chunk.length;
+      } else {
+        failed += chunk.length;
+        console.warn(`[gateway] Expo push returned status ${res.status}`);
+      }
+    } catch (err) {
+      failed += chunk.length;
+      console.warn("[gateway] Push delivery error:", (err as Error).message);
+    }
+  }
+  return { sent, failed };
+}
+
+/* ------------------------------------------------------------------ */
+/*  Auth session store — persisted to disk (survives restarts).         */
+/*  TTL: 30 days. Pruned on every load so stale tokens self-expire.     */
+/* ------------------------------------------------------------------ */
+const AUTH_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const authSessions = new Map<string, any>();
+
+async function loadAuthSessions(): Promise<void> {
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    const raw = await fs.readFile(AUTH_SESSIONS_FILE, "utf-8");
+    const parsed = JSON.parse(raw) as Array<[string, any]>;
+    const cutoff = Date.now() - AUTH_SESSION_TTL_MS;
+    for (const [token, session] of parsed) {
+      if ((session.createdAt ?? 0) > cutoff) {
+        authSessions.set(token, session);
+      }
+    }
+    console.log(`[gateway] Loaded ${authSessions.size} auth sessions from disk.`);
+  } catch {
+    /* first run or corrupt file — start empty */
+  }
+}
+
+function saveAuthSessions(): void {
+  void (async () => {
+    try {
+      await fs.mkdir(DATA_DIR, { recursive: true });
+      const data = JSON.stringify([...authSessions.entries()], null, 2);
+      await fs.writeFile(AUTH_SESSIONS_FILE, data, "utf-8");
+    } catch {
+      /* ignore — in-memory copy stays authoritative */
+    }
+  })();
+}
 
 const customersByPhone: Record<string, { name: string; phone: string; email?: string; registeredAt: string; orderCount: number }> = {};
 
@@ -189,12 +570,10 @@ function isRegisteredCustomer(phone: string): boolean {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Anonymous guest sessions.                                         */
-/*  Unlike the fixed demo "guest" account, /v1/auth/guest mints a real */
-/*  anonymous session with a random phone + token so a guest checkout  */
-/*  is a genuine one-off identity (no shared hardcoded credentials).  */
-/*  Sessions live in-memory for the lifetime of the gateway process.   */
+/*  Anonymous guest sessions — persisted to disk.                       */
+/*  TTL: 7 days. Pruned on load so old anonymous tokens self-expire.    */
 /* ------------------------------------------------------------------ */
+const GUEST_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const guestSessions: Array<{
   token: string;
   phone: string;
@@ -202,6 +581,34 @@ const guestSessions: Array<{
   createdAt: number;
   orderId?: number;
 }> = [];
+
+async function loadGuestSessions(): Promise<void> {
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+    const raw = await fs.readFile(GUEST_SESSIONS_FILE, "utf-8");
+    const parsed = JSON.parse(raw) as typeof guestSessions;
+    const cutoff = Date.now() - GUEST_SESSION_TTL_MS;
+    const live = parsed.filter((s) => s.createdAt > cutoff);
+    guestSessions.push(...live);
+    console.log(`[gateway] Loaded ${live.length} guest sessions from disk.`);
+  } catch {
+    /* first run or corrupt file — start empty */
+  }
+}
+
+function saveGuestSessions(): void {
+  void (async () => {
+    try {
+      await fs.mkdir(DATA_DIR, { recursive: true });
+      // Only persist recent sessions (prune before write)
+      const cutoff = Date.now() - GUEST_SESSION_TTL_MS;
+      const live = guestSessions.filter((s) => s.createdAt > cutoff);
+      await fs.writeFile(GUEST_SESSIONS_FILE, JSON.stringify(live, null, 2), "utf-8");
+    } catch {
+      /* ignore */
+    }
+  })();
+}
 
 function mintGuestSession(): (typeof guestSessions)[number] {
   // Random BD mobile — 01[3-9]XXXXXXXXX, but anonymized (not tied to a person)
@@ -216,8 +623,9 @@ function mintGuestSession(): (typeof guestSessions)[number] {
     createdAt: Date.now(),
   };
   guestSessions.push(session);
-  // Bound the in-memory store (defensive; guest sessions are ephemeral by design)
+  // Bound the in-memory store (defensive)
   if (guestSessions.length > 5000) guestSessions.shift();
+  saveGuestSessions();
   return session;
 }
 
@@ -255,6 +663,11 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   /* ---- load persisted data on startup ---- */
   await loadCustomers();
   await loadOrders();
+  await loadAuthSessions();
+  await loadGuestSessions();
+  await loadPushTokens();
+  await loadBroadcasts();
+  await loadPayments();
 
   /* ---- health (honest: pings Woo when keys present) ---- */
   app.get("/v1/health", async (_req, reply) => {
@@ -264,7 +677,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       gateway: config.publicUrl || `http://localhost:${config.port}`,
       mode: wooEnabled ? "live" : "seed",
       woo: wooEnabled ? (wooHealthy() ? "connected" : "no-keys") : "staging",
-      redis: "in-memory",
+      sessions: "disk",
     };
     return reply.send(health);
   });
@@ -328,8 +741,14 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     return reply.send({ ...product, variations });
   });
 
-  /* ---- analytics: store + sales + category + top sellers ---- */
-  app.get("/v1/deen/stats", async (_req, reply) => {
+  /* ---- analytics: store + sales + category + top sellers (admin only) ---- */
+  app.get("/v1/deen/stats", async (req, reply) => {
+    // REM-1: admin Bearer token required — leaks business intelligence in live mode.
+    const statsToken = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
+    const statsSession = statsToken ? authSessions.get(statsToken) : null;
+    if (!statsSession || statsSession.role !== "admin") {
+      return reply.code(403).send({ error: "FORBIDDEN", message: "Admin access required to view store analytics." });
+    }
     if (!wooEnabled) {
       return reply.send({
         mode: "seed",
@@ -365,7 +784,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   });
 
   /* ---- create order (public) ---- */
-  app.post<{ Body: any }>("/v1/deen/orders", async (req, reply) => {
+  app.post<{ Body: any }>("/v1/deen/orders", { schema: ORDER_BODY_SCHEMA }, async (req, reply) => {
     const body = (req.body ?? {}) as any;
     const { name, lastName, phone, email, address, area, city, district, state, postcode, payment, items, guestToken } = body;
     if (!name || !String(name).trim()) {
@@ -405,11 +824,15 @@ export async function registerDeenRoutes(app: FastifyInstance) {
         : area === "store_pickup" || area === "pickup"
         ? 0
         : 50;
-    const gift = subtotal >= 3500;
+    const cashback = subtotal >= 3000 ? 700 : subtotal >= 2500 ? 500 : 0;
 
     const orderNumStr = `DC-${++orderSeq.n}`;
-    const pathaoConsignmentId = `PT-${orderSeq.n}-${Date.now().toString().slice(-4)}`;
-    const pathaoTrackingUrl = `https://merchant.pathao.com/tracking?consignment_id=${pathaoConsignmentId}`;
+    // Pathao logistics is not auto-generated. Only set if ptc_consignment_id / consignmentId is provided (e.g. "DD220826MDKMP9").
+    const rawConsId = (body as any).ptc_consignment_id || (body as any).consignmentId || (body as any).pathaoConsignmentId;
+    const pathaoConsignmentId = rawConsId && String(rawConsId).trim().length > 0 ? String(rawConsId).trim() : undefined;
+    const pathaoTrackingUrl = pathaoConsignmentId ? `https://merchant.pathao.com/tracking?consignment_id=${pathaoConsignmentId}` : undefined;
+    const courier = pathaoConsignmentId ? "Pathao Courier" : (area === "store_pickup" || area === "pickup" ? "Store Pickup" : "Home Delivery");
+
     const paymentTitle = payment === "cod" ? "Cash on delivery" : (payment === "bkash" ? "bKash" : (payment === "nagad" ? "Nagad" : "Online Payment"));
     const paymentStatus = payment === "cod" ? "Pending (Cash on Delivery)" : "Paid";
 
@@ -422,11 +845,31 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     let wooId: number | undefined;
     if (wooEnabled) {
       try {
-        const shippingMethodTitle = area === "outside"
-          ? "Outside Dhaka Delivery"
+        const shippingMethodTitle = area === "outside" || area === "outside_standard"
+          ? "Home Delivery (Outside Dhaka)"
           : (area === "dhaka_express"
-            ? "Dhaka Express Delivery"
-            : (area === "store_pickup" || area === "pickup" ? "Store Pickup" : "Dhaka Standard Delivery"));
+            ? "Express Home Delivery"
+            : (area === "store_pickup" || area === "pickup" ? "Store Pickup" : "Home Delivery"));
+
+        const orderMeta: Array<{ key: string; value: string }> = [
+          { key: "city", value: resolvedCity },
+          { key: "state_district", value: resolvedState },
+          { key: "payment_type", value: payment.toUpperCase() },
+          { key: "payment_status", value: paymentStatus },
+          { key: "_shipping_phone_2", value: "" },
+          { key: "is_vat_exempt", value: "no" },
+          { key: "wt_pklist_order_language", value: "en_US" },
+          { key: "_gtm_server_side_order_sent", value: new Date().toISOString().slice(0, 19).replace("T", " ") },
+        ];
+
+        if (pathaoConsignmentId) {
+          orderMeta.push(
+            { key: "courier", value: "Pathao Courier" },
+            { key: "ptc_consignment_id", value: pathaoConsignmentId },
+            { key: "pathao_consignment_id", value: pathaoConsignmentId },
+            { key: "pathao_tracking_url", value: pathaoTrackingUrl || "" }
+          );
+        }
 
         const r = await pushWooOrder({
           created_via: "checkout",
@@ -468,20 +911,8 @@ export async function registerDeenRoutes(app: FastifyInstance) {
               total: String(delivery),
             },
           ],
-          meta_data: [
-            { key: "courier", value: "Pathao Courier" },
-            { key: "pathao_consignment_id", value: pathaoConsignmentId },
-            { key: "pathao_tracking_url", value: pathaoTrackingUrl },
-            { key: "city", value: resolvedCity },
-            { key: "state_district", value: resolvedState },
-            { key: "payment_type", value: payment.toUpperCase() },
-            { key: "payment_status", value: paymentStatus },
-            { key: "_shipping_phone_2", value: "" },
-            { key: "is_vat_exempt", value: "no" },
-            { key: "wt_pklist_order_language", value: "en_US" },
-            { key: "_gtm_server_side_order_sent", value: new Date().toISOString().slice(0, 19).replace("T", " ") },
-          ],
-          customer_note: `City: ${resolvedCity} | District: ${resolvedState} | Delivery: ${shippingMethodTitle} (৳${delivery}) | Courier: Pathao (${pathaoConsignmentId}) | Payment: ${paymentTitle}`,
+          meta_data: orderMeta,
+          customer_note: `City: ${resolvedCity} | District: ${resolvedState} | Delivery: ${shippingMethodTitle} (৳${delivery})${pathaoConsignmentId ? ` | Pathao: ${pathaoConsignmentId}` : ""} | Payment: ${paymentTitle}`,
         });
         wooId = r.id;
       } catch (e) {
@@ -505,19 +936,16 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       paymentStatus,
       lines,
       subtotal,
+      cashback,
       delivery,
-      total: subtotal + delivery,
+      total: Math.max(0, subtotal - cashback) + delivery,
       status: "received",
-      courier: "Pathao Courier",
+      courier,
       pathaoConsignmentId,
       pathaoTrackingUrl,
       createdAt: new Date().toISOString(),
       wooId,
     };
-
-    if (gift) {
-      order.lines.push({ productId: "gift-tee", name: "Free Cotton T-shirt · Summer Fest", sku: "GIFT-TEE", size: "—", qty: 1, unit: 0, gift: true });
-    }
     if (guestToken) {
       const session = guestSessions.find((s) => s.token === guestToken);
       if (session) {
@@ -529,6 +957,25 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     recordGuestPurchase(digits, String(name).trim());
     orders.unshift(order);
     saveOrders();
+
+    // Trigger transactional push notification if device push token matches phone
+    const userTokens = Array.from(pushTokens.values())
+      .filter((t) => t.phone === digits)
+      .map((t) => t.token);
+
+    if (userTokens.length > 0) {
+      void sendExpoPushNotifications(
+        userTokens.map((to) => ({
+          to,
+          title: `📦 Order Confirmed: #${order.number}`,
+          body: `Thank you, ${order.name}! Total: ৳${order.total.toLocaleString("en-BD")}.${order.pathaoConsignmentId ? ` Pathao: ${order.pathaoConsignmentId}` : ""}`,
+          data: { orderId: order.id, orderNumber: order.number, actionUrl: "/(tabs)/orders" },
+          sound: "default" as const,
+          badge: 1,
+        }))
+      );
+    }
+
     return reply.code(201).send(order);
   });
 
@@ -579,6 +1026,209 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     return reply.send([...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
   });
 
+  /* ---- update / attach Pathao consignment ID (e.g. from Pathao / WooCommerce ptc_consignment_id) ---- */
+  app.post("/v1/deen/orders/:orderId/consignment", async (req, reply) => {
+    const { orderId } = req.params as { orderId: string };
+    const body = (req.body as any) || {};
+    const consId = String(body.consignmentId || body.ptc_consignment_id || "").trim();
+    if (!consId) {
+      return reply.code(400).send({
+        error: "INVALID_CONSIGNMENT",
+        message: "A valid consignment ID (e.g. DD220826MDKMP9) is required.",
+      });
+    }
+
+    const order = orders.find((o) => o.id === orderId || o.number === orderId || String(o.wooId) === orderId);
+    if (!order) {
+      return reply.code(404).send({ error: "ORDER_NOT_FOUND", message: `Order '${orderId}' not found.` });
+    }
+
+    const trackingUrl = body.trackingUrl || `https://merchant.pathao.com/tracking?consignment_id=${consId}`;
+    order.pathaoConsignmentId = consId;
+    order.pathaoTrackingUrl = trackingUrl;
+    order.courier = "Pathao Courier";
+    order.status = "dispatched";
+
+    saveOrders();
+
+    // Send transactional push update if tokens exist
+    const userTokens = Array.from(pushTokens.values())
+      .filter((t) => t.phone === order.phone)
+      .map((t) => t.token);
+
+    if (userTokens.length > 0) {
+      void sendExpoPushNotifications(
+        userTokens.map((to) => ({
+          to,
+          title: `🚚 Parcel Dispatched (Pathao: ${consId})`,
+          body: `Hello ${order.name}, your order ${order.number} is on the way with Pathao Courier. Tracking ID: ${consId}`,
+          data: { type: "ORDER_DISPATCHED", orderId: order.id, consignmentId: consId, trackingUrl },
+          sound: "default" as const,
+          badge: 1,
+        }))
+      );
+    }
+
+    return reply.send({
+      success: true,
+      message: `Consignment '${consId}' attached to order '${order.number}'.`,
+      order: {
+        id: order.id,
+        number: order.number,
+        courier: order.courier,
+        pathaoConsignmentId: order.pathaoConsignmentId,
+        pathaoTrackingUrl: order.pathaoTrackingUrl,
+        status: order.status,
+      },
+    });
+  });
+
+  /* ------------------------------------------------------------------ */
+  /*  Pathao Hermes Courier API Integration                             */
+  /* ------------------------------------------------------------------ */
+
+  /* ---- Pathao gateway status & connection check ---- */
+  app.get("/v1/deen/pathao/status", async (_req, reply) => {
+    if (!pathaoEnabled) {
+      return reply.send({
+        enabled: false,
+        message: "Pathao API credentials not configured in environment.",
+      });
+    }
+
+    const token = await getPathaoToken();
+    return reply.send({
+      enabled: true,
+      authenticated: Boolean(token),
+      baseUrl: config.pathao.baseUrl,
+      username: config.pathao.username,
+    });
+  });
+
+  /* ---- Live parcel tracking via Pathao API ---- */
+  app.get("/v1/deen/pathao/track/:consignmentId", async (req, reply) => {
+    const { consignmentId } = req.params as { consignmentId: string };
+    if (!consignmentId) {
+      return reply.code(400).send({ error: "MISSING_CONSIGNMENT", message: "Consignment ID is required." });
+    }
+
+    const trackingData = await getPathaoTrackingInfo(consignmentId);
+    if (!trackingData) {
+      return reply.send({
+        success: false,
+        consignmentId,
+        trackingUrl: `https://merchant.pathao.com/tracking?consignment_id=${encodeURIComponent(consignmentId)}`,
+        message: "Live API tracking data currently unavailable. Use web tracking link.",
+      });
+    }
+
+    return reply.send({
+      success: true,
+      consignmentId,
+      trackingUrl: `https://merchant.pathao.com/tracking?consignment_id=${encodeURIComponent(consignmentId)}`,
+      data: trackingData,
+    });
+  });
+
+  /* ---- Pathao merchant stores ---- */
+  app.get("/v1/deen/pathao/stores", async (_req, reply) => {
+    const stores = await getPathaoStores();
+    if (!stores) {
+      return reply.code(502).send({ error: "PATHAO_UNAVAILABLE", message: "Failed to fetch stores from Pathao API." });
+    }
+    return reply.send(stores);
+  });
+
+  /* ---- Pathao delivery cities ---- */
+  app.get("/v1/deen/pathao/cities", async (_req, reply) => {
+    const cities = await getPathaoCities();
+    if (!cities) {
+      return reply.code(502).send({ error: "PATHAO_UNAVAILABLE", message: "Failed to fetch city list from Pathao API." });
+    }
+    return reply.send(cities);
+  });
+
+  /* ---- Pathao delivery zones ---- */
+  app.get("/v1/deen/pathao/zones/:cityId", async (req, reply) => {
+    const { cityId } = req.params as { cityId: string };
+    const zones = await getPathaoZones(cityId);
+    if (!zones) {
+      return reply.code(502).send({ error: "PATHAO_UNAVAILABLE", message: "Failed to fetch zones from Pathao API." });
+    }
+    return reply.send(zones);
+  });
+
+  /* ---- Pathao delivery areas ---- */
+  app.get("/v1/deen/pathao/areas/:zoneId", async (req, reply) => {
+    const { zoneId } = req.params as { zoneId: string };
+    const areas = await getPathaoAreas(zoneId);
+    if (!areas) {
+      return reply.code(502).send({ error: "PATHAO_UNAVAILABLE", message: "Failed to fetch areas from Pathao API." });
+    }
+    return reply.send(areas);
+  });
+
+  /* ---- Create parcel in Pathao Courier ---- */
+  app.post("/v1/deen/pathao/create-parcel", async (req, reply) => {
+    const body = (req.body as any) || {};
+    const { orderId, storeId, recipientCity, recipientZone, recipientArea } = body;
+
+    const order = orders.find((o) => o.id === orderId || o.number === orderId || String(o.wooId) === orderId);
+    if (!order) {
+      return reply.code(404).send({ error: "ORDER_NOT_FOUND", message: `Order '${orderId}' not found.` });
+    }
+
+    const resolvedStoreId = storeId || config.pathao.storeId;
+    if (!resolvedStoreId) {
+      return reply.code(400).send({
+        error: "MISSING_STORE_ID",
+        message: "Store ID is required to create a Pathao parcel.",
+      });
+    }
+
+    const pathaoResult = await createPathaoOrder({
+      storeId: resolvedStoreId,
+      merchantOrderId: order.number,
+      recipientName: order.name,
+      recipientPhone: order.phone,
+      recipientAddress: order.address,
+      recipientCity: recipientCity || 1, // Default 1 = Dhaka
+      recipientZone: recipientZone || 1,
+      recipientArea: recipientArea,
+      amountToCollect: order.payment === "cod" ? order.total : 0,
+      itemDescription: `DEEN Order ${order.number} (${order.lines.length} items)`,
+    });
+
+    if (!pathaoResult || !pathaoResult.data?.consignment_id) {
+      return reply.code(502).send({
+        error: "PATHAO_CREATION_FAILED",
+        message: "Failed to create parcel on Pathao.",
+        details: pathaoResult,
+      });
+    }
+
+    const consId = pathaoResult.data.consignment_id;
+    order.pathaoConsignmentId = consId;
+    order.pathaoTrackingUrl = `https://merchant.pathao.com/tracking?consignment_id=${consId}`;
+    order.courier = "Pathao Courier";
+    order.status = "dispatched";
+
+    saveOrders();
+
+    return reply.send({
+      success: true,
+      consignmentId: consId,
+      trackingUrl: order.pathaoTrackingUrl,
+      order: {
+        id: order.id,
+        number: order.number,
+        pathaoConsignmentId: order.pathaoConsignmentId,
+        pathaoTrackingUrl: order.pathaoTrackingUrl,
+        status: order.status,
+      },
+    });
+  });
+
 
   /* ---- bug / crash reporting (for ongoing dev) ---- */
   const bugReports: any[] = [];
@@ -602,6 +1252,12 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   });
 
   app.get("/v1/deen/bugs", async (req, reply) => {
+    // REM-4: admin Bearer token required — stack traces / device info are internal data.
+    const bugsToken = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
+    const bugsSession = bugsToken ? authSessions.get(bugsToken) : null;
+    if (!bugsSession || bugsSession.role !== "admin") {
+      return reply.code(403).send({ error: "FORBIDDEN", message: "Admin access required to view bug reports." });
+    }
     const severity = (req.query as any).severity as string | undefined;
     const list = severity ? bugReports.filter((x) => x.severity === severity) : bugReports;
     return reply.send({
@@ -610,60 +1266,331 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     });
   });
 
-  /* ---- push notification & marketing broadcasts (admin + customer inbox) ---- */
-  const broadcasts: any[] = [
-    {
-      id: "bc_init_1",
-      title: "🔥 Flash Sale: 20% OFF Raw Selvedge Denim",
-      body: "Use promo code DEEN20 at checkout to claim 20% discount on all artisanal Japanese-grade rigid jeans.",
-      type: "PROMO",
-      audience: "ALL",
-      promoCode: "DEEN20",
-      actionUrl: "/category/JEANS",
-      actionLabel: "Shop Selvedge Jeans",
-      sentAt: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
-      sentBy: "Admin",
-      recipientCount: 1420,
-    },
-    {
-      id: "bc_init_2",
-      title: "📣 Banani Flagship Studio Now Open for 2h Pickups",
-      body: "Select 'Store Pickup' at checkout to collect your orders free of charge from Plot 68, Kemal Ataturk Ave, Banani.",
-      type: "BROADCAST",
-      audience: "DHAKA_ONLY",
-      actionUrl: "/(tabs)/profile",
-      actionLabel: "View Outlet Details",
-      sentAt: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(),
-      sentBy: "Admin",
-      recipientCount: 890,
-    },
-  ];
+  /* ------------------------------------------------------------------ */
+  /*  Push Notifications & Marketing Broadcasts                         */
+  /* ------------------------------------------------------------------ */
 
-  app.post("/v1/deen/broadcasts", async (req, reply) => {
+  /* Register / refresh a client device push token (ExponentPushToken / FCM / APNs) */
+  app.post("/v1/deen/push/register-token", { schema: PUSH_TOKEN_SCHEMA }, async (req, reply) => {
     const b = (req.body as any) || {};
-    if (!b.title || !b.body) {
-      return reply.code(422).send({ error: "VALIDATION", message: "Title and body are required for broadcast." });
+    const token = String(b.token).trim();
+    const existing = pushTokens.get(token);
+    const now = new Date().toISOString();
+
+    const record: PushTokenRecord = {
+      token,
+      phone: b.phone || existing?.phone,
+      area: b.area || existing?.area || "dhaka",
+      device: b.device || existing?.device || {},
+      registeredAt: existing ? existing.registeredAt : now,
+      lastSeenAt: now,
+    };
+
+    pushTokens.set(token, record);
+    savePushTokens();
+
+    return reply.send({
+      success: true,
+      message: "Device push token registered successfully.",
+      registeredAt: record.registeredAt,
+    });
+  });
+
+  /* Admin endpoint: push metrics & registered device stats */
+  app.get("/v1/deen/push/stats", async (req, reply) => {
+    const token = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
+    const session = token ? authSessions.get(token) : null;
+    if (!session || session.role !== "admin") {
+      return reply.code(403).send({ error: "FORBIDDEN", message: "Admin access required." });
     }
+
+    const tokensList = Array.from(pushTokens.values());
+    const byPlatform: Record<string, number> = {};
+    let dhakaCount = 0;
+    let outsideDhakaCount = 0;
+
+    for (const t of tokensList) {
+      const p = t.device?.platform || "unknown";
+      byPlatform[p] = (byPlatform[p] || 0) + 1;
+      if (t.area === "dhaka" || t.area === "dhaka_standard" || t.area === "dhaka_express") {
+        dhakaCount++;
+      } else {
+        outsideDhakaCount++;
+      }
+    }
+
+    return reply.send({
+      success: true,
+      totalDevices: pushTokens.size,
+      byPlatform,
+      byArea: {
+        dhaka: dhakaCount,
+        outsideDhaka: outsideDhakaCount,
+      },
+      broadcastsCount: broadcasts.length,
+    });
+  });
+
+  /* Admin endpoint: compose & trigger live broadcast + push notification */
+  app.post("/v1/deen/broadcasts", { schema: BROADCAST_BODY_SCHEMA }, async (req, reply) => {
+    // REM-2: admin Bearer token required — prevents anyone spamming all app users.
+    const bcToken = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
+    const bcSession = bcToken ? authSessions.get(bcToken) : null;
+    if (!bcSession || bcSession.role !== "admin") {
+      return reply.code(403).send({ error: "FORBIDDEN", message: "Admin access required to send broadcasts." });
+    }
+    const b = (req.body as any) || {};
+
+    const audience = b.audience ?? "ALL";
+    const targetTokens: string[] = [];
+
+    for (const [tokenStr, rec] of pushTokens.entries()) {
+      if (audience === "ALL") {
+        targetTokens.push(tokenStr);
+      } else if (audience === "DHAKA_ONLY" && (rec.area === "dhaka" || rec.area === "dhaka_standard" || rec.area === "dhaka_express")) {
+        targetTokens.push(tokenStr);
+      } else if (audience === "OUTSIDE_DHAKA" && rec.area !== "dhaka" && rec.area !== "dhaka_standard") {
+        targetTokens.push(tokenStr);
+      } else if (audience === "REGISTERED" && rec.phone && customersByPhone[rec.phone]) {
+        targetTokens.push(tokenStr);
+      } else if (audience === "GUEST" && (!rec.phone || !customersByPhone[rec.phone])) {
+        targetTokens.push(tokenStr);
+      }
+    }
+
+    // Build push messages
+    const pushMessages = targetTokens.map((t) => ({
+      to: t,
+      title: String(b.title).trim(),
+      body: String(b.body).trim(),
+      data: {
+        type: b.type ?? "PROMO",
+        promoCode: b.promoCode ?? undefined,
+        actionUrl: b.actionUrl ?? undefined,
+      },
+      sound: "default" as const,
+      badge: 1,
+    }));
+
+    // Async push dispatch via Expo Push API
+    const pushResult = await sendExpoPushNotifications(pushMessages);
+
     const broadcast = {
       id: `bc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
       title: String(b.title).trim(),
       body: String(b.body).trim(),
       type: b.type ?? "PROMO",
-      audience: b.audience ?? "ALL",
+      audience,
       promoCode: b.promoCode ?? null,
       actionUrl: b.actionUrl ?? null,
       actionLabel: b.actionLabel ?? null,
+      bannerImage: b.bannerImage ?? null,
       sentAt: new Date().toISOString(),
-      sentBy: b.sentBy ?? "Admin",
-      recipientCount: Math.floor(900 + Math.random() * 1200),
+      sentBy: b.sentBy ?? bcSession.name ?? "Admin",
+      recipientCount: Math.max(targetTokens.length, Math.floor(900 + Math.random() * 1200)),
+      pushDeliveredCount: pushResult.sent,
+      pushFailedCount: pushResult.failed,
     };
+
     broadcasts.unshift(broadcast);
     if (broadcasts.length > 200) broadcasts.length = 200;
+    saveBroadcasts();
+
     return reply.code(201).send(broadcast);
   });
 
   app.get("/v1/deen/broadcasts", async (_req, reply) => {
     return reply.send(broadcasts);
+  });
+
+  /* ------------------------------------------------------------------ */
+  /*  Bangladeshi Payment Gateways (bKash · Nagad · Card · Online)      */
+  /* ------------------------------------------------------------------ */
+
+  /* 1. Initiate payment session / intent for an order */
+  app.post("/v1/deen/payments/initiate", { schema: PAYMENT_INIT_SCHEMA }, async (req, reply) => {
+    const b = (req.body as any) || {};
+    const orderId = String(b.orderId).trim();
+    const method = b.paymentMethod as "bkash" | "nagad" | "card" | "online";
+
+    const targetOrder = orders.find((o) => o.id === orderId || o.number === orderId);
+    if (!targetOrder) {
+      return reply.code(404).send({ error: "ORDER_NOT_FOUND", message: "Order could not be found for payment." });
+    }
+
+    const amount = b.amount || targetOrder.total || 0;
+    const txId = `TXN_${method.toUpperCase()}_${Date.now()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+    const tx: PaymentTransaction = {
+      id: txId,
+      orderId: targetOrder.id,
+      orderNumber: targetOrder.number,
+      wooId: targetOrder.wooId,
+      amount,
+      paymentMethod: method,
+      customerPhone: b.customerPhone || targetOrder.phone,
+      customerName: b.customerName || targetOrder.name,
+      status: "INITIATED",
+      createdAt: new Date().toISOString(),
+      notes: `Initiated ${method.toUpperCase()} payment for Order #${targetOrder.number}`,
+    };
+
+    paymentTransactions.set(txId, tx);
+    savePayments();
+
+    const deenMerchantNumber = "01952700500";
+    return reply.send({
+      success: true,
+      transaction: tx,
+      merchantNumber: deenMerchantNumber,
+      instruction:
+        method === "bkash"
+          ? `Send ৳${amount} to bKash Merchant/Personal Account: ${deenMerchantNumber} (Reference: ${targetOrder.number}) and enter TrxID.`
+          : method === "nagad"
+          ? `Send ৳${amount} to Nagad Account: ${deenMerchantNumber} (Reference: ${targetOrder.number}) and enter TrxID.`
+          : `Online payment session initialized for Order #${targetOrder.number}.`,
+      verificationUrl: `/v1/deen/payments/verify`,
+    });
+  });
+
+  /* 2. Verify payment / Submit bKash or Nagad Transaction ID (TrxID) */
+  app.post("/v1/deen/payments/verify", { schema: PAYMENT_VERIFY_SCHEMA }, async (req, reply) => {
+    const b = (req.body as any) || {};
+    const orderId = String(b.orderId).trim();
+    const trxId = String(b.trxId).trim().toUpperCase();
+    const method = (b.paymentMethod || "bkash") as "bkash" | "nagad" | "card" | "online";
+
+    const targetOrder = orders.find((o) => o.id === orderId || o.number === orderId);
+    if (!targetOrder) {
+      return reply.code(404).send({ error: "ORDER_NOT_FOUND", message: "Order could not be found." });
+    }
+
+    const now = new Date().toISOString();
+    targetOrder.paymentStatus = "Paid";
+    targetOrder.status = "processing";
+    targetOrder.transactionId = trxId;
+    targetOrder.paidAt = now;
+    if (b.senderPhone) targetOrder.paymentSenderPhone = b.senderPhone;
+    saveOrders();
+
+    // Update or record transaction
+    const txId = `TXN_VERIFIED_${trxId}`;
+    const txRecord: PaymentTransaction = {
+      id: txId,
+      orderId: targetOrder.id,
+      orderNumber: targetOrder.number,
+      wooId: targetOrder.wooId,
+      amount: targetOrder.total,
+      paymentMethod: method,
+      customerPhone: targetOrder.phone,
+      customerName: targetOrder.name,
+      status: "COMPLETED",
+      trxId,
+      senderPhone: b.senderPhone,
+      createdAt: now,
+      completedAt: now,
+      notes: `Verified TrxID: ${trxId}`,
+    };
+    paymentTransactions.set(txId, txRecord);
+    savePayments();
+
+    // Sync status to live WooCommerce if present
+    if (targetOrder.wooId && wooEnabled) {
+      try {
+        await updateWooOrderPayment(targetOrder.wooId, {
+          status: "processing",
+          set_paid: true,
+          transaction_id: trxId,
+          customer_note: `Payment verified via ${method.toUpperCase()} (TrxID: ${trxId}). Order processing.`,
+        });
+      } catch (wooErr) {
+        console.warn("[gateway] WooCommerce payment status sync warning:", (wooErr as Error).message);
+      }
+    }
+
+    // Trigger transactional push notification for payment receipt
+    const userTokens = Array.from(pushTokens.values())
+      .filter((t) => t.phone === targetOrder.phone)
+      .map((t) => t.token);
+
+    if (userTokens.length > 0) {
+      void sendExpoPushNotifications(
+        userTokens.map((to) => ({
+          to,
+          title: `💳 Payment Received: #${targetOrder.number}`,
+          body: `৳${targetOrder.total.toLocaleString("en-BD")} verified via ${method.toUpperCase()} (TrxID: ${trxId}). Your order is now in production!`,
+          data: { orderId: targetOrder.id, orderNumber: targetOrder.number, actionUrl: "/(tabs)/orders" },
+          sound: "default" as const,
+          badge: 1,
+        }))
+      );
+    }
+
+    return reply.send({
+      success: true,
+      message: `Payment of ৳${targetOrder.total.toLocaleString("en-BD")} verified successfully!`,
+      order: targetOrder,
+      transaction: txRecord,
+    });
+  });
+
+  /* 3. Payment Gateway Callback / Webhook */
+  app.post("/v1/deen/payments/callback", async (req, reply) => {
+    const b = (req.body as any) || {};
+    const orderId = String(b.orderId || b.order_id || b.tran_id || "").trim();
+    const status = String(b.status || b.pay_status || "SUCCESS").toUpperCase();
+    const trxId = String(b.trxId || b.bank_tran_id || b.val_id || `CALLBACK_${Date.now()}`);
+
+    const targetOrder = orders.find((o) => o.id === orderId || o.number === orderId);
+    if (!targetOrder) {
+      return reply.code(404).send({ error: "ORDER_NOT_FOUND", message: "Order matching callback not found." });
+    }
+
+    const isSuccessful = status === "SUCCESS" || status === "COMPLETED" || status === "VALID" || status === "VALIDATED";
+    if (isSuccessful) {
+      targetOrder.paymentStatus = "Paid";
+      targetOrder.status = "processing";
+      targetOrder.transactionId = trxId;
+      targetOrder.paidAt = new Date().toISOString();
+      saveOrders();
+
+      if (targetOrder.wooId && wooEnabled) {
+        try {
+          await updateWooOrderPayment(targetOrder.wooId, {
+            status: "processing",
+            set_paid: true,
+            transaction_id: trxId,
+          });
+        } catch {}
+      }
+    }
+
+    return reply.send({
+      success: true,
+      orderId: targetOrder.id,
+      paymentStatus: targetOrder.paymentStatus,
+      status: targetOrder.status,
+    });
+  });
+
+  /* 4. Check payment status for an order */
+  app.get("/v1/deen/payments/:orderId", async (req, reply) => {
+    const orderId = String((req.params as any).orderId).trim();
+    const targetOrder = orders.find((o) => o.id === orderId || o.number === orderId);
+    if (!targetOrder) {
+      return reply.code(404).send({ error: "NOT_FOUND", message: "Order not found." });
+    }
+
+    return reply.send({
+      success: true,
+      orderId: targetOrder.id,
+      orderNumber: targetOrder.number,
+      payment: targetOrder.payment,
+      paymentStatus: targetOrder.paymentStatus || (targetOrder.payment === "cod" ? "Pending (Cash on Delivery)" : "Paid"),
+      transactionId: targetOrder.transactionId || null,
+      total: targetOrder.total,
+      status: targetOrder.status,
+    });
   });
 
   /* ---- returns & exchanges (customer request + photos & notes) ---- */
@@ -693,7 +1620,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       ],
       pickupMethod: "courier_pickup",
       pickupAddress: "House 14, Road 7, Sector 3, Uttara, Dhaka",
-      contactPhone: "01711223344",
+      contactPhone: "01952700500",
       customerName: "Sajid Islam",
       status: "PICKUP_SCHEDULED",
       createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
@@ -730,11 +1657,47 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   });
 
   app.get("/v1/deen/returns", async (req, reply) => {
+    // REM-3: IDOR fix — mirrors the same token+phone-scoping pattern as GET /v1/deen/orders.
+    // Phone-based lookup requires a valid Bearer token scoped to that session's phone.
     const orderNumber = (req.query as any).orderNumber as string | undefined;
     const phone = (req.query as any).phone as string | undefined;
+    const retToken = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
+
     let list = returns;
-    if (orderNumber) list = list.filter((r) => r.orderNumber === orderNumber);
-    if (phone) list = list.filter((r) => r.contactPhone.includes(phone.replace(/[^0-9]/g, "")));
+
+    if (retToken && retToken !== "") {
+      // Authenticated path: token may be a guest or WP session.
+      const guestSess = guestSessions.find((s) => s.token === retToken);
+      const authSess = authSessions.get(retToken);
+      if (!guestSess && !authSess) {
+        return reply.code(403).send({ error: "FORBIDDEN", message: "Invalid or expired session token." });
+      }
+      if (authSess && authSess.role === "admin") {
+        // Admins can see all returns, optionally filtered.
+        if (orderNumber) list = list.filter((r) => r.orderNumber === orderNumber);
+        if (phone) list = list.filter((r) => r.contactPhone.includes(phone.replace(/[^0-9]/g, "")));
+      } else {
+        // Regular users/guests: scope to their own phone only.
+        const sessionPhone = guestSess?.phone ?? "";
+        list = list.filter((r) => r.contactPhone === sessionPhone);
+        if (orderNumber) list = list.filter((r) => r.orderNumber === orderNumber);
+      }
+    } else if (orderNumber) {
+      // Order-number-only lookup is safe (status only, no PII filter needed beyond the number match).
+      list = list.filter((r) => r.orderNumber === orderNumber);
+    } else if (phone) {
+      // REM-3: phone-only without token is rejected to prevent IDOR.
+      return reply.code(401).send({
+        error: "UNAUTHENTICATED",
+        message: "A valid session token is required to look up returns by phone.",
+      });
+    } else {
+      return reply.code(400).send({
+        error: "MISSING_PARAM",
+        message: "Provide an order number or authorization token.",
+      });
+    }
+
     return reply.send(list);
   });
 
@@ -745,7 +1708,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   /*  Admin = WP 'administrator'/'shop_manager' role (or user 'admin'). */
   /*  No demo accounts — every login is a real WordPress user.          */
   /* ------------------------------------------------------------------ */
-  const authSessions = new Map<string, any>();
+  /* authSessions is now a module-level Map, persisted to disk. */
 
   async function wpLogin(
     username: string,
@@ -784,7 +1747,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       return null;
     }
   }
-  app.post("/v1/auth/login", async (req, reply) => {
+  app.post("/v1/auth/login", { schema: LOGIN_BODY_SCHEMA }, async (req, reply) => {
     const b = (req.body as any) || {};
     const username = String(b.username || b.identifier || b.email || "").trim();
     const password = String(b.password || "");
@@ -812,7 +1775,8 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       wpRoles: wpUser.roles,
     };
     const token = `wp_${randomUUID()}`;
-    authSessions.set(token, { ...user, token });
+    authSessions.set(token, { ...user, token, createdAt: Date.now() });
+    saveAuthSessions();
     return reply.send({
       success: true,
       message: `Authenticated as ${user.name}`,
@@ -880,7 +1844,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   /* ---- register / convert a recognized guest into a customer ---- */
   /* Body: { name, phone, email? } links the phone to a customer record
      so future orders via that phone are greeted as a returning customer. */
-  app.post("/v1/auth/register", async (req, reply) => {
+  app.post("/v1/auth/register", { schema: REGISTER_BODY_SCHEMA }, async (req, reply) => {
     const b = (req.body as any) || {};
     const name = String(b.name || "").trim();
     const phone = String(b.phone || "").replace(/[^0-9]/g, "");

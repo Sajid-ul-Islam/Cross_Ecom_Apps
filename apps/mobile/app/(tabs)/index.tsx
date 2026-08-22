@@ -102,7 +102,7 @@ export default function HomeScreen() {
         <View style={styles.heroWrapper}>
           <Image
             source={{
-              uri: "https://image.qwenlm.ai/generated-images/6632ddf9-2268-4bf4-aee4-f16c6a71bf78/_result.png",
+              uri: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
             }}
             style={styles.heroImage}
             resizeMode="cover"

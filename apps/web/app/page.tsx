@@ -4,28 +4,29 @@ import ProductCard from "@/components/ProductCard";
 import { bdt } from "@/lib/api";
 
 export const metadata = {
-  title: "DEEN Commerce — Premium Men's Fashion Bangladesh",
+  title: "DEEN - দেশের প্রথম ডেনিম ব্র্যান্ড | Official Online Store",
+  description: "DEEN is an empathetic lifestyle e-commerce denim and apparel brand based in Bangladesh.",
 };
 
 const HERO_IMAGE =
-  "https://deencommerce.com/wp-content/uploads/2023/04/WhatsApp-Image-2023-04-20-at-2.39.00-PM-scaled.jpeg";
+  "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg";
 
 const CATEGORY_IMAGES: Record<string, { img: string; label: string }> = {
   JEANS: {
-    img: "https://deencommerce.com/wp-content/uploads/2023/04/WhatsApp-Image-2023-04-20-at-2.39.00-PM-scaled.jpeg",
-    label: "Jeans",
+    img: "https://deencommerce.com/wp-content/uploads/2026/05/jeans-1.jpg",
+    label: "Raw Washed & Vintage Jeans",
   },
   SHIRT: {
-    img: "https://deencommerce.com/wp-content/uploads/2023/05/White-Microprint-Casual-Half-Shirt-1-scaled.jpg",
-    label: "Shirts",
+    img: "https://deencommerce.com/wp-content/uploads/2026/06/Half-sleeve-Section-iomage.webp",
+    label: "Casual & Half Shirts",
   },
   PANJABI: {
-    img: "https://deencommerce.com/wp-content/uploads/2023/06/Edward-Embroidered-Panjabi-1-scaled.jpg",
-    label: "Panjabis",
+    img: "https://deencommerce.com/wp-content/uploads/2026/05/Section-Image-4.jpg",
+    label: "Cuban Collar & Resort Wear",
   },
   "T-SHIRT": {
-    img: "https://deencommerce.com/wp-content/uploads/2023/05/Full-Sleeve-White-Stripe-T-shirt-1-scaled.jpg",
-    label: "T-Shirts",
+    img: "https://deencommerce.com/wp-content/uploads/2026/07/1x1-2.png",
+    label: "Heavyweight T-Shirts",
   },
 };
 
@@ -41,58 +42,62 @@ export default async function HomePage() {
       <section className="hero">
         <div className="hero__bg">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={HERO_IMAGE} alt="DEEN Collection" />
+          <img src={HERO_IMAGE} alt="DEEN - দেশের প্রথম ডেনিম ব্র্যান্ড" />
         </div>
         <div className="hero__overlay" />
         <div className="hero__content">
           <div className="hero__badge">
             <span>✦</span>
-            <span>PREMIUM COLLECTION 2026</span>
+            <span>দেশের প্রথম ডেনিম ব্র্যান্ড · DEEN</span>
           </div>
-          <p className="hero__tagline">Crafted for the modern Bangladeshi man</p>
+          <p className="hero__tagline">Empathetic Men's Lifestyle Fashion in Bangladesh</p>
           <h1 className="hero__title">
-            Wear What<br />Defines You
+            Raw Washed.<br />Selvedge Heritage.
           </h1>
           <p className="hero__sub">
-            From raw-washed denim to hand-embroidered panjabis — every piece built
-            for quality, comfort, and confidence.
+            From vintage slim-fit denim to Cuban collar shirts and heavyweight cotton — every piece
+            is engineered for premium comfort, structure, and endurance.
           </p>
           <div className="hero__actions">
             <Link href="/shop" className="btn btn-primary btn-lg">
-              Shop Now →
+              Shop Collection →
             </Link>
             <Link href="/shop?category=JEANS" className="btn btn-lg" style={{ background: "rgba(255,255,255,0.15)", color: "#fff", backdropFilter: "blur(8px)" }}>
-              Explore Jeans
+              Explore Denim
             </Link>
           </div>
         </div>
       </section>
 
       <div className="container">
-        {/* ── Free Tee Offer ───────────────────────────── */}
+        {/* ── Instant Cashback Offer ─────────────────── */}
         <div
           style={{
-            background: "linear-gradient(135deg, var(--indigo) 0%, #1a2350 100%)",
+            background: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #172554 100%)",
             borderRadius: "var(--radius)",
-            padding: "20px 28px",
+            padding: "22px 30px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             flexWrap: "wrap",
-            gap: 12,
+            gap: 16,
             marginBottom: 48,
+            border: "1px solid rgba(240, 185, 82, 0.3)",
           }}
         >
           <div>
-            <p style={{ color: "#f0b952", fontSize: 11, fontWeight: 800, letterSpacing: 1, marginBottom: 4 }}>
-              EXCLUSIVE OFFER
+            <p style={{ color: "#f0b952", fontSize: 11, fontWeight: 800, letterSpacing: 1.5, marginBottom: 4 }}>
+              🔥 LIMITED-TIME CASHBACK CAMPAIGN
             </p>
-            <p style={{ color: "#fff", fontSize: 16, fontWeight: 800 }}>
-              🎁 FREE 240 GSM Heavyweight T-Shirt on orders over {bdt(3500)}
+            <p style={{ color: "#fff", fontSize: 17, fontWeight: 900, marginBottom: 2 }}>
+              Get ৳500 Cashback on {bdt(2500)}+ · ৳700 Cashback on {bdt(3000)}+
+            </p>
+            <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 13 }}>
+              Applied automatically at checkout on all denim, shirts, and menswear.
             </p>
           </div>
-          <Link href="/shop" className="btn btn-sm" style={{ background: "#fff", color: "var(--indigo)", flexShrink: 0 }}>
-            Shop Now
+          <Link href="/shop" className="btn btn-sm" style={{ background: "#f0b952", color: "#000", fontWeight: 800, flexShrink: 0 }}>
+            Shop &amp; Save →
           </Link>
         </div>
 
@@ -220,41 +225,103 @@ export default async function HomePage() {
           </section>
         )}
 
-        {/* ── Outlet CTA ───────────────────────────────── */}
+        {/* ── 4 Physical Outlets Section ─────────────────── */}
         <section
           style={{
             background: "var(--surface)",
             border: "1px solid var(--border)",
             borderRadius: "var(--radius)",
-            padding: "40px 48px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 24,
+            padding: "40px 36px",
             marginBottom: 60,
           }}
         >
-          <div>
-            <p style={{ color: "var(--indigo)", fontSize: 11, fontWeight: 800, letterSpacing: 1, marginBottom: 6 }}>
-              VISIT US IN PERSON
+          <div style={{ marginBottom: 28, textAlign: "center" }}>
+            <p style={{ color: "var(--brand)", fontSize: 11, fontWeight: 800, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6 }}>
+              VISIT DEEN IN PERSON
             </p>
-            <h2 style={{ fontSize: 22, fontWeight: 900, color: "var(--ink)", marginBottom: 8 }}>
-              Banani Showroom
+            <h2 style={{ fontSize: 24, fontWeight: 900, color: "var(--ink)", marginBottom: 8 }}>
+              Our 4 Physical Outlets & Showrooms
             </h2>
-            <p style={{ color: "var(--sub)", fontSize: 14, lineHeight: 1.6 }}>
-              Plot 68, Kemal Ataturk Ave, Banani, Dhaka 1213<br />
-              Sat–Thu 10am–10pm · Fri 2pm–10pm
+            <p style={{ color: "var(--sub)", fontSize: 14, maxWidth: 600, margin: "0 auto" }}>
+              Experience the fabric, try on selvedge denim, and get free store pickup from any of our 4 official retail locations across Bangladesh.
             </p>
           </div>
-          <a
-            href="https://maps.google.com/?q=Banani+Dhaka"
-            target="_blank"
-            rel="noopener"
-            className="btn btn-outline"
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gap: 20,
+            }}
           >
-            📍 Get Directions
-          </a>
+            {/* Mirpur 12 */}
+            <div style={{ padding: 20, borderRadius: 12, border: "1px solid var(--border)", background: "var(--bg)" }}>
+              <span style={{ fontSize: 10, fontWeight: 800, color: "var(--brand)", letterSpacing: 1 }}>FLAGSHIP HQ & STUDIO</span>
+              <h3 style={{ fontSize: 16, fontWeight: 800, margin: "6px 0 4px" }}>DEEN Mirpur 12 (Dhaka)</h3>
+              <p style={{ fontSize: 13, color: "var(--sub)", lineHeight: 1.5, marginBottom: 12 }}>
+                2nd Floor, Ramzannesa Super Market, Mirpur 12, Dhaka-1216
+              </p>
+              <a
+                href="https://maps.google.com/?q=Ramzannesa+Super+Market+Mirpur+12+Dhaka"
+                target="_blank"
+                rel="noopener"
+                style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)" }}
+              >
+                📍 View on Google Maps →
+              </a>
+            </div>
+
+            {/* Wari */}
+            <div style={{ padding: 20, borderRadius: 12, border: "1px solid var(--border)", background: "var(--bg)" }}>
+              <span style={{ fontSize: 10, fontWeight: 800, color: "var(--brand)", letterSpacing: 1 }}>DHAKA SOUTH</span>
+              <h3 style={{ fontSize: 16, fontWeight: 800, margin: "6px 0 4px" }}>DEEN Wari Outlet</h3>
+              <p style={{ fontSize: 13, color: "var(--sub)", lineHeight: 1.5, marginBottom: 12 }}>
+                Ground Floor, 41 A.K Famous Tower, Rankin Street, Wari, Dhaka-1203
+              </p>
+              <a
+                href="https://maps.google.com/?q=Rankin+Street+Wari+Dhaka"
+                target="_blank"
+                rel="noopener"
+                style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)" }}
+              >
+                📍 View on Google Maps →
+              </a>
+            </div>
+
+            {/* Cumilla */}
+            <div style={{ padding: 20, borderRadius: 12, border: "1px solid var(--border)", background: "var(--bg)" }}>
+              <span style={{ fontSize: 10, fontWeight: 800, color: "var(--brand)", letterSpacing: 1 }}>CUMILLA SHOWROOM</span>
+              <h3 style={{ fontSize: 16, fontWeight: 800, margin: "6px 0 4px" }}>DEEN Cumilla Outlet</h3>
+              <p style={{ fontSize: 13, color: "var(--sub)", lineHeight: 1.5, marginBottom: 12 }}>
+                4th Floor, QR Tower, Badurtola, Cumilla
+              </p>
+              <a
+                href="https://maps.google.com/?q=QR+Tower+Badurtola+Cumilla"
+                target="_blank"
+                rel="noopener"
+                style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)" }}
+              >
+                📍 View on Google Maps →
+              </a>
+            </div>
+
+            {/* Sylhet */}
+            <div style={{ padding: 20, borderRadius: 12, border: "1px solid var(--border)", background: "var(--bg)" }}>
+              <span style={{ fontSize: 10, fontWeight: 800, color: "var(--brand)", letterSpacing: 1 }}>SYLHET SHOWROOM</span>
+              <h3 style={{ fontSize: 16, fontWeight: 800, margin: "6px 0 4px" }}>DEEN Sylhet Outlet</h3>
+              <p style={{ fontSize: 13, color: "var(--sub)", lineHeight: 1.5, marginBottom: 12 }}>
+                Block-A, House-54/2, Kumar Para, Sylhet
+              </p>
+              <a
+                href="https://maps.google.com/?q=Kumar+Para+Sylhet"
+                target="_blank"
+                rel="noopener"
+                style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)" }}
+              >
+                📍 View on Google Maps →
+              </a>
+            </div>
+          </div>
         </section>
       </div>
     </>

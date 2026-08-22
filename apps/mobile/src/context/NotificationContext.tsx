@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NotificationItem, BroadcastMessage, NotificationType } from "../types";
-import { sendBroadcastAPI } from "../services/gateway";
+import { sendBroadcastAPI, fetchBroadcastsAPI, registerPushTokenAPI } from "../services/gateway";
 
 const NOTIFICATIONS_STORAGE_KEY = "deen_mobile_notifications_v1";
 const BROADCASTS_STORAGE_KEY = "deen_mobile_broadcasts_v1";
+const PUSH_TOKEN_STORAGE_KEY = "deen_mobile_push_token_v1";
 
 const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
@@ -52,8 +54,8 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: "notif_5",
     type: "BROADCAST",
-    title: "📣 Banani Flagship Studio Now Open for 2h Pickups",
-    body: "Select 'Store Pickup' at checkout to collect your orders free of charge from Plot 68, Kemal Ataturk Ave, Banani.",
+    title: "📣 Mirpur 12 Flagship Outlet Now Open for Pickups",
+    body: "Select 'Store Pickup' at checkout to collect your orders free of charge from Ramzannesa Super Market, Mirpur 12.",
     timestamp: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(), // 3 days ago
     read: true,
     actionUrl: "/(tabs)/profile",
@@ -77,8 +79,8 @@ const INITIAL_BROADCASTS: BroadcastMessage[] = [
   },
   {
     id: "bc_2",
-    title: "📣 Banani Flagship Studio Now Open for 2h Pickups",
-    body: "Select 'Store Pickup' at checkout to collect your orders free of charge from Plot 68, Kemal Ataturk Ave, Banani.",
+    title: "📣 Mirpur 12 Flagship Outlet Now Open for Pickups",
+    body: "Select 'Store Pickup' at checkout to collect your orders free of charge from Ramzannesa Super Market, Mirpur 12.",
     type: "BROADCAST",
     audience: "DHAKA_ONLY",
     actionUrl: "/(tabs)/profile",
@@ -93,11 +95,13 @@ interface NotificationContextType {
   notifications: NotificationItem[];
   broadcasts: BroadcastMessage[];
   unreadCount: number;
+  pushToken: string | null;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;
   addNotification: (item: Omit<NotificationItem, "id" | "timestamp" | "read">) => Promise<void>;
   sendBroadcast: (msg: Omit<BroadcastMessage, "id" | "sentAt" | "recipientCount">) => Promise<BroadcastMessage>;
+  refreshBroadcasts: () => Promise<void>;
   loading: boolean;
 }
 
@@ -106,7 +110,71 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
   const [broadcasts, setBroadcasts] = useState<BroadcastMessage[]>(INITIAL_BROADCASTS);
+  const [pushToken, setPushToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Sync broadcasts from gateway API & merge into local inbox
+  const syncLiveBroadcasts = async () => {
+    try {
+      const remote = await fetchBroadcastsAPI();
+      if (Array.isArray(remote) && remote.length > 0) {
+        setBroadcasts(remote);
+        await AsyncStorage.setItem(BROADCASTS_STORAGE_KEY, JSON.stringify(remote)).catch(() => {});
+
+        // Convert remote broadcasts into notification inbox items if not present
+        setNotifications((prev) => {
+          const existingIds = new Set(prev.map((n) => n.id));
+          const converted: NotificationItem[] = remote
+            .filter((bc) => !existingIds.has(bc.id))
+            .map((bc) => ({
+              id: bc.id,
+              type: bc.type,
+              title: bc.title,
+              body: bc.body,
+              timestamp: bc.sentAt || new Date().toISOString(),
+              read: false,
+              promoCode: bc.promoCode,
+              actionUrl: bc.actionUrl,
+              actionLabel: bc.actionLabel,
+              bannerImage: bc.bannerImage,
+            }));
+          if (converted.length > 0) {
+            const merged = [...converted, ...prev];
+            AsyncStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(merged)).catch(() => {});
+            return merged;
+          }
+          return prev;
+        });
+      }
+    } catch {
+      /* network offline — use cached */
+    }
+  };
+
+  // Register or obtain push token on startup
+  const initPushToken = async () => {
+    try {
+      let token = await AsyncStorage.getItem(PUSH_TOKEN_STORAGE_KEY);
+      if (!token) {
+        // Deterministic or generated Exponent Push Token format for simulator/device
+        token = `ExponentPushToken[${Math.random().toString(36).slice(2, 10)}_${Date.now().toString(36)}]`;
+        await AsyncStorage.setItem(PUSH_TOKEN_STORAGE_KEY, token);
+      }
+      setPushToken(token);
+
+      // Register with gateway
+      await registerPushTokenAPI(token, {
+        area: "dhaka",
+        device: {
+          platform: Platform.OS,
+          osVersion: String(Platform.Version),
+          model: Platform.select({ ios: "iPhone", android: "Android Device", default: "Mobile Client" }),
+        },
+      });
+    } catch (e) {
+      console.warn("Push token registration error:", e);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -124,6 +192,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         } else {
           await AsyncStorage.setItem(BROADCASTS_STORAGE_KEY, JSON.stringify(INITIAL_BROADCASTS));
         }
+
+        // Initialize push token and sync broadcasts
+        await initPushToken();
+        await syncLiveBroadcasts();
       } catch (e) {
         console.error("Failed to load notifications", e);
       } finally {
@@ -131,6 +203,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
     })();
   }, []);
+
 
   const saveNotifications = async (items: NotificationItem[]) => {
     setNotifications(items);
@@ -209,11 +282,13 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         notifications,
         broadcasts,
         unreadCount,
+        pushToken,
         markAsRead,
         markAllAsRead,
         deleteNotification,
         addNotification,
         sendBroadcast,
+        refreshBroadcasts: syncLiveBroadcasts,
         loading,
       }}
     >

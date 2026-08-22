@@ -10,19 +10,30 @@ import {
   UserProfile,
 } from "../types";
 
-export const FREE_TEE_THRESHOLD = 3500;
+export const CASHBACK_TIERS = {
+  tier1: { minSpend: 2500, cashback: 500 },
+  tier2: { minSpend: 3000, cashback: 700 },
+} as const;
+
+export function getCashbackAmount(subtotal: number): number {
+  if (subtotal >= CASHBACK_TIERS.tier2.minSpend) return CASHBACK_TIERS.tier2.cashback;
+  if (subtotal >= CASHBACK_TIERS.tier1.minSpend) return CASHBACK_TIERS.tier1.cashback;
+  return 0;
+}
+
+export const FREE_TEE_THRESHOLD = 2500; // Deprecated backward compat
 
 export const DELIVERY_OPTIONS: Record<DeliveryOptionKey, DeliveryOption> = {
   dhaka_standard: {
     id: "dhaka_standard",
-    name: "Inside Dhaka (Standard)",
+    name: "Home Delivery",
     sub: "2-3 business days · Regular doorstep courier",
     fee: 50,
     estimatedDays: "2-3 Days",
   },
   dhaka_express: {
     id: "dhaka_express",
-    name: "Dhaka Express (Same-Day / 24h)",
+    name: "Express Home Delivery (Same-Day / 24h)",
     sub: "Within 24 hours · Priority rush delivery in Dhaka",
     fee: 120,
     estimatedDays: "24 Hours",
@@ -30,15 +41,15 @@ export const DELIVERY_OPTIONS: Record<DeliveryOptionKey, DeliveryOption> = {
   },
   outside_standard: {
     id: "outside_standard",
-    name: "Outside Dhaka (All Districts)",
-    sub: "3-5 business days · Steadfast / RedX home delivery",
+    name: "Home Delivery (Outside Dhaka)",
+    sub: "3-5 business days · Steadfast / Pathao home delivery",
     fee: 90,
     estimatedDays: "3-5 Days",
   },
   store_pickup: {
     id: "store_pickup",
-    name: "Store Pickup (Banani Studio)",
-    sub: "Ready within 2 hours · Free collection from outlet",
+    name: "Store Pickup (Mirpur 12 Outlet)",
+    sub: "Ready within 2 hours · Free collection from store",
     fee: 0,
     estimatedDays: "Ready in 2h",
     badge: "FREE",

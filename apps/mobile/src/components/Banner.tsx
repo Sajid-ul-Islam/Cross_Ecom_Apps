@@ -6,10 +6,15 @@ import { useTheme } from "../context/ThemeContext";
 import { bdt } from "../services/gateway";
 
 export const FreeTeeBanner: React.FC = () => {
-  const { freeTeeEligible, freeTeeGap, subtotal } = useCart();
+  const { subtotal } = useCart();
   const { colors } = useTheme();
-  const progress = Math.min(1, subtotal / 3500);
-  const accentColor = freeTeeEligible ? colors.emerald : colors.indigo;
+
+  // Tier 1: ৳2,500 (৳500 cashback)
+  // Tier 2: ৳3,000 (৳700 cashback)
+  const isTier2 = subtotal >= 3000;
+  const isTier1 = subtotal >= 2500;
+  const progress = Math.min(1, subtotal / 3000);
+  const accentColor = isTier2 ? colors.emerald : isTier1 ? colors.denimStitch : colors.indigo;
 
   return (
     <View style={{
@@ -30,20 +35,24 @@ export const FreeTeeBanner: React.FC = () => {
           <Gift size={16} color={accentColor} />
         </View>
         <View style={{ flex: 1 }}>
-          {freeTeeEligible ? (
+          {isTier2 ? (
             <Text style={{ fontSize: 12, fontWeight: "800", color: colors.emerald }}>
-              🎉 FREE HEAVYWEIGHT TEE UNLOCKED!
+              🎉 MAXIMUM ৳700 CASHBACK UNLOCKED!
+            </Text>
+          ) : isTier1 ? (
+            <Text style={{ fontSize: 12, fontWeight: "800", color: colors.denimStitch }}>
+              ✨ ৳500 CASHBACK UNLOCKED! Add {bdt(3000 - subtotal)} for ৳700
             </Text>
           ) : (
             <Text style={{ fontSize: 12, color: colors.ink }}>
               Add{" "}
-              <Text style={{ fontWeight: "700", color: colors.indigo }}>{bdt(freeTeeGap)}</Text>
-              {" "}more for a{" "}
-              <Text style={{ fontWeight: "700", color: colors.indigo }}>FREE T-Shirt</Text>
+              <Text style={{ fontWeight: "700", color: colors.indigo }}>{bdt(2500 - subtotal)}</Text>
+              {" "}for{" "}
+              <Text style={{ fontWeight: "700", color: colors.emerald }}>৳500 CASHBACK</Text>
             </Text>
           )}
           <Text style={{ fontSize: 10, color: colors.sub, marginTop: 2 }}>
-            Orders over ৳3,500 receive a complimentary 240 GSM Tee
+            Instant Cashback: ৳500 off on ৳2,500+ · ৳700 off on ৳3,000+
           </Text>
         </View>
       </View>

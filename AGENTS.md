@@ -13,11 +13,9 @@ This codebase contains:
    - For COD (`cod`), `payment_method_title` is `Cash on Delivery (COD)` with `set_paid: false`.
 
 2. **Pathao Logistics Tracking**:
-   - Generate Pathao consignment ID `PT-{order_number}-{suffix}` and live tracking link `https://merchant.pathao.com/tracking?consignment_id=...`.
-   - Display Pathao Consignment ID and clickable tracking link on:
-     - Order Confirmation Screen (Web & Mobile)
-     - My Orders Screen (Web & Mobile)
-     - Profile Screen (Web & Mobile)
+   - Pathao consignment IDs are NOT auto-generated or faked on new orders.
+   - When a real `ptc_consignment_id` (e.g. `DD220826MDKMP9`) is attached to an order (from Pathao/WooCommerce), resolve `pathaoConsignmentId` and live tracking link `https://merchant.pathao.com/tracking?consignment_id={consignment_id}`.
+   - Display Pathao Consignment ID and clickable tracking link on Order Confirmation, My Orders, and Profile screens only when `pathaoConsignmentId` is present. Otherwise, show "Preparing Dispatch".
 
 3. **District Selection**:
    - Both Web and Mobile checkout forms provide full 64 Bangladesh districts dropdown/modal selection with official WooCommerce state codes (`BD-13` Dhaka, `BD-10` Chattogram, etc.).

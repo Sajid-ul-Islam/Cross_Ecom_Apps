@@ -24,24 +24,48 @@ export default function Footer() {
               Crafted for the modern Bangladeshi man — premium fabrics, honest
               pricing, delivered to your door.
             </p>
-            <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
+            <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
               <a
                 href="https://www.facebook.com/deencommerce"
                 target="_blank"
                 rel="noopener"
+                title="Follow DEEN on Facebook"
                 style={{
-                  width: 32,
-                  height: 32,
+                  width: 34,
+                  height: 34,
                   borderRadius: "50%",
-                  background: "var(--surface-2)",
-                  border: "1px solid var(--border)",
+                  background: "#1877F2",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  color: "var(--sub)",
+                  color: "#FFFFFF",
+                  fontWeight: 800,
+                  fontSize: 14,
+                  textDecoration: "none",
                 }}
               >
                 f
+              </a>
+              <a
+                href="https://www.instagram.com/deencommerce"
+                target="_blank"
+                rel="noopener"
+                title="Follow DEEN on Instagram"
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: "50%",
+                  background: "linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#FFFFFF",
+                  fontWeight: 800,
+                  fontSize: 13,
+                  textDecoration: "none",
+                }}
+              >
+                📸
               </a>
             </div>
           </div>
@@ -74,11 +98,12 @@ export default function Footer() {
             <p className="footer__col-title">Contact</p>
             <ul className="footer__links">
               <li style={{ color: "var(--sub)", fontSize: 13 }}>
-                📍 Plot 68, Kemal Ataturk Ave,<br />Banani, Dhaka 1213
+                📍 Ramzannesa Super Market, Mirpur 12, Dhaka 1216<br />
+                <span style={{ fontSize: 11, color: "var(--brand)" }}>Outlets: Mirpur 12 · Wari · Cumilla · Sylhet</span>
               </li>
               <li style={{ marginTop: 8 }}>
-                <a href="tel:+8801877076200" style={{ fontSize: 13 }}>
-                  📞 +880 1877-076200
+                <a href="tel:+8801952700500" style={{ fontSize: 13 }}>
+                  📞 +880 1952-700500
                 </a>
               </li>
               <li>

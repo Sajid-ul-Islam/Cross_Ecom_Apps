@@ -260,3 +260,29 @@ export async function pushWooOrder(order: unknown): Promise<{ id: number }> {
   return (await r.json()) as { id: number };
 }
 
+export async function updateWooOrderPayment(
+  wooId: number,
+  data: {
+    status?: "processing" | "completed" | "on-hold" | "cancelled" | "failed";
+    set_paid?: boolean;
+    transaction_id?: string;
+    customer_note?: string;
+  }
+): Promise<{ id: number; status: string }> {
+  const { site, consumerKey, consumerSecret } = config.woo;
+  const url = new URL(`${site.replace(/\/$/, "")}/wp-json/wc/v3/orders/${wooId}`);
+  url.searchParams.set("consumer_key", consumerKey);
+  url.searchParams.set("consumer_secret", consumerSecret);
+  const r = await fetch(url.toString(), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!r.ok) {
+    const errBody = await r.text().catch(() => "");
+    throw new Error(`Woo order update failed: ${r.status} ${errBody.slice(0, 200)}`);
+  }
+  return (await r.json()) as { id: number; status: string };
+}
+
+
