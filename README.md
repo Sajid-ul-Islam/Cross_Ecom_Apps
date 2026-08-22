@@ -2,6 +2,29 @@
 
 **Bangladesh's first denim brand — DEEN** — built as a modern e-commerce suite: a **React Native (Expo SDK 55) mobile app**, a **Fastify WooCommerce-gateway API**, and a **Next.js 14 web storefront order desk**. Designed to be handed between autonomous coding agents (see [BLUEPRINT.md](./BLUEPRINT.md)).
 
+[![Fastify](https://img.shields.io/badge/Fastify-8A3936?style=for-the-badge&logo=Fastify&logoColor=white)](https://www.fastify.io/)
+[![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactnative.dev/)
+[![Expo](https://img.shields.io/badge/Expo-000000?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/)
+[![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-000000?style=for-the-badge&logo=github-actions&logoColor=white)](https://github.com/features/actions)
+
+**Bangladesh's first denim brand — [DEEN](https://deencommerce.com)** — built as a modern full-stack e-commerce suite:  
+📱 **React Native (Expo)** mobile app · ⚡ **Fastify + WooCommerce** Gateway API · 🖥️ **Next.js 14** web order desk.  
+
+> Built for handoff between autonomous coding agents. See [`AGENTS.md`](./AGENTS.md) for operational rules and [`BLUEPRINT.md`](./BLUEPRINT.md) for the full architecture.
+
+---
+
+### 🔥 Why This Repo Shines
+
+- 📦 **Monorepo** with Vite, EAS, Docker, Render & Vercel deployment pipelines  
+- 🌍 **Offline-first** React Native app with 826 products bundled locally  
+- 🧠 Integrates with real **WooCommerce REST API**, **Pathao Logistics**, and **bKash/Nagad** payment flows  
+- 🧑‍💼 Powers three distinct user modes: **Admin**, **Registered Customer**, and **Guest**  
+- 🧪 Includes **demo test accounts** ready to use out-the-box  
+
 ---
 
 ## Table of Contents
@@ -137,6 +160,8 @@ Live gateway: `https://cross-ecom-apps.onrender.com/`
 | `GET` | `/v1/auth/demo-accounts` | — | REMOVED (no demo users) |
 | `POST` | `/v1/auth/login` | — | Real WordPress login (username+password) → token + role |
 | `GET` | `/v1/auth/me` | Bearer token | Resume authenticated session |
+| `GET` | `/v1/auth/demo-accounts` | — | List demo test credentials |
+| `POST` | `/v1/auth/login` | — | Authenticate customer, VIP, or admin |
 | `POST` | `/v1/auth/guest` | — | Mint a real anonymous guest session |
 | `POST` | `/v1/deen/bugs` | — | Crash & bug report sink |
 
@@ -160,6 +185,20 @@ Every login is a **real WordPress user** on `deencommerce.com`:
 - Token is stored on device; `GET /v1/auth/me` resumes the session.
 - Guest checkout remains available (anonymous `POST /v1/auth/guest` session).
 - **Out-of-stock products are hidden from customers** everywhere: `/v1/deen/products` filters them by default (`?includeOOS=1` opt-in for admin), and the bundled offline snapshot is OOS-free.
+- Must include `city`, `state` (BD-XX district code), `postcode`, `country: "BD"` in `billing` & `shipping`
+- Delivery fees: **৳50** Dhaka standard, **৳90** outside Dhaka, **৳0** store pickup
+- COD: `set_paid: false`, `payment_method_title: "Cash on Delivery (COD)"`
+
+---
+
+## 🔑 Demo Test Accounts & Credentials
+
+| Role | Username / Email | BD Phone | Key Details |
+| :--- | :--- | :--- | :--- |
+| 👤 **Regular Customer** | `customer` / `tanvir@deen.com` | `01712-345678` | Tanvir Ahmed — 1,250 DEEN Coins |
+| ⭐ **VIP Gold Shopper** | `vip` / `vip@deen.com` | `01899-776655` | Sajid-ul Islam — 4,800 Coins (Gold) |
+| 👑 **Store Admin** | `admin` / `admin@deen.com` | `01711-223344` | BI dashboard, broadcast console |
+| ⚡ **Guest Mode** | `guest` | `01911-000000` | Anonymous fast checkout |
 
 > **Live site contact:** WhatsApp `01952-700500`, IVR `09617-700500`
 > **Outlets:** Mirpur, Wari, Cumilla, Sylhet
@@ -171,6 +210,15 @@ Every login is a **real WordPress user** on `deencommerce.com`:
 - **👑 Admin** — unlocked only by logging in as a WordPress admin; sees live BI dashboard + broadcast console on Home.
 - **👤 Customer** — signed in with a real WordPress account; saved addresses, order history, profile.
 - **⚡ Guest** — anonymous fast checkout (real random session, no shared creds).
+## 🎛️ 3-Way User Operating Modes
+
+Toggle via `UserModeBar.tsx` on Home & Profile:
+
+1. **👑 Admin Panel Mode** — Live BI sparklines, revenue KPIs, broadcast marketing console
+2. **👤 Registered User Mode** — Saved addresses, order history, VIP coins, size profile
+3. **⚡ Guest User Mode** — Anonymous fast checkout (real random session, no shared creds)
+
+---
 
 ## Deployment
 
