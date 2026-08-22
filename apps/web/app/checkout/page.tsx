@@ -42,7 +42,8 @@ function CheckoutContent() {
   const [apiError, setApiError] = useState("");
 
   const delivery = DELIVERY_FEES[area] ?? 50;
-  const total = subtotal + delivery;
+  const cashback = subtotal >= 3000 ? 700 : subtotal >= 2500 ? 500 : 0;
+  const total = Math.max(0, subtotal - cashback) + delivery;
 
   // Auto sync delivery fee if district changes
   const handleDistrictChange = (dCode: string) => {
@@ -342,9 +343,10 @@ function CheckoutContent() {
                   {delivery === 0 ? "FREE" : bdt(delivery)}
                 </span>
               </div>
-              {subtotal >= 3500 && (
-                <div className="summary-row" style={{ color: "var(--emerald)" }}>
-                  <span>🎁 Free Summer Tee</span><span>৳0</span>
+              {cashback > 0 && (
+                <div className="summary-row" style={{ color: "var(--emerald)", fontWeight: 700 }}>
+                  <span>🎁 Instant Cashback ({subtotal >= 3000 ? "৳700 for ৳3,000+" : "৳500 for ৳2,500+"})</span>
+                  <span>-{bdt(cashback)}</span>
                 </div>
               )}
               <div className="summary-row summary-row--total">

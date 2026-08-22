@@ -8,6 +8,7 @@ import {
   Switch,
   StyleSheet,
   Alert,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -729,8 +730,42 @@ export default function ProfileScreen() {
           <View style={styles.supportBox}>
             <HelpCircle size={16} color={Colors.indigo} />
             <Text style={styles.supportText}>
-              Customer Hotline & WhatsApp: <Text style={styles.bold}>+880 1952-700500</Text> (10 AM - 10 PM)
+              Customer Hotline &amp; WhatsApp: <Text style={styles.bold}>+880 1952-700500</Text> (10 AM - 10 PM)
             </Text>
+          </View>
+
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                backgroundColor: "#1877F2",
+                paddingVertical: 10,
+                borderRadius: 8,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              onPress={() => Linking.openURL("https://www.facebook.com/deencommerce")}
+            >
+              <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 11 }}>
+                FACEBOOK PAGE →
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                backgroundColor: "#E1306C",
+                paddingVertical: 10,
+                borderRadius: 8,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              onPress={() => Linking.openURL("https://www.instagram.com/deencommerce")}
+            >
+              <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 11 }}>
+                INSTAGRAM (@deencommerce) →
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>

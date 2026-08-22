@@ -70,30 +70,34 @@ export default async function HomePage() {
       </section>
 
       <div className="container">
-        {/* ── Free Tee Offer ───────────────────────────── */}
+        {/* ── Instant Cashback Offer ─────────────────── */}
         <div
           style={{
-            background: "linear-gradient(135deg, var(--indigo) 0%, #1a2350 100%)",
+            background: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #172554 100%)",
             borderRadius: "var(--radius)",
-            padding: "20px 28px",
+            padding: "22px 30px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             flexWrap: "wrap",
-            gap: 12,
+            gap: 16,
             marginBottom: 48,
+            border: "1px solid rgba(240, 185, 82, 0.3)",
           }}
         >
           <div>
-            <p style={{ color: "#f0b952", fontSize: 11, fontWeight: 800, letterSpacing: 1, marginBottom: 4 }}>
-              EXCLUSIVE OFFER
+            <p style={{ color: "#f0b952", fontSize: 11, fontWeight: 800, letterSpacing: 1.5, marginBottom: 4 }}>
+              🔥 LIMITED-TIME CASHBACK CAMPAIGN
             </p>
-            <p style={{ color: "#fff", fontSize: 16, fontWeight: 800 }}>
-              🎁 FREE 240 GSM Heavyweight T-Shirt on orders over {bdt(3500)}
+            <p style={{ color: "#fff", fontSize: 17, fontWeight: 900, marginBottom: 2 }}>
+              Get ৳500 Cashback on {bdt(2500)}+ · ৳700 Cashback on {bdt(3000)}+
+            </p>
+            <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 13 }}>
+              Applied automatically at checkout on all denim, shirts, and menswear.
             </p>
           </div>
-          <Link href="/shop" className="btn btn-sm" style={{ background: "#fff", color: "var(--indigo)", flexShrink: 0 }}>
-            Shop Now
+          <Link href="/shop" className="btn btn-sm" style={{ background: "#f0b952", color: "#000", fontWeight: 800, flexShrink: 0 }}>
+            Shop &amp; Save →
           </Link>
         </div>
 

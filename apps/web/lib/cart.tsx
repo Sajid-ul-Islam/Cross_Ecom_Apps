@@ -27,7 +27,18 @@ interface CartCtx {
 
 const CartContext = createContext<CartCtx | undefined>(undefined);
 const STORAGE_KEY = "@deen_web_cart_v1";
-export const FREE_TEE_THRESHOLD = 3500;
+export const CASHBACK_TIERS = {
+  tier1: { minSpend: 2500, cashback: 500 },
+  tier2: { minSpend: 3000, cashback: 700 },
+} as const;
+
+export function getCashbackAmount(subtotal: number): number {
+  if (subtotal >= 3000) return 700;
+  if (subtotal >= 2500) return 500;
+  return 0;
+}
+
+export const FREE_TEE_THRESHOLD = 2500; // backward compat
 
 
 export function CartProvider({ children }: { children: React.ReactNode }) {

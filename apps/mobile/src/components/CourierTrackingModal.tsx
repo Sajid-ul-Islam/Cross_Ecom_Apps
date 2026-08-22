@@ -20,6 +20,7 @@ import {
   Navigation,
   ShieldCheck,
 } from "./Icons";
+import { LottieAnimation } from "./LottieAnimation";
 import { Colors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { Order } from "../types";
@@ -90,12 +91,9 @@ export const CourierTrackingModal: React.FC<CourierTrackingModalProps> = ({
                   <Text style={styles.hubLabel}>Pathao Hub</Text>
                 </View>
 
-                {/* Courier Bike / Van in transit */}
+                {/* Courier in transit */}
                 <View style={styles.riderNode}>
-                  <View style={styles.riderPill}>
-                    <Navigation size={12} color="#FFFFFF" />
-                    <Text style={styles.riderPillText}>In Transit</Text>
-                  </View>
+                  <LottieAnimation type="truck" size={44} loop={true} />
                 </View>
 
                 {/* Destination Node */}
