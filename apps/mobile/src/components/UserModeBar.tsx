@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from "react-native";
-import { ShieldCheck, User, Store, Sparkles, CheckCircle2 } from "./Icons";
+import { User, Store } from "./Icons";
 import { Colors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
-import { useProfile, UserMode } from "../context/ProfileContext";
+import { useProfile } from "../context/ProfileContext";
 
 const { width } = Dimensions.get("window");
 
@@ -12,34 +12,27 @@ interface UserModeBarProps {
 }
 
 export const UserModeBar: React.FC<UserModeBarProps> = ({ showDescription = true }) => {
-  const { colors, isDark } = useTheme();
-  const { currentMode, setAccountMode, profile } = useProfile();
+  const { colors } = useTheme();
+  const { currentMode, profile, switchToGuestMode } = useProfile();
   const [justSwitched, setJustSwitched] = useState<string | null>(null);
 
-  const handleSelect = async (mode: UserMode) => {
+  const handleSelect = async (mode: "registered" | "guest") => {
     if (mode === currentMode) return;
-    await setAccountMode(mode);
-
-    let msg = "";
-    if (mode === "admin") {
-      msg = "👑 Admin Panel Mode Active: BI Analytics, Revenue Tracking & Push Broadcasts enabled on Home.";
-    } else if (mode === "registered") {
-      msg = "👤 Registered User Mode Active: Saved addresses, VIP coins & customer profiles enabled.";
+    if (mode === "guest") {
+      await switchToGuestMode();
+      setJustSwitched("⚡ Guest Mode Active: Anonymous fast checkout without registration.");
     } else {
-      msg = "⚡ Guest User Mode Active: Anonymous fast checkout enabled without password.";
+      setJustSwitched("👤 Customer Mode: sign in to load your account.");
     }
-
-    setJustSwitched(msg);
     setTimeout(() => setJustSwitched(null), 4000);
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      {/* Header bar */}
       <View style={styles.topRow}>
         <View style={styles.topTitleRow}>
           <Store size={14} color={colors.indigo} />
-          <Text style={[styles.topTitle, { color: colors.ink }]}>TESTER &amp; ADMIN ROLE SWITCHER</Text>
+          <Text style={[styles.topTitle, { color: colors.ink }]}>ACCOUNT MODE</Text>
         </View>
         <View
           style={[
@@ -66,33 +59,7 @@ export const UserModeBar: React.FC<UserModeBarProps> = ({ showDescription = true
         </View>
       </View>
 
-      {/* 3-Segmented Tabs */}
       <View style={[styles.tabsRow, { backgroundColor: colors.cardSecondary }]}>
-        {/* 1. Admin Mode */}
-        <TouchableOpacity
-          style={[
-            styles.tabItem,
-            currentMode === "admin" && [
-              styles.tabItemActive,
-              { backgroundColor: colors.paper, borderColor: colors.indigo },
-            ],
-          ]}
-          activeOpacity={0.85}
-          onPress={() => handleSelect("admin")}
-        >
-          <Text style={styles.tabIcon}>👑</Text>
-          <Text
-            style={[
-              styles.tabTitle,
-              { color: currentMode === "admin" ? colors.indigoDark : colors.sub },
-              currentMode === "admin" && styles.tabTitleActive,
-            ]}
-          >
-            Admin Panel
-          </Text>
-        </TouchableOpacity>
-
-        {/* 2. Registered User Mode */}
         <TouchableOpacity
           style={[
             styles.tabItem,
@@ -112,11 +79,10 @@ export const UserModeBar: React.FC<UserModeBarProps> = ({ showDescription = true
               currentMode === "registered" && styles.tabTitleActive,
             ]}
           >
-            Registered User
+            Customer
           </Text>
         </TouchableOpacity>
 
-        {/* 3. Guest Mode */}
         <TouchableOpacity
           style={[
             styles.tabItem,
@@ -136,12 +102,11 @@ export const UserModeBar: React.FC<UserModeBarProps> = ({ showDescription = true
               currentMode === "guest" && styles.tabTitleActive,
             ]}
           >
-            Guest User
+            Guest
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Dynamic Toast / Status Banner */}
       {justSwitched ? (
         <View style={styles.switchBanner}>
           <Text style={styles.switchBannerText}>{justSwitched}</Text>
@@ -149,10 +114,10 @@ export const UserModeBar: React.FC<UserModeBarProps> = ({ showDescription = true
       ) : showDescription ? (
         <Text style={[styles.descText, { color: colors.sub }]}>
           {currentMode === "admin"
-            ? "👑 Admin Mode: Full BI dashboard, revenue stats & push broadcasts active on Home."
+            ? "👑 Admin Mode: Full BI dashboard active on Home."
             : currentMode === "registered"
-            ? `👤 Registered Mode: Logged in as ${profile.name || "Customer"} (${profile.phone || "01712-345678"}).`
-            : "⚡ Guest Mode: Anonymous checkout without saved address or registration."}
+            ? `👤 Customer Mode: Logged in as ${profile.name || "Customer"}.`
+            : "⚡ Guest Mode: Anonymous checkout without registration."}
         </Text>
       ) : null}
     </View>

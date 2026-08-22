@@ -68,7 +68,7 @@ function _rateLimitHook() {
 }
 
   await registerDeenRoutes(app);
-
+  _rateLimitHook();
   app.get("/", async () => ({ name: "DEEN Gateway", mode: config.apiKey ? "keyed" : "open", docs: "/v1/health" }));
 
   return app;

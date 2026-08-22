@@ -1,5 +1,7 @@
 # DEEN Commerce — Cross-Platform E-commerce Monorepo
 
+**Bangladesh's first denim brand — DEEN** — built as a modern e-commerce suite: a **React Native (Expo SDK 55) mobile app**, a **Fastify WooCommerce-gateway API**, and a **Next.js 14 web storefront order desk**. Designed to be handed between autonomous coding agents (see [BLUEPRINT.md](./BLUEPRINT.md)).
+
 [![Fastify](https://img.shields.io/badge/Fastify-8A3936?style=for-the-badge&logo=Fastify&logoColor=white)](https://www.fastify.io/)
 [![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactnative.dev/)
 [![Expo](https://img.shields.io/badge/Expo-000000?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/)
@@ -155,6 +157,9 @@ Live gateway: `https://cross-ecom-apps.onrender.com/`
 | `GET` | `/v1/deen/broadcasts` | — | List past broadcasts |
 | `POST` | `/v1/deen/returns` | — | Submit return/exchange ticket with photos |
 | `GET` | `/v1/deen/returns` | — | Retrieve return tickets by phone/order |
+| `GET` | `/v1/auth/demo-accounts` | — | REMOVED (no demo users) |
+| `POST` | `/v1/auth/login` | — | Real WordPress login (username+password) → token + role |
+| `GET` | `/v1/auth/me` | Bearer token | Resume authenticated session |
 | `GET` | `/v1/auth/demo-accounts` | — | List demo test credentials |
 | `POST` | `/v1/auth/login` | — | Authenticate customer, VIP, or admin |
 | `POST` | `/v1/auth/guest` | — | Mint a real anonymous guest session |
@@ -164,6 +169,22 @@ Live gateway: `https://cross-ecom-apps.onrender.com/`
 
 - Order number format: `DC-{seq}` (e.g. `DC-1042`)
 - Pathao consignment ID: `PT-{orderNumber}-{suffix}` → tracking at `https://merchant.pathao.com/tracking?consignment_id=...`
+- Must include `city`, `state` (BD-XX district code), `postcode`, `country: "BD"` in `billing` & `shipping`, plus `email` and `last_name`
+- Delivery fees: **৳50** Dhaka standard, **৳90** outside Dhaka, **৳0** store pickup
+- COD: `set_paid: false`, `payment_method_title: "Cash on delivery"` (matches the website exactly), `created_via: "checkout"`, Woo metas `_shipping_phone_2` / `is_vat_exempt` / `wt_pklist_order_language` / `_gtm_server_side_order_sent`
+
+---
+
+## 🔑 Authentication (real, no demos)
+
+Every login is a **real WordPress user** on `deencommerce.com`:
+
+- `POST /v1/auth/login { username, password }` → gateway does a cookie-exchange against `wp-login.php` and reads the user from `wp/v2/users/me`.
+  - WP `administrator` / `shop_manager` role (or username `admin`) → **admin** (BI dashboard, broadcasts).
+  - Otherwise → **customer**.
+- Token is stored on device; `GET /v1/auth/me` resumes the session.
+- Guest checkout remains available (anonymous `POST /v1/auth/guest` session).
+- **Out-of-stock products are hidden from customers** everywhere: `/v1/deen/products` filters them by default (`?includeOOS=1` opt-in for admin), and the bundled offline snapshot is OOS-free.
 - Must include `city`, `state` (BD-XX district code), `postcode`, `country: "BD"` in `billing` & `shipping`
 - Delivery fees: **৳50** Dhaka standard, **৳90** outside Dhaka, **৳0** store pickup
 - COD: `set_paid: false`, `payment_method_title: "Cash on Delivery (COD)"`
@@ -184,6 +205,11 @@ Live gateway: `https://cross-ecom-apps.onrender.com/`
 
 ---
 
+## 🎛️ User Modes
+
+- **👑 Admin** — unlocked only by logging in as a WordPress admin; sees live BI dashboard + broadcast console on Home.
+- **👤 Customer** — signed in with a real WordPress account; saved addresses, order history, profile.
+- **⚡ Guest** — anonymous fast checkout (real random session, no shared creds).
 ## 🎛️ 3-Way User Operating Modes
 
 Toggle via `UserModeBar.tsx` on Home & Profile:
