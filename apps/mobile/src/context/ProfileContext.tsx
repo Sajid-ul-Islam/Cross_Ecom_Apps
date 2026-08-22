@@ -1,20 +1,28 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { UserProfile, AccountType, DemoAccount } from "../types";
-import { DEFAULT_PROFILE, GUEST_PROFILE, DEMO_ACCOUNTS } from "../services/api";
-import { getProfile, saveProfile as apiSaveProfile } from "../services/gateway";
+import { UserProfile, AccountType } from "../types";
+import { DEFAULT_PROFILE, GUEST_PROFILE } from "../services/api";
+import {
+  getProfile,
+  saveProfile as apiSaveProfile,
+  login as gatewayLogin,
+  authMe,
+  logout as gatewayLogout,
+  createGuestSession,
+  AuthUser,
+} from "../services/gateway";
 
 function normalizeProfile(p: Partial<UserProfile> | null): UserProfile {
   if (!p) return DEFAULT_PROFILE;
-  const isAdmin = p.username?.trim().toLowerCase() === "admin" || p.role === "admin";
+  const isAdmin = p.role === "admin";
   const isGuest = !isAdmin && (p.isGuest === true || p.accountType === "guest" || (!p.phone && !p.name));
-  
+
   const accountType: AccountType = isAdmin ? "admin" : isGuest ? "guest" : "customer";
   const role = isAdmin ? "admin" : "customer";
 
   return {
     accountType,
     isGuest,
-    username: isAdmin ? "admin" : p.username,
+    username: isAdmin ? p.username || "admin" : p.username,
     role,
     name: p.name ?? (isGuest ? "" : DEFAULT_PROFILE.name),
     phone: p.phone ?? (isGuest ? "" : DEFAULT_PROFILE.phone),
@@ -37,59 +45,55 @@ export type UserMode = "admin" | "registered" | "guest";
 interface ProfileContextType {
   profile: UserProfile;
   currentMode: UserMode;
-  demoAccounts: DemoAccount[];
-  activeDemoId: string | null;
-  setAccountMode: (mode: UserMode) => Promise<void>;
+  loading: boolean;
+  isLoggedIn: boolean;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   switchToGuestMode: () => Promise<void>;
   registerCustomer: (data: { name: string; phone: string; email?: string; address?: string }) => Promise<void>;
-  loginAsAdmin: () => Promise<void>;
-  logoutAdmin: () => Promise<void>;
-  loginAsDemoAccount: (id: string) => Promise<void>;
-  loginWithCredentials: (
-    identifier: string,
-    password?: string
-  ) => Promise<{ success: boolean; message: string; account?: DemoAccount }>;
-  loading: boolean;
+  login: (username: string, password: string) => Promise<{ success: boolean; message?: string }>;
+  logout: () => Promise<void>;
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [profile, setProfile] = useState<UserProfile>(() => normalizeProfile(DEFAULT_PROFILE));
-  const [activeDemoId, setActiveDemoId] = useState<string | null>("customer");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       try {
+        // Prefer a real authenticated session (WordPress login via gateway).
+        const me = await authMe();
+        if (me) {
+          setProfile(
+            normalizeProfile({
+              ...DEFAULT_PROFILE,
+              username: me.username,
+              name: me.name,
+              email: me.email,
+              role: me.role,
+              accountType: me.accountType,
+              isGuest: false,
+            })
+          );
+          setLoading(false);
+          return;
+        }
+        // Otherwise resume any locally-saved profile.
         const stored = await getProfile();
-        const norm = normalizeProfile(stored);
-        setProfile(norm);
-        if (norm.role === "admin") setActiveDemoId("admin");
-        else if (norm.isGuest) setActiveDemoId("guest");
-        else if (norm.phone?.includes("776655")) setActiveDemoId("vip");
-        else setActiveDemoId("customer");
+        setProfile(normalizeProfile(stored));
       } catch {
         setProfile(normalizeProfile(DEFAULT_PROFILE));
-        setActiveDemoId("customer");
       } finally {
         setLoading(false);
       }
     })();
   }, []);
 
-  const persist = (next: UserProfile, demoId?: string | null) => {
+  const persist = (next: UserProfile) => {
     const normalized = normalizeProfile(next);
     setProfile(normalized);
-    if (demoId !== undefined) {
-      setActiveDemoId(demoId);
-    } else {
-      if (normalized.role === "admin") setActiveDemoId("admin");
-      else if (normalized.isGuest) setActiveDemoId("guest");
-      else if (normalized.phone?.includes("776655")) setActiveDemoId("vip");
-      else setActiveDemoId(null);
-    }
     apiSaveProfile(normalized);
   };
 
@@ -98,175 +102,68 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const switchToGuestMode = async () => {
-    persist(
-      {
-        ...GUEST_PROFILE,
-        accountType: "guest",
-        isGuest: true,
-        role: "customer",
-      },
-      "guest"
-    );
+    await createGuestSession().catch(() => {});
+    persist({
+      ...GUEST_PROFILE,
+      accountType: "guest",
+      isGuest: true,
+      role: "customer",
+    });
   };
 
   const registerCustomer = async (data: { name: string; phone: string; email?: string; address?: string }) => {
-    persist(
-      {
-        ...profile,
-        accountType: "customer",
-        isGuest: false,
-        role: "customer",
-        name: data.name.trim(),
-        phone: data.phone.trim(),
-        email: data.email?.trim() || profile.email,
-        address: data.address?.trim() || profile.address,
-        memberSince: new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" }),
-      },
-      null
-    );
-  };
-
-  const loginAsAdmin = async () => {
-    const adminAcc = DEMO_ACCOUNTS.find((a) => a.id === "admin");
-    persist(
-      {
-        ...profile,
-        username: "admin",
-        role: "admin",
-        accountType: "admin",
-        isGuest: false,
-        name: adminAcc?.name || "DEEN Store Admin",
-        phone: adminAcc?.phone || "01711-223344",
-        email: adminAcc?.email || "admin@deen.com",
-      },
-      "admin"
-    );
-  };
-
-  const logoutAdmin = async () => {
-    persist(
-      {
-        ...DEFAULT_PROFILE,
-        username: "customer",
-        role: "customer",
-        accountType: "customer",
-        isGuest: false,
-      },
-      "customer"
-    );
-  };
-
-  const loginAsDemoAccount = async (id: string) => {
-    const target = DEMO_ACCOUNTS.find((a) => a.id === id);
-    if (!target) return;
-
-    if (target.accountType === "guest") {
-      await switchToGuestMode();
-      return;
-    }
-
-    const isAdmin = target.role === "admin";
-    persist(
-      {
-        ...profile,
-        accountType: target.accountType,
-        isGuest: false,
-        role: target.role,
-        username: target.username,
-        name: target.name,
-        phone: target.phone,
-        email: target.email,
-        address: target.address,
-        area: target.area,
-        jeansSize: target.jeansSize,
-        topSize: target.topSize,
-        memberSince: "Aug 2024",
-      },
-      target.id
-    );
-  };
-
-  const loginWithCredentials = async (
-    identifier: string,
-    _password?: string
-  ): Promise<{ success: boolean; message: string; account?: DemoAccount }> => {
-    const cleanId = identifier.trim().toLowerCase();
-    const cleanPhone = identifier.replace(/[^0-9]/g, "");
-
-    // 1. Check against Demo Accounts
-    const matched = DEMO_ACCOUNTS.find((acc) => {
-      const matchUsername = acc.username.toLowerCase() === cleanId;
-      const matchEmail = acc.email.toLowerCase() === cleanId;
-      const matchPhone = cleanPhone && acc.phone.replace(/[^0-9]/g, "") === cleanPhone;
-      return matchUsername || matchEmail || matchPhone;
+    persist({
+      ...profile,
+      accountType: "customer",
+      isGuest: false,
+      role: "customer",
+      name: data.name.trim(),
+      phone: data.phone.trim(),
+      email: data.email?.trim() || profile.email,
+      address: data.address?.trim() || profile.address,
+      memberSince: new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" }),
     });
+  };
 
-    if (matched) {
-      await loginAsDemoAccount(matched.id);
-      return {
-        success: true,
-        message: `Welcome back, ${matched.name}! Logged in as ${matched.badge}.`,
-        account: matched,
-      };
-    }
-
-    // 2. Generic fallback for custom registered users
-    if (cleanPhone.length >= 10 || cleanId.includes("@")) {
+  const login = async (username: string, password: string) => {
+    const res = await gatewayLogin(username.trim(), password);
+    if (res.success && res.user) {
+      const me = res.user;
       persist({
-        ...profile,
-        accountType: "customer",
+        ...DEFAULT_PROFILE,
+        username: me.username,
+        name: me.name,
+        email: me.email,
+        role: me.role,
+        accountType: me.accountType,
         isGuest: false,
-        role: "customer",
-        name: cleanId.split("@")[0] || "Custom Shopper",
-        phone: identifier,
-        email: cleanId.includes("@") ? cleanId : profile.email,
       });
-
-      return {
-        success: true,
-        message: `Signed in successfully as ${identifier}.`,
-      };
     }
+    return { success: res.success, message: res.message };
+  };
 
-    return {
-      success: false,
-      message: "Account not found. Please try a demo account (e.g. customer, vip, admin) or check credentials.",
-    };
+  const logout = async () => {
+    await gatewayLogout().catch(() => {});
+    persist(normalizeProfile(DEFAULT_PROFILE));
   };
 
   const currentMode: UserMode =
-    profile.role === "admin"
-      ? "admin"
-      : profile.isGuest
-      ? "guest"
-      : "registered";
+    profile.role === "admin" ? "admin" : profile.isGuest ? "guest" : "registered";
 
-  const setAccountMode = async (mode: UserMode) => {
-    if (mode === "admin") {
-      await loginAsAdmin();
-    } else if (mode === "guest") {
-      await switchToGuestMode();
-    } else {
-      await loginAsDemoAccount("customer");
-    }
-  };
+  const isLoggedIn = !profile.isGuest && !!profile.username;
 
   return (
     <ProfileContext.Provider
       value={{
         profile,
         currentMode,
-        demoAccounts: DEMO_ACCOUNTS,
-        activeDemoId,
-        setAccountMode,
+        loading,
+        isLoggedIn,
         updateProfile,
         switchToGuestMode,
         registerCustomer,
-        loginAsAdmin,
-        logoutAdmin,
-        loginAsDemoAccount,
-        loginWithCredentials,
-        loading,
+        login,
+        logout,
       }}
     >
       {children}

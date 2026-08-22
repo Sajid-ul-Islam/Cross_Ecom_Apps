@@ -23,7 +23,6 @@ import {
   getDeliveryFee,
   DEFAULT_PROFILE,
   GUEST_PROFILE,
-  DEMO_ACCOUNTS,
   bdt,
   CATEGORIES,
   FREE_TEE_THRESHOLD,
@@ -34,7 +33,6 @@ export {
   getDeliveryFee,
   DEFAULT_PROFILE,
   GUEST_PROFILE,
-  DEMO_ACCOUNTS,
   bdt,
   CATEGORIES,
   FREE_TEE_THRESHOLD,
@@ -125,7 +123,7 @@ export async function request<T>(path: string, init?: RequestInit, timeoutMs = 8
 /* ----------------------------- catalog ----------------------------- */
 
 function applyFilters(list: Product[], category?: DeenCategory, query?: string): Product[] {
-  let out = list || [];
+  let out = (list || []).filter((p) => (p.stockStatus || "instock") !== "outofstock");
   if (category && category !== "ALL") {
     out = out.filter((p) => p.category === category);
   }
@@ -559,3 +557,69 @@ export async function lookupCustomer(
     return null;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/*  Real WordPress login (via gateway /v1/auth/login).                  */
+/*  Returns a session token + the user's role (admin/customer).        */
+/* ------------------------------------------------------------------ */
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  username: string;
+  email: string;
+  role: "customer" | "admin";
+  accountType: "customer" | "admin";
+  wpUserId?: number;
+  wpRoles?: string[];
+}
+
+export interface AuthResult {
+  success: boolean;
+  message?: string;
+  user?: AuthUser;
+  token?: string;
+}
+
+export async function login(
+  username: string,
+  password: string
+): Promise<AuthResult> {
+  try {
+    const res = await request<AuthResult>("/v1/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ username, password }),
+    }, 12000);
+    if (res?.success && res.token && res.user) {
+      await AsyncStorage.setItem(AUTH_TOKEN_KEY, res.token).catch(() => {});
+      await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(res.user)).catch(() => {});
+    }
+    return res;
+  } catch (e: any) {
+    return { success: false, message: e?.message || "Login failed." };
+  }
+}
+
+export async function authMe(): Promise<AuthUser | null> {
+  const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+  if (!token) return null;
+  try {
+    const res = await request<{ success: boolean; user?: AuthUser }>("/v1/auth/me", {
+      headers: { Authorization: `Bearer ${token}` },
+    }, 6000);
+    if (res?.success && res.user) return res.user;
+  } catch { /* token expired */ }
+  return null;
+}
+
+export async function getAuthToken(): Promise<string | null> {
+  return AsyncStorage.getItem(AUTH_TOKEN_KEY).catch(() => null);
+}
+
+export async function logout(): Promise<void> {
+  await AsyncStorage.removeItem(AUTH_TOKEN_KEY).catch(() => {});
+  await AsyncStorage.removeItem(AUTH_USER_KEY).catch(() => {});
+}
+
+const AUTH_TOKEN_KEY = "deen_auth_token";
+const AUTH_USER_KEY = "deen_auth_user";

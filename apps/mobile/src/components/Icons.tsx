@@ -1,5 +1,5 @@
 import React from "react";
-import Svg, { Path, Circle, Rect, Line, Polygon } from "react-native-svg";
+import Svg, { Path, Circle, Rect, Line, Polygon, Polyline } from "react-native-svg";
 
 /* ------------------------------------------------------------------ */
 /*  In-house icon set — replaces `lucide-react-native`.                 */
@@ -479,6 +479,14 @@ export const Trophy = make(
     <Path d="M10 14.66V17c0 .55-.45.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
     <Path d="M14 14.66V17c0 .55.45.98.97 1.21C16.15 18.75 17 20.24 17 22" />
     <Path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+  </>,
+);
+
+export const LogOut = make(
+  <>
+    <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <Polyline points="16 17 21 12 16 7" />
+    <Line x1="21" y1="12" x2="9" y2="12" />
   </>,
 );
 
