@@ -100,6 +100,46 @@ SafeAreaProvider
 - `profile.role === "admin"` (from WP) unlocks the BI dashboard on Home + broadcast button.
 - Customers never see sales/BI data.
 
+## Security & Audit Notes
+- **CORS** is allowlist-based (`apps/api/src/index.ts`): only configured `allowedOrigins` are
+  reflected; `*` is never used (prevents arbitrary-site cookie calls).
+- **Auth rate limiting**: `/v1/auth/*` is protected by a sliding-window limiter
+  (`_rateLimitHook`, 20 req/min/IP by default) — invoked in `build()`.
+- **`wpLogin`**: exchanges WP credentials for a `wordpress_logged_in_*` cookie via
+  `wp-login.php`, then reads the user from `/wp/v2/users/me` using **only that cookie**
+  (no plaintext Basic-Auth header is sent). The cookie authenticates the `/users/me` call.
+- **No secrets in source**: Woo keys come from `process.env` (`.env`, gitignored). A
+  `test-env.ts` scratch file exists but is gitignored and must never ship.
+- **Order exact-match**: app-placed orders push Woo `state` as `BD-XX` district codes
+  (verified against a real website order: `BD-11` = Cox's Bazar), payment title
+  `Cash on delivery`, and the same Woo meta keys as the website.
+
+## Cashback Logic (must match the live site)
+The live `deencommerce.com` store auto-applies a cart cashback that the app must replicate
+so app orders match website orders exactly:
+- Subtotal **> ৳2500** → **−৳500** cashback
+- Subtotal **> ৳3000** → **−৳700** cashback (higher tier replaces the lower)
+The store implements this via WooCommerce coupons/auto-apply (16,954 coupons exist; the
+tier coupons are gated by `minimum_amount`). Because the gateway holds a **read-only** Woo
+key, the app cannot create coupons — the gateway must compute
+`cashback = subtotal>=3000 ? 700 : subtotal>=2500 ? 500 : 0` and send it to Woo as a
+`coupon_lines` entry on the order, and the mobile cart/checkout UI must display the
+deduction. (Implementation pending — logic documented here for exact-match compliance.)
+
+## Local Android Build (no EAS cloud, no admin)
+A fully-local APK build toolchain is installed at `C:\Users\deenb\tools`:
+- Temurin **JDK 17**, Android **cmdline-tools**, **platform-tools**, **build-tools 34.0.0**,
+  **platforms/android-34**, plus an **emulator** + `system-images;android-34;google_apis;x86_64`
+  (AVD `deen_pixel` stored on `H:\android-avd` to avoid C: space limits).
+- Env: `JAVA_HOME`, `ANDROID_HOME` (setx + `~/.bashrc`). `eas build --local` is blocked on
+  Windows, so the path is `expo prebuild --platform android` →
+  `cd android && ./gradlew.bat assembleRelease`. Known fixes: copy
+  `node_modules/expo/node_modules/expo-modules-autolinking/android/expo-gradle-plugin` into
+  the top-level autolinking dir; delete duplicate `styles.xml` `AppTheme`; remove duplicate
+  `ic_launcher*.webp` launchers. Full runbook: `references/local-android-build.md` in the
+  `expo-react-native` skill.
+
+
 ## Bug Collection System
 - Mobile: global `ErrorUtils` handler in `app/_layout.tsx` forwards uncaught JS errors to `POST /v1/deen/bugs` (severity `crash`/`high`). Never blocks the UI.
 - Mobile: Profile → **REPORT A PROBLEM** button sends a `low`-severity manual report.
@@ -138,7 +178,7 @@ curl https://cross-ecom-apps.onrender.com/v1/deen/snapshot -o apps/mobile/src/da
 - [x] Replaced incompatible third-party icon packages with zero-dependency SVG icon system.
 - [x] Multi-tier theme engine: automatic OS dark/light inheritance + manual switcher.
 - [x] 3-Way user mode switcher (Admin Panel Mode ↔ Registered User ↔ Guest Mode).
-- [x] Demo test accounts & interactive credential sign-in modal.
+- [x] Real WordPress auth (demo/test accounts removed — see Authentication).
 - [x] In-app notification center & Admin marketing push broadcast console.
 - [x] Customer size exchanges & returns portal with multi-photo uploads and live tracking.
 - [x] Dedicated category landing pages with craft highlights and filter chips.
