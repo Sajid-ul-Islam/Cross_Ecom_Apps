@@ -1,6 +1,27 @@
 # DEEN Commerce — Cross-Platform E-commerce Monorepo
 
-**Bangladesh's first denim brand — DEEN** — built as a modern e-commerce suite: a **React Native (Expo SDK 55) mobile app**, a **Fastify WooCommerce-gateway API**, and a **Next.js 14 web storefront order desk**. Designed to be handed between autonomous coding agents (see [BLUEPRINT.md](./BLUEPRINT.md)).
+[![Fastify](https://img.shields.io/badge/Fastify-8A3936?style=for-the-badge&logo=Fastify&logoColor=white)](https://www.fastify.io/)
+[![React Native](https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactnative.dev/)
+[![Expo](https://img.shields.io/badge/Expo-000000?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/)
+[![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-000000?style=for-the-badge&logo=github-actions&logoColor=white)](https://github.com/features/actions)
+
+**Bangladesh's first denim brand — [DEEN](https://deencommerce.com)** — built as a modern full-stack e-commerce suite:  
+📱 **React Native (Expo)** mobile app · ⚡ **Fastify + WooCommerce** Gateway API · 🖥️ **Next.js 14** web order desk.  
+
+> Built for handoff between autonomous coding agents. See [`AGENTS.md`](./AGENTS.md) for operational rules and [`BLUEPRINT.md`](./BLUEPRINT.md) for the full architecture.
+
+---
+
+### 🔥 Why This Repo Shines
+
+- 📦 **Monorepo** with Vite, EAS, Docker, Render & Vercel deployment pipelines  
+- 🌍 **Offline-first** React Native app with 826 products bundled locally  
+- 🧠 Integrates with real **WooCommerce REST API**, **Pathao Logistics**, and **bKash/Nagad** payment flows  
+- 🧑‍💼 Powers three distinct user modes: **Admin**, **Registered Customer**, and **Guest**  
+- 🧪 Includes **demo test accounts** ready to use out-the-box  
 
 ---
 
