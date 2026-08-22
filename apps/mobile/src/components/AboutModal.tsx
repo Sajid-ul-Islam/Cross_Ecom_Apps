@@ -57,7 +57,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
             {/* Section 1 */}
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>
-                <Store size={16} color={Colors.indigo} />
+                <Store size={16} color={colors.indigo} />
                 <Text style={styles.sectionTitle}>WHO WE ARE</Text>
               </View>
               <Text style={styles.sectionBody}>
@@ -71,7 +71,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
             {/* Section 2 */}
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>
-                <Heart size={16} color={Colors.indigo} />
+                <Heart size={16} color={colors.indigo} />
                 <Text style={styles.sectionTitle}>WHAT DRIVES US</Text>
               </View>
               <Text style={styles.sectionBody}>
@@ -85,7 +85,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
             {/* Contact Info */}
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>
-                <PhoneCall size={16} color={Colors.indigo} />
+                <PhoneCall size={16} color={colors.indigo} />
                 <Text style={styles.sectionTitle}>CONTACT &amp; COMMUNITY</Text>
               </View>
               <Text style={styles.sectionBody}>
@@ -141,7 +141,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
             {/* Outlets */}
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>
-                <MapPin size={16} color={Colors.indigo} />
+                <MapPin size={16} color={colors.indigo} />
                 <Text style={styles.sectionTitle}>OUR OUTLETS</Text>
               </View>
               
@@ -165,7 +165,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
             {/* Section 3 */}
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>
-                <ShieldCheck size={16} color={Colors.indigo} />
+                <ShieldCheck size={16} color={colors.indigo} />
                 <Text style={styles.sectionTitle}>CORPORATE RESPONSIBILITY</Text>
               </View>
               <Text style={styles.sectionBody}>

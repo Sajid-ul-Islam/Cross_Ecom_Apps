@@ -98,7 +98,7 @@ export const CourierTrackingModal: React.FC<CourierTrackingModalProps> = ({
 
                 {/* Destination Node */}
                 <View style={styles.destNode}>
-                  <MapPin size={18} color={Colors.crimson} />
+                  <MapPin size={18} color={colors.crimson} />
                   <Text style={styles.destLabel}>Your Address</Text>
                 </View>
               </View>

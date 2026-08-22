@@ -233,7 +233,7 @@ export const AdminBroadcastModal: React.FC<AdminBroadcastModalProps> = ({ visibl
                       value={title}
                       onChangeText={setTitle}
                       placeholder="e.g. 🔥 Eid Denim Flash Drop: 20% OFF"
-                      placeholderTextColor={Colors.faint}
+                      placeholderTextColor={colors.faint}
                     />
                   </View>
 
@@ -246,7 +246,7 @@ export const AdminBroadcastModal: React.FC<AdminBroadcastModalProps> = ({ visibl
                       multiline
                       numberOfLines={3}
                       placeholder="Write your push notification marketing message..."
-                      placeholderTextColor={Colors.faint}
+                      placeholderTextColor={colors.faint}
                     />
                   </View>
 
@@ -258,7 +258,7 @@ export const AdminBroadcastModal: React.FC<AdminBroadcastModalProps> = ({ visibl
                         value={promoCode}
                         onChangeText={setPromoCode}
                         placeholder="e.g. DEEN20"
-                        placeholderTextColor={Colors.faint}
+                        placeholderTextColor={colors.faint}
                         autoCapitalize="characters"
                       />
                     </View>
@@ -270,7 +270,7 @@ export const AdminBroadcastModal: React.FC<AdminBroadcastModalProps> = ({ visibl
                         value={actionLabel}
                         onChangeText={setActionLabel}
                         placeholder="e.g. Shop Now"
-                        placeholderTextColor={Colors.faint}
+                        placeholderTextColor={colors.faint}
                       />
                     </View>
                   </View>
@@ -282,7 +282,7 @@ export const AdminBroadcastModal: React.FC<AdminBroadcastModalProps> = ({ visibl
                       value={actionUrl}
                       onChangeText={setActionUrl}
                       placeholder="e.g. /category/JEANS or /product/dn-01"
-                      placeholderTextColor={Colors.faint}
+                      placeholderTextColor={colors.faint}
                     />
                   </View>
                 </View>
@@ -290,7 +290,7 @@ export const AdminBroadcastModal: React.FC<AdminBroadcastModalProps> = ({ visibl
                 {/* 4. Live Push Notification Preview */}
                 <View style={styles.previewCard}>
                   <View style={styles.previewHeader}>
-                    <Sparkles size={14} color={Colors.indigo} />
+                    <Sparkles size={14} color={colors.indigo} />
                     <Text style={styles.previewTitle}>LIVE CUSTOMER PUSH PREVIEW</Text>
                   </View>
 
@@ -304,7 +304,7 @@ export const AdminBroadcastModal: React.FC<AdminBroadcastModalProps> = ({ visibl
                     <Text style={styles.simBody}>{body || "Campaign message body text..."}</Text>
                     {promoCode ? (
                       <View style={styles.simCodeRow}>
-                        <Tag size={12} color={Colors.indigoDark} />
+                        <Tag size={12} color={colors.indigoDark} />
                         <Text style={styles.simCodeText}>Code: {promoCode}</Text>
                       </View>
                     ) : null}
@@ -352,15 +352,15 @@ export const AdminBroadcastModal: React.FC<AdminBroadcastModalProps> = ({ visibl
 
                     <View style={styles.historyMeta}>
                       <View style={styles.statPill}>
-                        <Users size={12} color={Colors.indigo} />
+                        <Users size={12} color={colors.indigo} />
                         <Text style={styles.statText}>
                           {bc.recipientCount?.toLocaleString() || "1,420"} Delivered
                         </Text>
                       </View>
                       {bc.promoCode && (
                         <View style={styles.statPill}>
-                          <Tag size={12} color={Colors.amber} />
-                          <Text style={[styles.statText, { color: Colors.amber }]}>
+                          <Tag size={12} color={colors.amber} />
+                          <Text style={[styles.statText, { color: colors.amber }]}>
                             {bc.promoCode}
                           </Text>
                         </View>
