@@ -77,25 +77,28 @@ SafeAreaProvider
 | GET | `/v1/deen/broadcasts` | — | List past marketing push broadcasts |
 | POST | `/v1/deen/returns` | — | Submit size exchange / return ticket with photos |
 | GET | `/v1/deen/returns` | — | List return tickets by order or phone |
-| GET | `/v1/auth/demo-accounts` | — | List pre-configured demo credentials |
-| POST | `/v1/auth/login` | — | Authenticate customer, VIP, or admin |
+| GET | `/v1/auth/demo-accounts` | — | REMOVED (no demo users) |
+| POST | `/v1/auth/login` | — | Real WordPress login (username+password) → token + role (admin/customer) |
+| GET | `/v1/auth/me` | Bearer token | Resume authenticated session (user + role) |
+| POST | `/v1/auth/guest` | — | Mint a real anonymous guest session (random BD phone) |
 | POST | `/v1/deen/bugs` | — | **Bug report sink** (crash/feedback collection) |
 | GET | `/v1/deen/bugs?severity=` | — | List collected reports (in-memory, last 500) |
 
 `gatewayUrl` is configured in `apps/mobile/app.json` `extra.gatewayUrl` (currently the Render URL: `https://cross-ecom-apps.onrender.com`). Never hardcode it in source.
 
-## Demo Test Profiles
-- **👤 Regular Customer**: `customer` · Phone: `01712-345678` (Tanvir Ahmed)
-- **⭐ VIP Gold Shopper**: `vip` · Phone: `01899-776655` (Sajid-ul Islam)
-- **👑 Store Admin & Merchant**: `admin` · Phone: `01711-223344` (DEEN Admin)
-- **⚡ Guest Mode**: `guest` · Phone: `01911-000000` (Anonymous Guest)
+## Authentication (real, no demos)
+- **No demo/test accounts.** Every login is a real WordPress user on `deencommerce.com`.
+- `POST /v1/auth/login {username, password}` → gateway exchanges creds for a WP session cookie via `wp-login.php`, then reads the user + roles from `wp/v2/users/me`.
+  - `roles` containing `administrator` or `shop_manager` (or username `admin`) → `role: "admin"` (sees BI dashboard, broadcasts).
+  - everyone else → `role: "customer"`.
+  - Returns `{ success, token, user:{username, name, email, role, wpUserId, wpRoles} }`. Token stored in AsyncStorage; `GET /v1/auth/me` resumes it.
+- Mobile `LoginModal` is a real username/password form → `login()` in `ProfileContext` → gateway. `logout()` clears the token.
+- Guest checkout still works (anonymous `POST /v1/auth/guest` session) for users who skip sign-in.
+- **Out-of-stock products are NEVER shown to customers**: `/v1/deen/products` filters `stockStatus==="outofstock"` by default (opt-in `?includeOOS=1` for admin/debug), and `/v1/deen/snapshot` (bundled offline catalog) is regenerated OOS-free. Mobile `applyFilters` also drops OOS as a client-side safety net.
 
-## Roles & 3-Way Mode Switcher
-- `UserProfile.role` is derived from active mode: `admin` vs `customer` (registered vs guest).
-- `UserModeBar.tsx` rendered at the top of the **Home feed** and **Profile screen** enables instant 1-tap switching:
-  - `👑 Admin Panel`: Displays live BI analytics sparklines, revenue KPIs, and broadcast marketing button.
-  - `👤 Registered User`: Displays personalized feed, saved address book, VIP points, and size profile.
-  - `⚡ Guest User`: Simulates first-time visitor with instant fast checkout.
+## Roles (admin vs customer)
+- `profile.role === "admin"` (from WP) unlocks the BI dashboard on Home + broadcast button.
+- Customers never see sales/BI data.
 
 ## Bug Collection System
 - Mobile: global `ErrorUtils` handler in `app/_layout.tsx` forwards uncaught JS errors to `POST /v1/deen/bugs` (severity `crash`/`high`). Never blocks the UI.
