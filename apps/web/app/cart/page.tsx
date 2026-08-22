@@ -33,9 +33,9 @@ export default function CartPage() {
   const { items, subtotal, updateQty, removeItem, totalItems } = useCart();
   const [deliveryArea, setDeliveryArea] = useState("dhaka_standard");
   const delivery = DELIVERY_OPTIONS.find((d) => d.id === deliveryArea)!;
-  const total = subtotal + delivery.fee;
-  const freeTeeGap = 3500 - subtotal;
-
+  const cashback = subtotal >= 3000 ? 700 : subtotal >= 2500 ? 500 : 0;
+  const total = Math.max(0, subtotal - cashback) + delivery.fee;
+  const progress = Math.min(100, (subtotal / 3000) * 100);
 
   if (items.length === 0) {
     return (
@@ -61,42 +61,45 @@ export default function CartPage() {
         {totalItems} item{totalItems !== 1 ? "s" : ""}
       </p>
 
-      {/* Free Tee Progress */}
+      {/* Instant Cashback Progress */}
       {subtotal > 0 && (
-        <div className="free-tee-banner">
+        <div className="free-tee-banner" style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)" }}>
           <span style={{ fontSize: 24 }}>🎁</span>
           <div style={{ flex: 1 }}>
-            {subtotal >= 3500 ? (
+            {subtotal >= 3000 ? (
+              <p style={{ color: "var(--emerald)", fontWeight: 800 }}>
+                Maximum ৳700 Cashback Unlocked! 🎉 Applied at checkout.
+              </p>
+            ) : subtotal >= 2500 ? (
               <p>
-                <strong>Free Heavyweight Tee unlocked! 🎉</strong> Added to your order.
+                <strong style={{ color: "var(--emerald)" }}>✨ ৳500 Cashback Unlocked!</strong> Add{" "}
+                <strong style={{ color: "var(--indigo)" }}>{bdt(3000 - subtotal)}</strong> more for <strong>৳700</strong>.
               </p>
             ) : (
-              <>
-                <p>
-                  Add <strong style={{ color: "var(--indigo)" }}>{bdt(freeTeeGap)}</strong> more to unlock a{" "}
-                  <strong>FREE 240 GSM T-Shirt</strong>
-                </p>
-                <div
-                  style={{
-                    marginTop: 6,
-                    height: 5,
-                    background: "var(--border)",
-                    borderRadius: 3,
-                    overflow: "hidden",
-                  }}
-                >
-                  <div
-                    style={{
-                      height: "100%",
-                      width: `${Math.min(100, (subtotal / 3500) * 100)}%`,
-                      background: "var(--indigo)",
-                      borderRadius: 3,
-                      transition: "width 0.3s",
-                    }}
-                  />
-                </div>
-              </>
+              <p>
+                Add <strong style={{ color: "var(--indigo)" }}>{bdt(2500 - subtotal)}</strong> more to unlock{" "}
+                <strong style={{ color: "var(--emerald)" }}>৳500 Cashback</strong>
+              </p>
             )}
+            <div
+              style={{
+                marginTop: 8,
+                height: 6,
+                background: "var(--border)",
+                borderRadius: 3,
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  height: "100%",
+                  width: `${progress}%`,
+                  background: subtotal >= 3000 ? "var(--emerald)" : "var(--indigo)",
+                  borderRadius: 3,
+                  transition: "width 0.3s",
+                }}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -207,9 +210,9 @@ export default function CartPage() {
 
           <div className="summary-row"><span>Subtotal</span><span>{bdt(subtotal)}</span></div>
           <div className="summary-row"><span>Delivery</span><span>{delivery.fee === 0 ? "FREE" : bdt(delivery.fee)}</span></div>
-          {subtotal >= 3500 && (
-            <div className="summary-row" style={{ color: "var(--emerald)" }}>
-              <span>🎁 Free Tee</span><span>৳0</span>
+          {cashback > 0 && (
+            <div className="summary-row" style={{ color: "var(--emerald)", fontWeight: 700 }}>
+              <span>🎁 Instant Cashback</span><span>-{bdt(cashback)}</span>
             </div>
           )}
           <div className="summary-row summary-row--total">

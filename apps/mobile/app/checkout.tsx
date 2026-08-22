@@ -97,7 +97,8 @@ export default function CheckoutScreen() {
   const deliveryFee = deliveryOpt.fee;
   const maxCoinDiscount = Math.min(Math.floor(coins / 2), Math.floor(subtotal * 0.2));
   const coinDiscountBDT = redeemPoints ? maxCoinDiscount : 0;
-  const total = Math.max(0, subtotal + deliveryFee - coinDiscountBDT);
+  const cashbackBDT = subtotal >= 3000 ? 700 : subtotal >= 2500 ? 500 : 0;
+  const total = Math.max(0, subtotal + deliveryFee - coinDiscountBDT - cashbackBDT);
 
   const handlePlaceOrder = async () => {
     if (!name.trim()) {
@@ -123,28 +124,15 @@ export default function CheckoutScreen() {
 
     try {
       // Build order item lines
-      const lines: OrderItemLine[] = cart.map((item) => ({
-        productId: item.productId,
-        name: item.product.name,
-        sku: item.product.sku,
-        size: item.size,
-        qty: item.qty,
-        unit: item.product.salePrice ?? item.product.price,
-        variationId: item.variationId,
+      const lines = cart.map((i) => ({
+        productId: i.productId,
+        variationId: i.variationId,
+        name: i.product.name,
+        sku: i.product.sku,
+        size: i.size,
+        qty: i.qty,
+        unit: i.product.salePrice ?? i.product.price,
       }));
-
-      // Add promotional gift line if eligible
-      if (freeTeeEligible) {
-        lines.push({
-          productId: "gift-tee",
-          name: "Free Cotton T-shirt · Summer Fest",
-          sku: "GIFT-TEE",
-          size: profile.topSize || "L",
-          qty: 1,
-          unit: 0,
-          gift: true,
-        });
-      }
 
       const created = await placeOrder({
         name: name.trim(),
@@ -561,15 +549,6 @@ export default function CheckoutScreen() {
             </View>
           ))}
 
-          {freeTeeEligible && (
-            <View style={styles.reviewItem}>
-              <Text style={[styles.reviewItemName, { color: Colors.emerald }]}>
-                1x Free Heavyweight 240 GSM Tee (Promotion)
-              </Text>
-              <Text style={[styles.reviewItemPrice, { color: Colors.emerald }]}>FREE</Text>
-            </View>
-          )}
-
           {/* 3.5 DEEN VIP Club Loyalty Point Redemption */}
           {coins > 0 && maxCoinDiscount > 0 && (
             <TouchableOpacity
@@ -616,6 +595,17 @@ export default function CheckoutScreen() {
               {deliveryFee === 0 ? "FREE" : bdt(deliveryFee)}
             </Text>
           </View>
+
+          {cashbackBDT > 0 && (
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, { color: Colors.emerald, fontWeight: "700" }]}>
+                🎁 Instant Cashback ({subtotal >= 3000 ? "৳700 on ৳3,000+" : "৳500 on ৳2,500+"})
+              </Text>
+              <Text style={[styles.summaryValue, { color: Colors.emerald, fontWeight: "800" }]}>
+                -{bdt(cashbackBDT)}
+              </Text>
+            </View>
+          )}
 
           {redeemPoints && coinDiscountBDT > 0 && (
             <View style={styles.summaryRow}>

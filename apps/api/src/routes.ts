@@ -824,7 +824,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
         : area === "store_pickup" || area === "pickup"
         ? 0
         : 50;
-    const gift = subtotal >= 3500;
+    const cashback = subtotal >= 3000 ? 700 : subtotal >= 2500 ? 500 : 0;
 
     const orderNumStr = `DC-${++orderSeq.n}`;
     // Pathao logistics is not auto-generated. Only set if ptc_consignment_id / consignmentId is provided (e.g. "DD220826MDKMP9").
@@ -936,8 +936,9 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       paymentStatus,
       lines,
       subtotal,
+      cashback,
       delivery,
-      total: subtotal + delivery,
+      total: Math.max(0, subtotal - cashback) + delivery,
       status: "received",
       courier,
       pathaoConsignmentId,
@@ -945,10 +946,6 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       createdAt: new Date().toISOString(),
       wooId,
     };
-
-    if (gift) {
-      order.lines.push({ productId: "gift-tee", name: "Free Cotton T-shirt · Summer Fest", sku: "GIFT-TEE", size: "—", qty: 1, unit: 0, gift: true });
-    }
     if (guestToken) {
       const session = guestSessions.find((s) => s.token === guestToken);
       if (session) {
