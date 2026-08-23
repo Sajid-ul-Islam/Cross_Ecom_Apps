@@ -426,7 +426,7 @@ export default function ProfileScreen() {
           {profile.role === "admin" ? (
             <View style={styles.adminOn}>
               <Text style={styles.adminOnText}>
-                ✓ Logged in as Admin — Sales Insights &amp; BI Dashboard are live on Home.
+                ✓ Logged in as Admin — Sales Insights & BI Dashboard are live on Home.
               </Text>
               <TouchableOpacity
                 style={styles.broadcastBtn}
@@ -440,11 +440,7 @@ export default function ProfileScreen() {
                 <Text style={styles.adminLogoutText}>LOG OUT ADMIN</Text>
               </TouchableOpacity>
             </View>
-          ) : (
-            <TouchableOpacity style={styles.adminLoginBtn} onPress={() => setLoginModalVisible(true)}>
-              <Text style={styles.adminLoginText}>LOGIN AS STORE ADMIN</Text>
-            </TouchableOpacity>
-          )}
+          ) : null}
         </View>
 
         {/* Contact & Customer Profile Information */}
@@ -462,7 +458,7 @@ export default function ProfileScreen() {
               style={styles.input}
               value={name}
               onChangeText={setName}
-              placeholder="e.g. Tanvir Ahmed"
+              placeholder="Your full name"
               placeholderTextColor={colors.faint}
             />
           </View>
