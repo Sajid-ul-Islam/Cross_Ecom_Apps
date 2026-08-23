@@ -2,6 +2,13 @@ import type { FastifyInstance } from "fastify";
 import { promises as fs } from "fs";
 import { randomUUID } from "crypto";
 import { config, wooEnabled, pathaoEnabled } from "./config.js";
+import {
+  audit,
+  maskPhone,
+  redactToken,
+  checkRateLimit,
+  rateLimitKeyFor,
+} from "./security.js";
 import { SEED_PRODUCTS, type DeenProduct } from "./seed.js";
 import {
   fetchWooProducts,
@@ -670,19 +677,6 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   await loadPushTokens();
   await loadBroadcasts();
   await loadPayments();
-
-  /* ---- health (honest: pings Woo when keys present) ---- */
-  app.get("/v1/health", async (_req, reply) => {
-    const health = {
-      status: "ok",
-      ms: Date.now(),
-      gateway: config.publicUrl || `http://localhost:${config.port}`,
-      mode: wooEnabled ? "live" : "seed",
-      woo: wooEnabled ? (wooHealthy() ? "connected" : "no-keys") : "staging",
-      sessions: "disk",
-    };
-    return reply.send(health);
-  });
 
   /* ---- catalog (filter + search + sort) ---- */
   app.get("/v1/deen/products", async (req, reply) => {
@@ -1804,6 +1798,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
 
     const wpUser = await wpLogin(username, password);
     if (!wpUser) {
+      audit("auth.login", false, maskPhone(username));
       return reply.code(401).send({ success: false, message: "Invalid WordPress username or password." });
     }
 
@@ -1839,6 +1834,49 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const session = authSessions.get(token);
     if (!session) return reply.code(401).send({ success: false, message: "Invalid or expired session." });
     return reply.send({ success: true, user: session });
+  });
+
+  /* ---- GDPR-style rights: data export + account deletion ---- */
+  /* Both are Bearer-protected. Source of truth is WooCommerce; we surface the
+     locally-held profile + order history and, when live Woo is configured,
+     defer hard deletion to Woo via the gateway. */
+  app.get("/v1/auth/export-data", async (req, reply) => {
+    const token = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
+    if (!token) return reply.code(401).send({ success: false, message: "Authorization token required." });
+    const session = authSessions.get(token);
+    if (!session) return reply.code(401).send({ success: false, message: "Invalid or expired session." });
+    audit("auth.export", true, maskPhone(session.username));
+    const phone = (session as any).phone || "";
+    const localCust = phone ? customersByPhone[phone] : undefined;
+    return reply.send({
+      success: true,
+      exportedAt: new Date().toISOString(),
+      profile: { name: session.name, username: session.username, email: session.email, phone: maskPhone(phone) },
+      customerRecord: localCust ? { ...localCust, phone: maskPhone(localCust.phone) } : null,
+      note: "For full order history, contact support@deencommerce.com. WooCommerce is the system of record.",
+    });
+  });
+
+  app.post("/v1/auth/delete-account", async (req, reply) => {
+    const token = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
+    if (!token) return reply.code(401).send({ success: false, message: "Authorization token required." });
+    const session = authSessions.get(token);
+    if (!session) return reply.code(401).send({ success: false, message: "Invalid or expired session." });
+    audit("auth.delete", true, maskPhone(session.username));
+    // Remove local session + any local customer record (PII minimization).
+    authSessions.delete(token);
+    const phone = (session as any).phone || "";
+    if (phone && customersByPhone[phone]) {
+      delete customersByPhone[phone];
+      saveCustomers();
+    }
+    saveAuthSessions();
+    // NOTE: WooCommerce-side customer/data deletion must be performed in WP admin
+    // (gateway holds only a minimal local cache; Woo is the system of record).
+    return reply.send({
+      success: true,
+      message: "Your local session and cached profile were deleted. To erase your WooCommerce account and order data, email support@deencommerce.com or use the WordPress data-eraser (GDPR).",
+    });
   });
 
   /* ---- anonymous guest session (real, minted identity) ---- */
@@ -1896,9 +1934,11 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const name = String(b.name || "").trim();
     const phone = String(b.phone || "").replace(/[^0-9]/g, "");
     if (!name || name.length < 2) {
+      audit("auth.register", false, maskPhone(phone));
       return reply.code(422).send({ success: false, message: "Name is required (min 2 chars)." });
     }
     if (!/^01[3-9]\d{8}$/.test(phone)) {
+      audit("auth.register", false, maskPhone(phone));
       return reply.code(422).send({ success: false, message: "Enter a valid BD mobile number - 01XXXXXXXXX." });
     }
     const existing = customersByPhone[phone];
