@@ -192,7 +192,7 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
             {/* Policy Banner */}
             <View style={styles.policyBanner}>
-              <ShieldCheck size={16} color={Colors.emerald} />
+              <ShieldCheck size={16} color={colors.emerald} />
               <Text style={styles.policyText}>
                 <Text style={styles.bold}>100% Guaranteed:</Text> Free courier pickup in Dhaka &amp; Nationwide. Item must be unwashed with original tags attached.
               </Text>
@@ -207,7 +207,7 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
                   onPress={() => setType("EXCHANGE")}
                   activeOpacity={0.8}
                 >
-                  <RotateCcw size={16} color={type === "EXCHANGE" ? "#FFFFFF" : Colors.ink} />
+                  <RotateCcw size={16} color={type === "EXCHANGE" ? "#FFFFFF" : colors.ink} />
                   <View>
                     <Text style={[styles.typeTitle, type === "EXCHANGE" && styles.typeTitleActive]}>
                       EXCHANGE SIZE / FIT
@@ -223,7 +223,7 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
                   onPress={() => setType("RETURN")}
                   activeOpacity={0.8}
                 >
-                  <AlertCircle size={16} color={type === "RETURN" ? "#FFFFFF" : Colors.ink} />
+                  <AlertCircle size={16} color={type === "RETURN" ? "#FFFFFF" : colors.ink} />
                   <View>
                     <Text style={[styles.typeTitle, type === "RETURN" && styles.typeTitleActive]}>
                       RETURN &amp; REFUND
@@ -314,7 +314,7 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
                 multiline
                 numberOfLines={3}
                 placeholder="Describe any fit issues, defect location, or special instructions for our inspection team..."
-                placeholderTextColor={Colors.faint}
+                placeholderTextColor={colors.faint}
               />
             </View>
 
@@ -354,7 +354,7 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
                     style={styles.presetChip}
                     onPress={() => handleAddSamplePhoto(preset.uri)}
                   >
-                    <Camera size={13} color={Colors.indigo} />
+                    <Camera size={13} color={colors.indigo} />
                     <Text style={styles.presetChipText}>{preset.label}</Text>
                   </TouchableOpacity>
                 ))}
@@ -369,7 +369,7 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
                   style={[styles.handoverCard, pickupMethod === "courier_pickup" && styles.handoverCardActive]}
                   onPress={() => setPickupMethod("courier_pickup")}
                 >
-                  <Truck size={16} color={pickupMethod === "courier_pickup" ? Colors.indigoDark : Colors.sub} />
+                  <Truck size={16} color={pickupMethod === "courier_pickup" ? colors.indigoDark : colors.sub} />
                   <Text style={[styles.handoverTitle, pickupMethod === "courier_pickup" && styles.handoverTitleActive]}>
                     Courier Pickup (Doorstep)
                   </Text>
@@ -380,7 +380,7 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
                   style={[styles.handoverCard, pickupMethod === "studio_dropoff" && styles.handoverCardActive]}
                   onPress={() => setPickupMethod("studio_dropoff")}
                 >
-                  <Store size={16} color={pickupMethod === "studio_dropoff" ? Colors.indigoDark : Colors.sub} />
+                  <Store size={16} color={pickupMethod === "studio_dropoff" ? colors.indigoDark : colors.sub} />
                   <Text style={[styles.handoverTitle, pickupMethod === "studio_dropoff" && styles.handoverTitleActive]}>
                     DEEN Outlet Dropoff (4 Outlets)
                   </Text>
@@ -397,7 +397,7 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
                       value={pickupAddress}
                       onChangeText={setPickupAddress}
                       placeholder="Full pickup address (house, road, area)"
-                      placeholderTextColor={Colors.faint}
+                      placeholderTextColor={colors.faint}
                     />
                   </View>
                   <View style={styles.field}>
@@ -407,7 +407,7 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
                       value={contactPhone}
                       onChangeText={setContactPhone}
                       placeholder="01XXXXXXXXX"
-                      placeholderTextColor={Colors.faint}
+                      placeholderTextColor={colors.faint}
                       keyboardType="phone-pad"
                     />
                   </View>
@@ -451,7 +451,7 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
                     value={refundAccount}
                     onChangeText={setRefundAccount}
                     placeholder="e.g. 01711223344"
-                    placeholderTextColor={Colors.faint}
+                    placeholderTextColor={colors.faint}
                   />
                 </View>
               </View>

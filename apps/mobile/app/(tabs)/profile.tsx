@@ -174,7 +174,7 @@ export default function ProfileScreen() {
           <View style={styles.vipHeader}>
             <View style={styles.vipHeaderLeft}>
               <View style={styles.vipIconCircle}>
-                <Trophy size={18} color={Colors.amber} />
+                <Trophy size={18} color={colors.amber} />
               </View>
               <View>
                 <Text style={styles.vipTitle}>DEEN VIP CLUB · {tierLabel}</Text>
@@ -190,7 +190,7 @@ export default function ProfileScreen() {
               style={styles.vipActionChip}
               onPress={() => setRewardsModalVisible(true)}
             >
-              <Gift size={14} color={Colors.amber} />
+              <Gift size={14} color={colors.amber} />
               <Text style={styles.vipActionText}>DAILY SCRATCH</Text>
             </TouchableOpacity>
 
@@ -198,7 +198,7 @@ export default function ProfileScreen() {
               style={styles.vipActionChip}
               onPress={() => setWishlistModalVisible(true)}
             >
-              <Heart size={14} color={Colors.crimson} />
+              <Heart size={14} color={colors.crimson} />
               <Text style={styles.vipActionText}>SAVED ({wishlist.length})</Text>
             </TouchableOpacity>
 
@@ -206,7 +206,7 @@ export default function ProfileScreen() {
               style={styles.vipActionChip}
               onPress={() => setGiftCardModalVisible(true)}
             >
-              <Gift size={14} color={Colors.indigoDark} />
+              <Gift size={14} color={colors.indigoDark} />
               <Text style={styles.vipActionText}>GIFT CARDS</Text>
             </TouchableOpacity>
 
@@ -214,7 +214,7 @@ export default function ProfileScreen() {
               style={styles.vipActionChip}
               onPress={() => setCareGuideVisible(true)}
             >
-              <BookOpen size={14} color={Colors.indigoDark} />
+              <BookOpen size={14} color={colors.indigoDark} />
               <Text style={styles.vipActionText}>DENIM GUIDE</Text>
             </TouchableOpacity>
           </View>
@@ -312,7 +312,7 @@ export default function ProfileScreen() {
               onPress={() => setLoginModalVisible(true)}
             >
               <Key size={15} color={colors.indigo} />
-              <Text style={styles.modeBtnTextAuth}>DEMO SIGN IN</Text>
+              <Text style={styles.modeBtnTextAuth}>SIGN IN</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -420,7 +420,7 @@ export default function ProfileScreen() {
         {/* Store Admin Switcher */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Store size={16} color={Colors.indigo} />
+            <Store size={16} color={colors.indigo} />
             <Text style={styles.cardTitle}>STORE ADMIN &amp; BI ACCESS</Text>
           </View>
           {profile.role === "admin" ? (
@@ -450,7 +450,7 @@ export default function ProfileScreen() {
         {/* Contact & Customer Profile Information */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <User size={16} color={Colors.indigo} />
+            <User size={16} color={colors.indigo} />
             <Text style={styles.cardTitle}>
               {profile.isGuest ? "GUEST CHECKOUT DETAILS" : "REGISTERED CUSTOMER DETAILS"}
             </Text>
@@ -463,7 +463,7 @@ export default function ProfileScreen() {
               value={name}
               onChangeText={setName}
               placeholder="e.g. Tanvir Ahmed"
-              placeholderTextColor={Colors.faint}
+              placeholderTextColor={colors.faint}
             />
           </View>
 
@@ -475,7 +475,7 @@ export default function ProfileScreen() {
               onChangeText={setPhone}
               keyboardType="phone-pad"
               placeholder="017XX-XXXXXX"
-              placeholderTextColor={Colors.faint}
+              placeholderTextColor={colors.faint}
             />
           </View>
 
@@ -487,7 +487,7 @@ export default function ProfileScreen() {
               onChangeText={setEmail}
               keyboardType="email-address"
               placeholder="e.g. name@example.com"
-              placeholderTextColor={Colors.faint}
+              placeholderTextColor={colors.faint}
             />
           </View>
 
@@ -500,7 +500,7 @@ export default function ProfileScreen() {
               multiline
               numberOfLines={3}
               placeholder="House, Road, Sector/Area, City"
-              placeholderTextColor={Colors.faint}
+              placeholderTextColor={colors.faint}
             />
           </View>
         </View>
@@ -508,7 +508,7 @@ export default function ProfileScreen() {
         {/* Advanced Delivery Zone Preferences */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Truck size={16} color={Colors.indigo} />
+            <Truck size={16} color={colors.indigo} />
             <Text style={styles.cardTitle}>PREFERRED DELIVERY OPTION</Text>
           </View>
 
@@ -551,7 +551,7 @@ export default function ProfileScreen() {
         {/* Saved Sizing Preferences */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Ruler size={16} color={Colors.indigo} />
+            <Ruler size={16} color={colors.indigo} />
             <Text style={styles.cardTitle}>FIT &amp; SIZING PREFERENCES</Text>
           </View>
 
@@ -599,7 +599,7 @@ export default function ProfileScreen() {
         {/* Theme & Appearance */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Sparkles size={16} color={Colors.indigo} />
+            <Sparkles size={16} color={colors.indigo} />
             <Text style={styles.cardTitle}>APPEARANCE &amp; THEME</Text>
           </View>
 
@@ -651,7 +651,7 @@ export default function ProfileScreen() {
         {/* Notifications */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Bell size={16} color={Colors.indigo} />
+            <Bell size={16} color={colors.indigo} />
             <Text style={styles.cardTitle}>NOTIFICATIONS</Text>
           </View>
 
@@ -663,7 +663,7 @@ export default function ProfileScreen() {
             <Switch
               value={pushOrders}
               onValueChange={setPushOrders}
-              trackColor={{ false: Colors.border, true: Colors.indigo }}
+              trackColor={{ false: colors.border, true: colors.indigo }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -678,7 +678,7 @@ export default function ProfileScreen() {
             <Switch
               value={pushPromos}
               onValueChange={setPushPromos}
-              trackColor={{ false: Colors.border, true: Colors.indigo }}
+              trackColor={{ false: colors.border, true: colors.indigo }}
               thumbColor="#FFFFFF"
             />
           </View>
@@ -692,18 +692,18 @@ export default function ProfileScreen() {
 
         {/* Report Problem & Stores */}
         <TouchableOpacity style={styles.reportBtn} onPress={handleReport}>
-          <HelpCircle size={16} color={Colors.indigo} />
+          <HelpCircle size={16} color={colors.indigo} />
           <Text style={styles.reportBtnText}>REPORT A PROBLEM / BUG</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[styles.reportBtn, { marginTop: 0 }]} onPress={() => setAboutModalVisible(true)}>
-          <Store size={16} color={Colors.indigo} />
+          <Store size={16} color={colors.indigo} />
           <Text style={styles.reportBtnText}>ABOUT DEEN COMMERCE</Text>
         </TouchableOpacity>
 
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Store size={16} color={Colors.indigo} />
+            <Store size={16} color={colors.indigo} />
             <Text style={styles.cardTitle}>DEEN RETAIL OUTLETS</Text>
           </View>
 
@@ -728,7 +728,7 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.supportBox}>
-            <HelpCircle size={16} color={Colors.indigo} />
+            <HelpCircle size={16} color={colors.indigo} />
             <Text style={styles.supportText}>
               Customer Hotline &amp; WhatsApp: <Text style={styles.bold}>+880 1952-700500</Text> (10 AM - 10 PM)
             </Text>

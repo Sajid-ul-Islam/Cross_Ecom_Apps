@@ -135,7 +135,7 @@ export default function ProductDetailScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.indigo} />
+          <ActivityIndicator size="large" color={colors.indigo} />
         </View>
       </SafeAreaView>
     );
@@ -145,14 +145,14 @@ export default function ProductDetailScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.loadingContainer}>
-          <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.ink, marginBottom: 8 }}>
+          <Text style={{ fontSize: 16, fontWeight: "700", color: colors.ink, marginBottom: 8 }}>
             Product Unavailable
           </Text>
-          <Text style={{ fontSize: 13, color: Colors.sub, marginBottom: 16, textAlign: "center" }}>
+          <Text style={{ fontSize: 13, color: colors.sub, marginBottom: 16, textAlign: "center" }}>
             This item could not be loaded from the store.
           </Text>
           <TouchableOpacity
-            style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: Colors.indigo, borderRadius: 6 }}
+            style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.indigo, borderRadius: 6 }}
             onPress={() => router.replace("/(tabs)/shop")}
           >
             <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>BACK TO SHOP</Text>
@@ -284,7 +284,7 @@ export default function ProductDetailScreen() {
           >
             <Heart
               size={18}
-              color={isWishlisted ? Colors.crimson : Colors.ink}
+              color={isWishlisted ? colors.crimson : colors.ink}
             />
           </TouchableOpacity>
 
@@ -363,7 +363,7 @@ export default function ProductDetailScreen() {
 
           {/* Fabric Badge */}
           <View style={styles.fabricHighlight}>
-            <Layers size={16} color={Colors.indigoDark} />
+            <Layers size={16} color={colors.indigoDark} />
             <Text style={styles.fabricHighlightText}>{product.fabric}</Text>
           </View>
 
@@ -384,7 +384,7 @@ export default function ProductDetailScreen() {
                 activeOpacity={0.8}
                 onPress={() => setSizeGuideVisible(true)}
               >
-                <Ruler size={14} color={Colors.indigoDark} />
+                <Ruler size={14} color={colors.indigoDark} />
                 <Text style={styles.sizeGuideBtnText}>SIZE CHART</Text>
               </TouchableOpacity>
             </View>
@@ -439,7 +439,7 @@ export default function ProductDetailScreen() {
 
               {isSavedMatch && (
                 <View style={styles.savedFitPill}>
-                  <Sparkles size={11} color={Colors.indigo} />
+                  <Sparkles size={11} color={colors.indigo} />
                   <Text style={styles.savedFitPillText}>Matches Your Fit Profile</Text>
                 </View>
               )}
@@ -448,7 +448,7 @@ export default function ProductDetailScreen() {
 
           {/* Free Gift Promo Tag */}
           <View style={styles.promoTag}>
-            <Sparkles size={16} color={Colors.emerald} />
+            <Sparkles size={16} color={colors.emerald} />
             <Text style={styles.promoTagText}>
               Eligible for <Text style={styles.bold}>FREE Heavyweight Tee</Text> on cart subtotal over ৳3,500.
             </Text>
@@ -471,7 +471,7 @@ export default function ProductDetailScreen() {
               activeOpacity={0.8}
               onPress={() => setStockModalVisible(true)}
             >
-              <Store size={15} color={Colors.indigoDark} />
+              <Store size={15} color={colors.indigoDark} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.featurePillTitle}>OUTLET INVENTORY</Text>
                 <Text style={styles.featurePillSub}>Check stock at 4 Outlets</Text>
@@ -483,7 +483,7 @@ export default function ProductDetailScreen() {
               activeOpacity={0.8}
               onPress={() => setReviewsModalVisible(true)}
             >
-              <Star size={15} color={Colors.amber} />
+              <Star size={15} color={colors.amber} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.featurePillTitle}>FIT REVIEWS (4.9 ⭐)</Text>
                 <Text style={styles.featurePillSub}>Customer fit photos &amp; feedback</Text>
@@ -495,7 +495,7 @@ export default function ProductDetailScreen() {
               activeOpacity={0.8}
               onPress={() => setCareGuideVisible(true)}
             >
-              <BookOpen size={15} color={Colors.indigoDark} />
+              <BookOpen size={15} color={colors.indigoDark} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.featurePillTitle}>DENIM CARE GUIDE</Text>
                 <Text style={styles.featurePillSub}>First soak &amp; fading handbook</Text>
@@ -512,9 +512,9 @@ export default function ProductDetailScreen() {
             >
               <Text style={styles.accordionTitle}>FABRIC &amp; SPECIFICATIONS</Text>
               {expandedSection === "fabric" ? (
-                <ChevronUp size={18} color={Colors.ink} />
+                <ChevronUp size={18} color={colors.ink} />
               ) : (
-                <ChevronDown size={18} color={Colors.ink} />
+                <ChevronDown size={18} color={colors.ink} />
               )}
             </TouchableOpacity>
             {expandedSection === "fabric" && (
@@ -536,9 +536,9 @@ export default function ProductDetailScreen() {
             >
               <Text style={styles.accordionTitle}>CARE &amp; WASHING INSTRUCTIONS</Text>
               {expandedSection === "care" ? (
-                <ChevronUp size={18} color={Colors.ink} />
+                <ChevronUp size={18} color={colors.ink} />
               ) : (
-                <ChevronDown size={18} color={Colors.ink} />
+                <ChevronDown size={18} color={colors.ink} />
               )}
             </TouchableOpacity>
             {expandedSection === "care" && (
@@ -559,9 +559,9 @@ export default function ProductDetailScreen() {
             >
               <Text style={styles.accordionTitle}>DELIVERY &amp; RETURN POLICY</Text>
               {expandedSection === "shipping" ? (
-                <ChevronUp size={18} color={Colors.ink} />
+                <ChevronUp size={18} color={colors.ink} />
               ) : (
-                <ChevronDown size={18} color={Colors.ink} />
+                <ChevronDown size={18} color={colors.ink} />
               )}
             </TouchableOpacity>
             {expandedSection === "shipping" && (
@@ -586,7 +586,7 @@ export default function ProductDetailScreen() {
           activeOpacity={0.85}
           onPress={handleAddToCart}
         >
-          <ShoppingBag size={18} color={Colors.indigoDark} />
+          <ShoppingBag size={18} color={colors.indigoDark} />
           <Text style={styles.addToCartBtnText}>ADD TO BAG</Text>
         </TouchableOpacity>
 

@@ -136,7 +136,7 @@ export const StoreStockModal: React.FC<StoreStockModalProps> = ({
 
                   <View style={styles.outletDetails}>
                     <View style={styles.detailRow}>
-                      <MapPin size={13} color={Colors.sub} />
+                      <MapPin size={13} color={colors.sub} />
                       <Text style={styles.detailText}>{outlet.address}</Text>
                     </View>
                     <Text style={styles.hoursText}>🕒 {outlet.hours}</Text>
@@ -147,7 +147,7 @@ export const StoreStockModal: React.FC<StoreStockModalProps> = ({
                       style={styles.dirBtn}
                       onPress={() => handleOpenMap(outlet.mapQuery)}
                     >
-                      <Navigation size={13} color={Colors.indigoDark} />
+                      <Navigation size={13} color={colors.indigoDark} />
                       <Text style={styles.dirBtnText}>DIRECTIONS</Text>
                     </TouchableOpacity>
 
