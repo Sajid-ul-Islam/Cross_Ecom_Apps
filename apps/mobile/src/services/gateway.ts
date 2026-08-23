@@ -224,6 +224,20 @@ export async function fetchCategories(): Promise<{ category: string; count: numb
   return Object.entries(counts).map(([category, count]) => ({ category, count }));
 }
 
+/**
+ * Category cover images — source of truth is WooCommerce (via the gateway's
+ * /v1/deen/category-covers, which reads each Woo category's WordPress media
+ * image.src). Returns { CATEGORY: imageUrl }. On failure returns {} so the
+ * screen falls back to the bundled deencommerce.com URL.
+ */
+export async function fetchCategoryCovers(): Promise<Record<string, string>> {
+  try {
+    const covers = await request<Record<string, string>>("/v1/deen/category-covers", undefined, 6000);
+    if (covers && typeof covers === "object") return covers;
+  } catch {}
+  return {};
+}
+
 export async function fetchProductById(id: string): Promise<Product | undefined> {
   try {
     const p = await request<Product>(`/v1/deen/products/${id}`, undefined, 6000);
