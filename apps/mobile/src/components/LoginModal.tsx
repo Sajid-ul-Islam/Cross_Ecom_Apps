@@ -76,7 +76,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, onClose, onSucc
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0}
+      >
         <View style={[styles.modalCard, { backgroundColor: colors.paper }]}>
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.borderLight }]}>
@@ -100,11 +104,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, onClose, onSucc
             </TouchableOpacity>
           </View>
 
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-            style={{ maxHeight: height * 0.9 }}
-          >
           <ScrollView
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.content}
@@ -221,9 +220,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, onClose, onSucc
               </TouchableOpacity>
             </View>
           </ScrollView>
-          </KeyboardAvoidingView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };

@@ -9,7 +9,7 @@ import {
   Dimensions,
   Linking,
 } from "react-native";
-import { X, Sparkles, Store, ShieldCheck, Heart, MapPin, PhoneCall, Truck } from "./Icons";
+import { X, Sparkles, Store, ShieldCheck, Heart, MapPin, PhoneCall, Truck, WhatsApp, Instagram, Facebook } from "./Icons";
 import { Colors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 
@@ -101,39 +101,33 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
                 Instagram: instagram.com/deencommerce
               </Text>
 
-              <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+              {/* Round social icon buttons — side by side */}
+              <View style={{ flexDirection: "row", justifyContent: "center", gap: 22, marginTop: 16 }}>
                 <TouchableOpacity
-                  style={{
-                    flex: 1,
-                    backgroundColor: "#1877F2",
-                    paddingVertical: 10,
-                    paddingHorizontal: 8,
-                    borderRadius: 8,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                  onPress={() => Linking.openURL("https://www.facebook.com/deencommerce")}
+                  accessibilityLabel="WhatsApp"
+                  activeOpacity={0.85}
+                  onPress={() => Linking.openURL("https://wa.me/8801952700500")}
+                  style={[styles.socialRound, { backgroundColor: "#25D366" }]}
                 >
-                  <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 11 }}>
-                    FACEBOOK →
-                  </Text>
+                  <WhatsApp size={30} color="#FFFFFF" />
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={{
-                    flex: 1,
-                    backgroundColor: "#E1306C",
-                    paddingVertical: 10,
-                    paddingHorizontal: 8,
-                    borderRadius: 8,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
+                  accessibilityLabel="Instagram"
+                  activeOpacity={0.85}
                   onPress={() => Linking.openURL("https://www.instagram.com/deencommerce")}
+                  style={[styles.socialRound, { backgroundColor: "#E1306C" }]}
                 >
-                  <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 11 }}>
-                    INSTAGRAM →
-                  </Text>
+                  <Instagram size={28} color="#FFFFFF" />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  accessibilityLabel="Facebook"
+                  activeOpacity={0.85}
+                  onPress={() => Linking.openURL("https://www.facebook.com/deencommerce")}
+                  style={[styles.socialRound, { backgroundColor: "#1877F2" }]}
+                >
+                  <Facebook size={28} color="#FFFFFF" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -291,5 +285,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.sub,
     lineHeight: 17,
+  },
+  socialRound: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
   },
 });

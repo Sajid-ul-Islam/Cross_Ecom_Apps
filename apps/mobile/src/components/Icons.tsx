@@ -490,4 +490,37 @@ export const LogOut = make(
   </>,
 );
 
+/* Brand glyphs — rendered white (fill/stroke) on coloured round buttons. */
+function makeFilled(nodes: React.ReactNode) {
+  return function Icon({ size = 24, color = "#FFFFFF", style, ...rest }: IconProps) {
+    return (
+      <Svg width={size} height={size} viewBox="0 0 24 24" fill={color} style={style} {...rest}>
+        {nodes}
+      </Svg>
+    );
+  };
+}
+
+export const WhatsApp = make(
+  <>
+    <Path d="M21 11.5a8.5 8.5 0 0 1-12.2 7.7L3 21l1.8-5.8A8.5 8.5 0 1 1 21 11.5z" />
+    <Path d="M8.8 8.6c0 3 2.5 5.5 5.5 5.5l1-1.5c.3-.4.9-.4 1.3-.1l1.7 1c.4.3.5.9.2 1.3-1 1.3-2.6 1.2-3.8.2" />
+  </>,
+);
+
+export const Instagram = make(
+  <>
+    <Rect x="3" y="3" width="18" height="18" rx="5" />
+    <Circle cx="12" cy="12" r="4" />
+    <Circle cx="17" cy="7" r="1.2" fill="#fff" stroke="none" />
+  </>,
+);
+
+export const Facebook = make(
+  <>
+    <Rect x="3" y="3" width="18" height="18" rx="4" />
+    <Path d="M14 8h-2c-1.1 0-2 .9-2 2v1.5H8v2h2V19h2v-5.5h2l.5-2H12V10c0-.3.2-.5.5-.5H14V8z" />
+  </>,
+);
+
 
