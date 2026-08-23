@@ -1,0 +1,44 @@
+{
+  "name": "deen-mobile",
+  "version": "1.0.1",
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "export:android": "NODE_OPTIONS=\"--require ./scripts/node18-polyfill.cjs\" expo export -p android",
+    "build:apk": "eas build -p android --profile production-apk",
+    "build:android": "eas build -p android --profile preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "expo": "~55.0.29",
+    "expo-constants": "~55.0.17",
+    "expo-font": "~55.0.8",
+    "expo-linking": "~55.0.17",
+    "expo-router": "~55.0.18",
+    "expo-status-bar": "~55.0.6",
+    "lottie-react-native": "~7.3.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "react-native": "0.83.10",
+    "react-native-gesture-handler": "~2.30.0",
+    "react-native-safe-area-context": "~5.6.2",
+    "react-native-screens": "~4.23.0",
+    "react-native-svg": "15.15.3"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.26.0",
+    "@types/react": "~19.2.8",
+    "@types/react-dom": "~19.2.0",
+    "babel-preset-expo": "~55.0.24",
+    "typescript": "~5.9.2"
+  },
+  "overrides": {
+    "react": "$react",
+    "react-dom": "$react-dom"
+  },
+  "private": true
+}
