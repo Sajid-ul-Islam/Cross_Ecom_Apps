@@ -1,0 +1,22 @@
+{
+  "name": "deen-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "DEEN middle API gateway — holds WooCommerce keys, exposes DEEN REST to the mobile/web apps.",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fastify/cors": "^9.0.1",
+    "dotenv": "^16.4.5",
+    "fastify": "^4.28.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.5.4"
+  }
+}
