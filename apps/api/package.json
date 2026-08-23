@@ -6,6 +6,7 @@
   "description": "DEEN middle API gateway — holds WooCommerce keys, exposes DEEN REST to the mobile/web apps.",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "build": "tsc --noEmit",
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit"
   },
