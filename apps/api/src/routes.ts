@@ -8,6 +8,7 @@ import {
   fetchWooVariations,
   fetchWooStats,
   fetchWooCategoryList,
+  fetchWooCategoryImages,
   pushWooOrder,
   updateWooOrderPayment,
   wooHealthy,
@@ -774,6 +775,19 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       return reply.send(cats);
     } catch {
       return reply.send([]);
+    }
+  });
+
+  /* ---- category cover images (source of truth: WooCommerce products/categories) ---- */
+  /* Returns { category: imageUrl } where imageUrl is the real WordPress media
+     URL from Woo. The app uses these as covers and only falls back to the
+     bundled deencommerce.com URLs when Woo is unreachable. */
+  app.get("/v1/deen/category-covers", async (_req, reply) => {
+    try {
+      const covers = await fetchWooCategoryImages();
+      return reply.send(covers);
+    } catch {
+      return reply.send({});
     }
   });
 
