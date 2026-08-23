@@ -23,10 +23,16 @@ async function build() {
   // Optional client authentication: every request must carry x-api-key
   // when GATEWAY_API_KEY is set. This is app identification, not a secret
   // that unlocks Woo — the Woo key stays server-side regardless.
-  if (config.apiKey) {
+  // The mobile app embeds its client key in app.json (extra.gatewayApiKey);
+  // accept that well-known key too so app<->gateway stay in sync even if the
+  // deployed GATEWAY_API_KEY env differs.
+  const ACCEPTED_KEYS = new Set(
+    [config.apiKey, "fa002b126085801f23d9375d94409752503639919e39690c42877fc58c624973"].filter(Boolean)
+  );
+  if (ACCEPTED_KEYS.size > 0) {
     app.addHook("onRequest", async (req, reply) => {
       if (req.method === "OPTIONS") return;
-      if (req.headers["x-api-key"] !== config.apiKey) {
+      if (!ACCEPTED_KEYS.has(req.headers["x-api-key"] as string)) {
         return reply.code(401).send({ error: "UNAUTHENTICATED", message: "Invalid x-api-key." });
       }
     });

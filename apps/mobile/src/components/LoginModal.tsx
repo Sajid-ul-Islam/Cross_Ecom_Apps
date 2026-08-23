@@ -10,6 +10,8 @@ import {
   Dimensions,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { X, Lock, User, CheckCircle2, Key, ArrowRight } from "./Icons";
 import { Colors } from "../theme/colors";
@@ -98,7 +100,16 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, onClose, onSucc
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+            style={{ maxHeight: height * 0.9 }}
+          >
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+          >
             {notice && (
               <View
                 style={[
@@ -210,6 +221,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, onClose, onSucc
               </TouchableOpacity>
             </View>
           </ScrollView>
+          </KeyboardAvoidingView>
         </View>
       </View>
     </Modal>
