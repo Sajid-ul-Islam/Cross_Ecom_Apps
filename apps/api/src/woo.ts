@@ -243,6 +243,33 @@ export async function fetchWooCategoryList(): Promise<{ category: string; count:
   return [...catCounts.entries()].map(([category, count]) => ({ category, count })).sort((a, b) => b.count - a.count);
 }
 
+/**
+ * Source of truth for category cover images: WooCommerce's
+ * `products/categories` endpoint, which carries each category's real
+ * WordPress media `image.src`. The app is a thin client — covers must
+ * originate from Woo/WordPress, never hardcoded or third-party hosts.
+ * Returns a map keyed by DeenCategory name -> cover image URL.
+ */
+export async function fetchWooCategoryImages(): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  if (!wooHealthy()) return out;
+  try {
+    const cats = (await wooFetch("products/categories", {
+      per_page: "100",
+      hide_empty: "false",
+    })) as Array<{ name: string; image?: { src?: string } | null }>;
+    for (const c of cats || []) {
+      const mapped = mapCategory([c.name]);
+      if (mapped === "OTHER") continue;
+      const src = c.image?.src;
+      if (src && !out[mapped]) out[mapped] = src;
+    }
+  } catch (e) {
+    console.error("[woo] category images failed:", (e as Error).message);
+  }
+  return out;
+}
+
 export async function pushWooOrder(order: unknown): Promise<{ id: number }> {
   const { site, consumerKey, consumerSecret } = config.woo;
   const url = new URL(`${site.replace(/\/$/, "")}/wp-json/wc/v3/orders`);
