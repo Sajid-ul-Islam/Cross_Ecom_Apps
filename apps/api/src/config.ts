@@ -1,5 +1,20 @@
 import "dotenv/config";
 
+export interface StoreConfig {
+  id: string;
+  /** API key this store's app sends as x-api-key. */
+  apiKey: string;
+  woo: {
+    site: string;
+    consumerKey: string;
+    consumerSecret: string;
+  };
+  brand?: {
+    name?: string;
+    primaryColor?: string;
+  };
+}
+
 export const config = {
   port: Number(process.env.PORT ?? 8787),
   /** Public base URL of THIS gateway. Used to advertise itself on /v1/health. */
@@ -13,6 +28,11 @@ export const config = {
   /** Rate-limit threshold (auth endpoints, per IP per window). */
   authRateLimit: Number(process.env.AUTH_RATE_LIMIT ?? 20),
   logLevel: (process.env.LOG_LEVEL as "info" | "debug" | "warn" | "error") ?? "info",
+  /** Multi-tenant store registry (SaaS). JSON array in STORES env.
+      When set, each store is keyed by its own apiKey and carries its own
+      Woo credentials + branding. The default (legacy) store uses the top-level
+      woo config + GATEWAY_API_KEY. */
+  stores: parseStores(process.env.STORES),
   woo: {
     site: process.env.WOO_SITE ?? "https://deencommerce.com",
     consumerKey: process.env.WOO_CONSUMER_KEY ?? "",
@@ -27,6 +47,24 @@ export const config = {
     storeId: process.env.PATHAO_STORE_ID ?? "",
   },
 };
+
+function parseStores(raw?: string): StoreConfig[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr)) return arr as StoreConfig[];
+  } catch {
+    console.error("[config] STORES env was not valid JSON — ignoring multi-tenant config.");
+  }
+  return [];
+}
+
+/** Resolve a store by the x-api-key a client sends. Falls back to the
+    legacy/default store when no multi-tenant registry matches. */
+export function resolveStore(apiKey?: string): StoreConfig | null {
+  if (!apiKey) return null;
+  return config.stores.find((s) => s.apiKey === apiKey) ?? null;
+}
 
 /** True when live WooCommerce credentials are present. */
 export const wooEnabled = Boolean(config.woo.consumerKey && config.woo.consumerSecret);

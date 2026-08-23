@@ -156,6 +156,25 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
               <Text style={styles.sectionBody}>01972-627985</Text>
             </View>
 
+            {/* Privacy & Support (store readiness) */}
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <ShieldCheck size={16} color={colors.indigo} />
+                <Text style={styles.sectionTitle}>PRIVACY &amp; SUPPORT</Text>
+              </View>
+              <Text style={styles.sectionBody}>
+                We protect your data. Your profile, addresses and order history are stored
+                securely and used only to fulfil your orders and improve your experience.
+                We never sell your personal information.
+              </Text>
+              <Text style={[styles.sectionBody, { marginTop: 8, fontWeight: "600", color: colors.ink }]}>
+                Support: support@deencommerce.com · 01952-700500
+              </Text>
+              <Text style={[styles.sectionBody, { marginTop: 4, fontWeight: "600", color: colors.ink }]}>
+                Privacy Policy: deencommerce.com/privacy-policy
+              </Text>
+            </View>
+
             {/* Section 3 */}
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>

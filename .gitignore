@@ -26,3 +26,6 @@ apps/mobile/android/
 # Scratch / one-off test scripts (not source)
 apps/api/src/test-env.ts
 
+
+# never commit secrets
+apps/api/.env

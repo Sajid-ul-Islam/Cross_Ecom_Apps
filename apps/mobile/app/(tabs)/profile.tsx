@@ -220,6 +220,43 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Display / Appearance (theme switcher) */}
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.cardHeader}>
+            <Sparkles size={16} color={colors.indigo} />
+            <Text style={[styles.cardTitle, { color: colors.ink }]}>APPEARANCE</Text>
+          </View>
+          <Text style={[styles.cardSub, { color: colors.sub, marginBottom: 10 }]}>
+            Choose how DEEN looks on your device.
+          </Text>
+          <View style={styles.themeRow}>
+            {(["light", "dark", "system"] as const).map((mode) => {
+              const active = themeMode === mode;
+              return (
+                <TouchableOpacity
+                  key={mode}
+                  style={[
+                    styles.themeChip,
+                    active && styles.themeChipActive,
+                    { borderColor: active ? colors.indigo : colors.border },
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={() => setThemeMode(mode)}
+                >
+                  <Text
+                    style={[
+                      styles.themeChipText,
+                      { color: active ? "#FFFFFF" : colors.sub },
+                    ]}
+                  >
+                    {mode === "light" ? "LIGHT" : mode === "dark" ? "DARK" : "SYSTEM"}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
         {/* 1. Account & Guest Mode Card */}
         <View style={styles.accountCard}>
           <View style={styles.accountHeader}>
@@ -1104,6 +1141,28 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginBottom: 12,
     marginTop: -6,
+  },
+  themeRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  themeChip: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    backgroundColor: Colors.cardSecondary,
+  },
+  themeChipActive: {
+    backgroundColor: Colors.indigo,
+    borderColor: Colors.indigo,
+  },
+  themeChipText: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.6,
   },
   card: {
     backgroundColor: Colors.card,

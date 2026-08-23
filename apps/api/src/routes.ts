@@ -9,6 +9,7 @@ import {
   fetchWooStats,
   fetchWooCategoryList,
   fetchWooCategoryImages,
+  wooStatus,
   pushWooOrder,
   updateWooOrderPayment,
   wooHealthy,
@@ -790,6 +791,28 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       return reply.send({});
     }
   });
+
+  /* ---- centralized error model (R4) ---- */
+  /* Every endpoint should return this shape so the app can decide:
+     retry (retryable) vs contact-support vs offline. */
+  function deenError(reply: any, status: number, code: string, message: string, retryable = false) {
+    return reply.code(status).send({ error: code, message, retryable });
+  }
+
+  /* ---- health (R1): reports gateway + Woo backend status ---- */
+  /* The app uses `woo` to show cached-catalog banners and never a hard error. */
+  async function healthPayload() {
+    const woo = wooStatus();
+    return {
+      ok: true,
+      gateway: "ok" as const,
+      woo,
+      mode: config.apiKey ? "keyed" : "open",
+      timestamp: new Date().toISOString(),
+    };
+  }
+  app.get("/health", async (_req, reply) => reply.send(await healthPayload()));
+  app.get("/v1/health", async (_req, reply) => reply.send(await healthPayload()));
 
   /* ---- bangladesh 64 districts for woocommerce states ---- */
   /* ---- bangladesh 64 districts for woocommerce states (matches live site BD-XX codes) ---- */

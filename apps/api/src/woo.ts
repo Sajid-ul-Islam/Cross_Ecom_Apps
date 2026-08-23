@@ -107,23 +107,92 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
 const CACHE_TTL_MS = 5 * 60 * 1000;
 let catalogCache: { at: number; data: DeenProduct[] } | null = null;
 let catalogWarming: Promise<DeenProduct[]> | null = null;
+let coverCache: { at: number; data: Record<string, string> } | null = null;
 
 export function wooHealthy(): boolean {
   return Boolean(config.woo.consumerKey && config.woo.consumerSecret);
 }
 
-async function wooFetch(path: string, params: Record<string, string> = {}): Promise<any> {
+/* --------------------- Woo resilience (R2) --------------------- */
+/* Track last successful Woo contact so /health can report
+   ok | degraded | down without a live call. */
+let lastWooSuccessAt = 0;
+let lastWooErrorAt = 0;
+const WOO_DEGRADED_AFTER_MS = 5 * 60 * 1000; // no success in 5 min -> degraded
+
+export function wooStatus(): "ok" | "degraded" | "down" {
+  if (!wooHealthy()) return "down";
+  if (lastWooSuccessAt === 0) return "ok"; // never tried (seed mode)
+  const sinceSuccess = Date.now() - lastWooSuccessAt;
+  if (sinceSuccess > WOO_DEGRADED_AFTER_MS) return "degraded";
+  return "ok";
+}
+
+/* Circuit breaker: while "open", fail fast instead of hammering a struggling
+   Woo. Opens after N consecutive failures, half-opens after a cooldown. */
+let cbFailures = 0;
+let cbOpenUntil = 0;
+const CB_THRESHOLD = 5;
+const CB_COOLDOWN_MS = 30_000;
+
+export function wooFetchWithBreaker<T = any>(path: string, params: Record<string, string> = {}): Promise<T> {
+  return wooFetchResilient<T>(path, params);
+}
+
+async function wooFetchResilient<T = any>(path: string, params: Record<string, string> = {}): Promise<T> {
+  if (Date.now() < cbOpenUntil) {
+    throw new Error("Woo circuit breaker open — fast-failing to protect backend");
+  }
   const { site, consumerKey, consumerSecret } = config.woo;
   const url = new URL(`${site.replace(/\/$/, "")}/wp-json/wc/v3/${path}`);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   url.searchParams.set("consumer_key", consumerKey);
   url.searchParams.set("consumer_secret", consumerSecret);
-  const res = await fetch(url.toString());
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Woo ${path} failed: ${res.status} ${body.slice(0, 120)}`);
+
+  const MAX_RETRIES = 3;
+  const TIMEOUT_MS = 8000;
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    try {
+      const res = await fetch(url.toString(), { signal: controller.signal });
+      clearTimeout(t);
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        throw new Error(`Woo ${path} failed: ${res.status} ${body.slice(0, 120)}`);
+      }
+      const json = (await res.json()) as T;
+      // success — reset breaker + record health
+      lastWooSuccessAt = Date.now();
+      cbFailures = 0;
+      return json;
+    } catch (err) {
+      clearTimeout(t);
+      lastErr = err;
+      const isAbort = err instanceof Error && err.name === "AbortError";
+      // Don't retry 4xx (auth/param errors) — only network/timeouts/5xx.
+      if (!isAbort && err instanceof Error && /failed: [45]/.test(err.message)) {
+        break;
+      }
+      if (attempt < MAX_RETRIES) {
+        await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+        continue;
+      }
+    }
   }
-  return res.json();
+  // failure — trip breaker if needed
+  lastWooErrorAt = Date.now();
+  cbFailures += 1;
+  if (cbFailures >= CB_THRESHOLD) {
+    cbOpenUntil = Date.now() + CB_COOLDOWN_MS;
+    cbFailures = 0;
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("Woo fetch failed");
+}
+
+async function wooFetch(path: string, params: Record<string, string> = {}): Promise<any> {
+  return wooFetchResilient(path, params);
 }
 
 export async function fetchWooProducts(): Promise<DeenProduct[]> {
@@ -156,17 +225,22 @@ export async function fetchWooProducts(): Promise<DeenProduct[]> {
 }
 
 /** Per-product variations (real size → stock + price) for the detail screen. */
+const variationCache = new Map<string, { at: number; data: { id: number; size: string; stock: string; price: number; regular: number }[] }>();
 export async function fetchWooVariations(productId: string): Promise<
   { id: number; size: string; stock: string; price: number; regular: number }[]
 > {
+  const cached = variationCache.get(productId);
+  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.data;
   const raw = (await wooFetch(`products/${productId}/variations`, { per_page: "50" })) as any[];
-  return raw.map((v) => ({
+  const data = raw.map((v) => ({
     id: v.id,
     size: (v.attributes || []).map((a: any) => a.option).join(" ") || "OS",
     stock: v.stock_status ?? "instock",
     price: Number(v.price) || 0,
     regular: Number(v.regular_price) || 0,
   }));
+  variationCache.set(productId, { at: Date.now(), data });
+  return data;
 }
 
 /* ----------------------------- analytics --------------------------- */
@@ -251,6 +325,7 @@ export async function fetchWooCategoryList(): Promise<{ category: string; count:
  * Returns a map keyed by DeenCategory name -> cover image URL.
  */
 export async function fetchWooCategoryImages(): Promise<Record<string, string>> {
+  if (coverCache && Date.now() - coverCache.at < CACHE_TTL_MS) return coverCache.data;
   const out: Record<string, string> = {};
   if (!wooHealthy()) return out;
   try {
@@ -267,6 +342,7 @@ export async function fetchWooCategoryImages(): Promise<Record<string, string>> 
   } catch (e) {
     console.error("[woo] category images failed:", (e as Error).message);
   }
+  coverCache = { at: Date.now(), data: out };
   return out;
 }
 
