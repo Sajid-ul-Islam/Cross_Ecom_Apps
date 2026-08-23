@@ -54,7 +54,7 @@ export default function OrdersScreen() {
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
         <Header title="MY ORDERS" showSearch={false} />
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={Colors.indigo} />
+          <ActivityIndicator size="large" color={colors.indigo} />
         </View>
       </SafeAreaView>
     );
@@ -66,7 +66,7 @@ export default function OrdersScreen() {
         <Header title="MY ORDERS" showSearch={false} />
         <View style={styles.emptyContainer}>
           <View style={styles.emptyIconCircle}>
-            <Package size={36} color={Colors.indigo} />
+            <Package size={36} color={colors.indigo} />
           </View>
           <Text style={styles.emptyTitle}>No Orders Yet</Text>
           <Text style={styles.emptySub}>

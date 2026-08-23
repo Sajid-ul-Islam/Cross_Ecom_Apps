@@ -131,7 +131,7 @@ export const DailyRewardsModal: React.FC<DailyRewardsModalProps> = ({ visible, o
             {/* Scratch / Mystery Card */}
             <View style={styles.scratchCardContainer}>
               <View style={styles.scratchHeader}>
-                <Sparkles size={14} color={Colors.amber} />
+                <Sparkles size={14} color={colors.amber} />
                 <Text style={styles.scratchHeaderText}>TODAY'S MYSTERY REWARD</Text>
               </View>
 
@@ -148,7 +148,7 @@ export const DailyRewardsModal: React.FC<DailyRewardsModalProps> = ({ visible, o
               ) : (
                 <View style={styles.scratchRevealed}>
                   <View style={styles.rewardIconBadge}>
-                    <Trophy size={28} color={Colors.amber} />
+                    <Trophy size={28} color={colors.amber} />
                   </View>
                   <Text style={styles.rewardCongratulations}>CONGRATULATIONS!</Text>
                   <Text style={styles.rewardTitle}>{selectedReward.title}</Text>
@@ -156,7 +156,7 @@ export const DailyRewardsModal: React.FC<DailyRewardsModalProps> = ({ visible, o
 
                   {/* Promo Code Box */}
                   <View style={styles.codeBox}>
-                    <Tag size={14} color={Colors.indigoDark} />
+                    <Tag size={14} color={colors.indigoDark} />
                     <Text style={styles.codeLabel}>VOUCHER CODE:</Text>
                     <Text style={styles.codeText}>{selectedReward.code}</Text>
                   </View>

@@ -133,7 +133,7 @@ export const ProductReviewsModal: React.FC<ProductReviewsModalProps> = ({
                 <Text style={styles.scoreNumber}>{product.rating || "4.9"}</Text>
                 <View style={{ flexDirection: "row", gap: 2 }}>
                   {[1, 2, 3, 4, 5].map((s) => (
-                    <Star key={s} size={14} color={Colors.amber} />
+                    <Star key={s} size={14} color={colors.amber} />
                   ))}
                 </View>
                 <Text style={styles.scoreSub}>Based on {reviews.length + 18} verified orders</Text>
@@ -167,7 +167,7 @@ export const ProductReviewsModal: React.FC<ProductReviewsModalProps> = ({
                   <View style={{ flexDirection: "row", gap: 6 }}>
                     {[1, 2, 3, 4, 5].map((s) => (
                       <TouchableOpacity key={s} onPress={() => setUserRating(s)}>
-                        <Star size={24} color={s <= userRating ? Colors.amber : Colors.border} />
+                        <Star size={24} color={s <= userRating ? colors.amber : colors.border} />
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -181,7 +181,7 @@ export const ProductReviewsModal: React.FC<ProductReviewsModalProps> = ({
                       value={fitHeight}
                       onChangeText={setFitHeight}
                       placeholder={"e.g. 5'10\""}
-                      placeholderTextColor={Colors.faint}
+                      placeholderTextColor={colors.faint}
                     />
                   </View>
 
@@ -192,7 +192,7 @@ export const ProductReviewsModal: React.FC<ProductReviewsModalProps> = ({
                       value={fitWeight}
                       onChangeText={setFitWeight}
                       placeholder="e.g. 72kg"
-                      placeholderTextColor={Colors.faint}
+                      placeholderTextColor={colors.faint}
                     />
                   </View>
                 </View>
@@ -206,7 +206,7 @@ export const ProductReviewsModal: React.FC<ProductReviewsModalProps> = ({
                     multiline
                     numberOfLines={3}
                     placeholder="How does the garment fit? Describe the fabric texture, waistband, and styling..."
-                    placeholderTextColor={Colors.faint}
+                    placeholderTextColor={colors.faint}
                   />
                 </View>
 
@@ -237,7 +237,7 @@ export const ProductReviewsModal: React.FC<ProductReviewsModalProps> = ({
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                         <Text style={styles.revName}>{rev.name}</Text>
                         <View style={styles.verifiedPill}>
-                          <ShieldCheck size={11} color={Colors.emerald} />
+                          <ShieldCheck size={11} color={colors.emerald} />
                           <Text style={styles.verifiedText}>VERIFIED BUYER</Text>
                         </View>
                       </View>
@@ -248,7 +248,7 @@ export const ProductReviewsModal: React.FC<ProductReviewsModalProps> = ({
 
                     <View style={{ flexDirection: "row", gap: 2 }}>
                       {[...Array(rev.rating)].map((_, i) => (
-                        <Star key={i} size={12} color={Colors.amber} />
+                        <Star key={i} size={12} color={colors.amber} />
                       ))}
                     </View>
                   </View>

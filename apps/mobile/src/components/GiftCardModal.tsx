@@ -209,7 +209,7 @@ export const GiftCardModal: React.FC<GiftCardModalProps> = ({ visible, onClose }
                     value={recipientName}
                     onChangeText={setRecipientName}
                     placeholder="e.g. Tahmid"
-                    placeholderTextColor={Colors.faint}
+                    placeholderTextColor={colors.faint}
                   />
                 </View>
 
@@ -220,7 +220,7 @@ export const GiftCardModal: React.FC<GiftCardModalProps> = ({ visible, onClose }
                     value={senderName}
                     onChangeText={setSenderName}
                     placeholder="e.g. Sajid"
-                    placeholderTextColor={Colors.faint}
+                    placeholderTextColor={colors.faint}
                   />
                 </View>
               </View>
@@ -234,7 +234,7 @@ export const GiftCardModal: React.FC<GiftCardModalProps> = ({ visible, onClose }
                   multiline
                   numberOfLines={2}
                   placeholder="Write a custom note..."
-                  placeholderTextColor={Colors.faint}
+                  placeholderTextColor={colors.faint}
                 />
               </View>
             </View>

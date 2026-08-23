@@ -76,15 +76,15 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ visible, o
   const getBadgeStyle = (type: NotificationType) => {
     switch (type) {
       case "PROMO":
-        return { bg: Colors.amberLight, text: Colors.amber, label: "PROMOTION" };
+        return { bg: colors.amberLight, text: colors.amber, label: "PROMOTION" };
       case "ORDER":
-        return { bg: Colors.emeraldLight, text: Colors.emerald, label: "ORDER STATUS" };
+        return { bg: colors.emeraldLight, text: colors.emerald, label: "ORDER STATUS" };
       case "RESTOCK":
-        return { bg: Colors.crimsonLight, text: Colors.crimson, label: "RESTOCK ALERT" };
+        return { bg: colors.crimsonLight, text: colors.crimson, label: "RESTOCK ALERT" };
       case "BROADCAST":
-        return { bg: Colors.indigoLight, text: Colors.indigo, label: "STORE NOTICE" };
+        return { bg: colors.indigoLight, text: colors.indigo, label: "STORE NOTICE" };
       default:
-        return { bg: Colors.cardSecondary, text: Colors.sub, label: "SYSTEM" };
+        return { bg: colors.cardSecondary, text: colors.sub, label: "SYSTEM" };
     }
   };
 
@@ -155,7 +155,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ visible, o
 
             {unreadCount > 0 && (
               <TouchableOpacity style={styles.markAllBtn} onPress={markAllAsRead}>
-                <CheckCircle2 size={13} color={Colors.indigo} />
+                <CheckCircle2 size={13} color={colors.indigo} />
                 <Text style={styles.markAllText}>Mark all read</Text>
               </TouchableOpacity>
             )}
@@ -171,7 +171,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ visible, o
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
             {filtered.length === 0 ? (
               <View style={styles.emptyContainer}>
-                <Bell size={36} color={Colors.faint} />
+                <Bell size={36} color={colors.faint} />
                 <Text style={styles.emptyTitle}>No notifications</Text>
                 <Text style={styles.emptySub}>You're all caught up with latest drops and updates.</Text>
               </View>
@@ -196,7 +196,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ visible, o
                           onPress={() => deleteNotification(item.id)}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
-                          <Trash2 size={14} color={Colors.sub} />
+                          <Trash2 size={14} color={colors.sub} />
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -209,7 +209,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ visible, o
                     {item.promoCode && (
                       <View style={styles.promoCodeBox}>
                         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                          <Tag size={13} color={Colors.indigoDark} />
+                          <Tag size={13} color={colors.indigoDark} />
                           <Text style={styles.promoCodeLabel}>PROMO CODE:</Text>
                           <Text style={styles.promoCodeValue}>{item.promoCode}</Text>
                         </View>
