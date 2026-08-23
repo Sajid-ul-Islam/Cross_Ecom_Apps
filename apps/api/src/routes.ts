@@ -904,6 +904,16 @@ export async function registerDeenRoutes(app: FastifyInstance) {
             variation_id: Number(it.variationId) || 0,
             quantity: it.qty,
           })),
+          // CRITICAL: send the cashback to Woo exactly like the live website does,
+          // so app-placed orders match website-placed orders. Without this the Woo
+          // order shows the full subtotal with no discount (exact-match break).
+          coupon_lines: cashback > 0
+            ? [{
+                code: `CASHBACK${cashback}`,
+                discount_type: "fixed_cart",
+                amount: String(cashback),
+              }]
+            : [],
           shipping_lines: [
             {
               method_id: area === "store_pickup" || area === "pickup" ? "local_pickup" : "flat_rate",
