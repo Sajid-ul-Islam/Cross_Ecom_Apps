@@ -27,7 +27,7 @@ import { Colors } from "../../src/theme/colors";
 import { useTheme } from "../../src/context/ThemeContext";
 import { ProductCard } from "../../src/components/ProductCard";
 import { SizeGuideModal } from "../../src/components/SizeGuideModal";
-import { fetchProducts, isGatewayConfigured, useCatalogRefreshOnFocus } from "../../src/services/gateway";
+import { fetchProducts, isGatewayConfigured, useCatalogRefreshOnFocus, fetchCategoryCovers } from "../../src/services/gateway";
 import { Product, DeenCategory } from "../../src/types";
 import { useCart } from "../../src/context/CartContext";
 import { useProfile } from "../../src/context/ProfileContext";
@@ -53,6 +53,13 @@ export default function CategoryLandingScreen() {
   const [selectedTag, setSelectedTag] = useState("All");
   const [sortBy, setSortBy] = useState<SortOption>("featured");
   const [sizeGuideVisible, setSizeGuideVisible] = useState(false);
+  const [categoryCovers, setCategoryCovers] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetchCategoryCovers()
+      .then((c) => setCategoryCovers(c || {}))
+      .catch(() => {});
+  }, []);
 
   const loadCategoryProducts = async () => {
     try {
@@ -180,7 +187,7 @@ export default function CategoryLandingScreen() {
             {/* Category Hero Cover Card */}
             <View style={styles.coverWrapper}>
               <Image
-                source={{ uri: categoryInfo.coverImage }}
+                source={{ uri: categoryCovers[categoryInfo.name] || categoryInfo.coverImage }}
                 style={styles.coverImage}
                 resizeMode="cover"
               />

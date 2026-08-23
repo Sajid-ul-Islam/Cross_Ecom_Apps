@@ -88,11 +88,17 @@ export default function ProductDetailScreen() {
           setProduct(p);
           const vars: Variation[] = p.variations ?? [];
           setVariations(vars);
-          const sizes = vars.length > 0 ? vars.map((v) => v.size) : (p.sizes?.length ? p.sizes : ["Standard"]);
+          const rawSizes = vars.length > 0 ? vars.map((v) => v.size) : (p.sizes?.length ? p.sizes : ["Standard"]);
+          // Drop empty/whitespace/duplicate sizes so no broken chip renders
+          // (e.g. a malformed variation size from Woo). Source of truth stays
+          // Woo — we only sanitize display, never invent sizes.
+          const sizes = Array.from(new Set(rawSizes.map((s) => String(s ?? "").trim()).filter(Boolean)));
           let initial = "";
-          if (p.category === "JEANS" && sizes.includes(profile.jeansSize)) initial = profile.jeansSize;
-          else if (sizes.includes(profile.topSize)) initial = profile.topSize;
-          else if (sizes.length > 0) initial = sizes[0];
+          if (sizes.length > 0) {
+            if (p.category === "JEANS" && sizes.includes(profile.jeansSize)) initial = profile.jeansSize;
+            else if (sizes.includes(profile.topSize)) initial = profile.topSize;
+            else initial = sizes[0];
+          }
           setSelectedSize(initial);
           const v = vars.find((x) => x.size === initial);
           setSelectedVariationId(v?.id);
@@ -390,7 +396,13 @@ export default function ProductDetailScreen() {
             </View>
 
             <View style={styles.sizeGrid}>
-              {(variations.length > 0 ? variations.map((v) => v.size) : (product.sizes?.length ? product.sizes : ["Standard"])).map((s) => {
+              {(Array.from(
+                new Set(
+                  (variations.length > 0 ? variations.map((v) => v.size) : (product.sizes?.length ? product.sizes : ["Standard"]))
+                    .map((s) => String(s ?? "").trim())
+                    .filter(Boolean)
+                )
+              )).map((s) => {
                 const isSelected = selectedSize === s;
                 const varStock = variations.find((v) => v.size === s)?.stock;
                 const oos = varStock === "outofstock";
