@@ -65,7 +65,20 @@
   - **Commit `a634ec1`.** (Not built/pushed to main per user rule: build only on explicit request.)
 - **Note**: `INITIAL_BROADCASTS` bc_1 (DEEN20 promo) is still seed/demo data — a real promo code must exist in Woo to be valid; flagged for later (admin broadcasts should come from Woo/WP).
 
-### Save every prompt+answer
+### Jeans fit: verify per-fit size chart (DONE - plumbing, needs data)
+- **Instruction**: "there is three type of jenas, Ragular, slim, and Stright fit, and there size chart is notrt same, now verify it in the app, is shoing it correctly?"
+- **Verification finding (BEFORE fix)**: app was NOT correct. `SizeGuideModal` had ONE hardcoded `JEANS_CHART` and branched only by `category` — no `fit` dimension. `Product` type had no `fit` field. Modal called with only `category`. So Regular/Slim/Straight all showed the SAME generic chart.
+- **User confirmed**: "fit" IS already a WooCommerce attribute on jeans products.
+- **Fix (commit `e68f753`)**:
+  - Gateway `woo.ts`: `getFit()` extracts the Woo "fit" attribute (matches "fit" in attr name → covers "Fit"/"pa_fit"/"Fit Type"); `mapWooToDeen` now returns `fit`.
+  - Gateway `seed.ts`: `DeenProduct.fit?` added.
+  - Mobile `types/index.ts`: `Product.fit?` added.
+  - Mobile `SizeGuideModal`: new `fit` prop + `FIT_CHARTS` map + `resolveJeansChart(fit)` selects per-fit chart; subtitle shows "X Fit · Raw Selvedge Denim Sizing".
+  - Product page passes `fit={product.fit}` to the modal.
+  - Gateway returns `DeenProduct` JSON directly as `Product` (no mapProduct), so `fit` flows automatically — no mobile gateway mapping needed.
+- **REMAINING**: `FIT_CHARTS.regular/slim/straight` currently all = `JEANS_CHART` (placeholder). Need the REAL per-fit measurement tables (waist/hip/thigh/leg-opening per size) from the brand spec to populate. Must NOT invent numbers (source-of-truth rule). Will drop in real tables when user provides. After that, redeploy gateway + rebuild APK to see live.
+- **Note**: local `.env` Woo keys are stale (direct Woo call 401'd); live gateway uses Render keys. Could not hit Woo directly to confirm exact attribute slug, but `getFit` matches by substring "fit" so it's robust.
+
 - **Instruction**: "what we do every prompt and your answer should be save in somwhere"
 - **Action**: Created `docs/SESSION_LOG.md`; appends each exchange. Each prompt → action/answer recorded here.
 
