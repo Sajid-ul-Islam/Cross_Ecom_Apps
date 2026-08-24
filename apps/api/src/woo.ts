@@ -533,4 +533,86 @@ export async function updateWooOrderPayment(
   return (await r.json()) as { id: number; status: string };
 }
 
+/* -------------------- WordPress / store sourcing -------------------- */
 
+/** Store address + basic settings from Woo (WP source of truth).
+    Admin edits these in WP → app reflects them with no rebuild. */
+export async function getStoreSettings(): Promise<{
+  address: string;
+  city: string;
+  postcode: string;
+  country: string;
+  currency: string;
+}> {
+  try {
+    const settings = (await wooFetch("settings/general")) as Array<{ id: string; value: string }>;
+    const pick = (id: string) => settings.find((s) => s.id === id)?.value ?? "";
+    return {
+      address: [pick("woocommerce_store_address"), pick("woocommerce_store_address_2")]
+        .filter(Boolean)
+        .join(", "),
+      city: pick("woocommerce_store_city"),
+      postcode: pick("woocommerce_store_postcode"),
+      country: pick("woocommerce_default_country"),
+      currency: pick("woocommerce_currency") || "BDT",
+    };
+  } catch {
+    return { address: "", city: "", postcode: "", country: "BD", currency: "BDT" };
+  }
+}
+
+/** A published WordPress page (About / Return / Terms / Contact), rendered HTML.
+    Source of truth = WP. Admin edits the page → app updates with no rebuild. */
+export async function getPage(slug: string): Promise<{ title: string; content: string } | null> {
+  try {
+    const pages = (await wooFetch(`pages?slug=${encodeURIComponent(slug)}&per_page=1&_fields=title,content`)) as Array<{
+      title?: { rendered?: string };
+      content?: { rendered?: string };
+    }>;
+    const p = pages[0];
+    if (!p) return null;
+    return {
+      title: (p.title?.rendered || "").replace(/<[^>]+>/g, "").trim(),
+      content: p.content?.rendered || "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Validate a coupon code against Woo (exact match to the website's behavior).
+    Returns the discount to apply, or null if invalid/expired. Mirrors what the
+    live site does when a customer enters a code at checkout. */
+export async function getCouponByCode(code: string): Promise<{
+  code: string;
+  type: string;
+  amount: number;
+  description: string;
+} | null> {
+  const clean = String(code || "").trim();
+  if (!clean) return null;
+  try {
+    const list = (await wooFetch(`coupons?code=${encodeURIComponent(clean)}&per_page=1`)) as Array<{
+      code: string;
+      discount_type: string;
+      amount: string | number;
+      description?: string;
+      date_expires?: string | null;
+    }>;
+    const c = list.find((x) => x.code.toLowerCase() === clean.toLowerCase());
+    if (!c) return null;
+    // respect expiry
+    if (c.date_expires) {
+      const exp = new Date(c.date_expires).getTime();
+      if (!isNaN(exp) && exp < Date.now()) return null;
+    }
+    return {
+      code: c.code,
+      type: c.discount_type,
+      amount: Number(c.amount) || 0,
+      description: c.description || "",
+    };
+  } catch {
+    return null;
+  }
+}

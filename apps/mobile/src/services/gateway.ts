@@ -348,6 +348,7 @@ export async function createOrder(
         area: orderData.area,
         payment: orderData.payment,
         trxId: (orderData as any).trxId || undefined,
+        coupon: (orderData as any).coupon || undefined,
         items: cleanItems,
         ...(orderData.guestToken ? { guestToken: orderData.guestToken } : {}),
       }),
@@ -468,6 +469,54 @@ export async function fetchCombos(): Promise<Combo[]> {
     return res.combos || [];
   } catch {
     return [];
+  }
+}
+
+export interface StoreInfo {
+  address: string;
+  city: string;
+  postcode: string;
+  country: string;
+  currency: string;
+  hotline: string;
+  whatsapp: string;
+  bkash: string;
+  email: string;
+}
+
+/** Store contact + address (source of truth = Woo settings + gateway env). */
+export async function fetchStoreInfo(): Promise<StoreInfo | null> {
+  try {
+    return await request<StoreInfo>("/v1/deen/store-info", undefined, 5000, true);
+  } catch {
+    return null;
+  }
+}
+
+/** A WordPress page (About / Return / Terms / Contact) — source of truth = WP. */
+export async function fetchPage(slug: string): Promise<{ title: string; content: string } | null> {
+  try {
+    return await request<{ title: string; content: string }>(`/v1/deen/page?slug=${encodeURIComponent(slug)}`, undefined, 5000, true);
+  } catch {
+    return null;
+  }
+}
+
+export interface CouponResult {
+  valid: boolean;
+  code: string;
+  type: string;
+  amount: number;
+  description: string;
+}
+
+/** Validate a customer-entered coupon against Woo (exact match to the website). */
+export async function fetchCoupon(code: string): Promise<CouponResult | null> {
+  try {
+    const res = await request<CouponResult>(`/v1/deen/coupon?code=${encodeURIComponent(code)}`, undefined, 5000, true);
+    return res.valid ? res : null;
+  } catch {
+    return null;
   }
 }
 

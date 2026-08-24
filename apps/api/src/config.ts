@@ -55,6 +55,14 @@ export const config = {
   combos: (() => {
     try { return JSON.parse(process.env.COMBOS ?? "[]"); } catch { return []; }
   })(),
+  /** Store contact details (source of truth = gateway env, falls back to the
+      real DEEN numbers). Admin can change via env without an app rebuild. */
+  contact: {
+    hotline: process.env.STORE_HOTLINE ?? "09617-700500",
+    whatsapp: process.env.STORE_WHATSAPP ?? "01952-700500",
+    bkash: process.env.STORE_BKASH ?? "01952700500",
+    email: process.env.STORE_EMAIL ?? "support@deencommerce.com",
+  },
   pathao: {
     baseUrl: process.env.PATHAO_BASE_URL ?? "https://hermes-api.pathao.com",
     clientId: process.env.PATHAO_CLIENT_ID ?? "",

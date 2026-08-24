@@ -25,7 +25,7 @@ import { useCart } from "../src/context/CartContext";
 import { useOrders } from "../src/context/OrderContext";
 import { useProfile } from "../src/context/ProfileContext";
 import { useRewards } from "../src/context/RewardsContext";
-import { bdt, DELIVERY_OPTIONS, createGuestSession, getGuestSession, fetchPaymentMethods } from "../src/services/gateway";
+import { bdt, DELIVERY_OPTIONS, createGuestSession, getGuestSession, fetchPaymentMethods, fetchCoupon } from "../src/services/gateway";
 
 import { BD_DISTRICTS, BdDistrict } from "../src/data/districts";
 import {
@@ -73,6 +73,11 @@ export default function CheckoutScreen() {
   const [redeemPoints, setRedeemPoints] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  // Customer coupon (validated against Woo, exactly like the website).
+  const [coupon, setCoupon] = useState("");
+  const [couponInfo, setCouponInfo] = useState<{ code: string; type: string; amount: number; description: string } | null>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
+  const [couponError, setCouponError] = useState("");
 
 
   // Eagerly load any persisted guest session.
@@ -101,7 +106,32 @@ export default function CheckoutScreen() {
   const maxCoinDiscount = Math.min(Math.floor(coins / 2), Math.floor(subtotal * 0.2));
   const coinDiscountBDT = redeemPoints ? maxCoinDiscount : 0;
   const cashbackBDT = subtotal >= 3000 ? 700 : subtotal >= 2500 ? 500 : 0;
-  const total = Math.max(0, subtotal + deliveryFee - coinDiscountBDT - cashbackBDT);
+  const couponDiscountBDT = couponInfo
+    ? (couponInfo.type === "percent"
+        ? Math.round((subtotal * couponInfo.amount) / 100)
+        : Math.min(couponInfo.amount, subtotal))
+    : 0;
+  const total = Math.max(0, subtotal + deliveryFee - coinDiscountBDT - cashbackBDT - couponDiscountBDT);
+
+  const handleApplyCoupon = async () => {
+    const code = coupon.trim();
+    if (!code) return;
+    setCouponBusy(true);
+    setCouponError("");
+    try {
+      const res = await fetchCoupon(code);
+      if (res) {
+        setCouponInfo(res);
+      } else {
+        setCouponInfo(null);
+        setCouponError("This coupon code is invalid or expired.");
+      }
+    } catch {
+      setCouponError("Could not verify coupon. Try again.");
+    } finally {
+      setCouponBusy(false);
+    }
+  };
 
   const handlePlaceOrder = async () => {
     if (!name.trim()) {
@@ -151,6 +181,7 @@ export default function CheckoutScreen() {
         deliveryNotes: deliveryNotes.trim() || undefined,
         payment,
         trxId: trxId.trim() || undefined,
+        coupon: couponInfo ? couponInfo.code : undefined,
         lines,
         subtotal,
         delivery: deliveryFee,
@@ -588,6 +619,37 @@ export default function CheckoutScreen() {
             </TouchableOpacity>
           )}
 
+          {/* Coupon code — customer may have a code written down, like the website */}
+          <View style={[styles.couponCard, { backgroundColor: colors.paper, borderColor: colors.borderLight }]}>
+            <Text style={[styles.couponTitle, { color: colors.ink }]}>Have a coupon?</Text>
+            <View style={styles.couponRow}>
+              <TextInput
+                style={[styles.couponInput, { borderColor: couponError ? "#D14343" : colors.border, color: colors.ink, backgroundColor: colors.cardSecondary }]}
+                placeholder="Enter coupon code"
+                placeholderTextColor={colors.sub}
+                autoCapitalize="characters"
+                value={coupon}
+                editable={!couponInfo && !couponBusy}
+                onChangeText={(t) => { setCoupon(t); if (couponInfo || couponError) { setCouponInfo(null); setCouponError(""); } }}
+              />
+              {couponInfo ? (
+                <TouchableOpacity style={[styles.couponBtn, { backgroundColor: colors.emerald }]} onPress={() => { setCouponInfo(null); setCoupon(""); }}>
+                  <Text style={styles.couponBtnText}>✓ REMOVE</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={[styles.couponBtn, { backgroundColor: colors.indigo }]} onPress={handleApplyCoupon} disabled={couponBusy || !coupon.trim()}>
+                  <Text style={styles.couponBtnText}>{couponBusy ? "…" : "APPLY"}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {couponInfo && (
+              <Text style={[styles.couponOk, { color: colors.emerald }]}>
+                ✓ {couponInfo.code} applied{couponInfo.description ? ` — ${couponInfo.description}` : ""}
+              </Text>
+            )}
+            {couponError ? <Text style={[styles.couponErr, { color: "#D14343" }]}>{couponError}</Text> : null}
+          </View>
+
           <View style={[styles.summaryDivider, { backgroundColor: colors.borderLight }]} />
 
           <View style={styles.summaryRow}>
@@ -624,6 +686,17 @@ export default function CheckoutScreen() {
               </Text>
               <Text style={[styles.summaryValue, { color: colors.emerald }]}>
                 -{bdt(coinDiscountBDT)}
+              </Text>
+            </View>
+          )}
+
+          {couponInfo && couponDiscountBDT > 0 && (
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, { color: colors.emerald }]}>
+                🎟️ Coupon ({couponInfo.code})
+              </Text>
+              <Text style={[styles.summaryValue, { color: colors.emerald }]}>
+                -{bdt(couponDiscountBDT)}
               </Text>
             </View>
           )}
@@ -1096,6 +1169,52 @@ function createStyles(colors: any) {
     coinsDiscountNotice: {
       fontSize: 10,
       fontWeight: "700",
+    },
+    couponCard: {
+      borderWidth: 1,
+      borderRadius: 12,
+      padding: 12,
+      marginTop: 12,
+    },
+    couponTitle: {
+      fontSize: 13,
+      fontWeight: "700",
+      marginBottom: 8,
+    },
+    couponRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    couponInput: {
+      flex: 1,
+      borderWidth: 1,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    couponBtn: {
+      borderRadius: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 11,
+    },
+    couponBtnText: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "800",
+      letterSpacing: 0.5,
+    },
+    couponOk: {
+      fontSize: 12,
+      fontWeight: "700",
+      marginTop: 8,
+    },
+    couponErr: {
+      fontSize: 12,
+      fontWeight: "600",
+      marginTop: 8,
     },
     summaryDivider: {
       height: 1,

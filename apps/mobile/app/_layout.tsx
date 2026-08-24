@@ -9,6 +9,7 @@ import { NotificationProvider } from "../src/context/NotificationContext";
 import { ReturnProvider } from "../src/context/ReturnContext";
 import { WishlistProvider } from "../src/context/WishlistContext";
 import { RewardsProvider } from "../src/context/RewardsContext";
+import { StoreProvider } from "../src/context/StoreContext";
 import { reportBug } from "../src/services/gateway";
 
 import { AnimatedSplashScreen } from "../src/components/AnimatedSplashScreen";
@@ -82,16 +83,18 @@ export default function RootLayout() {
           <NotificationProvider>
             <WishlistProvider>
               <RewardsProvider>
-                <ReturnProvider>
-                  <CartProvider>
-                    <OrderProvider>
-                      <RootNavigator />
-                      {isSplashVisible && (
-                        <AnimatedSplashScreen onAnimationComplete={() => setSplashVisible(false)} />
-                      )}
-                    </OrderProvider>
-                  </CartProvider>
-                </ReturnProvider>
+                <StoreProvider>
+                  <ReturnProvider>
+                    <CartProvider>
+                      <OrderProvider>
+                        <RootNavigator />
+                        {isSplashVisible && (
+                          <AnimatedSplashScreen onAnimationComplete={() => setSplashVisible(false)} />
+                        )}
+                      </OrderProvider>
+                    </CartProvider>
+                  </ReturnProvider>
+                </StoreProvider>
               </RewardsProvider>
             </WishlistProvider>
           </NotificationProvider>

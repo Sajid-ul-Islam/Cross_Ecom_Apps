@@ -28,6 +28,9 @@ import {
   wooFetch,
   fetchWooPaymentMethods,
   getShippingFees,
+  getStoreSettings,
+  getPage,
+  getCouponByCode,
 } from "./woo.js";
 import {
   getPathaoToken,
@@ -61,6 +64,7 @@ const ORDER_BODY_SCHEMA = {
       postcode:   { type: "string", maxLength: 10 },
       payment:    { type: "string", enum: ["cod", "bkash", "nagad", "card", "online", "bkash-for-woocommerce", "sslcommerz"] },
       trxId:      { type: "string", maxLength: 60 },
+      coupon:     { type: "string", maxLength: 60 },
       guestToken: { type: "string", maxLength: 80 },
       items: {
         type: "array",
@@ -933,6 +937,8 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const body = req.body as any;
     const items = Array.isArray(body?.items) ? body.items : [];
     const area = String(body?.area || "dhaka_standard");
+    const rawCoupon = String(body?.coupon || "").trim();
+    const couponInfo = rawCoupon ? await getCouponByCode(rawCoupon) : null;
     const list = await getCatalog();
     const lines = items.map((it: any) => {
       const prod = list.find((x: any) => x.id === it.productId);
@@ -942,6 +948,11 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const subtotal = lines.reduce((s: number, l: any) => s + l.unit * l.qty, 0);
     const cashback = calculateCashback(subtotal).amount;
     const bogo = calculateBogo(lines);
+    const couponDiscount = couponInfo
+      ? (couponInfo.type === "percent"
+          ? Math.round((subtotal * couponInfo.amount) / 100)
+          : Math.min(couponInfo.amount, subtotal))
+      : 0;
     const fees = await getShippingFees();
     const delivery =
       area === "outside" || area === "outside_standard"
@@ -957,8 +968,10 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       nextTierAt: calculateCashback(subtotal).nextTierAt,
       bogoDiscount: bogo.discount,
       bogoFreeIndexes: bogo.freeIndexes,
+      couponCode: couponInfo?.code || null,
+      couponDiscount,
       deliveryFees: { insideDhaka: fees.insideDhaka, outsideDhaka: fees.outsideDhaka, express: fees.insideDhaka + config.expressSurcharge, storePickup: 0 },
-      total: Math.max(0, subtotal - cashback - bogo.discount) + delivery,
+      total: Math.max(0, subtotal - cashback - bogo.discount - couponDiscount) + delivery,
       currency: "BDT",
     });
   });
@@ -1020,6 +1033,45 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     return reply.send({ combos: config.combos || [] });
   });
 
+  /* ---- store info (source of truth = Woo settings + gateway env) ----
+     Replaces every hardcoded phone/address in the app. Admin edits WP or the
+     gateway env; the app reflects it with no rebuild. */
+  app.get("/v1/deen/store-info", async (_req, reply) => {
+    const s = await getStoreSettings();
+    return reply.send({
+      address: s.address,
+      city: s.city,
+      postcode: s.postcode,
+      country: s.country,
+      currency: s.currency,
+      hotline: config.contact?.hotline || "09617-700500",
+      whatsapp: config.contact?.whatsapp || "01952-700500",
+      bkash: config.contact?.bkash || "01952700500",
+      email: config.contact?.email || "support@deencommerce.com",
+    });
+  });
+
+  /* ---- WordPress page content (About / Return / Terms / Contact) ----
+     Source of truth = the WP page. Admin edits it; the app shows it with no rebuild. */
+  app.get("/v1/deen/page", async (req, reply) => {
+    const slug = String((req.query as any).slug || "");
+    if (!slug) return reply.code(400).send({ error: "slug required" });
+    const page = await getPage(slug);
+    if (!page) return reply.code(404).send({ error: "not found" });
+    return reply.send(page);
+  });
+
+  /* ---- coupon validation (exact match to the website's checkout) ----
+     Customer may have a code written down; the app validates it against Woo
+     and returns the discount to apply, just like deencommerce.com. */
+  app.get("/v1/deen/coupon", async (req, reply) => {
+    const code = String((req.query as any).code || "");
+    if (!code.trim()) return reply.code(400).send({ error: "code required" });
+    const c = await getCouponByCode(code);
+    if (!c) return reply.code(404).send({ error: "invalid_or_expired", valid: false });
+    return reply.send({ valid: true, ...c });
+  });
+
   /* ---- shipping fees (source of truth = Woo shipping zones) ---- */
   app.get("/v1/deen/shipping", async (_req, reply) => {
     const fees = await getShippingFees();
@@ -1034,7 +1086,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
 
   app.post<{ Body: any }>("/v1/deen/orders", { schema: ORDER_BODY_SCHEMA }, async (req, reply) => {
     const body = (req.body ?? {}) as any;
-    const { name, lastName, phone, email, address, area, city, district, state, postcode, payment, items, guestToken, trxId } = body;
+    const { name, lastName, phone, email, address, area, city, district, state, postcode, payment, items, guestToken, trxId, coupon } = body;
     if (!name || !String(name).trim()) {
       return reply.code(422).send({ error: "VALIDATION", message: "Name is required." });
     }
@@ -1056,6 +1108,16 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       return reply.code(422).send({ error: "VALIDATION", message: "Your bag is empty." });
     }
 
+    // Validate any customer-entered coupon against Woo (exact-match to the website).
+    let couponInfo: { code: string; type: string; amount: number; description: string } | null = null;
+    const rawCoupon = String(coupon || "").trim();
+    if (rawCoupon) {
+      couponInfo = await getCouponByCode(rawCoupon);
+      if (!couponInfo) {
+        return reply.code(422).send({ error: "INVALID_COUPON", message: "This coupon code is invalid or expired." });
+      }
+    }
+
     const list = await getCatalog();
     const lines = items.map((it: any) => {
       const prod = list.find((x) => x.id === it.productId);
@@ -1075,6 +1137,12 @@ export async function registerDeenRoutes(app: FastifyInstance) {
         : shipFees.insideDhaka;
     const cashback = calculateCashback(subtotal).amount;
     const bogo = calculateBogo(lines);
+    // Customer coupon (validated above). Apply fixed or percent discount on subtotal.
+    const couponDiscount = couponInfo
+      ? (couponInfo.type === "percent"
+          ? Math.round((subtotal * couponInfo.amount) / 100)
+          : Math.min(couponInfo.amount, subtotal))
+      : 0;
 
     const orderNumStr = `DC-${++orderSeq.n}`;
     // Pathao logistics is not auto-generated. Only set if ptc_consignment_id / consignmentId is provided (e.g. "DD220826MDKMP9").
@@ -1178,6 +1246,13 @@ export async function registerDeenRoutes(app: FastifyInstance) {
                 amount: String(Math.round(bogo.discount)),
               }]
               : []),
+            ...(couponDiscount > 0 && couponInfo
+              ? [{
+                code: String(couponInfo.code).toUpperCase(),
+                discount_type: couponInfo.type === "percent" ? "percent" : "fixed_cart",
+                amount: String(couponInfo.amount),
+              }]
+              : []),
           ],
           shipping_lines: [
             {
@@ -1217,8 +1292,10 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       cashback,
       bogoDiscount: bogo.discount,
       bogoFreeIndexes: bogo.freeIndexes,
+      couponCode: couponInfo?.code || null,
+      couponDiscount,
       delivery,
-      total: Math.max(0, subtotal - cashback - bogo.discount) + delivery,
+      total: Math.max(0, subtotal - cashback - bogo.discount - couponDiscount) + delivery,
       status: "received",
       courier,
       pathaoConsignmentId,

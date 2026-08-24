@@ -120,6 +120,8 @@ export interface Order {
   paymentTitle?: string;
   paymentStatus?: string;
   trxId?: string; // bKash/Nagad manual transfer transaction ID (manual payment)
+  coupon?: string; // customer-entered coupon code (validated against Woo)
+  couponDiscount?: number; // discount applied by the coupon
   paymentUrl?: string; // Woo hosted payment page (redirect methods: bKash/SSLCommerz)
   lines: OrderItemLine[];
   subtotal: number;

@@ -12,6 +12,7 @@ import {
 import { X, Sparkles, Store, ShieldCheck, Heart, MapPin, PhoneCall, Truck, WhatsApp, Instagram, Facebook } from "./Icons";
 import { Colors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
+import { useStore } from "../context/StoreContext";
 
 const { height } = Dimensions.get("window");
 
@@ -22,6 +23,8 @@ interface AboutModalProps {
 
 export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
   const { colors } = useTheme();
+  const { info } = useStore();
+  const waNumber = info.whatsapp.replace(/[^0-9]/g, "");
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -92,7 +95,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
                 Need help or styling advice? Connect directly with us:
               </Text>
               <Text style={[styles.sectionBody, { marginTop: 8, fontWeight: "600", color: colors.ink }]}>
-                WhatsApp &amp; Hotline: 01952-700500
+                WhatsApp &amp; Hotline: {info.whatsapp}
               </Text>
               <Text style={[styles.sectionBody, { marginTop: 4, fontWeight: "600", color: colors.ink }]}>
                 Facebook: facebook.com/deencommerce
@@ -106,7 +109,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
                 <TouchableOpacity
                   accessibilityLabel="WhatsApp"
                   activeOpacity={0.85}
-                  onPress={() => Linking.openURL("https://wa.me/8801952700500")}
+                  onPress={() => Linking.openURL(`https://wa.me/88${waNumber}`)}
                   style={[styles.socialRound, { backgroundColor: "#25D366" }]}
                 >
                   <WhatsApp size={30} color="#FFFFFF" />
@@ -168,7 +171,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
                 We never sell your personal information.
               </Text>
               <Text style={[styles.sectionBody, { marginTop: 8, fontWeight: "600", color: colors.ink }]}>
-                Support: support@deencommerce.com · 01952-700500
+                Support: {info.email} · {info.whatsapp}
               </Text>
               <Text style={[styles.sectionBody, { marginTop: 4, fontWeight: "600", color: colors.ink }]}>
                 Privacy Policy: deencommerce.com/privacy-policy
