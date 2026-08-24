@@ -51,6 +51,21 @@
   - Quantity selector → ADD on product page.
 - **Action so far**: Gateway `calculateCashback()` + `GET /v1/deen/cashback?subtotal=` added (single source of truth). Next: app reads it; remove free-tee UI; add qty selector.
 
+### Cashback + free-tee + quantity (DONE)
+- **Instruction**: "dont show any extra features or offer like complementary gifty added, that you can [not] defend from source of truth from api of woocm" + "in product landing page there should be quantity selection option" + "cashback offer should also from woocom, because it is actual offer, acting like a discount, auto deducted from total order value but it shows as cashback."
+- **Decisions**:
+  - Free-tee gift (hardcoded, not from Woo) → REMOVED everywhere (product tag, bag gift card + summary row, complimentary-tee notification; `FreeTeeBanner` renamed `CashbackBanner`).
+  - Cashback (real Woo coupon/discount) → KEEP, but sourced from gateway, not app-hardcoded.
+  - Quantity selector → ADDED on product page (stepper, reset after add/buy).
+- **Action**:
+  - Gateway: `calculateCashback()` + `GET /v1/deen/cashback?subtotal=` (single source of truth, matches the Woo coupon the gateway builds at checkout).
+  - App `gateway.ts`: `fetchCashback(subtotal)` (cached 30s, silent, offline-safe).
+  - App `CartContext`: cashback now fetched from gateway (async state), removed `freeTeeEligible`/`freeTeeGap` hardcoded fields.
+  - Product page: quantity stepper UI + `qty` state wired to addToCart/buyNow.
+  - **Commit `a634ec1`.** (Not built/pushed to main per user rule: build only on explicit request.)
+- **Note**: `INITIAL_BROADCASTS` bc_1 (DEEN20 promo) is still seed/demo data — a real promo code must exist in Woo to be valid; flagged for later (admin broadcasts should come from Woo/WP).
+
 ### Save every prompt+answer
 - **Instruction**: "what we do every prompt and your answer should be save in somwhere"
-- **Action**: This `SESSION_LOG.md` created; will append each exchange.
+- **Action**: Created `docs/SESSION_LOG.md`; appends each exchange. Each prompt → action/answer recorded here.
+
