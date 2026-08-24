@@ -72,13 +72,12 @@ function getSizes(p: WooProduct): string[] {
 }
 
 function getFit(p: WooProduct): string | undefined {
-  // Reads the "Fit" attribute from Woo (covers "Fit", "pa_fit", "Fit Type", etc.).
-  // Single source of truth: whatever Woo returns for the product.
-  const attr = p.attributes?.find((a) => (a.name || "").toLowerCase().includes("fit"));
-  if (!attr) return undefined;
-  const opts = attr.options;
-  const raw = (Array.isArray(opts) ? opts : [opts]).map((o) => String(o).trim()).filter(Boolean);
-  return raw[0] || undefined;
+  // Fit is a WooCommerce product CATEGORY (e.g. "SLIM FIT", "REGULAR FIT", "STRAIGHT FIT"),
+  // NOT a product attribute. Derive it from the category names (single source of truth).
+  const fitCat = (p.categories || []).find((c) => /fit/i.test(c.name || ""));
+  if (!fitCat) return undefined;
+  const m = (fitCat.name || "").match(/(\w+)\s*fit/i);
+  return m ? m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase() : undefined;
 }
 
 function mapWooToDeen(p: WooProduct): DeenProduct | null {
