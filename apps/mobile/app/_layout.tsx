@@ -10,7 +10,7 @@ import { ReturnProvider } from "../src/context/ReturnContext";
 import { WishlistProvider } from "../src/context/WishlistContext";
 import { RewardsProvider } from "../src/context/RewardsContext";
 import { StoreProvider } from "../src/context/StoreContext";
-import { reportBug } from "../src/services/gateway";
+import { startGatewayKeepAlive, reportBug } from "../src/services/gateway";
 
 import { AnimatedSplashScreen } from "../src/components/AnimatedSplashScreen";
 
@@ -75,6 +75,10 @@ function RootNavigator() {
 
 export default function RootLayout() {
   const [isSplashVisible, setSplashVisible] = React.useState(true);
+
+  // Keep the gateway warm + auto-failover if the primary origin goes down.
+  // (Also configure an external uptime pinger against /health in production.)
+  React.useEffect(() => startGatewayKeepAlive(), []);
 
   return (
     <SafeAreaProvider>

@@ -50,17 +50,38 @@ import type {
 
 const extra = (Constants.expoConfig?.extra ?? {}) as {
   gatewayUrl?: string;
+  gatewayUrls?: string[];
   gatewayApiKey?: string;
 };
 
 /** Default to Render live gateway */
 const DEFAULT_GATEWAY_URL = "https://cross-ecom-apps.onrender.com";
 
-/** Base URL of the middle gateway. Override per-build in app.json `extra.gatewayUrl`. */
-export const GATEWAY_URL = (extra.gatewayUrl || DEFAULT_GATEWAY_URL).replace(/\/$/, "");
+/** Ordered list of gateway base URLs.
+ *  Source of truth (per-build) = app.json `extra.gatewayUrl` (primary) and
+ *  optional `extra.gatewayUrls` (backup origins). Falls back to the live Render
+ *  gateway. The app tries each in order on a network/timeout failure, so a
+ *  primary outage (e.g. Render spins down) automatically fails over with no
+ *  rebuild. Admin can add/remove backups by editing app.json `extra`. */
+export const GATEWAY_URLS: string[] = Array.from(
+  new Set(
+    [
+      extra.gatewayUrl,
+      ...(Array.isArray(extra.gatewayUrls) ? extra.gatewayUrls : []),
+      DEFAULT_GATEWAY_URL,
+    ]
+      .filter(Boolean)
+      .map((u) => String(u).replace(/\/$/, "")),
+  ),
+);
+
+/** Currently preferred gateway index (starts at primary, shifts on failure). */
+let preferredGatewayIdx = 0;
+export const GATEWAY_URL = GATEWAY_URLS[preferredGatewayIdx];
+
 const API_KEY = extra.gatewayApiKey || "";
 
-export const isGatewayConfigured = Boolean(GATEWAY_URL);
+export const isGatewayConfigured = Boolean(GATEWAY_URLS[0]);
 
 export type ConnectionState = "online" | "offline";
 let connection: ConnectionState = "online";
@@ -104,37 +125,95 @@ function setConnection(state: ConnectionState) {
 }
 
 export async function request<T>(path: string, init?: RequestInit, timeoutMs = 8000, silent = false): Promise<T> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...((init?.headers as Record<string, string>) || {}),
+  };
+  if (API_KEY) headers["x-api-key"] = API_KEY;
 
-  try {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      ...((init?.headers as Record<string, string>) || {}),
-    };
-    if (API_KEY) headers["x-api-key"] = API_KEY;
+  // Try gateways in order, starting at the currently-preferred one. Only
+  // network/timeout failures shift to the next origin; a real HTTP error
+  // (4xx/5xx) is a definitive response and is thrown immediately.
+  const order = [
+    ...GATEWAY_URLS.slice(preferredGatewayIdx),
+    ...GATEWAY_URLS.slice(0, preferredGatewayIdx),
+  ];
 
-    const res = await fetch(`${GATEWAY_URL}${path}`, {
-      ...init,
-      headers,
-      signal: controller.signal,
-    });
+  let lastErr: unknown;
+  for (const base of order) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(`${base}${path}`, {
+        ...init,
+        headers,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
 
-    clearTimeout(timeoutId);
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        if (!silent) markFail();
+        throw new Error(`Gateway returned ${res.status}: ${body.slice(0, 200)}`);
+      }
 
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
+      if (!silent) markOnline();
+      return (await res.json()) as T;
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      // Network error / timeout / abort → try the next gateway.
+      const isNetworkFailure =
+        err?.name === "AbortError" ||
+        err?.message?.includes("Network request failed") ||
+        err?.message?.includes("Failed to fetch") ||
+        err?.message?.includes("timeout");
+      if (!isNetworkFailure) {
+        // Definitive HTTP error from a reachable gateway — do not fail over.
+        if (!silent) markFail();
+        throw err;
+      }
+      lastErr = err;
+      // Mark the failed origin so future calls start on a healthy one.
+      const idx = GATEWAY_URLS.indexOf(base);
+      if (idx === preferredGatewayIdx) {
+        preferredGatewayIdx = (preferredGatewayIdx + 1) % GATEWAY_URLS.length;
+      }
       if (!silent) markFail();
-      throw new Error(`Gateway returned ${res.status}: ${body.slice(0, 200)}`);
     }
-
-    if (!silent) markOnline();
-    return (await res.json()) as T;
-  } catch (err: any) {
-    clearTimeout(timeoutId);
-    if (!silent) markFail();
-    throw err;
   }
+  throw lastErr instanceof Error ? lastErr : new Error("All gateways unreachable");
+}
+
+/** Probe a single gateway's /health (used by keep-alive / startup checks). */
+export async function pingGateway(base: string, timeoutMs = 5000): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), timeoutMs);
+    const res = await fetch(`${base}/health`, { signal: controller.signal });
+    clearTimeout(t);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** Keep the preferred gateway warm + repair failover.
+ *  Pings `/health` on an interval; if the preferred origin is down it shifts
+ *  `preferredGatewayIdx` to the next healthy one. Call once at app launch.
+ *  (Deployment-side, also configure an external uptime pinger — UptimeRobot /
+ *  Better Uptime — against `/health` so a free-tier host doesn't spin down.) */
+export function startGatewayKeepAlive(intervalMs = 4 * 60 * 1000): () => void {
+  let timer: ReturnType<typeof setInterval> | null = null;
+  const tick = async () => {
+    const base = GATEWAY_URLS[preferredGatewayIdx];
+    const ok = await pingGateway(base).catch(() => false);
+    if (!ok && GATEWAY_URLS.length > 1) {
+      preferredGatewayIdx = (preferredGatewayIdx + 1) % GATEWAY_URLS.length;
+    }
+  };
+  tick();
+  timer = setInterval(tick, intervalMs);
+  return () => { if (timer) clearInterval(timer); };
 }
 
 /* ----------------------------- catalog ----------------------------- */
