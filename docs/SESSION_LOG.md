@@ -130,3 +130,37 @@
     - **P2**: per-fit charts (parked), push, admin panel, real payment gateway, multi-tenant.
   - **Commit `c52ec9f`** (docs).
 
+## 2026-08-25
+
+### WordPress wire-up + coupon input on checkout (built & verified)
+- **Instruction**: explore what more can be wired to actual WordPress; build
+  store-info, add what can be sourced from WP, and add a coupon input on the
+  order page exactly like the website (customer may have a code written down).
+- **Action** (commits `514e7b8`, `b6481da`):
+  - Gateway: `getStoreSettings()` (Woo `settings/general`), `getPage(slug)`
+    via new `wpFetch()` (wp/v2), `getCouponByCode()` (Woo `coupons`, expiry-aware),
+    `GET /v1/deen/store-info`, `GET /v1/deen/page`, `GET /v1/deen/coupon`,
+    order route + `/v1/deen/pricing` apply a customer coupon as a real Woo coupon.
+    `config.contact` (STORE_HOTLINE/WHATSAPP/BKASH/EMAIL env).
+  - Mobile: `StoreContext` (fetches store-info, `getPage`) wired in `_layout`;
+    AboutModal + WhatsAppConciergeButton use store-info (no hardcoded numbers);
+    checkout "Have a coupon?" input → validates vs Woo → applies discount →
+    passes code to `placeOrder`; `Order.coupon/couponDiscount` types.
+  - **Bug fix**: `getPage` was hitting `wc/v3/pages` (404) → added `wpFetch()`
+    for `wp/v2`. Verified live: store-info, WP page content, coupon valid
+    (`deen150`→৳150) + invalid→404, and coupon applied to an order total.
+  - BOGO + Woo-sourced delivery + combos + Cart terminology rename landed in
+    earlier commits this session (`6e3d786`, `328907e`): route `(tabs)/bag`→
+    `cart`, tab "Cart", "Your Cart is Empty", "CONTINUE SHOPPING".
+
+### Backend resilience & WordPress control-plane (R&D spec, NOT built)
+- **Instruction**: suggest how to make it more real/reusable — API backup if
+  Render is down, and WordPress as the source of truth where admin can dictate
+  push notifications etc.
+- **Action**: wrote `docs/BACKEND_RESILIENCE_AND_WP_CONTROL.md` (spec only).
+  Key points: (1) gateway is stateful on ephemeral disk → need shared state
+  (Supabase/Upstash/R2) + app-side gateway fallback list + keep-alive + 2nd
+  deploy; (2) "you dictate from WP" = `POST /v1/deen/admin/broadcast` +
+  `order.updated` webhook → customer push; (3) gateway already tenant-agnostic
+  (config-driven) → reusable for another store. Open questions for owner in doc.
+
