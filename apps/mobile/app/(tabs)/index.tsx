@@ -24,7 +24,6 @@ import { Product, DeenCategory, Stats } from "../../src/types";
 import { useProfile } from "../../src/context/ProfileContext";
 import { getCategoryInfo } from "../../src/data/categories";
 import { AdminBroadcastModal } from "../../src/components/AdminBroadcastModal";
-import { ConnectionBanner } from "../../src/components/ConnectionBanner";
 
 const { width } = Dimensions.get("window");
 
@@ -83,7 +82,6 @@ export default function HomeScreen() {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
       <Header />
       <DeliveryNoticeBanner />
-      <ConnectionBanner />
 
       <ScrollView
         showsVerticalScrollIndicator={false}

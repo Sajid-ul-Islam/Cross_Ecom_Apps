@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { ShoppingBag, ArrowLeft, Search, Bell } from "./Icons";
@@ -6,7 +6,6 @@ import { useTheme } from "../context/ThemeContext";
 import { useCart } from "../context/CartContext";
 import { useNotifications } from "../context/NotificationContext";
 import { NotificationModal } from "./NotificationModal";
-import { getConnection, onConnectionChange, ConnectionState } from "../services/gateway";
 
 interface HeaderProps {
   title?: string;
@@ -31,15 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
   const { colors, isDark } = useTheme();
   const { totalItems } = useCart();
   const { unreadCount } = useNotifications();
-  const [connection, setConnection] = useState<ConnectionState>(getConnection());
   const [notifVisible, setNotifVisible] = useState(false);
-
-  useEffect(() => {
-    const unsub = onConnectionChange(setConnection);
-    return unsub;
-  }, []);
-
-  const live = connection === "online";
 
   return (
     <View style={[styles.container, { backgroundColor: colors.paper, borderBottomColor: colors.border }]}>
@@ -63,9 +54,6 @@ export const Header: React.FC<HeaderProps> = ({
               <Text style={[styles.brandTitle, { color: isDark ? colors.indigo : colors.indigoDark }]}>
                 DEEN
               </Text>
-              <View style={[styles.connDot, { backgroundColor: live ? colors.emerald : colors.faint }]}>
-                <Text style={styles.connText}>{live ? "LIVE" : "OFFLINE"}</Text>
-              </View>
             </View>
             {subtitle ? (
               <Text style={[styles.brandSubtitle, { color: colors.sub }]}>{subtitle}</Text>
