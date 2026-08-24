@@ -154,6 +154,13 @@ export async function request<T>(path: string, init?: RequestInit, timeoutMs = 8
       if (!res.ok) {
         const body = await res.text().catch(() => "");
         if (!silent) markFail();
+        // 5xx = server/unavailable (e.g. Render "Service Suspended" 503). This is
+        // failover-worthy: try the next origin. Only 4xx from a reachable gateway
+        // is a definitive client error and must NOT fail over.
+        if (res.status >= 500) {
+          lastErr = new Error(`Gateway ${base} returned ${res.status}`);
+          continue;
+        }
         throw new Error(`Gateway returned ${res.status}: ${body.slice(0, 200)}`);
       }
 
@@ -198,16 +205,27 @@ export async function pingGateway(base: string, timeoutMs = 5000): Promise<boole
 }
 
 /** Keep the preferred gateway warm + repair failover.
- *  Pings `/health` on an interval; if the preferred origin is down it shifts
- *  `preferredGatewayIdx` to the next healthy one. Call once at app launch.
- *  (Deployment-side, also configure an external uptime pinger — UptimeRobot /
- *  Better Uptime — against `/health` so a free-tier host doesn't spin down.) */
+ *  Pings `/health` on every configured origin; if the preferred origin is down
+ *  it shifts `preferredGatewayIdx` to the first healthy one. Call once at app
+ *  launch. This client-side warm-up helps, but the real guard against a
+ *  free-tier host spinning down is an external uptime pinger (UptimeRobot /
+ *  Better Uptime) hitting `/health` every ~5 min — see
+ *  docs/GATEWAY_FAILOVER_SETUP.md. */
 export function startGatewayKeepAlive(intervalMs = 4 * 60 * 1000): () => void {
   let timer: ReturnType<typeof setInterval> | null = null;
   const tick = async () => {
-    const base = GATEWAY_URLS[preferredGatewayIdx];
-    const ok = await pingGateway(base).catch(() => false);
-    if (!ok && GATEWAY_URLS.length > 1) {
+    // Probe all origins; prefer the first one that answers healthy.
+    const results = await Promise.all(
+      GATEWAY_URLS.map(async (base) => ({
+        base,
+        ok: await pingGateway(base).catch(() => false),
+      })),
+    );
+    const firstHealthy = results.find((r) => r.ok);
+    if (firstHealthy) {
+      const idx = GATEWAY_URLS.indexOf(firstHealthy.base);
+      if (idx !== -1) preferredGatewayIdx = idx;
+    } else if (GATEWAY_URLS.length > 1) {
       preferredGatewayIdx = (preferredGatewayIdx + 1) % GATEWAY_URLS.length;
     }
   };
