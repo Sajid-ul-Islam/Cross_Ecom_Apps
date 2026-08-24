@@ -58,7 +58,8 @@ const ORDER_BODY_SCHEMA = {
       district:   { type: "string", maxLength: 100 },
       state:      { type: "string", maxLength: 20 },
       postcode:   { type: "string", maxLength: 10 },
-      payment:    { type: "string", enum: ["cod", "bkash", "nagad", "card", "online"] },
+      payment:    { type: "string", enum: ["cod", "bkash", "nagad", "card", "online", "bkash-for-woocommerce", "sslcommerz"] },
+      trxId:      { type: "string", maxLength: 60 },
       guestToken: { type: "string", maxLength: 80 },
       items: {
         type: "array",
@@ -1002,8 +1003,12 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const pathaoTrackingUrl = pathaoConsignmentId ? `https://merchant.pathao.com/tracking?consignment_id=${pathaoConsignmentId}` : undefined;
     const courier = pathaoConsignmentId ? "Pathao Courier" : (area === "store_pickup" || area === "pickup" ? "Store Pickup" : "Home Delivery");
 
-    const paymentTitle = payment === "cod" ? "Cash on delivery" : (payment === "bkash" ? "bKash" : (payment === "nagad" ? "Nagad" : "Online Payment"));
-    const paymentStatus = payment === "cod" ? "Pending (Cash on Delivery)" : "Paid";
+    const paymentTitle = payment === "cod" ? "Cash on delivery"
+      : payment === "bkash" || payment === "bkash-for-woocommerce" ? "bKash"
+      : payment === "nagad" ? "Nagad"
+      : payment === "sslcommerz" ? "SSLCommerz"
+      : "Online Payment";
+    const paymentStatus = payment === "cod" ? "Pending (Cash on Delivery)" : "Awaiting Payment";
 
     const resolvedCity = String(city || (area === "outside" ? "Chittagong" : "Dhaka")).trim();
     // CRITICAL: the live site stores Woo state as "BD-XX" codes, never the district
@@ -1013,6 +1018,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
 
     let wooId: number | undefined;
     let wooNumber: string | undefined;
+    let wooPaymentUrl: string | undefined;
     if (wooEnabled) {
       try {
         const shippingMethodTitle = area === "outside" || area === "outside_standard"
@@ -1092,10 +1098,12 @@ export async function registerDeenRoutes(app: FastifyInstance) {
             },
           ],
           meta_data: orderMeta,
+          transaction_id: trxId ? String(trxId) : undefined,
           customer_note: `City: ${resolvedCity} | District: ${resolvedState} | Delivery: ${shippingMethodTitle} (৳${delivery})${pathaoConsignmentId ? ` | Pathao: ${pathaoConsignmentId}` : ""} | Payment: ${paymentTitle}`,
         });
         wooId = r.id;
         wooNumber = r.number;
+        wooPaymentUrl = r.paymentUrl;
       } catch (e) {
         console.error("[gateway] Woo order push failed:", (e as Error).message);
       }
@@ -1127,6 +1135,8 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       createdAt: new Date().toISOString(),
       wooId,
       wooNumber,
+      wooPaymentUrl,
+      trxId: trxId ? String(trxId) : undefined,
     };
     if (guestToken) {
       const session = guestSessions.find((s) => s.token === guestToken);

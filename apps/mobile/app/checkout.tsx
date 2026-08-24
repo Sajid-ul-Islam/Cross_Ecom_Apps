@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -24,13 +25,12 @@ import { useCart } from "../src/context/CartContext";
 import { useOrders } from "../src/context/OrderContext";
 import { useProfile } from "../src/context/ProfileContext";
 import { useRewards } from "../src/context/RewardsContext";
-import { bdt, DELIVERY_OPTIONS, createGuestSession, getGuestSession } from "../src/services/gateway";
+import { bdt, DELIVERY_OPTIONS, createGuestSession, getGuestSession, fetchPaymentMethods } from "../src/services/gateway";
 
 import { BD_DISTRICTS, BdDistrict } from "../src/data/districts";
 import {
   DeliveryOptionKey,
   DeliverySlot,
-  PaymentMethod,
 } from "../src/types";
 
 const DELIVERY_SLOTS: { key: DeliverySlot; label: string; time: string }[] = [
@@ -65,7 +65,9 @@ export default function CheckoutScreen() {
   );
   const [deliverySlot, setDeliverySlot] = useState<DeliverySlot>(profile.deliverySlot || "any");
   const [deliveryNotes, setDeliveryNotes] = useState(profile.deliveryNotes || "");
-  const [payment, setPayment] = useState<PaymentMethod>("cod");
+  const [payment, setPayment] = useState<string>("cod"); // Woo gateway id (cod / bkash-for-woocommerce / sslcommerz)
+  const [paymentMethods, setPaymentMethods] = useState<{ id: string; title: string; description: string; type: "cod" | "redirect" }[]>([]);
+  const [trxId, setTrxId] = useState("");
   const [isGuestMode, setIsGuestMode] = useState<boolean>(profile.isGuest);
   const [guestSession, setGuestSession] = useState<null | Awaited<ReturnType<typeof getGuestSession>>>(null);
   const [redeemPoints, setRedeemPoints] = useState(false);
@@ -86,6 +88,13 @@ export default function CheckoutScreen() {
       setAddress(profile.address || "");
     }
   }, [profile]);
+
+  // Source of truth: real, ENABLED payment gateways from Woo (cod / bKash / sslcommerz).
+  useEffect(() => {
+    fetchPaymentMethods()
+      .then((m) => { if (m.length) setPaymentMethods(m); })
+      .catch(() => {});
+  }, []);
 
   const deliveryOpt = DELIVERY_OPTIONS[selectedArea] || DELIVERY_OPTIONS.dhaka_standard;
   const deliveryFee = deliveryOpt.fee;
@@ -141,6 +150,7 @@ export default function CheckoutScreen() {
         deliverySlot,
         deliveryNotes: deliveryNotes.trim() || undefined,
         payment,
+        trxId: trxId.trim() || undefined,
         lines,
         subtotal,
         delivery: deliveryFee,
@@ -164,6 +174,8 @@ export default function CheckoutScreen() {
           orderNumber: created.wooNumber || created.number,
           gatewayRef: created.number,
           total: String(created.total),
+          paymentUrl: created.paymentUrl || "",
+          paymentMethodId: payment,
           guestName: isGuestMode ? name.trim() : undefined,
           guestPhone: isGuestMode ? digits : undefined,
         },
@@ -487,66 +499,45 @@ export default function CheckoutScreen() {
           </View>
         </View>
 
-        {/* 3. Payment Method */}
+        {/* 3. Payment Method — sourced from Woo (real enabled gateways) */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.stepTitle, { color: colors.indigoDark }]}>3. PAYMENT METHOD</Text>
 
-          {/* Cash on Delivery */}
-          <TouchableOpacity
-            style={[
-              styles.payOption,
-              { backgroundColor: colors.paper, borderColor: colors.border },
-              payment === "cod" && [styles.payOptionActive, { borderColor: colors.indigo, backgroundColor: colors.indigoLight }],
-            ]}
-            onPress={() => setPayment("cod")}
-          >
-            <View style={[styles.radioOuter, { borderColor: colors.indigo }]}>
-              {payment === "cod" && <View style={[styles.radioInner, { backgroundColor: colors.indigo }]} />}
-            </View>
-            <View style={styles.payInfo}>
-              <Text style={[styles.payTitle, { color: colors.ink }]}>Cash on Delivery (COD)</Text>
-              <Text style={[styles.paySub, { color: colors.sub }]}>Pay cash upon receiving and inspecting your parcel</Text>
-            </View>
-            <View style={[styles.payTag, { backgroundColor: colors.indigo }]}>
-              <Text style={styles.payTagText}>MOST POPULAR</Text>
-            </View>
-          </TouchableOpacity>
-
-          {/* bKash */}
-          <TouchableOpacity
-            style={[
-              styles.payOption,
-              { backgroundColor: colors.paper, borderColor: colors.border },
-              payment === "bkash" && [styles.payOptionActive, { borderColor: colors.indigo, backgroundColor: colors.indigoLight }],
-            ]}
-            onPress={() => setPayment("bkash")}
-          >
-            <View style={[styles.radioOuter, { borderColor: colors.indigo }]}>
-              {payment === "bkash" && <View style={[styles.radioInner, { backgroundColor: colors.indigo }]} />}
-            </View>
-            <View style={styles.payInfo}>
-              <Text style={[styles.payTitle, { color: colors.bkash }]}>bKash Direct Pay</Text>
-              <Text style={[styles.paySub, { color: colors.sub }]}>Instant mobile wallet payment</Text>
-            </View>
-          </TouchableOpacity>
-
-          {/* Nagad */}
-          <TouchableOpacity
-            style={[
-              styles.payOption,
-              { backgroundColor: colors.paper, borderColor: colors.border },
-              payment === "nagad" && [styles.payOptionActive, { borderColor: colors.indigo, backgroundColor: colors.indigoLight }],
-            ]}
-            onPress={() => setPayment("nagad")}
-          >
-            <View style={[styles.radioOuter, { borderColor: colors.indigo }]}>
-              {payment === "nagad" && <View style={[styles.radioInner, { backgroundColor: colors.indigo }]} />}
-            </View>
-            <View style={styles.payInfo}>
-              <Text style={[styles.payTitle, { color: colors.nagad }]}>Nagad Postal Pay</Text>
-              <Text style={[styles.paySub, { color: colors.sub }]}>Pay via Nagad digital postal gateway</Text>
-            </View>
-          </TouchableOpacity>
+          {paymentMethods.length === 0 ? (
+            // Fallback while loading / if fetch fails: safe default = COD only.
+            <TouchableOpacity
+              style={[styles.payOption, { backgroundColor: colors.paper, borderColor: colors.border }, payment === "cod" && [styles.payOptionActive, { borderColor: colors.indigo, backgroundColor: colors.indigoLight }]]}
+              onPress={() => setPayment("cod")}
+            >
+              <View style={[styles.radioOuter, { borderColor: colors.indigo }]}>{payment === "cod" && <View style={[styles.radioInner, { backgroundColor: colors.indigo }]} />}</View>
+              <View style={styles.payInfo}>
+                <Text style={[styles.payTitle, { color: colors.ink }]}>Cash on Delivery (COD)</Text>
+                <Text style={[styles.paySub, { color: colors.sub }]}>Pay cash upon receiving and inspecting your parcel</Text>
+              </View>
+              <View style={[styles.payTag, { backgroundColor: colors.indigo }]}><Text style={styles.payTagText}>MOST POPULAR</Text></View>
+            </TouchableOpacity>
+          ) : (
+            paymentMethods.map((m) => {
+              const active = payment === m.id;
+              const isCod = m.type === "cod";
+              return (
+                <View key={m.id}>
+                  <TouchableOpacity
+                    style={[styles.payOption, { backgroundColor: colors.paper, borderColor: colors.border }, active && [styles.payOptionActive, { borderColor: colors.indigo, backgroundColor: colors.indigoLight }]]}
+                    onPress={() => setPayment(m.id)}
+                  >
+                    <View style={[styles.radioOuter, { borderColor: colors.indigo }]}>{active && <View style={[styles.radioInner, { backgroundColor: colors.indigo }]} />}</View>
+                    <View style={styles.payInfo}>
+                      <Text style={[styles.payTitle, { color: colors.ink }]}>{m.title}</Text>
+                      {m.description ? <Text style={[styles.paySub, { color: colors.sub }]}>{m.description}</Text> : null}
+                      {!isCod && <Text style={[styles.paySub, { color: colors.sub }]}>You'll be taken to the secure {m.title} page to complete payment.</Text>}
+                    </View>
+                    {isCod && <View style={[styles.payTag, { backgroundColor: colors.indigo }]}><Text style={styles.payTagText}>MOST POPULAR</Text></View>}
+                  </TouchableOpacity>
+                </View>
+              );
+            })
+          )}
         </View>
 
         {/* 4. Order Summary */}

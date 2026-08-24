@@ -347,6 +347,7 @@ export async function createOrder(
         postcode: (orderData as any).postcode || "1200",
         area: orderData.area,
         payment: orderData.payment,
+        trxId: (orderData as any).trxId || undefined,
         items: cleanItems,
         ...(orderData.guestToken ? { guestToken: orderData.guestToken } : {}),
       }),
@@ -406,6 +407,23 @@ export async function fetchNotice(): Promise<string> {
     return res.notice || "";
   } catch {
     return "";
+  }
+}
+
+export interface PaymentMethodInfo {
+  id: string;
+  title: string;
+  description: string;
+  type: "cod" | "redirect";
+}
+
+/** Real, ENABLED payment gateways from Woo (cod / bKash / SSLCommerz). Never hardcode. */
+export async function fetchPaymentMethods(): Promise<PaymentMethodInfo[]> {
+  try {
+    const res = await request<{ methods: PaymentMethodInfo[] }>(`/v1/deen/payment-methods`, undefined, 5000, true);
+    return res.methods || [];
+  } catch {
+    return [];
   }
 }
 

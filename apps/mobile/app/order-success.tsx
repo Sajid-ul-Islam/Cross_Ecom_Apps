@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Linking,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -22,12 +23,15 @@ export default function OrderSuccessScreen() {
     orderNumber?: string;
     gatewayRef?: string;
     total?: string;
+    paymentUrl?: string;
+    paymentMethodId?: string;
     guestName?: string;
     guestPhone?: string;
   }>();
   const { colors, isDark } = useTheme();
   const styles = createStyles(colors);
   const isGuestCheckout = Boolean(params.guestName && params.guestPhone);
+  const needsPayment = Boolean(params.paymentUrl) && params.paymentMethodId !== "cod";
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
@@ -100,6 +104,20 @@ export default function OrderSuccessScreen() {
 
         {/* Actions */}
         <View style={styles.actions}>
+          {needsPayment && (
+            <TouchableOpacity
+              style={[styles.trackBtn, { backgroundColor: colors.emerald }]}
+              activeOpacity={0.88}
+              onPress={() => {
+                const url = params.paymentUrl || "";
+                if (url) Linking.openURL(url).catch(() => Alert.alert("Could not open payment page", url));
+              }}
+            >
+              <Text style={styles.trackBtnText}>COMPLETE PAYMENT</Text>
+              <ArrowRight size={16} color="#FFFFFF" />
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
             style={[styles.trackBtn, { backgroundColor: colors.indigo }]}
             activeOpacity={0.88}

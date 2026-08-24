@@ -116,10 +116,11 @@ export interface Order {
   deliveryOption?: DeliveryOptionKey;
   deliverySlot?: DeliverySlot;
   deliveryNotes?: string;
-  payment: PaymentMethod;
+  payment: string; // Woo gateway id: "cod" | "bkash-for-woocommerce" | "sslcommerz" | ...
   paymentTitle?: string;
   paymentStatus?: string;
   trxId?: string; // bKash/Nagad manual transfer transaction ID (manual payment)
+  paymentUrl?: string; // Woo hosted payment page (redirect methods: bKash/SSLCommerz)
   lines: OrderItemLine[];
   subtotal: number;
   delivery: number;
