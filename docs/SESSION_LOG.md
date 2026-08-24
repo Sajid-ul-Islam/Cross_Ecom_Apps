@@ -89,3 +89,13 @@
 - **Instruction**: "what we do every prompt and your answer should be save in somwhere"
 - **Action**: Created `docs/SESSION_LOG.md`; appends each exchange. Each prompt → action/answer recorded here.
 
+### Park fit-chart + Go-live plan (DONE)
+- **Instruction**: "now how can I solev thi? for this time make a flog about it, so that we can fix it later but meanwhile we can focus on some real important features... find out what need be fix first"
+- **Action**:
+  - `docs/BLOG_JEANS_FIT_CHARTS.md` — parked issue (fit = Woo category; getFit fixed `683a29c`; blocked on brand's real per-fit tables; NOT a go-live blocker).
+  - `docs/GO_LIVE_PLAN.md` — prioritized go-live audit from real code:
+    - **P0**: (1) Reactivate Render gateway ("Service Suspended") + verify `WOO_SITE=https://deencommerce.com` + new keys; (2) prove real order reaches Woo; (3) secrets hygiene.
+    - **P1**: payment model (currently MANUAL TrxID to `01952700500`, no bKash/Nagad keys → launch COD+manual, queue real gateway); signed release build (AAB/APK); prod hardening (remove demo broadcasts).
+    - **P2**: per-fit charts (parked), push, admin panel, real payment gateway, multi-tenant.
+  - **Commit `c52ec9f`** (docs).
+
