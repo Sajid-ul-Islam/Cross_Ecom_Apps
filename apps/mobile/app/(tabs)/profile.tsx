@@ -415,7 +415,7 @@ export default function ProfileScreen() {
                 style={{ backgroundColor: colors.indigo, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 6 }}
                 onPress={() => router.push("/(tabs)/shop")}
               >
-                <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "800" }}>START SHOPPING</Text>
+                <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "800" }}>CONTINUE SHOPPING</Text>
               </TouchableOpacity>
             </View>
           )}

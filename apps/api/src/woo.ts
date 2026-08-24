@@ -473,6 +473,41 @@ export async function fetchWooPaymentMethods(): Promise<DeenPaymentMethod[]> {
   return out;
 }
 
+/**
+ * Source of truth for delivery fees = WooCommerce shipping zones.
+ * Admin edits these in WP (WooCommerce → Settings → Shipping) and the app
+ * reflects the change with NO app rebuild.
+ * Returns the flat_rate cost for Inside Dhaka / Outside Dhaka (store pickup = 0).
+ */
+export interface ShippingFees {
+  insideDhaka: number;
+  outsideDhaka: number;
+  storePickup: number; // always 0
+}
+
+export async function getShippingFees(): Promise<ShippingFees> {
+  const fallback: ShippingFees = { insideDhaka: 50, outsideDhaka: 90, storePickup: 0 };
+  if (!wooHealthy()) return fallback;
+  try {
+    const zones = (await wooFetch("shipping/zones", { per_page: "50" })) as any[];
+    let insideDhaka = fallback.insideDhaka;
+    let outsideDhaka = fallback.outsideDhaka;
+    for (const z of zones || []) {
+      const name = String(z.name || "").toLowerCase();
+      const methods = (await wooFetch(`shipping/zones/${z.id}/methods`, { per_page: "50" })) as any[];
+      const flat = (methods || []).find((m) => m.method_id === "flat_rate" && m.enabled !== false);
+      const cost = flat?.settings?.cost?.value ?? flat?.settings?.cost?.default;
+      const num = cost != null ? Number(String(cost).replace(/[^\d.]/g, "")) : NaN;
+      if (isNaN(num)) continue;
+      if (name.includes("inside dhaka") || name.includes("dhaka")) insideDhaka = num;
+      else if (name.includes("outside")) outsideDhaka = num;
+    }
+    return { insideDhaka, outsideDhaka, storePickup: 0 };
+  } catch {
+    return fallback;
+  }
+}
+
 export async function updateWooOrderPayment(
   wooId: number,
   data: {

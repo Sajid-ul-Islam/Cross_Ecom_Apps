@@ -38,12 +38,12 @@ export default function BagScreen() {
   if (cart.length === 0) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
-        <Header title="SHOPPING BAG" showBag={false} />
+        <Header title="CART" showBag={false} />
         <View style={[styles.emptyContainer, { flex: 1 }]}>
           <View style={[styles.emptyIconCircle, { backgroundColor: colors.indigoLight }]}>
             <ShoppingBag size={36} color={colors.indigo} />
           </View>
-          <Text style={[styles.emptyTitle, { color: colors.ink }]}>Your Bag is Empty</Text>
+          <Text style={[styles.emptyTitle, { color: colors.ink }]}>Your Cart is Empty</Text>
           <Text style={[styles.emptySub, { color: colors.sub }]}>
             Explore our artisanal selvedge jeans, dobby panjabis, and heavyweight tees.
           </Text>
@@ -52,7 +52,7 @@ export default function BagScreen() {
             activeOpacity={0.85}
             onPress={() => router.push("/(tabs)/shop")}
           >
-            <Text style={styles.shopBtnText}>START SHOPPING</Text>
+            <Text style={styles.shopBtnText}>CONTINUE SHOPPING</Text>
             <ArrowRight size={16} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
@@ -62,7 +62,7 @@ export default function BagScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
-      <Header title="SHOPPING BAG" showBag={false} />
+      <Header title="CART" showBag={false} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <CashbackBanner />

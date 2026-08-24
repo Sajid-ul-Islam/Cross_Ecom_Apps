@@ -156,7 +156,7 @@ export default function CategoryLandingScreen() {
 
         <TouchableOpacity
           style={[styles.bagBtn, { backgroundColor: colors.cardSecondary }]}
-          onPress={() => router.push("/(tabs)/bag")}
+          onPress={() => router.push("/(tabs)/cart")}
         >
           <ShoppingBag size={20} color={colors.ink} />
           {totalItems > 0 && (

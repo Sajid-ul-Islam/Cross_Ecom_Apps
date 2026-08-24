@@ -27,6 +27,7 @@ import {
   wooPost,
   wooFetch,
   fetchWooPaymentMethods,
+  getShippingFees,
 } from "./woo.js";
 import {
   getPathaoToken,
@@ -883,6 +884,34 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     if (subtotal >= 2500) return { amount: 500, tier: 1, nextTierAt: 3000 };
     return { amount: 0, tier: 0, nextTierAt: 2500 };
   }
+
+  /* ---- BOGO (buy 2+ same category → cheapest is free) ----
+     Mirrors the live site: per category, when >=2 items are in the bag, the
+     single lowest-priced item becomes ৳0. Returns the total BOGO discount and
+     which line indices are free (so the app can show the strikethrough). */
+  function calculateBogo(lines: { category?: string; unit: number; qty?: number }[]): {
+    discount: number;
+    freeIndexes: number[];
+  } {
+    const byCat = new Map<string, number[]>();
+    lines.forEach((l, i) => {
+      const cat = l.category || "OTHER";
+      if (!byCat.has(cat)) byCat.set(cat, []);
+      byCat.get(cat)!.push(i);
+    });
+    let discount = 0;
+    const freeIndexes: number[] = [];
+    for (const idxs of byCat.values()) {
+      if (idxs.length < 2) continue; // need 2+ in the same category
+      // cheapest line is free (its full unit price * qty)
+      let cheapest = idxs[0];
+      for (const i of idxs) if ((lines[i].unit) < (lines[cheapest].unit)) cheapest = i;
+      const qty = lines[cheapest].qty ?? 1;
+      discount += lines[cheapest].unit * qty;
+      freeIndexes.push(cheapest);
+    }
+    return { discount, freeIndexes };
+  }
   app.get("/v1/deen/cashback", async (req, reply) => {
     const subtotal = Number((req.query as any).subtotal ?? 0) || 0;
     const cb = calculateCashback(subtotal);
@@ -893,6 +922,44 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       nextTierAt: cb.nextTierAt,
       currency: "BDT",
       note: "Applied automatically as a WooCommerce coupon at checkout.",
+    });
+  });
+
+  /* ---- live pricing preview (source of truth for bag math) ----
+     App sends its cart; gateway returns subtotal, cashback, BOGO discount +
+     which line indexes are free, and delivery fees. Mirrors exactly what the
+     order route will charge, so the bag and checkout never disagree. */
+  app.post<{ Body: any }>("/v1/deen/pricing", async (req, reply) => {
+    const body = req.body as any;
+    const items = Array.isArray(body?.items) ? body.items : [];
+    const area = String(body?.area || "dhaka_standard");
+    const list = await getCatalog();
+    const lines = items.map((it: any) => {
+      const prod = list.find((x: any) => x.id === it.productId);
+      const unit = prod ? (prod.salePrice ?? prod.price) : Number(it.unit ?? 0);
+      return { productId: it.productId, qty: Number(it.qty ?? 1), unit, category: prod?.category };
+    });
+    const subtotal = lines.reduce((s: number, l: any) => s + l.unit * l.qty, 0);
+    const cashback = calculateCashback(subtotal).amount;
+    const bogo = calculateBogo(lines);
+    const fees = await getShippingFees();
+    const delivery =
+      area === "outside" || area === "outside_standard"
+        ? fees.outsideDhaka
+        : area === "dhaka_express"
+        ? fees.insideDhaka + config.expressSurcharge
+        : area === "store_pickup" || area === "pickup"
+        ? 0
+        : fees.insideDhaka;
+    return reply.send({
+      subtotal,
+      cashback,
+      nextTierAt: calculateCashback(subtotal).nextTierAt,
+      bogoDiscount: bogo.discount,
+      bogoFreeIndexes: bogo.freeIndexes,
+      deliveryFees: { insideDhaka: fees.insideDhaka, outsideDhaka: fees.outsideDhaka, express: fees.insideDhaka + config.expressSurcharge, storePickup: 0 },
+      total: Math.max(0, subtotal - cashback - bogo.discount) + delivery,
+      currency: "BDT",
     });
   });
 
@@ -948,6 +1015,17 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     return reply.send({ notice: config.publicNotice || "" });
   });
 
+  /* ---- curated combos / bundles (source of truth = COMBOS env) ---- */
+  app.get("/v1/deen/combos", async (_req, reply) => {
+    return reply.send({ combos: config.combos || [] });
+  });
+
+  /* ---- shipping fees (source of truth = Woo shipping zones) ---- */
+  app.get("/v1/deen/shipping", async (_req, reply) => {
+    const fees = await getShippingFees();
+    return reply.send({ fees });
+  });
+
   /* ---- payment methods (source of truth = Woo enabled gateways) ---- */
   app.get("/v1/deen/payment-methods", async (_req, reply) => {
     const methods = await fetchWooPaymentMethods();
@@ -983,18 +1061,20 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       const prod = list.find((x) => x.id === it.productId);
       if (!prod) throw new Error("A product in your bag is no longer available.");
       const unit = prod.salePrice ?? prod.price;
-      return { productId: prod.id, name: prod.name, sku: prod.sku, size: it.size, qty: it.qty, unit };
+      return { productId: prod.id, name: prod.name, sku: prod.sku, size: it.size, qty: it.qty, unit, category: prod.category };
     });
     const subtotal = lines.reduce((s: number, l: any) => s + l.unit * l.qty, 0);
+    const shipFees = await getShippingFees();
     const delivery =
       area === "outside" || area === "outside_standard"
-        ? 90
+        ? shipFees.outsideDhaka
         : area === "dhaka_express"
-        ? 120
+        ? shipFees.insideDhaka + config.expressSurcharge
         : area === "store_pickup" || area === "pickup"
         ? 0
-        : 50;
+        : shipFees.insideDhaka;
     const cashback = calculateCashback(subtotal).amount;
+    const bogo = calculateBogo(lines);
 
     const orderNumStr = `DC-${++orderSeq.n}`;
     // Pathao logistics is not auto-generated. Only set if ptc_consignment_id / consignmentId is provided (e.g. "DD220826MDKMP9").
@@ -1083,13 +1163,22 @@ export async function registerDeenRoutes(app: FastifyInstance) {
           // CRITICAL: send the cashback to Woo exactly like the live website does,
           // so app-placed orders match website-placed orders. Without this the Woo
           // order shows the full subtotal with no discount (exact-match break).
-          coupon_lines: cashback > 0
-            ? [{
+          coupon_lines: [
+            ...(cashback > 0
+              ? [{
                 code: `CASHBACK${cashback}`,
                 discount_type: "fixed_cart",
                 amount: String(cashback),
               }]
-            : [],
+              : []),
+            ...(bogo.discount > 0
+              ? [{
+                code: `BOGO${Math.round(bogo.discount)}`,
+                discount_type: "fixed_cart",
+                amount: String(Math.round(bogo.discount)),
+              }]
+              : []),
+          ],
           shipping_lines: [
             {
               method_id: area === "store_pickup" || area === "pickup" ? "local_pickup" : "flat_rate",
@@ -1126,8 +1215,10 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       lines,
       subtotal,
       cashback,
+      bogoDiscount: bogo.discount,
+      bogoFreeIndexes: bogo.freeIndexes,
       delivery,
-      total: Math.max(0, subtotal - cashback) + delivery,
+      total: Math.max(0, subtotal - cashback - bogo.discount) + delivery,
       status: "received",
       courier,
       pathaoConsignmentId,

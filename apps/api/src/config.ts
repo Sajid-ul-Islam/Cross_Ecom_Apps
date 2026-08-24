@@ -46,6 +46,15 @@ export const config = {
       Source of truth = set here (Render env), NOT hardcoded in the app bundle.
       Leave blank for no banner. Example: "Get ৳500 cashback on orders over ৳2500". */
   publicNotice: process.env.PUBLIC_NOTICE ?? "",
+  /** Express (same-day) delivery surcharge added on top of the Inside Dhaka Woo
+      zone fee. Admin can change via EXPRESS_SURCHARGE env without app rebuild. */
+  expressSurcharge: Number(process.env.EXPRESS_SURCHARGE ?? "70"),
+  /** Curated combos/bundles (source of truth = Render env COMBOS as JSON).
+      Admin edits this to change the "Add Combo" window without an app rebuild.
+      Shape: [{ id, name, image?, description?, items:[{productId,size?}], price? }] */
+  combos: (() => {
+    try { return JSON.parse(process.env.COMBOS ?? "[]"); } catch { return []; }
+  })(),
   pathao: {
     baseUrl: process.env.PATHAO_BASE_URL ?? "https://hermes-api.pathao.com",
     clientId: process.env.PATHAO_CLIENT_ID ?? "",

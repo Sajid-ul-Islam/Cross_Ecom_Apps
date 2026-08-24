@@ -427,6 +427,50 @@ export async function fetchPaymentMethods(): Promise<PaymentMethodInfo[]> {
   }
 }
 
+export interface PricingResult {
+  subtotal: number;
+  cashback: number;
+  nextTierAt: number | null;
+  bogoDiscount: number;
+  bogoFreeIndexes: number[];
+  deliveryFees: { insideDhaka: number; outsideDhaka: number; express: number; storePickup: number };
+  total: number;
+  currency: string;
+}
+
+/** Live pricing from the gateway (single source of truth for bag math).
+    Mirrors exactly what the order route will charge: cashback + BOGO + Woo fees. */
+export async function fetchPricing(items: { productId: string; qty: number }[], area: string): Promise<PricingResult> {
+  try {
+    const res = await request<PricingResult>("/v1/deen/pricing", {
+      method: "POST",
+      body: JSON.stringify({ items, area }),
+    }, 6000, true);
+    return res;
+  } catch {
+    return { subtotal: 0, cashback: 0, nextTierAt: null, bogoDiscount: 0, bogoFreeIndexes: [], deliveryFees: { insideDhaka: 50, outsideDhaka: 90, express: 120, storePickup: 0 }, total: 0, currency: "BDT" };
+  }
+}
+
+export interface Combo {
+  id: string;
+  name: string;
+  image?: string;
+  description?: string;
+  price?: number;
+  items: { productId: string; size?: string }[];
+}
+
+/** Curated combos/bundles from the gateway (admin-editable via COMBOS env). */
+export async function fetchCombos(): Promise<Combo[]> {
+  try {
+    const res = await request<{ combos: Combo[] }>(`/v1/deen/combos`, undefined, 5000, true);
+    return res.combos || [];
+  } catch {
+    return [];
+  }
+}
+
 /* --------------------------- bug reporting ------------------------- */
 
 export interface BugReport {

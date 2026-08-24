@@ -192,7 +192,7 @@ export default function ProductDetailScreen() {
     if (!selectedSize) return;
     addToCart(product, selectedSize, qty, selectedVariationId);
     setQty(1);
-    router.push("/(tabs)/bag");
+    router.push("/(tabs)/cart");
   };
 
   const toggleSection = (section: string) => {
@@ -224,7 +224,7 @@ export default function ProductDetailScreen() {
 
         <TouchableOpacity
           style={[styles.bagBtn, { backgroundColor: colors.cardSecondary }]}
-          onPress={() => router.push("/(tabs)/bag")}
+          onPress={() => router.push("/(tabs)/cart")}
         >
           <ShoppingBag size={20} color={colors.ink} />
           {totalItems > 0 && (
@@ -238,7 +238,7 @@ export default function ProductDetailScreen() {
       {addedNotice && (
         <View style={styles.toastBanner}>
           <Text style={styles.toastText}>
-            ✓ Added {product.name} ({selectedSize}) to bag!
+            ✓ Added {product.name} ({selectedSize}) to cart!
           </Text>
         </View>
       )}
