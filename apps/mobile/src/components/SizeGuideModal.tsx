@@ -38,6 +38,23 @@ const JEANS_CHART: MeasurementRow[] = [
   { size: "38", waist: { in: 38, cm: 96 }, length: { in: 34, cm: 86 }, hip: { in: 46, cm: 116 }, thigh: { in: 26, cm: 66 }, legOpening: { in: 15.5, cm: 39 } },
 ];
 
+/* Per-fit jeans charts. The fit comes from WooCommerce (source of truth). The measurement
+   values below are the brand's official spec for each cut — they MUST match the real
+   garment measurements, not be invented. Replace with the actual tables when provided. */
+const FIT_CHARTS: Record<string, MeasurementRow[]> = {
+  regular: JEANS_CHART,
+  slim: JEANS_CHART,
+  straight: JEANS_CHART,
+};
+
+function resolveJeansChart(fit?: string): MeasurementRow[] {
+  if (fit) {
+    const key = fit.toLowerCase();
+    if (FIT_CHARTS[key]) return FIT_CHARTS[key];
+  }
+  return JEANS_CHART;
+}
+
 const TOPS_CHART: MeasurementRow[] = [
   { size: "S", chest: { in: 38, cm: 96 }, length: { in: 27, cm: 68.5 }, shoulder: { in: 17, cm: 43 }, sleeve: { in: 8.5, cm: 21.5 } },
   { size: "M", chest: { in: 40, cm: 101 }, length: { in: 28, cm: 71 }, shoulder: { in: 18, cm: 45.5 }, sleeve: { in: 9, cm: 23 } },
@@ -68,6 +85,7 @@ interface SizeGuideModalProps {
   selectedSize: string;
   onSelectSize: (size: string) => void;
   savedUserSize?: string;
+  fit?: string; // jeans fit from Woo (Regular | Slim | Straight)
 }
 
 export const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
@@ -77,6 +95,7 @@ export const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
   savedUserSize,
   onSelectSize,
   onClose,
+  fit,
 }) => {
   const { colors, isDark } = useTheme();
   const [unit, setUnit] = useState<UnitType>("in");
@@ -89,7 +108,7 @@ export const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
   const chartData = isTrousers
     ? TROUSERS_CHART
     : isBottom
-    ? JEANS_CHART
+    ? resolveJeansChart(fit)
     : isPanjabi
     ? PANJABI_CHART
     : TOPS_CHART;
@@ -115,7 +134,7 @@ export const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
                 <Text style={[styles.title, { color: colors.ink }]}>SIZE CHART &amp; GUIDE</Text>
                 <Text style={[styles.subtitle, { color: colors.sub }]}>
                   {catUpper === "JEANS"
-                    ? "Raw Selvedge Denim Sizing"
+                    ? `${fit ? fit + " Fit · " : ""}Raw Selvedge Denim Sizing`
                     : isPanjabi
                     ? "Premium Dobby Panjabi Sizing"
                     : `${category} Measurement Guide`}

@@ -27,6 +27,7 @@ export interface Product {
   ratingCount: number;
   blurb: string;
   isNew?: boolean;
+  fit?: string; // jeans fit from Woo (Regular | Slim | Straight)
   variations?: Variation[];
 }
 

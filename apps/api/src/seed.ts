@@ -27,6 +27,7 @@ export interface DeenProduct {
   images: [string, string];
   gallery: string[];
   fabric: string;
+  fit?: string; // jeans fit from Woo attribute (Regular | Slim | Straight)
   stockStatus: "instock" | "outofstock" | "onbackorder";
   rating: number;
   ratingCount: number;

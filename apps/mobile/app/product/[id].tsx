@@ -636,6 +636,7 @@ export default function ProductDetailScreen() {
         visible={sizeGuideVisible}
         onClose={() => setSizeGuideVisible(false)}
         category={product.category}
+        fit={product.fit}
         selectedSize={selectedSize}
         onSelectSize={handleSizeSelect}
         savedUserSize={savedSizeMatch}

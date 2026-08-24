@@ -71,6 +71,16 @@ function getSizes(p: WooProduct): string[] {
   return raw.map((o) => String(o).trim()).filter(Boolean);
 }
 
+function getFit(p: WooProduct): string | undefined {
+  // Reads the "Fit" attribute from Woo (covers "Fit", "pa_fit", "Fit Type", etc.).
+  // Single source of truth: whatever Woo returns for the product.
+  const attr = p.attributes?.find((a) => (a.name || "").toLowerCase().includes("fit"));
+  if (!attr) return undefined;
+  const opts = attr.options;
+  const raw = (Array.isArray(opts) ? opts : [opts]).map((o) => String(o).trim()).filter(Boolean);
+  return raw[0] || undefined;
+}
+
 function mapWooToDeen(p: WooProduct): DeenProduct | null {
   const catNames = p.categories.map((c) => c.name);
   const category = mapCategory(catNames);
@@ -94,6 +104,7 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
     images: [imgs[0] ?? "", imgs[1] ?? imgs[0] ?? ""] as [string, string],
     gallery: imgs,
     fabric,
+    fit: getFit(p),
     stockStatus: (p.stock_status as DeenProduct["stockStatus"]) ?? "instock",
     rating: Number(p.average_rating) || 0,
     ratingCount: Number(p.rating_count) || 0,
