@@ -421,7 +421,7 @@ export async function fetchWooCategoryImages(): Promise<Record<string, string>> 
   return out;
 }
 
-export async function pushWooOrder(order: unknown): Promise<{ id: number }> {
+export async function pushWooOrder(order: unknown): Promise<{ id: number; number: string }> {
   const { site, consumerKey, consumerSecret } = config.woo;
   const url = new URL(`${site.replace(/\/$/, "")}/wp-json/wc/v3/orders`);
   url.searchParams.set("consumer_key", consumerKey);
@@ -435,7 +435,10 @@ export async function pushWooOrder(order: unknown): Promise<{ id: number }> {
     const errBody = await r.text().catch(() => "");
     throw new Error(`Woo order create failed: ${r.status} ${errBody.slice(0, 200)}`);
   }
-  return (await r.json()) as { id: number };
+  const j = (await r.json()) as { id: number; number?: string };
+  // Woo's `number` is the human-facing order number (e.g. "1042" / "#1042").
+  // Fall back to the id if Woo omits it (sequential id is still the real store order).
+  return { id: j.id, number: String(j.number ?? j.id) };
 }
 
 export async function updateWooOrderPayment(

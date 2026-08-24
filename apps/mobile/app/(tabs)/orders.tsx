@@ -113,8 +113,17 @@ export default function OrdersScreen() {
                 <View style={[styles.orderHeader, { borderBottomColor: colors.borderLight }]}>
                   <View>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                      <Text style={[styles.orderNumber, { color: colors.indigo }]}>{order.number}</Text>
-                      {order.wooId && (
+                      <Text style={[styles.orderNumber, { color: colors.indigo }]}>
+                        #{order.wooNumber || order.number}
+                      </Text>
+                      {order.wooNumber && order.number && order.wooNumber !== order.number && (
+                        <View style={{ backgroundColor: colors.indigoLight, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                          <Text style={{ fontSize: 9, fontWeight: "800", color: colors.indigo }}>
+                            APP {order.number}
+                          </Text>
+                        </View>
+                      )}
+                      {!order.wooNumber && order.wooId && (
                         <View style={{ backgroundColor: colors.indigoLight, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
                           <Text style={{ fontSize: 9, fontWeight: "800", color: colors.indigo }}>
                             STORE #{order.wooId}

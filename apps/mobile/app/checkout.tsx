@@ -161,7 +161,8 @@ export default function CheckoutScreen() {
         pathname: "/order-success",
         params: {
           orderId: created.id,
-          orderNumber: created.number,
+          orderNumber: created.wooNumber || created.number,
+          gatewayRef: created.number,
           total: String(created.total),
           guestName: isGuestMode ? name.trim() : undefined,
           guestPhone: isGuestMode ? digits : undefined,

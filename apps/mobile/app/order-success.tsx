@@ -20,6 +20,7 @@ export default function OrderSuccessScreen() {
   const params = useLocalSearchParams<{
     orderId?: string;
     orderNumber?: string;
+    gatewayRef?: string;
     total?: string;
     guestName?: string;
     guestPhone?: string;
@@ -45,8 +46,15 @@ export default function OrderSuccessScreen() {
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.cardRow}>
             <Text style={[styles.label, { color: colors.sub }]}>ORDER NUMBER</Text>
-            <Text style={[styles.orderNumber, { color: colors.indigoDark }]}>{params.orderNumber || "DN-XXXXXX"}</Text>
+            <Text style={[styles.orderNumber, { color: colors.indigoDark }]}>{params.orderNumber || "N/A"}</Text>
           </View>
+
+          {params.gatewayRef ? (
+            <View style={styles.cardRow}>
+              <Text style={[styles.label, { color: colors.sub }]}>APP REFERENCE</Text>
+              <Text style={[styles.gatewayRef, { color: colors.faint }]}>{params.gatewayRef}</Text>
+            </View>
+          ) : null}
 
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
 
@@ -228,6 +236,10 @@ function createStyles(colors: ThemeColors) {
     orderNumber: {
       fontSize: 15,
       fontWeight: "800",
+    },
+    gatewayRef: {
+      fontSize: 12,
+      fontWeight: "600",
     },
     totalValue: {
       fontSize: 15,

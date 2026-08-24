@@ -128,6 +128,7 @@ export interface Order {
   pathaoConsignmentId?: string;
   pathaoTrackingUrl?: string;
   wooId?: number;
+  wooNumber?: string; // REAL WooCommerce order number (e.g. "1042") shown to customer
   isGuestOrder?: boolean;
   /** Gateway-issued anonymous guest session token (when placed as a guest). */
   guestToken?: string;

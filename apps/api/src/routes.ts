@@ -1000,6 +1000,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const resolvedPostcode = String(postcode || "1200").trim();
 
     let wooId: number | undefined;
+    let wooNumber: string | undefined;
     if (wooEnabled) {
       try {
         const shippingMethodTitle = area === "outside" || area === "outside_standard"
@@ -1082,6 +1083,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
           customer_note: `City: ${resolvedCity} | District: ${resolvedState} | Delivery: ${shippingMethodTitle} (৳${delivery})${pathaoConsignmentId ? ` | Pathao: ${pathaoConsignmentId}` : ""} | Payment: ${paymentTitle}`,
         });
         wooId = r.id;
+        wooNumber = r.number;
       } catch (e) {
         console.error("[gateway] Woo order push failed:", (e as Error).message);
       }
@@ -1112,6 +1114,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       pathaoTrackingUrl,
       createdAt: new Date().toISOString(),
       wooId,
+      wooNumber,
     };
     if (guestToken) {
       const session = guestSessions.find((s) => s.token === guestToken);
@@ -1134,9 +1137,9 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       void sendExpoPushNotifications(
         userTokens.map((to) => ({
           to,
-          title: `📦 Order Confirmed: #${order.number}`,
+          title: `📦 Order Confirmed: #${order.wooNumber || order.number}`,
           body: `Thank you, ${order.name}! Total: ৳${order.total.toLocaleString("en-BD")}.${order.pathaoConsignmentId ? ` Pathao: ${order.pathaoConsignmentId}` : ""}`,
-          data: { orderId: order.id, orderNumber: order.number, actionUrl: "/(tabs)/orders" },
+          data: { orderId: order.id, orderNumber: order.wooNumber || order.number, actionUrl: "/(tabs)/orders" },
           sound: "default" as const,
           badge: 1,
         }))
