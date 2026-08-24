@@ -21,12 +21,17 @@ export interface Product {
   sizes: string[];
   images: [string, string];
   gallery: string[];
+  /** Woo/WP-sized variants (all Woo-sourced). thumb=grid, single=PDP, full=zoom. */
+  thumb: string;
+  single: string;
+  full: string;
   fabric: string;
   stockStatus: "instock" | "outofstock" | "onbackorder";
   rating: number;
   ratingCount: number;
   blurb: string;
   isNew?: boolean;
+  fit?: string; // jeans fit from Woo (Regular | Slim | Straight)
   variations?: Variation[];
 }
 
@@ -69,7 +74,7 @@ export interface CartItem {
   variationId?: number;
 }
 
-export type PaymentMethod = "cod" | "bkash" | "nagad";
+export type PaymentMethod = "cod" | "bkash" | "nagad" | "manual";
 
 export type DeliveryOptionKey =
   | "dhaka_standard"
@@ -115,9 +120,13 @@ export interface Order {
   deliveryOption?: DeliveryOptionKey;
   deliverySlot?: DeliverySlot;
   deliveryNotes?: string;
-  payment: PaymentMethod;
+  payment: string; // Woo gateway id: "cod" | "bkash-for-woocommerce" | "sslcommerz" | ...
   paymentTitle?: string;
   paymentStatus?: string;
+  trxId?: string; // bKash/Nagad manual transfer transaction ID (manual payment)
+  coupon?: string; // customer-entered coupon code (validated against Woo)
+  couponDiscount?: number; // discount applied by the coupon
+  paymentUrl?: string; // Woo hosted payment page (redirect methods: bKash/SSLCommerz)
   lines: OrderItemLine[];
   subtotal: number;
   delivery: number;
@@ -127,6 +136,7 @@ export interface Order {
   pathaoConsignmentId?: string;
   pathaoTrackingUrl?: string;
   wooId?: number;
+  wooNumber?: string; // REAL WooCommerce order number (e.g. "1042") shown to customer
   isGuestOrder?: boolean;
   /** Gateway-issued anonymous guest session token (when placed as a guest). */
   guestToken?: string;

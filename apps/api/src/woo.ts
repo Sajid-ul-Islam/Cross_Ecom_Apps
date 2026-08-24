@@ -20,7 +20,12 @@ interface WooProduct {
   average_rating?: string;
   rating_count?: number;
   categories: { name: string }[];
-  images: { src: string }[];
+  images: {
+    src: string;
+    thumbnail?: string;
+    woocommerce_single?: string;
+    sizes?: string | Record<string, { source_url?: string }>;
+  }[];
   description?: string;
   short_description?: string;
   attributes?: { name: string; options?: string[] | string }[];
@@ -71,6 +76,15 @@ function getSizes(p: WooProduct): string[] {
   return raw.map((o) => String(o).trim()).filter(Boolean);
 }
 
+function getFit(p: WooProduct): string | undefined {
+  // Fit is a WooCommerce product CATEGORY (e.g. "SLIM FIT", "REGULAR FIT", "STRAIGHT FIT"),
+  // NOT a product attribute. Derive it from the category names (single source of truth).
+  const fitCat = (p.categories || []).find((c) => /fit/i.test(c.name || ""));
+  if (!fitCat) return undefined;
+  const m = (fitCat.name || "").match(/(\w+)\s*fit/i);
+  return m ? m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase() : undefined;
+}
+
 function mapWooToDeen(p: WooProduct): DeenProduct | null {
   const catNames = p.categories.map((c) => c.name);
   const category = mapCategory(catNames);
@@ -79,7 +93,16 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
   const current = Number(p.price) || 0;
   const regular = p.regular_price ? Number(p.regular_price) : pct ? Math.round(current / (1 - pct / 100)) : undefined;
   const salePrice = p.on_sale && p.sale_price ? Number(p.sale_price) : p.on_sale ? current : undefined;
-  const imgs = (p.images || []).map((i) => i.src).filter(Boolean);
+  // Pick the right Woo/WP size per surface. `src` = full original (heavy);
+  // `thumbnail` = WP-generated small (grid), `woocommerce_single` = medium (PDP).
+  // All three are Woo-sourced — we never host or generate images.
+  const pickImg = (i: (typeof p.images)[number]) => ({
+    full: i.src,
+    single: i.woocommerce_single || i.src,
+    thumb: i.thumbnail || i.woocommerce_single || i.src,
+  });
+  const picks = (p.images || []).map(pickImg).filter((x) => x.full);
+  const imgs = [picks[0]?.full ?? "", picks[1]?.full ?? picks[0]?.full ?? ""] as [string, string];
   const fabric = p.meta_data?.find((m) => m.key.toLowerCase() === "fabric")?.value ?? "";
   return {
     id: String(p.id),
@@ -92,8 +115,12 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
     salePct: pct,
     sizes,
     images: [imgs[0] ?? "", imgs[1] ?? imgs[0] ?? ""] as [string, string],
-    gallery: imgs,
+    gallery: picks.map((x) => x.full),
+    thumb: picks[0]?.thumb ?? imgs[0] ?? "",
+    single: picks[0]?.single ?? imgs[0] ?? "",
+    full: picks[0]?.full ?? imgs[0] ?? "",
     fabric,
+    fit: getFit(p),
     stockStatus: (p.stock_status as DeenProduct["stockStatus"]) ?? "instock",
     rating: Number(p.average_rating) || 0,
     ratingCount: Number(p.rating_count) || 0,
@@ -191,8 +218,101 @@ async function wooFetchResilient<T = any>(path: string, params: Record<string, s
   throw lastErr instanceof Error ? lastErr : new Error("Woo fetch failed");
 }
 
-async function wooFetch(path: string, params: Record<string, string> = {}): Promise<any> {
+export async function wooFetch(path: string, params: Record<string, string> = {}): Promise<any> {
   return wooFetchResilient(path, params);
+}
+
+/** GET to the WordPress core REST API (wp/v2) — for pages, media, etc.
+    Source of truth for CMS content (About / Return / Terms). */
+export async function wpFetch(path: string, params: Record<string, string> = {}): Promise<any> {
+  if (Date.now() < cbOpenUntil) throw new Error("Woo circuit breaker open");
+  const { site, consumerKey, consumerSecret } = config.woo;
+  const url = new URL(`${site.replace(/\/$/, "")}/wp-json/wp/v2/${path}`);
+  url.searchParams.set("consumer_key", consumerKey);
+  url.searchParams.set("consumer_secret", consumerSecret);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  const MAX_RETRIES = 2;
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 8000);
+    try {
+      const res = await fetch(url.toString(), { signal: controller.signal });
+      clearTimeout(t);
+      if (!res.ok) throw new Error(`WP ${res.status}`);
+      return (await res.json()) as any;
+    } catch (e) {
+      clearTimeout(t);
+      lastErr = e;
+      await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("wpFetch failed");
+}
+
+/** POST to WooCommerce REST API (used by the webhook auto-provisioner). */
+export async function wooPost<T = any>(path: string, body: Record<string, unknown>): Promise<T> {
+  if (Date.now() < cbOpenUntil) throw new Error("Woo circuit breaker open");
+  const { site, consumerKey, consumerSecret } = config.woo;
+  const url = new URL(`${site.replace(/\/$/, "")}/wp-json/wc/v3/${path}`);
+  url.searchParams.set("consumer_key", consumerKey);
+  url.searchParams.set("consumer_secret", consumerSecret);
+  const MAX_RETRIES = 3;
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 8000);
+    try {
+      const res = await fetch(url.toString(), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      clearTimeout(t);
+      if (!res.ok) {
+        const rb = await res.text().catch(() => "");
+        throw new Error(`Woo POST ${path} failed: ${res.status} ${rb.slice(0, 120)}`);
+      }
+      lastWooSuccessAt = Date.now();
+      cbFailures = 0;
+      return (await res.json()) as T;
+    } catch (err) {
+      clearTimeout(t);
+      lastErr = err;
+      if (err instanceof Error && /failed: [45]/.test(err.message)) break;
+      if (attempt < MAX_RETRIES) { await new Promise((r) => setTimeout(r, 300 * (attempt + 1))); continue; }
+    }
+  }
+  lastWooErrorAt = Date.now();
+  cbFailures += 1;
+  if (cbFailures >= CB_THRESHOLD) cbOpenUntil = Date.now() + CB_COOLDOWN_MS;
+  throw lastErr instanceof Error ? lastErr : new Error("Woo POST failed");
+}
+
+/* Invalidate the catalog cache (called by the Woo webhook when a product
+   is created/updated/deleted). The next listing request re-fetches from Woo
+   immediately, so price/discount/new-product changes show in seconds. */
+export function invalidateCatalogCache(): void {
+  catalogCache = null;
+  catalogWarming = null;
+}
+
+/* Invalidate a single product's size/price variations (product_variation.* topics). */
+export function invalidateVariationCache(productId?: string): void {
+  if (productId) variationCache.delete(String(productId));
+  else variationCache.clear();
+}
+
+/* Invalidate category covers (when a category image changes) + the derived stats. */
+export function invalidateCoverCache(): void {
+  coverCache = null;
+}
+
+export function invalidateStats(): void {
+  // Stats are derived from the catalog + sales report; busting catalog is enough,
+  // but we expose this for order/customer topics that change sales numbers.
+  // (No separate stats cache today; left as a hook for future memoization.)
 }
 
 export async function fetchWooProducts(): Promise<DeenProduct[]> {
@@ -346,7 +466,7 @@ export async function fetchWooCategoryImages(): Promise<Record<string, string>> 
   return out;
 }
 
-export async function pushWooOrder(order: unknown): Promise<{ id: number }> {
+export async function pushWooOrder(order: unknown): Promise<{ id: number; number: string; paymentUrl?: string }> {
   const { site, consumerKey, consumerSecret } = config.woo;
   const url = new URL(`${site.replace(/\/$/, "")}/wp-json/wc/v3/orders`);
   url.searchParams.set("consumer_key", consumerKey);
@@ -360,7 +480,77 @@ export async function pushWooOrder(order: unknown): Promise<{ id: number }> {
     const errBody = await r.text().catch(() => "");
     throw new Error(`Woo order create failed: ${r.status} ${errBody.slice(0, 200)}`);
   }
-  return (await r.json()) as { id: number };
+  const j = (await r.json()) as { id: number; number?: string; payment_url?: string };
+  // Woo's `number` is the human-facing order number (e.g. "1042").
+  // `payment_url` is the hosted payment page (bKash/SSLCommerz) the customer
+  // must open to actually pay — only present for non-COD gateways.
+  return { id: j.id, number: String(j.number ?? j.id), paymentUrl: j.payment_url };
+}
+
+export interface DeenPaymentMethod {
+  /** Woo gateway id, e.g. "cod", "bkash-for-woocommerce", "sslcommerz". Send this as `payment` when creating an order. */
+  id: string;
+  title: string;
+  description: string;
+  /** "cod" = pay on delivery (no redirect). "redirect" = open payment_url to pay (bKash/SSLCommerz). */
+  type: "cod" | "redirect";
+}
+
+/** Source of truth: real, ENABLED payment gateways from WooCommerce.
+    The app MUST render exactly these — never hardcode payment options. */
+export async function fetchWooPaymentMethods(): Promise<DeenPaymentMethod[]> {
+  if (!wooHealthy()) return [];
+  const list = (await wooFetch("payment_gateways", { per_page: "50" })) as any[];
+  const out: DeenPaymentMethod[] = [];
+  for (const g of list || []) {
+    if (!g.enabled) continue;
+    const id = String(g.id || "");
+    if (!id) continue;
+    // Map known methods to a type the app understands.
+    const type: "cod" | "redirect" = id === "cod" ? "cod" : "redirect";
+    out.push({
+      id,
+      title: String(g.title || g.method_title || id),
+      description: String(g.description || ""),
+      type,
+    });
+  }
+  return out;
+}
+
+/**
+ * Source of truth for delivery fees = WooCommerce shipping zones.
+ * Admin edits these in WP (WooCommerce → Settings → Shipping) and the app
+ * reflects the change with NO app rebuild.
+ * Returns the flat_rate cost for Inside Dhaka / Outside Dhaka (store pickup = 0).
+ */
+export interface ShippingFees {
+  insideDhaka: number;
+  outsideDhaka: number;
+  storePickup: number; // always 0
+}
+
+export async function getShippingFees(): Promise<ShippingFees> {
+  const fallback: ShippingFees = { insideDhaka: 50, outsideDhaka: 90, storePickup: 0 };
+  if (!wooHealthy()) return fallback;
+  try {
+    const zones = (await wooFetch("shipping/zones", { per_page: "50" })) as any[];
+    let insideDhaka = fallback.insideDhaka;
+    let outsideDhaka = fallback.outsideDhaka;
+    for (const z of zones || []) {
+      const name = String(z.name || "").toLowerCase();
+      const methods = (await wooFetch(`shipping/zones/${z.id}/methods`, { per_page: "50" })) as any[];
+      const flat = (methods || []).find((m) => m.method_id === "flat_rate" && m.enabled !== false);
+      const cost = flat?.settings?.cost?.value ?? flat?.settings?.cost?.default;
+      const num = cost != null ? Number(String(cost).replace(/[^\d.]/g, "")) : NaN;
+      if (isNaN(num)) continue;
+      if (name.includes("inside dhaka") || name.includes("dhaka")) insideDhaka = num;
+      else if (name.includes("outside")) outsideDhaka = num;
+    }
+    return { insideDhaka, outsideDhaka, storePickup: 0 };
+  } catch {
+    return fallback;
+  }
 }
 
 export async function updateWooOrderPayment(
@@ -388,4 +578,86 @@ export async function updateWooOrderPayment(
   return (await r.json()) as { id: number; status: string };
 }
 
+/* -------------------- WordPress / store sourcing -------------------- */
 
+/** Store address + basic settings from Woo (WP source of truth).
+    Admin edits these in WP → app reflects them with no rebuild. */
+export async function getStoreSettings(): Promise<{
+  address: string;
+  city: string;
+  postcode: string;
+  country: string;
+  currency: string;
+}> {
+  try {
+    const settings = (await wooFetch("settings/general")) as Array<{ id: string; value: string }>;
+    const pick = (id: string) => settings.find((s) => s.id === id)?.value ?? "";
+    return {
+      address: [pick("woocommerce_store_address"), pick("woocommerce_store_address_2")]
+        .filter(Boolean)
+        .join(", "),
+      city: pick("woocommerce_store_city"),
+      postcode: pick("woocommerce_store_postcode"),
+      country: pick("woocommerce_default_country"),
+      currency: pick("woocommerce_currency") || "BDT",
+    };
+  } catch {
+    return { address: "", city: "", postcode: "", country: "BD", currency: "BDT" };
+  }
+}
+
+/** A published WordPress page (About / Return / Terms / Contact), rendered HTML.
+    Source of truth = WP. Admin edits the page → app updates with no rebuild. */
+export async function getPage(slug: string): Promise<{ title: string; content: string } | null> {
+  try {
+    const pages = (await wpFetch(`pages?slug=${encodeURIComponent(slug)}&per_page=1&_fields=title,content`)) as Array<{
+      title?: { rendered?: string };
+      content?: { rendered?: string };
+    }>;
+    const p = pages[0];
+    if (!p) return null;
+    return {
+      title: (p.title?.rendered || "").replace(/<[^>]+>/g, "").trim(),
+      content: p.content?.rendered || "",
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** Validate a coupon code against Woo (exact match to the website's behavior).
+    Returns the discount to apply, or null if invalid/expired. Mirrors what the
+    live site does when a customer enters a code at checkout. */
+export async function getCouponByCode(code: string): Promise<{
+  code: string;
+  type: string;
+  amount: number;
+  description: string;
+} | null> {
+  const clean = String(code || "").trim();
+  if (!clean) return null;
+  try {
+    const list = (await wooFetch(`coupons?code=${encodeURIComponent(clean)}&per_page=1`)) as Array<{
+      code: string;
+      discount_type: string;
+      amount: string | number;
+      description?: string;
+      date_expires?: string | null;
+    }>;
+    const c = list.find((x) => x.code.toLowerCase() === clean.toLowerCase());
+    if (!c) return null;
+    // respect expiry
+    if (c.date_expires) {
+      const exp = new Date(c.date_expires).getTime();
+      if (!isNaN(exp) && exp < Date.now()) return null;
+    }
+    return {
+      code: c.code,
+      type: c.discount_type,
+      amount: Number(c.amount) || 0,
+      description: c.description || "",
+    };
+  } catch {
+    return null;
+  }
+}

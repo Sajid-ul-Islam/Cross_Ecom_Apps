@@ -31,10 +31,12 @@ import {
   Store,
   BookOpen,
   MessageCircle,
+  Minus,
+  Plus,
 } from "../../src/components/Icons";
 import { Colors } from "../../src/theme/colors";
 import { useTheme } from "../../src/context/ThemeContext";
-import { fetchProductById, fetchProducts, bdt, FREE_TEE_THRESHOLD } from "../../src/services/gateway";
+import { fetchProductById, fetchProducts, bdt } from "../../src/services/gateway";
 import { Product, Variation } from "../../src/types";
 import { useCart } from "../../src/context/CartContext";
 import { useProfile } from "../../src/context/ProfileContext";
@@ -66,6 +68,7 @@ export default function ProductDetailScreen() {
   const [selectedVariationId, setSelectedVariationId] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [addedNotice, setAddedNotice] = useState(false);
+  const [qty, setQty] = useState(1);
   const [expandedSection, setExpandedSection] = useState<string | null>("fabric");
   const [sizeGuideVisible, setSizeGuideVisible] = useState(false);
   const [lightboxVisible, setLightboxVisible] = useState(false);
@@ -118,8 +121,18 @@ export default function ProductDetailScreen() {
     };
   }, [id, profile]);
 
-  const rawGallery = product?.gallery?.length ? product.gallery : product?.images ?? [];
-  const galleryImages = rawGallery.length > 0 ? rawGallery : ["https://images.unsplash.com/photo-1542272604-780c96856592?w=800"];
+  // Inline gallery uses the medium Woo variant (single) for fast loading; the
+  // lightbox uses the full original (full) for pinch-zoom quality. Both Woo-sourced.
+  const rawSingle = product?.single
+    ? [product.single, ...(product?.gallery?.slice(1) ?? [])]
+    : product?.gallery?.length
+      ? product.gallery
+      : product?.images ?? [];
+  const rawFull = product?.full
+    ? [product.full, ...(product?.gallery?.slice(1) ?? [])]
+    : rawSingle;
+  const galleryImages = rawSingle.length > 0 ? rawSingle : ["https://images.unsplash.com/photo-1542272604-780c96856592?w=800"];
+  const zoomImages = rawFull.length > 0 ? rawFull : galleryImages;
 
   const handleGalleryScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = event.nativeEvent.contentOffset.x;
@@ -179,15 +192,17 @@ export default function ProductDetailScreen() {
 
   const handleAddToCart = () => {
     if (!selectedSize) return;
-    addToCart(product, selectedSize, 1, selectedVariationId);
+    addToCart(product, selectedSize, qty, selectedVariationId);
     setAddedNotice(true);
+    setQty(1);
     setTimeout(() => setAddedNotice(false), 2500);
   };
 
   const handleBuyNow = () => {
     if (!selectedSize) return;
-    addToCart(product, selectedSize, 1, selectedVariationId);
-    router.push("/(tabs)/bag");
+    addToCart(product, selectedSize, qty, selectedVariationId);
+    setQty(1);
+    router.push("/(tabs)/cart");
   };
 
   const toggleSection = (section: string) => {
@@ -219,7 +234,7 @@ export default function ProductDetailScreen() {
 
         <TouchableOpacity
           style={[styles.bagBtn, { backgroundColor: colors.cardSecondary }]}
-          onPress={() => router.push("/(tabs)/bag")}
+          onPress={() => router.push("/(tabs)/cart")}
         >
           <ShoppingBag size={20} color={colors.ink} />
           {totalItems > 0 && (
@@ -233,7 +248,7 @@ export default function ProductDetailScreen() {
       {addedNotice && (
         <View style={styles.toastBanner}>
           <Text style={styles.toastText}>
-            ✓ Added {product.name} ({selectedSize}) to bag!
+            ✓ Added {product.name} ({selectedSize}) to cart!
           </Text>
         </View>
       )}
@@ -458,12 +473,27 @@ export default function ProductDetailScreen() {
             </View>
           </View>
 
-          {/* Free Gift Promo Tag */}
-          <View style={styles.promoTag}>
-            <Sparkles size={16} color={colors.emerald} />
-            <Text style={styles.promoTagText}>
-              Eligible for <Text style={styles.bold}>FREE Heavyweight Tee</Text> on cart subtotal over ৳3,500.
-            </Text>
+          {/* Quantity Selector */}
+          <View style={styles.qtySection}>
+            <Text style={styles.qtyLabel}>QUANTITY</Text>
+            <View style={styles.qtyStepper}>
+              <TouchableOpacity
+                style={[styles.qtyBtn, qty <= 1 && styles.qtyBtnDisabled]}
+                activeOpacity={0.7}
+                disabled={qty <= 1}
+                onPress={() => setQty((q) => Math.max(1, q - 1))}
+              >
+                <Minus size={16} color={qty <= 1 ? colors.sub : colors.ink} />
+              </TouchableOpacity>
+              <Text style={styles.qtyValue}>{qty}</Text>
+              <TouchableOpacity
+                style={styles.qtyBtn}
+                activeOpacity={0.7}
+                onPress={() => setQty((q) => Math.min(99, q + 1))}
+              >
+                <Plus size={16} color={colors.ink} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Accordion Details */}
@@ -616,6 +646,7 @@ export default function ProductDetailScreen() {
         visible={sizeGuideVisible}
         onClose={() => setSizeGuideVisible(false)}
         category={product.category}
+        fit={product.fit}
         selectedSize={selectedSize}
         onSelectSize={handleSizeSelect}
         savedUserSize={savedSizeMatch}
@@ -625,7 +656,7 @@ export default function ProductDetailScreen() {
       <ImageLightboxModal
         visible={lightboxVisible}
         onClose={() => setLightboxVisible(false)}
-        images={galleryImages}
+        images={zoomImages}
         initialIndex={activeImageIdx}
         productName={product.name}
       />
@@ -948,6 +979,43 @@ const styles = StyleSheet.create({
   sizeSection: {
     marginBottom: 16,
   },
+  qtySection: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  qtyLabel: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: Colors.ink,
+    letterSpacing: 0.8,
+  },
+  qtyStepper: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    backgroundColor: Colors.card,
+  },
+  qtyBtn: {
+    width: 38,
+    height: 38,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  qtyBtnDisabled: {
+    opacity: 0.4,
+  },
+  qtyValue: {
+    minWidth: 36,
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "800",
+    color: Colors.ink,
+  },
   sizeHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1056,22 +1124,6 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "800",
     color: Colors.indigoDark,
-  },
-  promoTag: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: Colors.emeraldLight,
-    padding: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: Colors.emerald,
-    marginBottom: 16,
-  },
-  promoTagText: {
-    fontSize: 11,
-    color: Colors.emerald,
-    flex: 1,
   },
   bold: {
     fontWeight: "700",

@@ -30,7 +30,13 @@ function ProductCardBase({ product, style }: ProductCardProps) {
   const hasDiscount = product.salePrice && product.salePrice < product.price;
   const pct = product.salePct ?? (hasDiscount ? Math.round(((product.price - (product.salePrice || 0)) / product.price) * 100) : 0);
   const outOfStock = product.stockStatus === "outofstock";
-  const imageUri = product.images?.[0] || product.gallery?.[0] || "https://images.unsplash.com/photo-1542272604-780c96856592?w=800";
+  // Use the Woo thumbnail variant for the grid (fast + correct ratio); fall back
+  // to the first gallery/full image if thumb is missing. Never host our own image.
+  const imageUri =
+    product.thumb ||
+    product.images?.[0] ||
+    product.gallery?.[0] ||
+    "https://images.unsplash.com/photo-1542272604-780c96856592?w=800";
   const displaySizes = product.sizes || [];
 
   return (

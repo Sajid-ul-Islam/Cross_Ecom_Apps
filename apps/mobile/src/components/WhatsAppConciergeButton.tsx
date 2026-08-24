@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { MessageCircle, PhoneCall, X, Sparkles, CheckCircle2, Store } from "./Icons";
 import { Colors } from "../theme/colors";
+import { useStore } from "../context/StoreContext";
 
 const { width } = Dimensions.get("window");
 
@@ -25,8 +26,8 @@ export const WhatsAppConciergeButton: React.FC<WhatsAppConciergeProps> = ({
   customText,
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
-
-  const phone = "+8801952700500";
+  const { info } = useStore();
+  const phone = "+88" + info.whatsapp.replace(/[^0-9]/g, "");
   const defaultMsg = productName
     ? `Hi DEEN Stylist! I need fit & sizing consultation for "${productName}" (${category}).`
     : customText || "Hi DEEN Stylist! I need assistance with custom fit and raw denim care.";
@@ -85,7 +86,7 @@ export const WhatsAppConciergeButton: React.FC<WhatsAppConciergeProps> = ({
             <View style={styles.dialogActions}>
               <TouchableOpacity style={styles.actionCallBtn} onPress={handleDirectCall}>
                 <PhoneCall size={14} color="#FFFFFF" />
-                <Text style={styles.actionCallBtnText}>CALL HOTLINE (01952-700500)</Text>
+                <Text style={styles.actionCallBtnText}>CALL HOTLINE ({info.hotline})</Text>
               </TouchableOpacity>
             </View>
           </View>

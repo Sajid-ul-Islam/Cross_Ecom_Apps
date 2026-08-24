@@ -38,6 +38,31 @@ export const config = {
     consumerKey: process.env.WOO_CONSUMER_KEY ?? "",
     consumerSecret: process.env.WOO_CONSUMER_SECRET ?? "",
   },
+  /** Shared secret for verifying WooCommerce webhook signatures
+      (X-WC-Webhook-Signature). Set this, then call POST /v1/deen/webhook/woo/register
+      once to auto-provision the webhooks in Woo. */
+  webhookSecret: process.env.WEBHOOK_SECRET ?? "",
+  /** Public store notice shown as a dismissible banner in the app.
+      Source of truth = set here (Render env), NOT hardcoded in the app bundle.
+      Leave blank for no banner. Example: "Get ৳500 cashback on orders over ৳2500". */
+  publicNotice: process.env.PUBLIC_NOTICE ?? "",
+  /** Express (same-day) delivery surcharge added on top of the Inside Dhaka Woo
+      zone fee. Admin can change via EXPRESS_SURCHARGE env without app rebuild. */
+  expressSurcharge: Number(process.env.EXPRESS_SURCHARGE ?? "70"),
+  /** Curated combos/bundles (source of truth = Render env COMBOS as JSON).
+      Admin edits this to change the "Add Combo" window without an app rebuild.
+      Shape: [{ id, name, image?, description?, items:[{productId,size?}], price? }] */
+  combos: (() => {
+    try { return JSON.parse(process.env.COMBOS ?? "[]"); } catch { return []; }
+  })(),
+  /** Store contact details (source of truth = gateway env, falls back to the
+      real DEEN numbers). Admin can change via env without an app rebuild. */
+  contact: {
+    hotline: process.env.STORE_HOTLINE ?? "09617-700500",
+    whatsapp: process.env.STORE_WHATSAPP ?? "01952-700500",
+    bkash: process.env.STORE_BKASH ?? "01952700500",
+    email: process.env.STORE_EMAIL ?? "support@deencommerce.com",
+  },
   pathao: {
     baseUrl: process.env.PATHAO_BASE_URL ?? "https://hermes-api.pathao.com",
     clientId: process.env.PATHAO_CLIENT_ID ?? "",

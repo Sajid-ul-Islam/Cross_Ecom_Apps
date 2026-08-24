@@ -370,7 +370,8 @@ export default function ProfileScreen() {
             <View style={{ backgroundColor: colors.paper, borderRadius: 8, padding: 12, borderWidth: 1, borderColor: colors.borderLight, gap: 6 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Text style={{ fontSize: 13, fontWeight: "800", color: colors.indigo }}>
-                  {orders[0].number} {orders[0].wooId ? `(Store #${orders[0].wooId})` : ""}
+                  #{orders[0].wooNumber || orders[0].number}
+                  {orders[0].wooNumber && orders[0].number && orders[0].wooNumber !== orders[0].number ? `  (App ${orders[0].number})` : ""}
                 </Text>
                 <View style={{ backgroundColor: colors.indigoLight, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
                   <Text style={{ fontSize: 10, fontWeight: "800", color: colors.indigo }}>
@@ -414,7 +415,7 @@ export default function ProfileScreen() {
                 style={{ backgroundColor: colors.indigo, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 6 }}
                 onPress={() => router.push("/(tabs)/shop")}
               >
-                <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "800" }}>START SHOPPING</Text>
+                <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "800" }}>CONTINUE SHOPPING</Text>
               </TouchableOpacity>
             </View>
           )}

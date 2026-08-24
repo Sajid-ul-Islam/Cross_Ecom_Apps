@@ -9,7 +9,8 @@ import { NotificationProvider } from "../src/context/NotificationContext";
 import { ReturnProvider } from "../src/context/ReturnContext";
 import { WishlistProvider } from "../src/context/WishlistContext";
 import { RewardsProvider } from "../src/context/RewardsContext";
-import { reportBug } from "../src/services/gateway";
+import { StoreProvider } from "../src/context/StoreContext";
+import { startGatewayKeepAlive, reportBug } from "../src/services/gateway";
 
 import { AnimatedSplashScreen } from "../src/components/AnimatedSplashScreen";
 
@@ -75,6 +76,10 @@ function RootNavigator() {
 export default function RootLayout() {
   const [isSplashVisible, setSplashVisible] = React.useState(true);
 
+  // Keep the gateway warm + auto-failover if the primary origin goes down.
+  // (Also configure an external uptime pinger against /health in production.)
+  React.useEffect(() => startGatewayKeepAlive(), []);
+
   return (
     <SafeAreaProvider>
       <ThemeProvider>
@@ -82,16 +87,18 @@ export default function RootLayout() {
           <NotificationProvider>
             <WishlistProvider>
               <RewardsProvider>
-                <ReturnProvider>
-                  <CartProvider>
-                    <OrderProvider>
-                      <RootNavigator />
-                      {isSplashVisible && (
-                        <AnimatedSplashScreen onAnimationComplete={() => setSplashVisible(false)} />
-                      )}
-                    </OrderProvider>
-                  </CartProvider>
-                </ReturnProvider>
+                <StoreProvider>
+                  <ReturnProvider>
+                    <CartProvider>
+                      <OrderProvider>
+                        <RootNavigator />
+                        {isSplashVisible && (
+                          <AnimatedSplashScreen onAnimationComplete={() => setSplashVisible(false)} />
+                        )}
+                      </OrderProvider>
+                    </CartProvider>
+                  </ReturnProvider>
+                </StoreProvider>
               </RewardsProvider>
             </WishlistProvider>
           </NotificationProvider>

@@ -50,21 +50,58 @@ import type {
 
 const extra = (Constants.expoConfig?.extra ?? {}) as {
   gatewayUrl?: string;
+  gatewayUrls?: string[];
   gatewayApiKey?: string;
 };
 
 /** Default to Render live gateway */
 const DEFAULT_GATEWAY_URL = "https://cross-ecom-apps.onrender.com";
 
-/** Base URL of the middle gateway. Override per-build in app.json `extra.gatewayUrl`. */
-export const GATEWAY_URL = (extra.gatewayUrl || DEFAULT_GATEWAY_URL).replace(/\/$/, "");
+/** Ordered list of gateway base URLs.
+ *  Source of truth (per-build) = app.json `extra.gatewayUrl` (primary) and
+ *  optional `extra.gatewayUrls` (backup origins). Falls back to the live Render
+ *  gateway. The app tries each in order on a network/timeout failure, so a
+ *  primary outage (e.g. Render spins down) automatically fails over with no
+ *  rebuild. Admin can add/remove backups by editing app.json `extra`. */
+export const GATEWAY_URLS: string[] = Array.from(
+  new Set(
+    [
+      extra.gatewayUrl,
+      ...(Array.isArray(extra.gatewayUrls) ? extra.gatewayUrls : []),
+      DEFAULT_GATEWAY_URL,
+    ]
+      .filter(Boolean)
+      .map((u) => String(u).replace(/\/$/, "")),
+  ),
+);
+
+/** Currently preferred gateway index (starts at primary, shifts on failure). */
+let preferredGatewayIdx = 0;
+export const GATEWAY_URL = GATEWAY_URLS[preferredGatewayIdx];
+
 const API_KEY = extra.gatewayApiKey || "";
 
-export const isGatewayConfigured = Boolean(GATEWAY_URL);
+export const isGatewayConfigured = Boolean(GATEWAY_URLS[0]);
 
 export type ConnectionState = "online" | "offline";
 let connection: ConnectionState = "online";
 const listeners: Array<(state: ConnectionState) => void> = [];
+
+/* Hysteresis: a single failed request must NOT flip the whole app to "offline"
+   (background calls like push-stats/broadcasts/bugs can blip). Declare offline only
+   after N consecutive failures; any success resets the counter and restores "online".
+   This stops the constant live/offline flicker. */
+let consecutiveFails = 0;
+const OFFLINE_AFTER = 3;
+
+function markOnline() {
+  consecutiveFails = 0;
+  setConnection("online");
+}
+function markFail() {
+  consecutiveFails += 1;
+  if (consecutiveFails >= OFFLINE_AFTER) setConnection("offline");
+}
 
 export const getConnection = () => connection;
 
@@ -87,37 +124,114 @@ function setConnection(state: ConnectionState) {
   }
 }
 
-export async function request<T>(path: string, init?: RequestInit, timeoutMs = 8000): Promise<T> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+export async function request<T>(path: string, init?: RequestInit, timeoutMs = 8000, silent = false): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...((init?.headers as Record<string, string>) || {}),
+  };
+  if (API_KEY) headers["x-api-key"] = API_KEY;
 
-  try {
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      ...((init?.headers as Record<string, string>) || {}),
-    };
-    if (API_KEY) headers["x-api-key"] = API_KEY;
+  // Try gateways in order, starting at the currently-preferred one. Only
+  // network/timeout failures shift to the next origin; a real HTTP error
+  // (4xx/5xx) is a definitive response and is thrown immediately.
+  const order = [
+    ...GATEWAY_URLS.slice(preferredGatewayIdx),
+    ...GATEWAY_URLS.slice(0, preferredGatewayIdx),
+  ];
 
-    const res = await fetch(`${GATEWAY_URL}${path}`, {
-      ...init,
-      headers,
-      signal: controller.signal,
-    });
+  let lastErr: unknown;
+  for (const base of order) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(`${base}${path}`, {
+        ...init,
+        headers,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
 
-    clearTimeout(timeoutId);
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        if (!silent) markFail();
+        // 5xx = server/unavailable (e.g. Render "Service Suspended" 503). This is
+        // failover-worthy: try the next origin. Only 4xx from a reachable gateway
+        // is a definitive client error and must NOT fail over.
+        if (res.status >= 500) {
+          lastErr = new Error(`Gateway ${base} returned ${res.status}`);
+          continue;
+        }
+        throw new Error(`Gateway returned ${res.status}: ${body.slice(0, 200)}`);
+      }
 
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new Error(`Gateway returned ${res.status}: ${body.slice(0, 200)}`);
+      if (!silent) markOnline();
+      return (await res.json()) as T;
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      // Network error / timeout / abort → try the next gateway.
+      const isNetworkFailure =
+        err?.name === "AbortError" ||
+        err?.message?.includes("Network request failed") ||
+        err?.message?.includes("Failed to fetch") ||
+        err?.message?.includes("timeout");
+      if (!isNetworkFailure) {
+        // Definitive HTTP error from a reachable gateway — do not fail over.
+        if (!silent) markFail();
+        throw err;
+      }
+      lastErr = err;
+      // Mark the failed origin so future calls start on a healthy one.
+      const idx = GATEWAY_URLS.indexOf(base);
+      if (idx === preferredGatewayIdx) {
+        preferredGatewayIdx = (preferredGatewayIdx + 1) % GATEWAY_URLS.length;
+      }
+      if (!silent) markFail();
     }
-
-    setConnection("online");
-    return (await res.json()) as T;
-  } catch (err: any) {
-    clearTimeout(timeoutId);
-    setConnection("offline");
-    throw err;
   }
+  throw lastErr instanceof Error ? lastErr : new Error("All gateways unreachable");
+}
+
+/** Probe a single gateway's /health (used by keep-alive / startup checks). */
+export async function pingGateway(base: string, timeoutMs = 5000): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), timeoutMs);
+    const res = await fetch(`${base}/health`, { signal: controller.signal });
+    clearTimeout(t);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** Keep the preferred gateway warm + repair failover.
+ *  Pings `/health` on every configured origin; if the preferred origin is down
+ *  it shifts `preferredGatewayIdx` to the first healthy one. Call once at app
+ *  launch. This client-side warm-up helps, but the real guard against a
+ *  free-tier host spinning down is an external uptime pinger (UptimeRobot /
+ *  Better Uptime) hitting `/health` every ~5 min — see
+ *  docs/GATEWAY_FAILOVER_SETUP.md. */
+export function startGatewayKeepAlive(intervalMs = 4 * 60 * 1000): () => void {
+  let timer: ReturnType<typeof setInterval> | null = null;
+  const tick = async () => {
+    // Probe all origins; prefer the first one that answers healthy.
+    const results = await Promise.all(
+      GATEWAY_URLS.map(async (base) => ({
+        base,
+        ok: await pingGateway(base).catch(() => false),
+      })),
+    );
+    const firstHealthy = results.find((r) => r.ok);
+    if (firstHealthy) {
+      const idx = GATEWAY_URLS.indexOf(firstHealthy.base);
+      if (idx !== -1) preferredGatewayIdx = idx;
+    } else if (GATEWAY_URLS.length > 1) {
+      preferredGatewayIdx = (preferredGatewayIdx + 1) % GATEWAY_URLS.length;
+    }
+  };
+  tick();
+  timer = setInterval(tick, intervalMs);
+  return () => { if (timer) clearInterval(timer); };
 }
 
 /* ----------------------------- catalog ----------------------------- */
@@ -330,6 +444,8 @@ export async function createOrder(
         postcode: (orderData as any).postcode || "1200",
         area: orderData.area,
         payment: orderData.payment,
+        trxId: (orderData as any).trxId || undefined,
+        coupon: (orderData as any).coupon || undefined,
         items: cleanItems,
         ...(orderData.guestToken ? { guestToken: orderData.guestToken } : {}),
       }),
@@ -358,6 +474,149 @@ export async function createOrder(
   }
 }
 
+/* --------------------------- cashback (from gateway = Woo source of truth) -----------
+   The app NEVER computes its own cashback thresholds — it asks the gateway, which uses the
+   exact same rule it applies as a WooCommerce coupon at checkout. Cached briefly; returns 0
+   when offline so the UI degrades gracefully. */
+let cashbackCache: { at: number; subtotal: number; amount: number; nextTierAt: number | null } | null = null;
+
+export async function fetchCashback(subtotal: number): Promise<{ amount: number; nextTierAt: number | null }> {
+  if (cashbackCache && cashbackCache.subtotal === subtotal && Date.now() - cashbackCache.at < 30_000) {
+    return { amount: cashbackCache.amount, nextTierAt: cashbackCache.nextTierAt };
+  }
+  try {
+    const res = await request<{ cashback: number; nextTierAt: number | null }>(
+      `/v1/deen/cashback?subtotal=${Math.round(subtotal)}`,
+      undefined,
+      5000,
+      true // silent: a blip must not flip connection state
+    );
+    cashbackCache = { at: Date.now(), subtotal, amount: res.cashback || 0, nextTierAt: res.nextTierAt ?? null };
+    return { amount: cashbackCache.amount, nextTierAt: cashbackCache.nextTierAt };
+  } catch {
+    return { amount: 0, nextTierAt: null };
+  }
+}
+
+/** Public store notice (source of truth = gateway env PUBLIC_NOTICE). Empty string = no banner. */
+export async function fetchNotice(): Promise<string> {
+  try {
+    const res = await request<{ notice: string }>(`/v1/deen/notice`, undefined, 5000, true);
+    return res.notice || "";
+  } catch {
+    return "";
+  }
+}
+
+export interface PaymentMethodInfo {
+  id: string;
+  title: string;
+  description: string;
+  type: "cod" | "redirect";
+}
+
+/** Real, ENABLED payment gateways from Woo (cod / bKash / SSLCommerz). Never hardcode. */
+export async function fetchPaymentMethods(): Promise<PaymentMethodInfo[]> {
+  try {
+    const res = await request<{ methods: PaymentMethodInfo[] }>(`/v1/deen/payment-methods`, undefined, 5000, true);
+    return res.methods || [];
+  } catch {
+    return [];
+  }
+}
+
+export interface PricingResult {
+  subtotal: number;
+  cashback: number;
+  nextTierAt: number | null;
+  bogoDiscount: number;
+  bogoFreeIndexes: number[];
+  deliveryFees: { insideDhaka: number; outsideDhaka: number; express: number; storePickup: number };
+  total: number;
+  currency: string;
+}
+
+/** Live pricing from the gateway (single source of truth for bag math).
+    Mirrors exactly what the order route will charge: cashback + BOGO + Woo fees. */
+export async function fetchPricing(items: { productId: string; qty: number }[], area: string): Promise<PricingResult> {
+  try {
+    const res = await request<PricingResult>("/v1/deen/pricing", {
+      method: "POST",
+      body: JSON.stringify({ items, area }),
+    }, 6000, true);
+    return res;
+  } catch {
+    return { subtotal: 0, cashback: 0, nextTierAt: null, bogoDiscount: 0, bogoFreeIndexes: [], deliveryFees: { insideDhaka: 50, outsideDhaka: 90, express: 120, storePickup: 0 }, total: 0, currency: "BDT" };
+  }
+}
+
+export interface Combo {
+  id: string;
+  name: string;
+  image?: string;
+  description?: string;
+  price?: number;
+  items: { productId: string; size?: string }[];
+}
+
+/** Curated combos/bundles from the gateway (admin-editable via COMBOS env). */
+export async function fetchCombos(): Promise<Combo[]> {
+  try {
+    const res = await request<{ combos: Combo[] }>(`/v1/deen/combos`, undefined, 5000, true);
+    return res.combos || [];
+  } catch {
+    return [];
+  }
+}
+
+export interface StoreInfo {
+  address: string;
+  city: string;
+  postcode: string;
+  country: string;
+  currency: string;
+  hotline: string;
+  whatsapp: string;
+  bkash: string;
+  email: string;
+}
+
+/** Store contact + address (source of truth = Woo settings + gateway env). */
+export async function fetchStoreInfo(): Promise<StoreInfo | null> {
+  try {
+    return await request<StoreInfo>("/v1/deen/store-info", undefined, 5000, true);
+  } catch {
+    return null;
+  }
+}
+
+/** A WordPress page (About / Return / Terms / Contact) — source of truth = WP. */
+export async function fetchPage(slug: string): Promise<{ title: string; content: string } | null> {
+  try {
+    return await request<{ title: string; content: string }>(`/v1/deen/page?slug=${encodeURIComponent(slug)}`, undefined, 5000, true);
+  } catch {
+    return null;
+  }
+}
+
+export interface CouponResult {
+  valid: boolean;
+  code: string;
+  type: string;
+  amount: number;
+  description: string;
+}
+
+/** Validate a customer-entered coupon against Woo (exact match to the website). */
+export async function fetchCoupon(code: string): Promise<CouponResult | null> {
+  try {
+    const res = await request<CouponResult>(`/v1/deen/coupon?code=${encodeURIComponent(code)}`, undefined, 5000, true);
+    return res.valid ? res : null;
+  } catch {
+    return null;
+  }
+}
+
 /* --------------------------- bug reporting ------------------------- */
 
 export interface BugReport {
@@ -382,7 +641,7 @@ export async function reportBug(report: BugReport): Promise<void> {
       extra: report.extra ?? null,
     });
     // Use request() so x-api-key is injected automatically (same as every other call).
-    await request<unknown>("/v1/deen/bugs", { method: "POST", body }, 5000).catch(() => {});
+    await request<unknown>("/v1/deen/bugs", { method: "POST", body }, 5000, true).catch(() => {});
   } catch {
     /* swallow — bug reporting must never crash the app */
   }
@@ -435,7 +694,7 @@ export async function fetchPushStatsAPI(): Promise<any> {
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   try {
-    return await request<any>("/v1/deen/push/stats", { headers }, 5000);
+    return await request<any>("/v1/deen/push/stats", { headers }, 5000, true);
   } catch {
     return null;
   }

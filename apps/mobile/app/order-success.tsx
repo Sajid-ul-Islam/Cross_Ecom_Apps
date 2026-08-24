@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Linking,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,13 +21,17 @@ export default function OrderSuccessScreen() {
   const params = useLocalSearchParams<{
     orderId?: string;
     orderNumber?: string;
+    gatewayRef?: string;
     total?: string;
+    paymentUrl?: string;
+    paymentMethodId?: string;
     guestName?: string;
     guestPhone?: string;
   }>();
   const { colors, isDark } = useTheme();
   const styles = createStyles(colors);
   const isGuestCheckout = Boolean(params.guestName && params.guestPhone);
+  const needsPayment = Boolean(params.paymentUrl) && params.paymentMethodId !== "cod";
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
@@ -45,8 +50,15 @@ export default function OrderSuccessScreen() {
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.cardRow}>
             <Text style={[styles.label, { color: colors.sub }]}>ORDER NUMBER</Text>
-            <Text style={[styles.orderNumber, { color: colors.indigoDark }]}>{params.orderNumber || "DN-XXXXXX"}</Text>
+            <Text style={[styles.orderNumber, { color: colors.indigoDark }]}>{params.orderNumber || "N/A"}</Text>
           </View>
+
+          {params.gatewayRef ? (
+            <View style={styles.cardRow}>
+              <Text style={[styles.label, { color: colors.sub }]}>APP REFERENCE</Text>
+              <Text style={[styles.gatewayRef, { color: colors.faint }]}>{params.gatewayRef}</Text>
+            </View>
+          ) : null}
 
           <View style={[styles.divider, { backgroundColor: colors.borderLight }]} />
 
@@ -92,6 +104,20 @@ export default function OrderSuccessScreen() {
 
         {/* Actions */}
         <View style={styles.actions}>
+          {needsPayment && (
+            <TouchableOpacity
+              style={[styles.trackBtn, { backgroundColor: colors.emerald }]}
+              activeOpacity={0.88}
+              onPress={() => {
+                const url = params.paymentUrl || "";
+                if (url) Linking.openURL(url).catch(() => Alert.alert("Could not open payment page", url));
+              }}
+            >
+              <Text style={styles.trackBtnText}>COMPLETE PAYMENT</Text>
+              <ArrowRight size={16} color="#FFFFFF" />
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
             style={[styles.trackBtn, { backgroundColor: colors.indigo }]}
             activeOpacity={0.88}
@@ -228,6 +254,10 @@ function createStyles(colors: ThemeColors) {
     orderNumber: {
       fontSize: 15,
       fontWeight: "800",
+    },
+    gatewayRef: {
+      fontSize: 12,
+      fontWeight: "600",
     },
     totalValue: {
       fontSize: 15,

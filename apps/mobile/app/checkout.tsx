@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Linking,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -24,13 +25,12 @@ import { useCart } from "../src/context/CartContext";
 import { useOrders } from "../src/context/OrderContext";
 import { useProfile } from "../src/context/ProfileContext";
 import { useRewards } from "../src/context/RewardsContext";
-import { bdt, DELIVERY_OPTIONS, createGuestSession, getGuestSession } from "../src/services/gateway";
+import { bdt, DELIVERY_OPTIONS, createGuestSession, getGuestSession, fetchPaymentMethods, fetchCoupon } from "../src/services/gateway";
 
 import { BD_DISTRICTS, BdDistrict } from "../src/data/districts";
 import {
   DeliveryOptionKey,
   DeliverySlot,
-  PaymentMethod,
 } from "../src/types";
 
 const DELIVERY_SLOTS: { key: DeliverySlot; label: string; time: string }[] = [
@@ -44,7 +44,7 @@ export default function CheckoutScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ area?: string }>();
   const { colors, isDark } = useTheme();
-  const { cart, subtotal, freeTeeEligible, clearCart } = useCart();
+  const { cart, subtotal, clearCart } = useCart();
   const { placeOrder } = useOrders();
   const { profile } = useProfile();
   const { coins, tierLabel, redeemCoins, earnCoins } = useRewards();
@@ -65,12 +65,19 @@ export default function CheckoutScreen() {
   );
   const [deliverySlot, setDeliverySlot] = useState<DeliverySlot>(profile.deliverySlot || "any");
   const [deliveryNotes, setDeliveryNotes] = useState(profile.deliveryNotes || "");
-  const [payment, setPayment] = useState<PaymentMethod>("cod");
+  const [payment, setPayment] = useState<string>("cod"); // Woo gateway id (cod / bkash-for-woocommerce / sslcommerz)
+  const [paymentMethods, setPaymentMethods] = useState<{ id: string; title: string; description: string; type: "cod" | "redirect" }[]>([]);
+  const [trxId, setTrxId] = useState("");
   const [isGuestMode, setIsGuestMode] = useState<boolean>(profile.isGuest);
   const [guestSession, setGuestSession] = useState<null | Awaited<ReturnType<typeof getGuestSession>>>(null);
   const [redeemPoints, setRedeemPoints] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  // Customer coupon (validated against Woo, exactly like the website).
+  const [coupon, setCoupon] = useState("");
+  const [couponInfo, setCouponInfo] = useState<{ code: string; type: string; amount: number; description: string } | null>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
+  const [couponError, setCouponError] = useState("");
 
 
   // Eagerly load any persisted guest session.
@@ -87,12 +94,44 @@ export default function CheckoutScreen() {
     }
   }, [profile]);
 
+  // Source of truth: real, ENABLED payment gateways from Woo (cod / bKash / sslcommerz).
+  useEffect(() => {
+    fetchPaymentMethods()
+      .then((m) => { if (m.length) setPaymentMethods(m); })
+      .catch(() => {});
+  }, []);
+
   const deliveryOpt = DELIVERY_OPTIONS[selectedArea] || DELIVERY_OPTIONS.dhaka_standard;
   const deliveryFee = deliveryOpt.fee;
   const maxCoinDiscount = Math.min(Math.floor(coins / 2), Math.floor(subtotal * 0.2));
   const coinDiscountBDT = redeemPoints ? maxCoinDiscount : 0;
   const cashbackBDT = subtotal >= 3000 ? 700 : subtotal >= 2500 ? 500 : 0;
-  const total = Math.max(0, subtotal + deliveryFee - coinDiscountBDT - cashbackBDT);
+  const couponDiscountBDT = couponInfo
+    ? (couponInfo.type === "percent"
+        ? Math.round((subtotal * couponInfo.amount) / 100)
+        : Math.min(couponInfo.amount, subtotal))
+    : 0;
+  const total = Math.max(0, subtotal + deliveryFee - coinDiscountBDT - cashbackBDT - couponDiscountBDT);
+
+  const handleApplyCoupon = async () => {
+    const code = coupon.trim();
+    if (!code) return;
+    setCouponBusy(true);
+    setCouponError("");
+    try {
+      const res = await fetchCoupon(code);
+      if (res) {
+        setCouponInfo(res);
+      } else {
+        setCouponInfo(null);
+        setCouponError("This coupon code is invalid or expired.");
+      }
+    } catch {
+      setCouponError("Could not verify coupon. Try again.");
+    } finally {
+      setCouponBusy(false);
+    }
+  };
 
   const handlePlaceOrder = async () => {
     if (!name.trim()) {
@@ -141,6 +180,8 @@ export default function CheckoutScreen() {
         deliverySlot,
         deliveryNotes: deliveryNotes.trim() || undefined,
         payment,
+        trxId: trxId.trim() || undefined,
+        coupon: couponInfo ? couponInfo.code : undefined,
         lines,
         subtotal,
         delivery: deliveryFee,
@@ -161,8 +202,11 @@ export default function CheckoutScreen() {
         pathname: "/order-success",
         params: {
           orderId: created.id,
-          orderNumber: created.number,
+          orderNumber: created.wooNumber || created.number,
+          gatewayRef: created.number,
           total: String(created.total),
+          paymentUrl: created.paymentUrl || "",
+          paymentMethodId: payment,
           guestName: isGuestMode ? name.trim() : undefined,
           guestPhone: isGuestMode ? digits : undefined,
         },
@@ -486,66 +530,45 @@ export default function CheckoutScreen() {
           </View>
         </View>
 
-        {/* 3. Payment Method */}
+        {/* 3. Payment Method — sourced from Woo (real enabled gateways) */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.stepTitle, { color: colors.indigoDark }]}>3. PAYMENT METHOD</Text>
 
-          {/* Cash on Delivery */}
-          <TouchableOpacity
-            style={[
-              styles.payOption,
-              { backgroundColor: colors.paper, borderColor: colors.border },
-              payment === "cod" && [styles.payOptionActive, { borderColor: colors.indigo, backgroundColor: colors.indigoLight }],
-            ]}
-            onPress={() => setPayment("cod")}
-          >
-            <View style={[styles.radioOuter, { borderColor: colors.indigo }]}>
-              {payment === "cod" && <View style={[styles.radioInner, { backgroundColor: colors.indigo }]} />}
-            </View>
-            <View style={styles.payInfo}>
-              <Text style={[styles.payTitle, { color: colors.ink }]}>Cash on Delivery (COD)</Text>
-              <Text style={[styles.paySub, { color: colors.sub }]}>Pay cash upon receiving and inspecting your parcel</Text>
-            </View>
-            <View style={[styles.payTag, { backgroundColor: colors.indigo }]}>
-              <Text style={styles.payTagText}>MOST POPULAR</Text>
-            </View>
-          </TouchableOpacity>
-
-          {/* bKash */}
-          <TouchableOpacity
-            style={[
-              styles.payOption,
-              { backgroundColor: colors.paper, borderColor: colors.border },
-              payment === "bkash" && [styles.payOptionActive, { borderColor: colors.indigo, backgroundColor: colors.indigoLight }],
-            ]}
-            onPress={() => setPayment("bkash")}
-          >
-            <View style={[styles.radioOuter, { borderColor: colors.indigo }]}>
-              {payment === "bkash" && <View style={[styles.radioInner, { backgroundColor: colors.indigo }]} />}
-            </View>
-            <View style={styles.payInfo}>
-              <Text style={[styles.payTitle, { color: colors.bkash }]}>bKash Direct Pay</Text>
-              <Text style={[styles.paySub, { color: colors.sub }]}>Instant mobile wallet payment</Text>
-            </View>
-          </TouchableOpacity>
-
-          {/* Nagad */}
-          <TouchableOpacity
-            style={[
-              styles.payOption,
-              { backgroundColor: colors.paper, borderColor: colors.border },
-              payment === "nagad" && [styles.payOptionActive, { borderColor: colors.indigo, backgroundColor: colors.indigoLight }],
-            ]}
-            onPress={() => setPayment("nagad")}
-          >
-            <View style={[styles.radioOuter, { borderColor: colors.indigo }]}>
-              {payment === "nagad" && <View style={[styles.radioInner, { backgroundColor: colors.indigo }]} />}
-            </View>
-            <View style={styles.payInfo}>
-              <Text style={[styles.payTitle, { color: colors.nagad }]}>Nagad Postal Pay</Text>
-              <Text style={[styles.paySub, { color: colors.sub }]}>Pay via Nagad digital postal gateway</Text>
-            </View>
-          </TouchableOpacity>
+          {paymentMethods.length === 0 ? (
+            // Fallback while loading / if fetch fails: safe default = COD only.
+            <TouchableOpacity
+              style={[styles.payOption, { backgroundColor: colors.paper, borderColor: colors.border }, payment === "cod" && [styles.payOptionActive, { borderColor: colors.indigo, backgroundColor: colors.indigoLight }]]}
+              onPress={() => setPayment("cod")}
+            >
+              <View style={[styles.radioOuter, { borderColor: colors.indigo }]}>{payment === "cod" && <View style={[styles.radioInner, { backgroundColor: colors.indigo }]} />}</View>
+              <View style={styles.payInfo}>
+                <Text style={[styles.payTitle, { color: colors.ink }]}>Cash on Delivery (COD)</Text>
+                <Text style={[styles.paySub, { color: colors.sub }]}>Pay cash upon receiving and inspecting your parcel</Text>
+              </View>
+              <View style={[styles.payTag, { backgroundColor: colors.indigo }]}><Text style={styles.payTagText}>MOST POPULAR</Text></View>
+            </TouchableOpacity>
+          ) : (
+            paymentMethods.map((m) => {
+              const active = payment === m.id;
+              const isCod = m.type === "cod";
+              return (
+                <View key={m.id}>
+                  <TouchableOpacity
+                    style={[styles.payOption, { backgroundColor: colors.paper, borderColor: colors.border }, active && [styles.payOptionActive, { borderColor: colors.indigo, backgroundColor: colors.indigoLight }]]}
+                    onPress={() => setPayment(m.id)}
+                  >
+                    <View style={[styles.radioOuter, { borderColor: colors.indigo }]}>{active && <View style={[styles.radioInner, { backgroundColor: colors.indigo }]} />}</View>
+                    <View style={styles.payInfo}>
+                      <Text style={[styles.payTitle, { color: colors.ink }]}>{m.title}</Text>
+                      {m.description ? <Text style={[styles.paySub, { color: colors.sub }]}>{m.description}</Text> : null}
+                      {!isCod && <Text style={[styles.paySub, { color: colors.sub }]}>You'll be taken to the secure {m.title} page to complete payment.</Text>}
+                    </View>
+                    {isCod && <View style={[styles.payTag, { backgroundColor: colors.indigo }]}><Text style={styles.payTagText}>MOST POPULAR</Text></View>}
+                  </TouchableOpacity>
+                </View>
+              );
+            })
+          )}
         </View>
 
         {/* 4. Order Summary */}
@@ -596,6 +619,37 @@ export default function CheckoutScreen() {
             </TouchableOpacity>
           )}
 
+          {/* Coupon code — customer may have a code written down, like the website */}
+          <View style={[styles.couponCard, { backgroundColor: colors.paper, borderColor: colors.borderLight }]}>
+            <Text style={[styles.couponTitle, { color: colors.ink }]}>Have a coupon?</Text>
+            <View style={styles.couponRow}>
+              <TextInput
+                style={[styles.couponInput, { borderColor: couponError ? "#D14343" : colors.border, color: colors.ink, backgroundColor: colors.cardSecondary }]}
+                placeholder="Enter coupon code"
+                placeholderTextColor={colors.sub}
+                autoCapitalize="characters"
+                value={coupon}
+                editable={!couponInfo && !couponBusy}
+                onChangeText={(t) => { setCoupon(t); if (couponInfo || couponError) { setCouponInfo(null); setCouponError(""); } }}
+              />
+              {couponInfo ? (
+                <TouchableOpacity style={[styles.couponBtn, { backgroundColor: colors.emerald }]} onPress={() => { setCouponInfo(null); setCoupon(""); }}>
+                  <Text style={styles.couponBtnText}>✓ REMOVE</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={[styles.couponBtn, { backgroundColor: colors.indigo }]} onPress={handleApplyCoupon} disabled={couponBusy || !coupon.trim()}>
+                  <Text style={styles.couponBtnText}>{couponBusy ? "…" : "APPLY"}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {couponInfo && (
+              <Text style={[styles.couponOk, { color: colors.emerald }]}>
+                ✓ {couponInfo.code} applied{couponInfo.description ? ` — ${couponInfo.description}` : ""}
+              </Text>
+            )}
+            {couponError ? <Text style={[styles.couponErr, { color: "#D14343" }]}>{couponError}</Text> : null}
+          </View>
+
           <View style={[styles.summaryDivider, { backgroundColor: colors.borderLight }]} />
 
           <View style={styles.summaryRow}>
@@ -632,6 +686,17 @@ export default function CheckoutScreen() {
               </Text>
               <Text style={[styles.summaryValue, { color: colors.emerald }]}>
                 -{bdt(coinDiscountBDT)}
+              </Text>
+            </View>
+          )}
+
+          {couponInfo && couponDiscountBDT > 0 && (
+            <View style={styles.summaryRow}>
+              <Text style={[styles.summaryLabel, { color: colors.emerald }]}>
+                🎟️ Coupon ({couponInfo.code})
+              </Text>
+              <Text style={[styles.summaryValue, { color: colors.emerald }]}>
+                -{bdt(couponDiscountBDT)}
               </Text>
             </View>
           )}
@@ -1104,6 +1169,52 @@ function createStyles(colors: any) {
     coinsDiscountNotice: {
       fontSize: 10,
       fontWeight: "700",
+    },
+    couponCard: {
+      borderWidth: 1,
+      borderRadius: 12,
+      padding: 12,
+      marginTop: 12,
+    },
+    couponTitle: {
+      fontSize: 13,
+      fontWeight: "700",
+      marginBottom: 8,
+    },
+    couponRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    couponInput: {
+      flex: 1,
+      borderWidth: 1,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    couponBtn: {
+      borderRadius: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 11,
+    },
+    couponBtnText: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "800",
+      letterSpacing: 0.5,
+    },
+    couponOk: {
+      fontSize: 12,
+      fontWeight: "700",
+      marginTop: 8,
+    },
+    couponErr: {
+      fontSize: 12,
+      fontWeight: "600",
+      marginTop: 8,
     },
     summaryDivider: {
       height: 1,

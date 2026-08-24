@@ -11,7 +11,7 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Gift, ShieldCheck } from "../../src/components/Icons";
 import { Header } from "../../src/components/Header";
-import { FreeTeeBanner } from "../../src/components/Banner";
+import { CashbackBanner } from "../../src/components/Banner";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useCart } from "../../src/context/CartContext";
 import { bdt, DELIVERY_OPTIONS } from "../../src/services/gateway";
@@ -26,7 +26,6 @@ export default function BagScreen() {
     updateQty,
     removeFromCart,
     subtotal,
-    freeTeeEligible,
     getDeliveryFee,
     calculateTotal,
   } = useCart();
@@ -39,12 +38,12 @@ export default function BagScreen() {
   if (cart.length === 0) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
-        <Header title="SHOPPING BAG" showBag={false} />
+        <Header title="CART" showBag={false} />
         <View style={[styles.emptyContainer, { flex: 1 }]}>
           <View style={[styles.emptyIconCircle, { backgroundColor: colors.indigoLight }]}>
             <ShoppingBag size={36} color={colors.indigo} />
           </View>
-          <Text style={[styles.emptyTitle, { color: colors.ink }]}>Your Bag is Empty</Text>
+          <Text style={[styles.emptyTitle, { color: colors.ink }]}>Your Cart is Empty</Text>
           <Text style={[styles.emptySub, { color: colors.sub }]}>
             Explore our artisanal selvedge jeans, dobby panjabis, and heavyweight tees.
           </Text>
@@ -53,7 +52,7 @@ export default function BagScreen() {
             activeOpacity={0.85}
             onPress={() => router.push("/(tabs)/shop")}
           >
-            <Text style={styles.shopBtnText}>START SHOPPING</Text>
+            <Text style={styles.shopBtnText}>CONTINUE SHOPPING</Text>
             <ArrowRight size={16} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
@@ -63,10 +62,10 @@ export default function BagScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
-      <Header title="SHOPPING BAG" showBag={false} />
+      <Header title="CART" showBag={false} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <FreeTeeBanner />
+        <CashbackBanner />
         {/* Cart Item Cards */}
         <View style={styles.itemsList}>
           {cart.map((item) => {
@@ -125,19 +124,6 @@ export default function BagScreen() {
             );
           })}
 
-          {/* Complimentary Free Tee Badge if unlocked */}
-          {freeTeeEligible && (
-            <View style={[styles.giftCard, { backgroundColor: colors.emeraldLight, borderColor: colors.emerald }]}>
-              <View style={styles.giftIcon}>
-                <Gift size={20} color={colors.emerald} />
-              </View>
-              <View style={styles.giftInfo}>
-                <Text style={[styles.giftTitle, { color: colors.emerald }]}>COMPLIMENTARY GIFT ADDED</Text>
-                <Text style={[styles.giftName, { color: colors.ink }]}>DEEN 240 GSM Heavyweight Tee (Size matches order)</Text>
-                <Text style={[styles.giftPrice, { color: colors.emerald }]}>FREE (৳850 value)</Text>
-              </View>
-            </View>
-          )}
         </View>
 
         {/* Delivery Area Selector */}
@@ -201,15 +187,6 @@ export default function BagScreen() {
             </Text>
             <Text style={[styles.summaryValue, { color: colors.ink }]}>{deliveryFee === 0 ? "FREE" : bdt(deliveryFee)}</Text>
           </View>
-
-          {freeTeeEligible && (
-            <View style={styles.summaryRow}>
-              <Text style={[styles.summaryLabel, { color: colors.emerald, fontWeight: "700" }]}>
-                Promotional Gift
-              </Text>
-              <Text style={[styles.summaryValue, { color: colors.emerald }]}>FREE</Text>
-            </View>
-          )}
 
           <View style={[styles.summaryDivider, { backgroundColor: colors.borderLight }]} />
 

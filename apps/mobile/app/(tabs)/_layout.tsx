@@ -44,9 +44,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="bag"
+        name="cart"
         options={{
-          title: "Bag",
+          title: "Cart",
           tabBarBadge: totalItems > 0 ? totalItems : undefined,
           tabBarBadgeStyle: {
             backgroundColor: colors.indigo,

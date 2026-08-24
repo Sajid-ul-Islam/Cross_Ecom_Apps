@@ -14,7 +14,8 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowRight, Sparkles, ShieldCheck, MapPin, Award, TrendingUp, Package, Tag, Users } from "../../src/components/Icons";
 import { Header } from "../../src/components/Header";
-import { FreeTeeBanner, DeliveryNoticeBanner } from "../../src/components/Banner";
+import { CashbackBanner, DeliveryNoticeBanner } from "../../src/components/Banner";
+import { StoreNoticeBanner } from "../../src/components/StoreNoticeBanner";
 import { ProductCard } from "../../src/components/ProductCard";
 import { Sparkline, CategoryBars, Donut, KpiTile } from "../../src/components/Charts";
 import { ThemeColors } from "../../src/theme/colors";
@@ -24,7 +25,6 @@ import { Product, DeenCategory, Stats } from "../../src/types";
 import { useProfile } from "../../src/context/ProfileContext";
 import { getCategoryInfo } from "../../src/data/categories";
 import { AdminBroadcastModal } from "../../src/components/AdminBroadcastModal";
-import { ConnectionBanner } from "../../src/components/ConnectionBanner";
 
 const { width } = Dimensions.get("window");
 
@@ -82,8 +82,8 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
       <Header />
+      <StoreNoticeBanner />
       <DeliveryNoticeBanner />
-      <ConnectionBanner />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -98,7 +98,7 @@ export default function HomeScreen() {
         }
       >
 
-        <FreeTeeBanner />
+        <CashbackBanner />
 
         {/* Hero Section */}
         <View style={styles.heroWrapper}>

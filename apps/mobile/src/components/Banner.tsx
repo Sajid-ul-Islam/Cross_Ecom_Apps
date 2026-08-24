@@ -5,7 +5,7 @@ import { useCart } from "../context/CartContext";
 import { useTheme } from "../context/ThemeContext";
 import { bdt } from "../services/gateway";
 
-export const FreeTeeBanner: React.FC = () => {
+export const CashbackBanner: React.FC = () => {
   const { subtotal } = useCart();
   const { colors } = useTheme();
 

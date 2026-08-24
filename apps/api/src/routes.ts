@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { promises as fs } from "fs";
-import { randomUUID } from "crypto";
+import { randomUUID, createHmac, timingSafeEqual } from "crypto";
 import { config, wooEnabled, pathaoEnabled } from "./config.js";
 import {
   audit,
@@ -20,6 +20,17 @@ import {
   pushWooOrder,
   updateWooOrderPayment,
   wooHealthy,
+  invalidateCatalogCache,
+  invalidateVariationCache,
+  invalidateCoverCache,
+  invalidateStats,
+  wooPost,
+  wooFetch,
+  fetchWooPaymentMethods,
+  getShippingFees,
+  getStoreSettings,
+  getPage,
+  getCouponByCode,
 } from "./woo.js";
 import {
   getPathaoToken,
@@ -51,7 +62,9 @@ const ORDER_BODY_SCHEMA = {
       district:   { type: "string", maxLength: 100 },
       state:      { type: "string", maxLength: 20 },
       postcode:   { type: "string", maxLength: 10 },
-      payment:    { type: "string", enum: ["cod", "bkash", "nagad", "card", "online"] },
+      payment:    { type: "string", enum: ["cod", "bkash", "nagad", "card", "online", "bkash-for-woocommerce", "sslcommerz"] },
+      trxId:      { type: "string", maxLength: 60 },
+      coupon:     { type: "string", maxLength: 60 },
       guestToken: { type: "string", maxLength: 80 },
       items: {
         type: "array",
@@ -669,6 +682,17 @@ function sortProducts(list: DeenProduct[], sort: string): DeenProduct[] {
 }
 
 export async function registerDeenRoutes(app: FastifyInstance) {
+  /* Stash the raw request body (string) on the request so the Woo webhook can verify
+     the HMAC signature over the EXACT bytes Woo sent. Harmless for all other JSON routes. */
+  app.addContentTypeParser("application/json", { parseAs: "string" }, (req, bodyStr, done) => {
+    try {
+      (req as any).rawBody = typeof bodyStr === "string" ? bodyStr : String(bodyStr ?? "");
+      done(null, bodyStr ? JSON.parse(String(bodyStr)) : undefined);
+    } catch (e) {
+      done(e as Error, undefined);
+    }
+  });
+
   /* ---- load persisted data on startup ---- */
   await loadCustomers();
   await loadOrders();
@@ -808,6 +832,190 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   app.get("/health", async (_req, reply) => reply.send(await healthPayload()));
   app.get("/v1/health", async (_req, reply) => reply.send(await healthPayload()));
 
+  /* ---- WooCommerce webhook: real-time catalog cache bust ----
+     Configure in WP Admin → WooCommerce → Settings → Advanced → Webhooks:
+       Topic: Product created / updated / deleted / restored
+               (also product_variation.* for size-level price/stock changes)
+       Delivery URL: <gateway>/v1/deen/webhook/woo
+       Secret: must equal the WEBHOOK_SECRET env var below.
+     Woo signs each payload: X-WC-Webhook-Signature = base64(HMAC-SHA256(raw_body, secret)).
+     We verify it, then invalidate the catalog cache so the next app request re-fetches
+     from Woo immediately (new product / price / discount shows in seconds, not 5 min). */
+  app.post("/v1/deen/webhook/woo", async (req, reply) => {
+    const secret = config.webhookSecret ?? "";
+    const topic = (req.headers["x-wc-webhook-topic"] as string) || "unknown";
+    const body = (req.body || {}) as any;
+
+    const verify = () => {
+      if (!secret) return true; // dev mode: no secret configured
+      const sigHeader = (req.headers["x-wc-webhook-signature"] as string) || "";
+      const raw = (req as any).rawBody || "";
+      const expected = createHmac("sha256", secret).update(raw).digest("base64");
+      const a = Buffer.from(sigHeader);
+      const b = Buffer.from(expected);
+      return a.length === b.length && timingSafeEqual(a, b);
+    };
+
+    if (!verify()) {
+      audit("woo_webhook", false, "REJECTED bad signature");
+      return reply.code(401).send({ error: "BAD_SIGNATURE" });
+    }
+
+    // Topic-aware, surgical cache busting — only invalidate what actually changed.
+    const pid = body?.id ? String(body.id) : undefined;
+    if (topic.startsWith("product_variation")) {
+      invalidateVariationCache(pid);
+    } else if (topic.startsWith("product")) {
+      invalidateCatalogCache();
+      if (pid) invalidateVariationCache(pid);
+    } else if (topic.startsWith("category")) {
+      invalidateCoverCache();
+      invalidateCatalogCache();
+    } else if (topic.startsWith("order") || topic.startsWith("customer")) {
+      invalidateStats();
+    }
+
+    audit("woo_webhook", true, `cache busted (topic: ${topic})`);
+    return reply.code(200).send({ ok: true, verified: true, topic });
+  });
+
+  /* ---- cashback (SINGLE SOURCE OF TRUTH) ----
+     The exact same rule the gateway uses when building the WooCommerce coupon at
+     checkout. The app MUST read this instead of computing its own thresholds, so the
+     displayed cashback always matches what Woo actually deducts. */
+  function calculateCashback(subtotal: number): { amount: number; tier: number; nextTierAt: number | null } {
+    if (subtotal >= 3000) return { amount: 700, tier: 2, nextTierAt: null };
+    if (subtotal >= 2500) return { amount: 500, tier: 1, nextTierAt: 3000 };
+    return { amount: 0, tier: 0, nextTierAt: 2500 };
+  }
+
+  /* ---- BOGO (buy 2+ same category → cheapest is free) ----
+     Mirrors the live site: per category, when >=2 items are in the bag, the
+     single lowest-priced item becomes ৳0. Returns the total BOGO discount and
+     which line indices are free (so the app can show the strikethrough). */
+  function calculateBogo(lines: { category?: string; unit: number; qty?: number }[]): {
+    discount: number;
+    freeIndexes: number[];
+  } {
+    const byCat = new Map<string, number[]>();
+    lines.forEach((l, i) => {
+      const cat = l.category || "OTHER";
+      if (!byCat.has(cat)) byCat.set(cat, []);
+      byCat.get(cat)!.push(i);
+    });
+    let discount = 0;
+    const freeIndexes: number[] = [];
+    for (const idxs of byCat.values()) {
+      if (idxs.length < 2) continue; // need 2+ in the same category
+      // cheapest line is free (its full unit price * qty)
+      let cheapest = idxs[0];
+      for (const i of idxs) if ((lines[i].unit) < (lines[cheapest].unit)) cheapest = i;
+      const qty = lines[cheapest].qty ?? 1;
+      discount += lines[cheapest].unit * qty;
+      freeIndexes.push(cheapest);
+    }
+    return { discount, freeIndexes };
+  }
+  app.get("/v1/deen/cashback", async (req, reply) => {
+    const subtotal = Number((req.query as any).subtotal ?? 0) || 0;
+    const cb = calculateCashback(subtotal);
+    return reply.send({
+      subtotal,
+      cashback: cb.amount,
+      tier: cb.tier,
+      nextTierAt: cb.nextTierAt,
+      currency: "BDT",
+      note: "Applied automatically as a WooCommerce coupon at checkout.",
+    });
+  });
+
+  /* ---- live pricing preview (source of truth for bag math) ----
+     App sends its cart; gateway returns subtotal, cashback, BOGO discount +
+     which line indexes are free, and delivery fees. Mirrors exactly what the
+     order route will charge, so the bag and checkout never disagree. */
+  app.post<{ Body: any }>("/v1/deen/pricing", async (req, reply) => {
+    const body = req.body as any;
+    const items = Array.isArray(body?.items) ? body.items : [];
+    const area = String(body?.area || "dhaka_standard");
+    const rawCoupon = String(body?.coupon || "").trim();
+    const couponInfo = rawCoupon ? await getCouponByCode(rawCoupon) : null;
+    const list = await getCatalog();
+    const lines = items.map((it: any) => {
+      const prod = list.find((x: any) => x.id === it.productId);
+      const unit = prod ? (prod.salePrice ?? prod.price) : Number(it.unit ?? 0);
+      return { productId: it.productId, qty: Number(it.qty ?? 1), unit, category: prod?.category };
+    });
+    const subtotal = lines.reduce((s: number, l: any) => s + l.unit * l.qty, 0);
+    const cashback = calculateCashback(subtotal).amount;
+    const bogo = calculateBogo(lines);
+    const couponDiscount = couponInfo
+      ? (couponInfo.type === "percent"
+          ? Math.round((subtotal * couponInfo.amount) / 100)
+          : Math.min(couponInfo.amount, subtotal))
+      : 0;
+    const fees = await getShippingFees();
+    const delivery =
+      area === "outside" || area === "outside_standard"
+        ? fees.outsideDhaka
+        : area === "dhaka_express"
+        ? fees.insideDhaka + config.expressSurcharge
+        : area === "store_pickup" || area === "pickup"
+        ? 0
+        : fees.insideDhaka;
+    return reply.send({
+      subtotal,
+      cashback,
+      nextTierAt: calculateCashback(subtotal).nextTierAt,
+      bogoDiscount: bogo.discount,
+      bogoFreeIndexes: bogo.freeIndexes,
+      couponCode: couponInfo?.code || null,
+      couponDiscount,
+      deliveryFees: { insideDhaka: fees.insideDhaka, outsideDhaka: fees.outsideDhaka, express: fees.insideDhaka + config.expressSurcharge, storePickup: 0 },
+      total: Math.max(0, subtotal - cashback - bogo.discount - couponDiscount) + delivery,
+      currency: "BDT",
+    });
+  });
+
+  app.post("/v1/deen/webhook/woo/register", async (req, reply) => {
+    // One-call setup: provisions the WooCommerce webhooks that keep the app real-time.
+    // No need to click in WP Admin. Re-run anytime; duplicate webhooks are skipped.
+    if (!wooHealthy()) return reply.code(503).send({ error: "WOO_DISABLED" });
+    const secret = config.webhookSecret ?? "";
+    if (!secret) return reply.code(400).send({ error: "SET_WEBHOOK_SECRET", message: "Set WEBHOOK_SECRET env on the gateway first." });
+
+    const proto = (req.headers["x-forwarded-proto"] as string) || "https";
+    const host = (req.headers["host"] as string) || config.publicUrl || "";
+    const base = (config.publicUrl || `${proto}://${host}`).replace(/\/$/, "");
+    const delivery = `${base}/v1/deen/webhook/woo`;
+
+    // Essential (customer-facing freshness): product + variation changes.
+    const topics = [
+      "product.created", "product.updated", "product.deleted", "product.restored",
+      "product_variation.created", "product_variation.updated", "product_variation.deleted",
+    ];
+    // Optional (admin stats / covers): pass ?full=1.
+    if (String((req.query as any).full ?? "") === "1") {
+      topics.push("category.created", "category.updated", "category.deleted", "order.created", "order.updated", "customer.created", "customer.updated");
+    }
+
+    const created: string[] = [];
+    const skipped: string[] = [];
+    for (const topic of topics) {
+      try {
+        // Avoid duplicates: Woo keys webhooks by delivery_url+topic.
+        const existing = (await wooFetch("webhooks", { per_page: "100" })) as any[];
+        const dup = (existing || []).find((w: any) => w.topic === topic && w.delivery_url === delivery);
+        if (dup) { skipped.push(topic); continue; }
+        await wooPost("webhooks", { topic, delivery_url: delivery, secret, status: "active", name: `DEEN ${topic}` } as any);
+        created.push(topic);
+      } catch (e) {
+        created.push(`ERROR ${topic}: ${(e as Error).message.slice(0, 80)}`);
+      }
+    }
+    audit("woo_webhook", true, `registered ${created.length} webhooks (skipped ${skipped.length})`);
+    return reply.send({ ok: true, delivery, created, skipped });
+  });
+
   /* ---- bangladesh 64 districts for woocommerce states ---- */
   /* ---- bangladesh 64 districts for woocommerce states (matches live site BD-XX codes) ---- */
   app.get("/v1/deen/districts", async (_req, reply) => {
@@ -815,9 +1023,70 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   });
 
   /* ---- create order (public) ---- */
+  /* ---- public store notice (source of truth = gateway env PUBLIC_NOTICE) ---- */
+  app.get("/v1/deen/notice", async (_req, reply) => {
+    return reply.send({ notice: config.publicNotice || "" });
+  });
+
+  /* ---- curated combos / bundles (source of truth = COMBOS env) ---- */
+  app.get("/v1/deen/combos", async (_req, reply) => {
+    return reply.send({ combos: config.combos || [] });
+  });
+
+  /* ---- store info (source of truth = Woo settings + gateway env) ----
+     Replaces every hardcoded phone/address in the app. Admin edits WP or the
+     gateway env; the app reflects it with no rebuild. */
+  app.get("/v1/deen/store-info", async (_req, reply) => {
+    const s = await getStoreSettings();
+    return reply.send({
+      address: s.address,
+      city: s.city,
+      postcode: s.postcode,
+      country: s.country,
+      currency: s.currency,
+      hotline: config.contact?.hotline || "09617-700500",
+      whatsapp: config.contact?.whatsapp || "01952-700500",
+      bkash: config.contact?.bkash || "01952700500",
+      email: config.contact?.email || "support@deencommerce.com",
+    });
+  });
+
+  /* ---- WordPress page content (About / Return / Terms / Contact) ----
+     Source of truth = the WP page. Admin edits it; the app shows it with no rebuild. */
+  app.get("/v1/deen/page", async (req, reply) => {
+    const slug = String((req.query as any).slug || "");
+    if (!slug) return reply.code(400).send({ error: "slug required" });
+    const page = await getPage(slug);
+    if (!page) return reply.code(404).send({ error: "not found" });
+    return reply.send(page);
+  });
+
+  /* ---- coupon validation (exact match to the website's checkout) ----
+     Customer may have a code written down; the app validates it against Woo
+     and returns the discount to apply, just like deencommerce.com. */
+  app.get("/v1/deen/coupon", async (req, reply) => {
+    const code = String((req.query as any).code || "");
+    if (!code.trim()) return reply.code(400).send({ error: "code required" });
+    const c = await getCouponByCode(code);
+    if (!c) return reply.code(404).send({ error: "invalid_or_expired", valid: false });
+    return reply.send({ valid: true, ...c });
+  });
+
+  /* ---- shipping fees (source of truth = Woo shipping zones) ---- */
+  app.get("/v1/deen/shipping", async (_req, reply) => {
+    const fees = await getShippingFees();
+    return reply.send({ fees });
+  });
+
+  /* ---- payment methods (source of truth = Woo enabled gateways) ---- */
+  app.get("/v1/deen/payment-methods", async (_req, reply) => {
+    const methods = await fetchWooPaymentMethods();
+    return reply.send({ methods });
+  });
+
   app.post<{ Body: any }>("/v1/deen/orders", { schema: ORDER_BODY_SCHEMA }, async (req, reply) => {
     const body = (req.body ?? {}) as any;
-    const { name, lastName, phone, email, address, area, city, district, state, postcode, payment, items, guestToken } = body;
+    const { name, lastName, phone, email, address, area, city, district, state, postcode, payment, items, guestToken, trxId, coupon } = body;
     if (!name || !String(name).trim()) {
       return reply.code(422).send({ error: "VALIDATION", message: "Name is required." });
     }
@@ -839,23 +1108,41 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       return reply.code(422).send({ error: "VALIDATION", message: "Your bag is empty." });
     }
 
+    // Validate any customer-entered coupon against Woo (exact-match to the website).
+    let couponInfo: { code: string; type: string; amount: number; description: string } | null = null;
+    const rawCoupon = String(coupon || "").trim();
+    if (rawCoupon) {
+      couponInfo = await getCouponByCode(rawCoupon);
+      if (!couponInfo) {
+        return reply.code(422).send({ error: "INVALID_COUPON", message: "This coupon code is invalid or expired." });
+      }
+    }
+
     const list = await getCatalog();
     const lines = items.map((it: any) => {
       const prod = list.find((x) => x.id === it.productId);
       if (!prod) throw new Error("A product in your bag is no longer available.");
       const unit = prod.salePrice ?? prod.price;
-      return { productId: prod.id, name: prod.name, sku: prod.sku, size: it.size, qty: it.qty, unit };
+      return { productId: prod.id, name: prod.name, sku: prod.sku, size: it.size, qty: it.qty, unit, category: prod.category };
     });
     const subtotal = lines.reduce((s: number, l: any) => s + l.unit * l.qty, 0);
+    const shipFees = await getShippingFees();
     const delivery =
       area === "outside" || area === "outside_standard"
-        ? 90
+        ? shipFees.outsideDhaka
         : area === "dhaka_express"
-        ? 120
+        ? shipFees.insideDhaka + config.expressSurcharge
         : area === "store_pickup" || area === "pickup"
         ? 0
-        : 50;
-    const cashback = subtotal >= 3000 ? 700 : subtotal >= 2500 ? 500 : 0;
+        : shipFees.insideDhaka;
+    const cashback = calculateCashback(subtotal).amount;
+    const bogo = calculateBogo(lines);
+    // Customer coupon (validated above). Apply fixed or percent discount on subtotal.
+    const couponDiscount = couponInfo
+      ? (couponInfo.type === "percent"
+          ? Math.round((subtotal * couponInfo.amount) / 100)
+          : Math.min(couponInfo.amount, subtotal))
+      : 0;
 
     const orderNumStr = `DC-${++orderSeq.n}`;
     // Pathao logistics is not auto-generated. Only set if ptc_consignment_id / consignmentId is provided (e.g. "DD220826MDKMP9").
@@ -864,8 +1151,12 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const pathaoTrackingUrl = pathaoConsignmentId ? `https://merchant.pathao.com/tracking?consignment_id=${pathaoConsignmentId}` : undefined;
     const courier = pathaoConsignmentId ? "Pathao Courier" : (area === "store_pickup" || area === "pickup" ? "Store Pickup" : "Home Delivery");
 
-    const paymentTitle = payment === "cod" ? "Cash on delivery" : (payment === "bkash" ? "bKash" : (payment === "nagad" ? "Nagad" : "Online Payment"));
-    const paymentStatus = payment === "cod" ? "Pending (Cash on Delivery)" : "Paid";
+    const paymentTitle = payment === "cod" ? "Cash on delivery"
+      : payment === "bkash" || payment === "bkash-for-woocommerce" ? "bKash"
+      : payment === "nagad" ? "Nagad"
+      : payment === "sslcommerz" ? "SSLCommerz"
+      : "Online Payment";
+    const paymentStatus = payment === "cod" ? "Pending (Cash on Delivery)" : "Awaiting Payment";
 
     const resolvedCity = String(city || (area === "outside" ? "Chittagong" : "Dhaka")).trim();
     // CRITICAL: the live site stores Woo state as "BD-XX" codes, never the district
@@ -874,6 +1165,8 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const resolvedPostcode = String(postcode || "1200").trim();
 
     let wooId: number | undefined;
+    let wooNumber: string | undefined;
+    let wooPaymentUrl: string | undefined;
     if (wooEnabled) {
       try {
         const shippingMethodTitle = area === "outside" || area === "outside_standard"
@@ -938,13 +1231,29 @@ export async function registerDeenRoutes(app: FastifyInstance) {
           // CRITICAL: send the cashback to Woo exactly like the live website does,
           // so app-placed orders match website-placed orders. Without this the Woo
           // order shows the full subtotal with no discount (exact-match break).
-          coupon_lines: cashback > 0
-            ? [{
+          coupon_lines: [
+            ...(cashback > 0
+              ? [{
                 code: `CASHBACK${cashback}`,
                 discount_type: "fixed_cart",
                 amount: String(cashback),
               }]
-            : [],
+              : []),
+            ...(bogo.discount > 0
+              ? [{
+                code: `BOGO${Math.round(bogo.discount)}`,
+                discount_type: "fixed_cart",
+                amount: String(Math.round(bogo.discount)),
+              }]
+              : []),
+            ...(couponDiscount > 0 && couponInfo
+              ? [{
+                code: String(couponInfo.code).toUpperCase(),
+                discount_type: couponInfo.type === "percent" ? "percent" : "fixed_cart",
+                amount: String(couponInfo.amount),
+              }]
+              : []),
+          ],
           shipping_lines: [
             {
               method_id: area === "store_pickup" || area === "pickup" ? "local_pickup" : "flat_rate",
@@ -953,9 +1262,12 @@ export async function registerDeenRoutes(app: FastifyInstance) {
             },
           ],
           meta_data: orderMeta,
+          transaction_id: trxId ? String(trxId) : undefined,
           customer_note: `City: ${resolvedCity} | District: ${resolvedState} | Delivery: ${shippingMethodTitle} (৳${delivery})${pathaoConsignmentId ? ` | Pathao: ${pathaoConsignmentId}` : ""} | Payment: ${paymentTitle}`,
         });
         wooId = r.id;
+        wooNumber = r.number;
+        wooPaymentUrl = r.paymentUrl;
       } catch (e) {
         console.error("[gateway] Woo order push failed:", (e as Error).message);
       }
@@ -978,14 +1290,21 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       lines,
       subtotal,
       cashback,
+      bogoDiscount: bogo.discount,
+      bogoFreeIndexes: bogo.freeIndexes,
+      couponCode: couponInfo?.code || null,
+      couponDiscount,
       delivery,
-      total: Math.max(0, subtotal - cashback) + delivery,
+      total: Math.max(0, subtotal - cashback - bogo.discount - couponDiscount) + delivery,
       status: "received",
       courier,
       pathaoConsignmentId,
       pathaoTrackingUrl,
       createdAt: new Date().toISOString(),
       wooId,
+      wooNumber,
+      wooPaymentUrl,
+      trxId: trxId ? String(trxId) : undefined,
     };
     if (guestToken) {
       const session = guestSessions.find((s) => s.token === guestToken);
@@ -1008,9 +1327,9 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       void sendExpoPushNotifications(
         userTokens.map((to) => ({
           to,
-          title: `📦 Order Confirmed: #${order.number}`,
+          title: `📦 Order Confirmed: #${order.wooNumber || order.number}`,
           body: `Thank you, ${order.name}! Total: ৳${order.total.toLocaleString("en-BD")}.${order.pathaoConsignmentId ? ` Pathao: ${order.pathaoConsignmentId}` : ""}`,
-          data: { orderId: order.id, orderNumber: order.number, actionUrl: "/(tabs)/orders" },
+          data: { orderId: order.id, orderNumber: order.wooNumber || order.number, actionUrl: "/(tabs)/orders" },
           sound: "default" as const,
           badge: 1,
         }))

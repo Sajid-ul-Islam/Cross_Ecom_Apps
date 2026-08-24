@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CartItem, Product, DeliveryArea } from "../types";
-import { DELIVERY_FEES, FREE_TEE_THRESHOLD } from "../services/gateway";
+import { DELIVERY_FEES, fetchCashback, fetchPricing } from "../services/gateway";
 
 interface CartContextType {
   cart: CartItem[];
@@ -11,10 +11,14 @@ interface CartContextType {
   clearCart: () => void;
   subtotal: number;
   totalItems: number;
-  freeTeeEligible: boolean;
-  freeTeeGap: number;
+  cashbackAmount: number;
+  cashbackTier: number;
+  cashbackGap: number;
+  bogoDiscount: number;
+  bogoFreeIndexes: number[];
   getDeliveryFee: (area: DeliveryArea) => number;
   calculateTotal: (area: DeliveryArea) => number;
+  setDeliveryArea: (area: DeliveryArea) => void;
 }
 
 const CART_STORAGE_KEY = "deen_mobile_cart_v1";
@@ -85,32 +89,45 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const totalItems = cart.reduce((acc, item) => acc + item.qty, 0);
 
-  // Cashback campaign calculation:
-  // - ৳500 cashback on ৳2,500+
-  // - ৳700 cashback on ৳3,000+
-  let cashbackAmount = 0;
-  let cashbackTier = 0;
-  let cashbackGap = 0;
+  // Cashback + BOGO + delivery are ALL sourced from the gateway (Woo), never
+  // computed locally. fetchPricing mirrors exactly what the order route charges,
+  // so the bag and checkout never disagree and admin can change fees in WP.
+  const [cashbackAmount, setCashbackAmount] = useState(0);
+  const [cashbackTier, setCashbackTier] = useState(0);
+  const [cashbackGap, setCashbackGap] = useState(0);
+  const [bogoDiscount, setBogoDiscount] = useState(0);
+  const [bogoFreeIndexes, setBogoFreeIndexes] = useState<number[]>([]);
+  const [deliveryFees, setDeliveryFees] = useState<{ insideDhaka: number; outsideDhaka: number; express: number; storePickup: number }>(
+    { insideDhaka: 50, outsideDhaka: 90, express: 120, storePickup: 0 }
+  );
+  const [area, setArea] = useState<DeliveryArea>("dhaka_standard");
 
-  if (subtotal >= 3000) {
-    cashbackAmount = 700;
-    cashbackTier = 2;
-    cashbackGap = 0;
-  } else if (subtotal >= 2500) {
-    cashbackAmount = 500;
-    cashbackTier = 1;
-    cashbackGap = 3000 - subtotal; // to reach ৳700 tier
-  } else {
-    cashbackAmount = 0;
-    cashbackTier = 0;
-    cashbackGap = 2500 - subtotal; // to reach ৳500 tier
-  }
+  useEffect(() => {
+    let cancelled = false;
+    const items = cart.map((i) => ({ productId: String(i.product.id), qty: i.qty }));
+    fetchPricing(items, area).then((p) => {
+      if (cancelled) return;
+      setCashbackAmount(p.cashback);
+      setCashbackTier(p.cashback >= 700 ? 2 : p.cashback >= 500 ? 1 : 0);
+      setCashbackGap(p.nextTierAt ? p.nextTierAt - subtotal : 0);
+      setBogoDiscount(p.bogoDiscount);
+      setBogoFreeIndexes(p.bogoFreeIndexes || []);
+      setDeliveryFees(p.deliveryFees);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [subtotal, area]);
 
-  const freeTeeEligible = cashbackAmount > 0;
-  const freeTeeGap = cashbackGap;
+  const getDeliveryFee = (a: DeliveryArea) => {
+    switch (a) {
+      case "outside": case "outside_standard": return deliveryFees.outsideDhaka;
+      case "dhaka_express": return deliveryFees.express;
+      case "store_pickup": return 0;
+      default: return deliveryFees.insideDhaka;
+    }
+  };
+  const calculateTotal = (a: DeliveryArea) => Math.max(0, subtotal - cashbackAmount - bogoDiscount) + getDeliveryFee(a);
 
-  const getDeliveryFee = (area: DeliveryArea) => DELIVERY_FEES[area] ?? 50;
-  const calculateTotal = (area: DeliveryArea) => Math.max(0, subtotal - cashbackAmount) + getDeliveryFee(area);
+  const setDeliveryArea = (a: DeliveryArea) => setArea(a);
 
   return (
     <CartContext.Provider
@@ -125,10 +142,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         cashbackAmount,
         cashbackTier,
         cashbackGap,
-        freeTeeEligible,
-        freeTeeGap,
+        bogoDiscount,
+        bogoFreeIndexes,
         getDeliveryFee,
         calculateTotal,
+        setDeliveryArea,
       } as any}
     >
       {children}
