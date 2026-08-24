@@ -205,6 +205,34 @@ export async function wooFetch(path: string, params: Record<string, string> = {}
   return wooFetchResilient(path, params);
 }
 
+/** GET to the WordPress core REST API (wp/v2) — for pages, media, etc.
+    Source of truth for CMS content (About / Return / Terms). */
+export async function wpFetch(path: string, params: Record<string, string> = {}): Promise<any> {
+  if (Date.now() < cbOpenUntil) throw new Error("Woo circuit breaker open");
+  const { site, consumerKey, consumerSecret } = config.woo;
+  const url = new URL(`${site.replace(/\/$/, "")}/wp-json/wp/v2/${path}`);
+  url.searchParams.set("consumer_key", consumerKey);
+  url.searchParams.set("consumer_secret", consumerSecret);
+  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  const MAX_RETRIES = 2;
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 8000);
+    try {
+      const res = await fetch(url.toString(), { signal: controller.signal });
+      clearTimeout(t);
+      if (!res.ok) throw new Error(`WP ${res.status}`);
+      return (await res.json()) as any;
+    } catch (e) {
+      clearTimeout(t);
+      lastErr = e;
+      await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("wpFetch failed");
+}
+
 /** POST to WooCommerce REST API (used by the webhook auto-provisioner). */
 export async function wooPost<T = any>(path: string, body: Record<string, unknown>): Promise<T> {
   if (Date.now() < cbOpenUntil) throw new Error("Woo circuit breaker open");
@@ -565,7 +593,7 @@ export async function getStoreSettings(): Promise<{
     Source of truth = WP. Admin edits the page → app updates with no rebuild. */
 export async function getPage(slug: string): Promise<{ title: string; content: string } | null> {
   try {
-    const pages = (await wooFetch(`pages?slug=${encodeURIComponent(slug)}&per_page=1&_fields=title,content`)) as Array<{
+    const pages = (await wpFetch(`pages?slug=${encodeURIComponent(slug)}&per_page=1&_fields=title,content`)) as Array<{
       title?: { rendered?: string };
       content?: { rendered?: string };
     }>;
