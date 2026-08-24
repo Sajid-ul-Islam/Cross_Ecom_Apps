@@ -95,12 +95,178 @@ async function pathaoRequest<T>(endpoint: string, options: RequestInit = {}): Pr
   }
 }
 
+/** Standardized tracking milestone used across the app. */
+export interface PathaoTrackingStep {
+  /** ISO timestamp of the milestone event, or empty string if not yet reached. */
+  timestamp: string;
+  /** e.g. "waiting_for_pickup", "picked_up", "at_hub", "in_transit", "out_for_delivery", "delivered" */
+  status: string;
+  /** Human-readable label, e.g. "Picked Up", "In Transit to Hub". */
+  label: string;
+  /** Raw location/address text from Pathao, if available. */
+  location?: string;
+  /** true once Pathao has reported this step as complete. */
+  completed: boolean;
+  /** true for the step Pathao is currently on (not yet completed). */
+  current: boolean;
+}
+
+/** Parsed live tracking info returned to app/web clients. */
+export interface PathaoTrackingInfo {
+  consignmentId: string;
+  summary: string;
+  status: string;
+  steps: PathaoTrackingStep[];
+  trackingUrl: string;
+  lastUpdated: string;
+}
+
 /**
- * Fetch live parcel tracking information and delivery history by Consignment ID (e.g. DD220826MDKMP9).
+ * Pathao tracking status codes mapped from the Pathao API response.
+ * The Pathao `/orders/{id}/info` endpoint returns a `shipment_details` or
+ * `status` field that varies by plan; this function normalizes them.
  */
-export async function getPathaoTrackingInfo(consignmentId: string): Promise<any | null> {
+const PATHAO_STATUS_MAP: Record<string, { status: string; label: string; completed: boolean }> = {
+  // Pathao uses various status strings; map them all to our normalized set
+  pending: { status: "waiting_for_pickup", label: "Waiting for Pickup", completed: false },
+  "waiting for pickup": { status: "waiting_for_pickup", label: "Waiting for Pickup", completed: false },
+  "awaiting_pickup": { status: "waiting_for_pickup", label: "Awaiting Pickup", completed: false },
+  picked_up: { status: "picked_up", label: "Picked Up", completed: true },
+  "picked up": { status: "picked_up", label: "Picked Up", completed: true },
+  "pickup_done": { status: "picked_up", label: "Picked Up", completed: true },
+  at_hub: { status: "at_hub", label: "Reached Hub", completed: true },
+  "at hub": { status: "at_hub", label: "Reached Hub", completed: true },
+  in_hub: { status: "at_hub", label: "At Hub", completed: true },
+  in_transit: { status: "in_transit", label: "In Transit", completed: true },
+  "in transit": { status: "in_transit", label: "In Transit", completed: true },
+  out_for_delivery: { status: "out_for_delivery", label: "Out for Delivery", completed: true },
+  "out for delivery": { status: "out_for_delivery", label: "Out for Delivery", completed: true },
+  delivered: { status: "delivered", label: "Delivered", completed: true },
+  "delivered_to_recipient": { status: "delivered", label: "Delivered", completed: true },
+  cancelled: { status: "cancelled", label: "Cancelled", completed: true },
+  return_initiated: { status: "return_initiated", label: "Return Initiated", completed: true },
+  return_completed: { status: "return_completed", label: "Return Completed", completed: true },
+};
+
+/** Ordered list of tracking statuses for building a progress timeline. */
+const TRACKING_STEP_ORDER = [
+  "waiting_for_pickup",
+  "picked_up",
+  "at_hub",
+  "in_transit",
+  "out_for_delivery",
+  "delivered",
+];
+
+/**
+ * Fetch live parcel tracking information by Consignment ID (e.g. DD220826MDKMP9)
+ * and parse the raw Pathao response into a normalized { steps, status } shape
+ * that mobile and web can render in a timeline.
+ */
+export async function getPathaoTrackingInfo(consignmentId: string): Promise<PathaoTrackingInfo | null> {
   if (!consignmentId) return null;
-  return pathaoRequest(`/aladdin/api/v1/orders/${encodeURIComponent(consignmentId)}/info`);
+
+  const raw: any = await pathaoRequest(`/aladdin/api/v1/orders/${encodeURIComponent(consignmentId)}/info`);
+  if (!raw) return null;
+
+  // The Pathao info endpoint returns various shapes depending on the account
+  // and API version. Key fields we care about:
+  //  - raw.status or raw.tracking_status  : current consolidated status string
+  //  - raw.shipment_details[]              : per-hop history with .status, .date/.timestamp, .location
+  //  - raw.delivery_info / raw.tracking    : alternate containers
+  const statusField = (raw.status || raw.tracking_status || raw.current_status || "") as string;
+  const hops: any[] =
+    raw.shipment_details ||
+    raw.tracking ||
+    raw.delivery_info ||
+    raw.status_history ||
+    [];
+
+  const trackingUrl = `https://merchant.pathao.com/tracking?consignment_id=${encodeURIComponent(consignmentId)}`;
+
+  // Build normalized steps from the hop history
+  const historySteps: PathaoTrackingStep[] = Array.isArray(hops)
+    ? hops
+        .map((h: any) => {
+          const rawStatus = (h.status || h?.status_string || "").toString().toLowerCase().trim();
+          const mapped = PATHAO_STATUS_MAP[rawStatus] || PATHAO_STATUS_MAP[rawStatus.replace(/_/g, " ")];
+          if (!mapped) return null;
+          const ts = (h.timestamp || h.date || h.created_at || h.updated_at || "") as string;
+          const loc = h.location || h.hub_name || h.warehouse_name || undefined;
+          return {
+            timestamp: ts,
+            status: mapped.status,
+            label: mapped.label,
+            ...(loc ? { location: loc } : {}),
+            completed: mapped.completed,
+            current: false,
+          };
+        })
+        .filter((s): s is PathaoTrackingStep => s !== null)
+    : [];
+
+  // Determine the current live status from the API's consolidated field
+  const currentMapped = PATHAO_STATUS_MAP[statusField.toLowerCase().trim()] ||
+    PATHAO_STATUS_MAP[statusField.toLowerCase().replace(/_/g, " ")];
+
+  const currentStatus = currentMapped?.status || statusField || "unknown";
+  const summary = currentMapped?.label || statusField || "Tracking information being fetched…";
+
+  // Determine which steps are completed vs current based on TRACKING_STEP_ORDER
+  const orderedSteps: PathaoTrackingStep[] = TRACKING_STEP_ORDER.map((stepStatus) => {
+    const fromHistory = historySteps.find((s) => s.status === stepStatus);
+    if (fromHistory) {
+      return { ...fromHistory, current: false };
+    }
+    // Not yet reached in history — mark as current if it's the next expected step
+    const isCurrent = stepStatus === currentStatus && !historySteps.some((s) => s.status === stepStatus && s.completed);
+    return {
+      timestamp: "",
+      status: stepStatus,
+      label: PATHAO_STATUS_MAP[stepStatus]?.label || stepStatus.replace(/_/g, " "),
+      completed: false,
+      current: isCurrent,
+    };
+  });
+
+  return {
+    consignmentId,
+    summary,
+    status: currentStatus,
+    steps: orderedSteps,
+    trackingUrl,
+    lastUpdated: raw.last_updated || raw.updated_at || raw.timestamp || new Date().toISOString(),
+  };
+}
+
+/**
+ * Cache wrapper around getPathaoTrackingInfo so the orders listing endpoint
+ * doesn't hammer the Pathao API on every request. Results are cached per-
+ * consignment ID for TRACKING_CACHE_MS.
+ */
+export interface CachedPathaoTracking {
+  consignmentId: string;
+  info: PathaoTrackingInfo | null;
+  cachedAt: number;
+}
+
+const TRACKING_CACHE_MS = 60_000; // 1 minute cache
+const trackingCache = new Map<string, CachedPathaoTracking>();
+
+export function getCachedPathaoTracking(consignmentId: string): PathaoTrackingInfo | null {
+  const cached = trackingCache.get(consignmentId);
+  if (!cached) return null;
+  if (Date.now() - cached.cachedAt > TRACKING_CACHE_MS) {
+    trackingCache.delete(consignmentId);
+    return null;
+  }
+  return cached.info;
+}
+
+export async function getFreshPathaoTracking(consignmentId: string): Promise<PathaoTrackingInfo | null> {
+  const info = await getPathaoTrackingInfo(consignmentId);
+  trackingCache.set(consignmentId, { consignmentId, info, cachedAt: Date.now() });
+  return info;
 }
 
 /**

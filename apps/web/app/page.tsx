@@ -194,7 +194,7 @@ export default async function HomePage() {
               {
                 icon: "🔄",
                 title: "Easy Returns",
-                desc: "Not satisfied? Return within 7 days — no questions asked",
+                desc: "Not satisfied? Return within 3 days — no questions asked",
               },
             ].map((t) => (
               <div key={t.title} className="trust-item">

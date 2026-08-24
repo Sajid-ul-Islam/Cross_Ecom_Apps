@@ -35,6 +35,8 @@ import {
 import {
   getPathaoToken,
   getPathaoTrackingInfo,
+  getFreshPathaoTracking,
+  getCachedPathaoTracking,
   getPathaoStores,
   getPathaoCities,
   getPathaoZones,
@@ -1383,7 +1385,20 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       });
     }
 
-    return reply.send([...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+    // Enrich orders with live Pathao tracking info (cached per-consignment,
+    // 60s TTL). Only fetched for orders that have a real consignment ID.
+    const enriched = await Promise.all(
+      [...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(async (o) => {
+        if (!o.pathaoConsignmentId) return o;
+        const cached = getCachedPathaoTracking(o.pathaoConsignmentId);
+        if (cached) {
+          return { ...o, pathaoTrackingInfo: cached };
+        }
+        const info = await getFreshPathaoTracking(o.pathaoConsignmentId);
+        return info ? { ...o, pathaoTrackingInfo: info } : o;
+      }),
+    );
+    return reply.send(enriched);
   });
 
   /* ---- update / attach Pathao consignment ID (e.g. from Pathao / WooCommerce ptc_consignment_id) ---- */
@@ -1472,7 +1487,8 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "MISSING_CONSIGNMENT", message: "Consignment ID is required." });
     }
 
-    const trackingData = await getPathaoTrackingInfo(consignmentId);
+    // Try live API first, fall back to cache
+    const trackingData = (await getFreshPathaoTracking(consignmentId)) || getCachedPathaoTracking(consignmentId);
     if (!trackingData) {
       return reply.send({
         success: false,
@@ -1484,8 +1500,12 @@ export async function registerDeenRoutes(app: FastifyInstance) {
 
     return reply.send({
       success: true,
-      consignmentId,
-      trackingUrl: `https://merchant.pathao.com/tracking?consignment_id=${encodeURIComponent(consignmentId)}`,
+      consignmentId: trackingData.consignmentId,
+      trackingUrl: trackingData.trackingUrl,
+      summary: trackingData.summary,
+      status: trackingData.status,
+      steps: trackingData.steps,
+      lastUpdated: trackingData.lastUpdated,
       data: trackingData,
     });
   });
@@ -1953,6 +1973,82 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     });
   });
 
+  /* ---- WhatsApp messaging helper ---- */
+  /**
+   * Sends a WhatsApp message to a store number using the WhatsApp Business Cloud API.
+   * If WABA credentials (token + phone_id) are not configured, logs the message
+   * instead so the flow is testable without real API access.
+   */
+  async function sendWhatsAppMessage(
+    to: string,
+    text: string,
+    imageUrls?: string[]
+  ): Promise<void> {
+    const WABA_TOKEN = process.env.WABA_TOKEN;
+    const WABA_PHONE_ID = process.env.WABA_PHONE_ID;
+    const WABA_API_VERSION = process.env.WABA_API_VERSION || "v18.0";
+
+    // If no real WhatsApp Business API credentials, log the message
+    if (!WABA_TOKEN || !WABA_PHONE_ID) {
+      console.log("[WhatsApp] (simulated) To:", to);
+      console.log("[WhatsApp] Message:", text);
+      if (imageUrls && imageUrls.length > 0) {
+        console.log("[WhatsApp] Images:", imageUrls.join(", "));
+      }
+      return;
+    }
+
+    // Send text message
+    await fetch(
+      `https://graph.facebook.com/${WABA_API_VERSION}/${WABA_PHONE_ID}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${WABA_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          to,
+          type: "interactive",
+          interactive: {
+            type: "button",
+            body: { text: text.replace(/\*([^*]+)\*/g, "$1").trim() },
+            action: {
+              button: { type: "reply", reply: { id: "view_returns", title: "View in Admin" } },
+            },
+          },
+        }),
+      }
+    );
+
+    // Send images if present (upload each first)
+    if (imageUrls && imageUrls.length > 0) {
+      for (const url of imageUrls) {
+        try {
+          await fetch(
+            `https://graph.facebook.com/${WABA_API_VERSION}/${WABA_PHONE_ID}/messages`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${WABA_TOKEN}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                messaging_product: "whatsapp",
+                to,
+                type: "image",
+                image: { link: url, caption: "Product photo for exchange/return request" },
+              }),
+            }
+          );
+        } catch (e) {
+          console.error("[WhatsApp] Failed to send image:", (e as Error).message);
+        }
+      }
+    }
+  }
+
   /* ---- returns & exchanges (customer request + photos & notes) ---- */
   const returns: any[] = [
     {
@@ -1990,6 +2086,37 @@ export async function registerDeenRoutes(app: FastifyInstance) {
 
   app.post("/v1/deen/returns", async (req, reply) => {
     const b = (req.body as any) || {};
+
+    // ── 3-Day Exchange Policy Enforcement ──
+    // Per deencommerce.com company policy: exchange/return requests must be
+    // submitted within 3 days (72 hours) after product delivery.
+    // Only enforce for orders that have actually been delivered.
+    const RETENTION_DAYS = 3;
+    const RETENTION_MS = RETENTION_DAYS * 24 * 60 * 60 * 1000;
+
+    const order = orders.find(
+      (o) =>
+        o.id === b.orderId ||
+        o.number === b.orderId ||
+        String(o.wooId) === b.orderId
+    );
+
+    if (order) {
+      // Check delivery date — only enforce for delivered orders
+      if (order.status === "delivered" && order.deliveredAt) {
+        const deliveredTime = new Date(order.deliveredAt).getTime();
+        const elapsed = Date.now() - deliveredTime;
+        if (elapsed > RETENTION_MS) {
+          return reply.code(403).send({
+            error: "EXCHANGE_WINDOW_EXPIRED",
+            message: `Exchange/return requests must be made within ${RETENTION_DAYS} days of delivery (${order.number}).`,
+            deliveredAt: order.deliveredAt,
+            elapsedDays: Math.round(elapsed / (24 * 60 * 60 * 1000)),
+          });
+        }
+      }
+    }
+
     const ticket = {
       id: b.id || `ret_${Date.now()}`,
       ticketNumber: b.ticketNumber || `RET-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -2013,6 +2140,33 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     };
     returns.unshift(ticket);
     if (returns.length > 200) returns.length = 200;
+
+    // ── WhatsApp Notification ──
+    // Send the customer's exchange/return request (including image URLs and
+    // issue description) to the store WhatsApp number for manual processing.
+    const waNumber = config.contact?.whatsapp || "01952-700500";
+    const cleanWaNumber = waNumber.replace(/[^0-9]/g, "");
+
+    let waMessage = `🔄 *${ticket.type === "EXCHANGE" ? "EXCHANGE" : "RETURN"} REQUEST* — Ticket #${ticket.ticketNumber}\n`;
+    waMessage += `Order: ${ticket.orderNumber} (ID: ${ticket.orderId})\n`;
+    waMessage += `Customer: ${ticket.customerName}\n`;
+    waMessage += `Phone: ${ticket.contactPhone}\n`;
+    waMessage += `Type: ${ticket.reasonText || ticket.reason}\n`;
+    if (ticket.customerNotes) {
+      waMessage += `Issue: ${ticket.customerNotes}\n`;
+    }
+    waMessage += `Pickup: ${ticket.pickupMethod === "courier_pickup" ? "Courier Pickup" : "Studio Dropoff"}\n`;
+    if (ticket.pickupMethod === "courier_pickup" && ticket.pickupAddress) {
+      waMessage += `Address: ${ticket.pickupAddress}\n`;
+    }
+    // Attach images (up to 3 for WhatsApp media)
+    const imagesToAttach = (ticket.images || []).slice(0, 3);
+    waMessage += `\nImages: ${imagesToAttach.length} photo(s) attached\n`;
+
+    void sendWhatsAppMessage(cleanWaNumber, waMessage, imagesToAttach).catch((e) => {
+      console.error("[returns] WhatsApp notification failed:", (e as Error).message);
+    });
+
     return reply.code(201).send(ticket);
   });
 
