@@ -66,6 +66,22 @@ export type ConnectionState = "online" | "offline";
 let connection: ConnectionState = "online";
 const listeners: Array<(state: ConnectionState) => void> = [];
 
+/* Hysteresis: a single failed request must NOT flip the whole app to "offline"
+   (background calls like push-stats/broadcasts/bugs can blip). Declare offline only
+   after N consecutive failures; any success resets the counter and restores "online".
+   This stops the constant live/offline flicker. */
+let consecutiveFails = 0;
+const OFFLINE_AFTER = 3;
+
+function markOnline() {
+  consecutiveFails = 0;
+  setConnection("online");
+}
+function markFail() {
+  consecutiveFails += 1;
+  if (consecutiveFails >= OFFLINE_AFTER) setConnection("offline");
+}
+
 export const getConnection = () => connection;
 
 export function onConnectionChange(fn: (state: ConnectionState) => void) {
@@ -87,7 +103,7 @@ function setConnection(state: ConnectionState) {
   }
 }
 
-export async function request<T>(path: string, init?: RequestInit, timeoutMs = 8000): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit, timeoutMs = 8000, silent = false): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -108,14 +124,15 @@ export async function request<T>(path: string, init?: RequestInit, timeoutMs = 8
 
     if (!res.ok) {
       const body = await res.text().catch(() => "");
+      if (!silent) markFail();
       throw new Error(`Gateway returned ${res.status}: ${body.slice(0, 200)}`);
     }
 
-    setConnection("online");
+    if (!silent) markOnline();
     return (await res.json()) as T;
   } catch (err: any) {
     clearTimeout(timeoutId);
-    setConnection("offline");
+    if (!silent) markFail();
     throw err;
   }
 }
@@ -382,7 +399,7 @@ export async function reportBug(report: BugReport): Promise<void> {
       extra: report.extra ?? null,
     });
     // Use request() so x-api-key is injected automatically (same as every other call).
-    await request<unknown>("/v1/deen/bugs", { method: "POST", body }, 5000).catch(() => {});
+    await request<unknown>("/v1/deen/bugs", { method: "POST", body }, 5000, true).catch(() => {});
   } catch {
     /* swallow — bug reporting must never crash the app */
   }
@@ -435,7 +452,7 @@ export async function fetchPushStatsAPI(): Promise<any> {
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   try {
-    return await request<any>("/v1/deen/push/stats", { headers }, 5000);
+    return await request<any>("/v1/deen/push/stats", { headers }, 5000, true);
   } catch {
     return null;
   }
