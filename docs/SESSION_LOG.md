@@ -164,3 +164,27 @@
   `order.updated` webhook → customer push; (3) gateway already tenant-agnostic
   (config-driven) → reusable for another store. Open questions for owner in doc.
 
+## 2026-08-25 (cont.)
+
+### Woo-sized product images (thumb/single/full) — built
+- **Instruction**: website images don't fit the app view; manage it. Use Woo
+  images perfectly (same source), pick the right Woo size + frame it.
+- **Action** (commit `f8c3713`): gateway `mapWooToDeen` now extracts Woo/WP
+  image variants — `thumbnail` (grid), `woocommerce_single` (PDP), `src` (zoom)
+  — into `DeenProduct.thumb/single/full` (all Woo-sourced, never hosted by app).
+  Mobile: `ProductCard` uses `thumb` (fast + correct ratio) in the existing
+  aspectRatio box; PDP gallery uses `single` while lightbox uses `full` (zoom
+  quality). Seed updated. api + mobile typecheck clean.
+
+### Build attempt — BLOCKED by EAS Free quota
+- **Instruction**: "after that build the app."
+- **Action**: `eas build -p android --profile preview` (APK, internal). EAS
+  accepted upload, used remote Keystore (Build Credentials 7Dz6fIdpfn), computed
+  fingerprint OK — but **failed at submission**: "This account has used its
+  Android builds from the Free plan this month; resets Tue Sep 01 2026."
+- **Local fallback not possible**: no Android SDK / Gradle / local keystore on
+  this machine (signing lives on EAS).
+- **Resolution**: either wait until Sep 01 2026 for quota reset, or upgrade the
+  EAS plan (expo.dev/accounts/sajid.islam/settings/billing). Code is
+  build-ready. No code change needed.
+
