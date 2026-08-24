@@ -72,10 +72,11 @@ export default function OrdersLookupPage() {
       ) : orders && orders.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 720 }}>
           {orders.map((order) => {
-            const pathaoId = order.pathaoConsignmentId || `PT-${order.number.replace(/[^0-9]/g, "")}921`;
+            const hasPathao = Boolean(order.pathaoConsignmentId);
+            const pathaoId = order.pathaoConsignmentId || "";
             const trackingUrl =
               order.pathaoTrackingUrl ||
-              `https://merchant.pathao.com/tracking?consignment_id=${pathaoId}`;
+              (hasPathao ? `https://merchant.pathao.com/tracking?consignment_id=${pathaoId}` : "");
 
             return (
               <div
@@ -140,38 +141,63 @@ export default function OrdersLookupPage() {
                   </span>
                 </div>
 
-                {/* Pathao Consignment Tracker */}
-                <div
-                  style={{
-                    background: "var(--surface-2)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 8,
-                    padding: "12px 16px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    gap: 10,
-                    marginBottom: 16,
-                  }}
-                >
-                  <div>
-                    <p style={{ fontSize: 11, fontWeight: 800, color: "var(--indigo)", letterSpacing: 0.5 }}>
-                      🚚 PATHAO EXPRESS COURIER
-                    </p>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", marginTop: 2 }}>
-                      Consignment ID: {pathaoId}
-                    </p>
-                  </div>
-                  <a
-                    href={trackingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-sm btn-primary"
+                {/* Pathao Consignment Tracker — only when real consignment exists */}
+                {hasPathao ? (
+                  <div
+                    style={{
+                      background: "var(--surface-2)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 8,
+                      padding: "12px 16px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: 10,
+                      marginBottom: 16,
+                    }}
                   >
-                    Track on Pathao →
-                  </a>
-                </div>
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 800, color: "var(--indigo)", letterSpacing: 0.5 }}>
+                        🚚 PATHAO EXPRESS COURIER
+                      </p>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", marginTop: 2 }}>
+                        Consignment ID: {pathaoId}
+                      </p>
+                    </div>
+                    <a
+                      href={trackingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-sm btn-primary"
+                    >
+                      Track on Pathao →
+                    </a>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      background: "var(--surface-2)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 8,
+                      padding: "12px 16px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      marginBottom: 16,
+                    }}
+                  >
+                    <span style={{ fontSize: 14 }}>📦</span>
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 800, color: "var(--indigo)", letterSpacing: 0.5 }}>
+                        Delivery Status
+                      </p>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", marginTop: 2 }}>
+                        Preparing Dispatch
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Lines */}
                 {order.lines && order.lines.length > 0 && (

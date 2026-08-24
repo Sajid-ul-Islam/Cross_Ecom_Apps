@@ -159,6 +159,10 @@ export async function request<T>(path: string, init?: RequestInit, timeoutMs = 8
         // is a definitive client error and must NOT fail over.
         if (res.status >= 500) {
           lastErr = new Error(`Gateway ${base} returned ${res.status}`);
+          const idx = GATEWAY_URLS.indexOf(base);
+          if (idx === preferredGatewayIdx) {
+            preferredGatewayIdx = (preferredGatewayIdx + 1) % GATEWAY_URLS.length;
+          }
           continue;
         }
         throw new Error(`Gateway returned ${res.status}: ${body.slice(0, 200)}`);
