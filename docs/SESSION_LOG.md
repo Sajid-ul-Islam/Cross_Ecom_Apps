@@ -65,7 +65,14 @@
   - **Commit `a634ec1`.** (Not built/pushed to main per user rule: build only on explicit request.)
 - **Note**: `INITIAL_BROADCASTS` bc_1 (DEEN20 promo) is still seed/demo data — a real promo code must exist in Woo to be valid; flagged for later (admin broadcasts should come from Woo/WP).
 
-### Jeans fit: verify per-fit size chart (DONE - plumbing, needs data)
+### Jeans fit: verify per-fit size chart (CORRECTED - fit source found)
+- **Key discovery**: user updated `.env` keys; direct Woo to `deencommerce.bd` 401'd. User clarified key is for `https://deencommerce.com/`. Re-queried `.com` → 200 OK. **The real store is `deencommerce.com`** (gateway `config.woo.site` already defaults to `.com` ✓).
+- **Fit is a Woo CATEGORY, not a `pa_fit` attribute.** Three fit categories exist: SLIM FIT (11 products), REGULAR FIT (5), STRAIGHT FIT (2). Product names like "High-End Raw Washed Jeans - Slim Fit". No per-fit size-chart data in Woo meta (only FB-catalog junk).
+- **Fix (commit `683a29c`)**: `getFit()` now derives fit from the product CATEGORY name (regex `(\w+)\s*fit` → "Slim"/"Regular"/"Straight"), not an attribute. `mapWooToDeen` already returns `fit`; flows to app `Product.fit` → `SizeGuideModal.resolveJeansChart(fit)`.
+- **REMAINING**: `FIT_CHARTS.regular/slim/straight` currently all = generic `JEANS_CHART` (placeholder). Woo has NO per-fit measurement tables → they are the brand's spec. **Need user to paste real per-fit tables (waist/hip/thigh/leg-opening per size) to populate.** Must not invent.
+- **Flag**: ensure Render env `WOO_SITE` = `https://deencommerce.com` (not `.bd`) after redeploy, else gateway 401s with the new key. Live gateway currently "Service Suspended" on Render.
+
+
 - **Instruction**: "there is three type of jenas, Ragular, slim, and Stright fit, and there size chart is notrt same, now verify it in the app, is shoing it correctly?"
 - **Verification finding (BEFORE fix)**: app was NOT correct. `SizeGuideModal` had ONE hardcoded `JEANS_CHART` and branched only by `category` — no `fit` dimension. `Product` type had no `fit` field. Modal called with only `category`. So Regular/Slim/Straight all showed the SAME generic chart.
 - **User confirmed**: "fit" IS already a WooCommerce attribute on jeans products.
