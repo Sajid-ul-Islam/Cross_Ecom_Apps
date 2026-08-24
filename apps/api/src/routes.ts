@@ -26,6 +26,7 @@ import {
   invalidateStats,
   wooPost,
   wooFetch,
+  fetchWooPaymentMethods,
 } from "./woo.js";
 import {
   getPathaoToken,
@@ -941,9 +942,20 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   });
 
   /* ---- create order (public) ---- */
+  /* ---- public store notice (source of truth = gateway env PUBLIC_NOTICE) ---- */
+  app.get("/v1/deen/notice", async (_req, reply) => {
+    return reply.send({ notice: config.publicNotice || "" });
+  });
+
+  /* ---- payment methods (source of truth = Woo enabled gateways) ---- */
+  app.get("/v1/deen/payment-methods", async (_req, reply) => {
+    const methods = await fetchWooPaymentMethods();
+    return reply.send({ methods });
+  });
+
   app.post<{ Body: any }>("/v1/deen/orders", { schema: ORDER_BODY_SCHEMA }, async (req, reply) => {
     const body = (req.body ?? {}) as any;
-    const { name, lastName, phone, email, address, area, city, district, state, postcode, payment, items, guestToken } = body;
+    const { name, lastName, phone, email, address, area, city, district, state, postcode, payment, items, guestToken, trxId } = body;
     if (!name || !String(name).trim()) {
       return reply.code(422).send({ error: "VALIDATION", message: "Name is required." });
     }

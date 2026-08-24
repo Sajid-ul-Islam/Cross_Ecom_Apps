@@ -70,7 +70,7 @@ export interface CartItem {
   variationId?: number;
 }
 
-export type PaymentMethod = "cod" | "bkash" | "nagad";
+export type PaymentMethod = "cod" | "bkash" | "nagad" | "manual";
 
 export type DeliveryOptionKey =
   | "dhaka_standard"
@@ -119,6 +119,7 @@ export interface Order {
   payment: PaymentMethod;
   paymentTitle?: string;
   paymentStatus?: string;
+  trxId?: string; // bKash/Nagad manual transfer transaction ID (manual payment)
   lines: OrderItemLine[];
   subtotal: number;
   delivery: number;

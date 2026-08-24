@@ -421,7 +421,7 @@ export async function fetchWooCategoryImages(): Promise<Record<string, string>> 
   return out;
 }
 
-export async function pushWooOrder(order: unknown): Promise<{ id: number; number: string }> {
+export async function pushWooOrder(order: unknown): Promise<{ id: number; number: string; paymentUrl?: string }> {
   const { site, consumerKey, consumerSecret } = config.woo;
   const url = new URL(`${site.replace(/\/$/, "")}/wp-json/wc/v3/orders`);
   url.searchParams.set("consumer_key", consumerKey);
@@ -435,10 +435,42 @@ export async function pushWooOrder(order: unknown): Promise<{ id: number; number
     const errBody = await r.text().catch(() => "");
     throw new Error(`Woo order create failed: ${r.status} ${errBody.slice(0, 200)}`);
   }
-  const j = (await r.json()) as { id: number; number?: string };
-  // Woo's `number` is the human-facing order number (e.g. "1042" / "#1042").
-  // Fall back to the id if Woo omits it (sequential id is still the real store order).
-  return { id: j.id, number: String(j.number ?? j.id) };
+  const j = (await r.json()) as { id: number; number?: string; payment_url?: string };
+  // Woo's `number` is the human-facing order number (e.g. "1042").
+  // `payment_url` is the hosted payment page (bKash/SSLCommerz) the customer
+  // must open to actually pay — only present for non-COD gateways.
+  return { id: j.id, number: String(j.number ?? j.id), paymentUrl: j.payment_url };
+}
+
+export interface DeenPaymentMethod {
+  /** Woo gateway id, e.g. "cod", "bkash-for-woocommerce", "sslcommerz". Send this as `payment` when creating an order. */
+  id: string;
+  title: string;
+  description: string;
+  /** "cod" = pay on delivery (no redirect). "redirect" = open payment_url to pay (bKash/SSLCommerz). */
+  type: "cod" | "redirect";
+}
+
+/** Source of truth: real, ENABLED payment gateways from WooCommerce.
+    The app MUST render exactly these — never hardcode payment options. */
+export async function fetchWooPaymentMethods(): Promise<DeenPaymentMethod[]> {
+  if (!wooHealthy()) return [];
+  const list = (await wooFetch("payment_gateways", { per_page: "50" })) as any[];
+  const out: DeenPaymentMethod[] = [];
+  for (const g of list || []) {
+    if (!g.enabled) continue;
+    const id = String(g.id || "");
+    if (!id) continue;
+    // Map known methods to a type the app understands.
+    const type: "cod" | "redirect" = id === "cod" ? "cod" : "redirect";
+    out.push({
+      id,
+      title: String(g.title || g.method_title || id),
+      description: String(g.description || ""),
+      type,
+    });
+  }
+  return out;
 }
 
 export async function updateWooOrderPayment(

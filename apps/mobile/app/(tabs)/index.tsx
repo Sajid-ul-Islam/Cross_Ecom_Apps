@@ -15,6 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ArrowRight, Sparkles, ShieldCheck, MapPin, Award, TrendingUp, Package, Tag, Users } from "../../src/components/Icons";
 import { Header } from "../../src/components/Header";
 import { CashbackBanner, DeliveryNoticeBanner } from "../../src/components/Banner";
+import { StoreNoticeBanner } from "../../src/components/StoreNoticeBanner";
 import { ProductCard } from "../../src/components/ProductCard";
 import { Sparkline, CategoryBars, Donut, KpiTile } from "../../src/components/Charts";
 import { ThemeColors } from "../../src/theme/colors";
@@ -81,6 +82,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
       <Header />
+      <StoreNoticeBanner />
       <DeliveryNoticeBanner />
 
       <ScrollView

@@ -42,6 +42,10 @@ export const config = {
       (X-WC-Webhook-Signature). Set this, then call POST /v1/deen/webhook/woo/register
       once to auto-provision the webhooks in Woo. */
   webhookSecret: process.env.WEBHOOK_SECRET ?? "",
+  /** Public store notice shown as a dismissible banner in the app.
+      Source of truth = set here (Render env), NOT hardcoded in the app bundle.
+      Leave blank for no banner. Example: "Get ৳500 cashback on orders over ৳2500". */
+  publicNotice: process.env.PUBLIC_NOTICE ?? "",
   pathao: {
     baseUrl: process.env.PATHAO_BASE_URL ?? "https://hermes-api.pathao.com",
     clientId: process.env.PATHAO_CLIENT_ID ?? "",

@@ -399,6 +399,16 @@ export async function fetchCashback(subtotal: number): Promise<{ amount: number;
   }
 }
 
+/** Public store notice (source of truth = gateway env PUBLIC_NOTICE). Empty string = no banner. */
+export async function fetchNotice(): Promise<string> {
+  try {
+    const res = await request<{ notice: string }>(`/v1/deen/notice`, undefined, 5000, true);
+    return res.notice || "";
+  } catch {
+    return "";
+  }
+}
+
 /* --------------------------- bug reporting ------------------------- */
 
 export interface BugReport {
