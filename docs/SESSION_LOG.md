@@ -89,7 +89,18 @@
 - **Instruction**: "what we do every prompt and your answer should be save in somwhere"
 - **Action**: Created `docs/SESSION_LOG.md`; appends each exchange. Each prompt → action/answer recorded here.
 
-### Park fit-chart + Go-live plan (DONE)
+### Real-time sync via WooCommerce webhooks (DONE)
+- **Instruction**: "how to add webhook?" then "there are many option product wise, order wise, and customer wise, how can I optimize the work?"
+- **Action** (commit `d1c5f33`, typecheck clean):
+  - `woo.ts`: `invalidateCatalogCache` + `invalidateVariationCache(productId?)` + `invalidateCoverCache` + `invalidateStats` + `wooPost` helper (exported `wooFetch` too).
+  - `routes.ts`: `POST /v1/deen/webhook/woo` — verifies HMAC-SHA256 (`X-WC-Webhook-Signature`) against `config.webhookSecret`; **topic-aware** surgical bust (product.* → catalog+variation; product_variation.* → variation only; category.* → covers; order/customer.* → stats). Also added a raw-body stash via content-type parser for signature verification.
+  - `routes.ts`: `POST /v1/deen/webhook/woo/register` — **auto-provisioner**: one call creates all webhooks in Woo via API (no WP Admin clicking), skips duplicates; `?full=1` adds category/order/customer topics.
+  - `config.ts`: `webhookSecret` from `WEBHOOK_SECRET` env. `.env` got a generated secret (untracked); `.env.example` documented.
+  - `docs/WEBHOOK_SETUP.md` written.
+- **Optimization answer to user**: subscribe ONLY to what changes customer-facing data — `product.*` + `product_variation.*` (7 topics) covers new products, price, discount, stock, size. `category.*` only if covers change often; `order.*`/`customer.*` only for admin stats (not customer UI). The register endpoint provisions exactly that set; `?full=1` for the rest. One endpoint handles ALL topics (reads `x-wc-webhook-topic`).
+- **Setup after deploy**: set `WEBHOOK_SECRET` on Render, then `curl -X POST <gateway>/v1/deen/webhook/woo/register`.
+
+
 - **Instruction**: "now how can I solev thi? for this time make a flog about it, so that we can fix it later but meanwhile we can focus on some real important features... find out what need be fix first"
 - **Action**:
   - `docs/BLOG_JEANS_FIT_CHARTS.md` — parked issue (fit = Woo category; getFit fixed `683a29c`; blocked on brand's real per-fit tables; NOT a go-live blocker).
