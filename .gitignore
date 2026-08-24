@@ -29,3 +29,6 @@ apps/api/src/test-env.ts
 
 # never commit secrets
 apps/api/.env
+
+# local test artifacts
+ord3.json
