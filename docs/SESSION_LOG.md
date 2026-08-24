@@ -89,7 +89,27 @@
 - **Instruction**: "what we do every prompt and your answer should be save in somwhere"
 - **Action**: Created `docs/SESSION_LOG.md`; appends each exchange. Each prompt → action/answer recorded here.
 
-### Real-time sync via WooCommerce webhooks (DONE)
+### Real Woo order number shown to customer (DONE + verified live)
+- **Instruction**: "if the order placed customer should get real order number that generated in woocommerce. show it to customer not demo"
+- **Finding**: gateway created a REAL Woo order (`pushWooOrder`) but only captured `id`, so `order.number` was the gateway's own `DC-NNN` sequence — NOT the Woo number. Customer saw `DC-5`, not the store's `#204639`.
+- **Fix** (commit `87ca891`, typecheck clean):
+  - `woo.ts pushWooOrder` returns `{ id, number }` (Woo's real `number`).
+  - `routes.ts`: capture `wooNumber` on order object; push notification + response use `wooNumber || number`.
+  - `checkout.tsx`: pass `orderNumber: created.wooNumber || created.number` + `gatewayRef: created.number`.
+  - `order-success.tsx`: shows real Woo `#` as primary; `DC-` app ref as secondary "APP REFERENCE" line.
+  - `types/index.ts Order`: added `wooNumber?`.
+  - `orders.tsx` + `profile.tsx`: show `#wooNumber` primary, app `DC-` ref as badge.
+- **Verification**: started gateway locally (port 8807), tested Woo orders API directly → Woo returned `{"id":204639,"number":"204639"}`. Then trashed the test order (cleanup). CONFIRMED real number flows.
+- **Note**: user said Render suspended → use local `.env` for testing (deencommerce.com). Done; gateway stopped after test.
+
+### (b) Live emulator UX critique
+- BLOCKED: Render gateway suspended. Plan: after unsuspend + redeploy, drive emulator, screenshot Home/PDP/Bag/Checkout/Profile/Orders, critique. Not done yet.
+
+### (c) P0 UX enhancements
+- Real Woo order number: DONE (above).
+- Remaining P0 candidates (not yet done): order confirmation clarity, My Orders view (exists: orders.tsx), guest checkout, payment clarity at checkout (manual TrxID to 01952700500 — needs clear UI).
+
+
 - **Instruction**: "how to add webhook?" then "there are many option product wise, order wise, and customer wise, how can I optimize the work?"
 - **Action** (commit `d1c5f33`, typecheck clean):
   - `woo.ts`: `invalidateCatalogCache` + `invalidateVariationCache(productId?)` + `invalidateCoverCache` + `invalidateStats` + `wooPost` helper (exported `wooFetch` too).
