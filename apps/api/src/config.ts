@@ -38,6 +38,10 @@ export const config = {
     consumerKey: process.env.WOO_CONSUMER_KEY ?? "",
     consumerSecret: process.env.WOO_CONSUMER_SECRET ?? "",
   },
+  /** Shared secret for verifying WooCommerce webhook signatures
+      (X-WC-Webhook-Signature). Set this, then call POST /v1/deen/webhook/woo/register
+      once to auto-provision the webhooks in Woo. */
+  webhookSecret: process.env.WEBHOOK_SECRET ?? "",
   pathao: {
     baseUrl: process.env.PATHAO_BASE_URL ?? "https://hermes-api.pathao.com",
     clientId: process.env.PATHAO_CLIENT_ID ?? "",

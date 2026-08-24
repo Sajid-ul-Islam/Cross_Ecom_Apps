@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { promises as fs } from "fs";
-import { randomUUID } from "crypto";
+import { randomUUID, createHmac, timingSafeEqual } from "crypto";
 import { config, wooEnabled, pathaoEnabled } from "./config.js";
 import {
   audit,
@@ -20,6 +20,12 @@ import {
   pushWooOrder,
   updateWooOrderPayment,
   wooHealthy,
+  invalidateCatalogCache,
+  invalidateVariationCache,
+  invalidateCoverCache,
+  invalidateStats,
+  wooPost,
+  wooFetch,
 } from "./woo.js";
 import {
   getPathaoToken,
@@ -669,6 +675,17 @@ function sortProducts(list: DeenProduct[], sort: string): DeenProduct[] {
 }
 
 export async function registerDeenRoutes(app: FastifyInstance) {
+  /* Stash the raw request body (string) on the request so the Woo webhook can verify
+     the HMAC signature over the EXACT bytes Woo sent. Harmless for all other JSON routes. */
+  app.addContentTypeParser("application/json", { parseAs: "string" }, (req, bodyStr, done) => {
+    try {
+      (req as any).rawBody = typeof bodyStr === "string" ? bodyStr : String(bodyStr ?? "");
+      done(null, bodyStr ? JSON.parse(String(bodyStr)) : undefined);
+    } catch (e) {
+      done(e as Error, undefined);
+    }
+  });
+
   /* ---- load persisted data on startup ---- */
   await loadCustomers();
   await loadOrders();
@@ -808,6 +825,53 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   app.get("/health", async (_req, reply) => reply.send(await healthPayload()));
   app.get("/v1/health", async (_req, reply) => reply.send(await healthPayload()));
 
+  /* ---- WooCommerce webhook: real-time catalog cache bust ----
+     Configure in WP Admin → WooCommerce → Settings → Advanced → Webhooks:
+       Topic: Product created / updated / deleted / restored
+               (also product_variation.* for size-level price/stock changes)
+       Delivery URL: <gateway>/v1/deen/webhook/woo
+       Secret: must equal the WEBHOOK_SECRET env var below.
+     Woo signs each payload: X-WC-Webhook-Signature = base64(HMAC-SHA256(raw_body, secret)).
+     We verify it, then invalidate the catalog cache so the next app request re-fetches
+     from Woo immediately (new product / price / discount shows in seconds, not 5 min). */
+  app.post("/v1/deen/webhook/woo", async (req, reply) => {
+    const secret = config.webhookSecret ?? "";
+    const topic = (req.headers["x-wc-webhook-topic"] as string) || "unknown";
+    const body = (req.body || {}) as any;
+
+    const verify = () => {
+      if (!secret) return true; // dev mode: no secret configured
+      const sigHeader = (req.headers["x-wc-webhook-signature"] as string) || "";
+      const raw = (req as any).rawBody || "";
+      const expected = createHmac("sha256", secret).update(raw).digest("base64");
+      const a = Buffer.from(sigHeader);
+      const b = Buffer.from(expected);
+      return a.length === b.length && timingSafeEqual(a, b);
+    };
+
+    if (!verify()) {
+      audit("woo_webhook", false, "REJECTED bad signature");
+      return reply.code(401).send({ error: "BAD_SIGNATURE" });
+    }
+
+    // Topic-aware, surgical cache busting — only invalidate what actually changed.
+    const pid = body?.id ? String(body.id) : undefined;
+    if (topic.startsWith("product_variation")) {
+      invalidateVariationCache(pid);
+    } else if (topic.startsWith("product")) {
+      invalidateCatalogCache();
+      if (pid) invalidateVariationCache(pid);
+    } else if (topic.startsWith("category")) {
+      invalidateCoverCache();
+      invalidateCatalogCache();
+    } else if (topic.startsWith("order") || topic.startsWith("customer")) {
+      invalidateStats();
+    }
+
+    audit("woo_webhook", true, `cache busted (topic: ${topic})`);
+    return reply.code(200).send({ ok: true, verified: true, topic });
+  });
+
   /* ---- cashback (SINGLE SOURCE OF TRUTH) ----
      The exact same rule the gateway uses when building the WooCommerce coupon at
      checkout. The app MUST read this instead of computing its own thresholds, so the
@@ -828,6 +892,46 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       currency: "BDT",
       note: "Applied automatically as a WooCommerce coupon at checkout.",
     });
+  });
+
+  app.post("/v1/deen/webhook/woo/register", async (req, reply) => {
+    // One-call setup: provisions the WooCommerce webhooks that keep the app real-time.
+    // No need to click in WP Admin. Re-run anytime; duplicate webhooks are skipped.
+    if (!wooHealthy()) return reply.code(503).send({ error: "WOO_DISABLED" });
+    const secret = config.webhookSecret ?? "";
+    if (!secret) return reply.code(400).send({ error: "SET_WEBHOOK_SECRET", message: "Set WEBHOOK_SECRET env on the gateway first." });
+
+    const proto = (req.headers["x-forwarded-proto"] as string) || "https";
+    const host = (req.headers["host"] as string) || config.publicUrl || "";
+    const base = (config.publicUrl || `${proto}://${host}`).replace(/\/$/, "");
+    const delivery = `${base}/v1/deen/webhook/woo`;
+
+    // Essential (customer-facing freshness): product + variation changes.
+    const topics = [
+      "product.created", "product.updated", "product.deleted", "product.restored",
+      "product_variation.created", "product_variation.updated", "product_variation.deleted",
+    ];
+    // Optional (admin stats / covers): pass ?full=1.
+    if (String((req.query as any).full ?? "") === "1") {
+      topics.push("category.created", "category.updated", "category.deleted", "order.created", "order.updated", "customer.created", "customer.updated");
+    }
+
+    const created: string[] = [];
+    const skipped: string[] = [];
+    for (const topic of topics) {
+      try {
+        // Avoid duplicates: Woo keys webhooks by delivery_url+topic.
+        const existing = (await wooFetch("webhooks", { per_page: "100" })) as any[];
+        const dup = (existing || []).find((w: any) => w.topic === topic && w.delivery_url === delivery);
+        if (dup) { skipped.push(topic); continue; }
+        await wooPost("webhooks", { topic, delivery_url: delivery, secret, status: "active", name: `DEEN ${topic}` } as any);
+        created.push(topic);
+      } catch (e) {
+        created.push(`ERROR ${topic}: ${(e as Error).message.slice(0, 80)}`);
+      }
+    }
+    audit("woo_webhook", true, `registered ${created.length} webhooks (skipped ${skipped.length})`);
+    return reply.send({ ok: true, delivery, created, skipped });
   });
 
   /* ---- bangladesh 64 districts for woocommerce states ---- */

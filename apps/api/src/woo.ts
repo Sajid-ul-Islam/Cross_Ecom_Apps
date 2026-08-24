@@ -201,8 +201,73 @@ async function wooFetchResilient<T = any>(path: string, params: Record<string, s
   throw lastErr instanceof Error ? lastErr : new Error("Woo fetch failed");
 }
 
-async function wooFetch(path: string, params: Record<string, string> = {}): Promise<any> {
+export async function wooFetch(path: string, params: Record<string, string> = {}): Promise<any> {
   return wooFetchResilient(path, params);
+}
+
+/** POST to WooCommerce REST API (used by the webhook auto-provisioner). */
+export async function wooPost<T = any>(path: string, body: Record<string, unknown>): Promise<T> {
+  if (Date.now() < cbOpenUntil) throw new Error("Woo circuit breaker open");
+  const { site, consumerKey, consumerSecret } = config.woo;
+  const url = new URL(`${site.replace(/\/$/, "")}/wp-json/wc/v3/${path}`);
+  url.searchParams.set("consumer_key", consumerKey);
+  url.searchParams.set("consumer_secret", consumerSecret);
+  const MAX_RETRIES = 3;
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 8000);
+    try {
+      const res = await fetch(url.toString(), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      clearTimeout(t);
+      if (!res.ok) {
+        const rb = await res.text().catch(() => "");
+        throw new Error(`Woo POST ${path} failed: ${res.status} ${rb.slice(0, 120)}`);
+      }
+      lastWooSuccessAt = Date.now();
+      cbFailures = 0;
+      return (await res.json()) as T;
+    } catch (err) {
+      clearTimeout(t);
+      lastErr = err;
+      if (err instanceof Error && /failed: [45]/.test(err.message)) break;
+      if (attempt < MAX_RETRIES) { await new Promise((r) => setTimeout(r, 300 * (attempt + 1))); continue; }
+    }
+  }
+  lastWooErrorAt = Date.now();
+  cbFailures += 1;
+  if (cbFailures >= CB_THRESHOLD) cbOpenUntil = Date.now() + CB_COOLDOWN_MS;
+  throw lastErr instanceof Error ? lastErr : new Error("Woo POST failed");
+}
+
+/* Invalidate the catalog cache (called by the Woo webhook when a product
+   is created/updated/deleted). The next listing request re-fetches from Woo
+   immediately, so price/discount/new-product changes show in seconds. */
+export function invalidateCatalogCache(): void {
+  catalogCache = null;
+  catalogWarming = null;
+}
+
+/* Invalidate a single product's size/price variations (product_variation.* topics). */
+export function invalidateVariationCache(productId?: string): void {
+  if (productId) variationCache.delete(String(productId));
+  else variationCache.clear();
+}
+
+/* Invalidate category covers (when a category image changes) + the derived stats. */
+export function invalidateCoverCache(): void {
+  coverCache = null;
+}
+
+export function invalidateStats(): void {
+  // Stats are derived from the catalog + sales report; busting catalog is enough,
+  // but we expose this for order/customer topics that change sales numbers.
+  // (No separate stats cache today; left as a hook for future memoization.)
 }
 
 export async function fetchWooProducts(): Promise<DeenProduct[]> {
