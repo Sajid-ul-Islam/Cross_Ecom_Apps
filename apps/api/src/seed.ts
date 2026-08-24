@@ -26,6 +26,11 @@ export interface DeenProduct {
   sizes: string[];
   images: [string, string];
   gallery: string[];
+  /** Woo/WP-sized image variants (all Woo-sourced, never hosted by app).
+      thumb = small (grid), single = medium (PDP), full = original (zoom). */
+  thumb: string;
+  single: string;
+  full: string;
   fabric: string;
   fit?: string; // jeans fit from Woo attribute (Regular | Slim | Straight)
   stockStatus: "instock" | "outofstock" | "onbackorder";
@@ -63,6 +68,9 @@ function p(
     sizes,
     images: [`${CDN}/${a}`, `${CDN}/${b}`],
     gallery: [`${CDN}/${a}`, `${CDN}/${b}`],
+    thumb: `${CDN}/${a}`,
+    single: `${CDN}/${a}`,
+    full: `${CDN}/${a}`,
     fabric,
     stockStatus: "instock",
     rating: 0,

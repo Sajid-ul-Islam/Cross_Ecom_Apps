@@ -121,8 +121,18 @@ export default function ProductDetailScreen() {
     };
   }, [id, profile]);
 
-  const rawGallery = product?.gallery?.length ? product.gallery : product?.images ?? [];
-  const galleryImages = rawGallery.length > 0 ? rawGallery : ["https://images.unsplash.com/photo-1542272604-780c96856592?w=800"];
+  // Inline gallery uses the medium Woo variant (single) for fast loading; the
+  // lightbox uses the full original (full) for pinch-zoom quality. Both Woo-sourced.
+  const rawSingle = product?.single
+    ? [product.single, ...(product?.gallery?.slice(1) ?? [])]
+    : product?.gallery?.length
+      ? product.gallery
+      : product?.images ?? [];
+  const rawFull = product?.full
+    ? [product.full, ...(product?.gallery?.slice(1) ?? [])]
+    : rawSingle;
+  const galleryImages = rawSingle.length > 0 ? rawSingle : ["https://images.unsplash.com/photo-1542272604-780c96856592?w=800"];
+  const zoomImages = rawFull.length > 0 ? rawFull : galleryImages;
 
   const handleGalleryScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetX = event.nativeEvent.contentOffset.x;
@@ -646,7 +656,7 @@ export default function ProductDetailScreen() {
       <ImageLightboxModal
         visible={lightboxVisible}
         onClose={() => setLightboxVisible(false)}
-        images={galleryImages}
+        images={zoomImages}
         initialIndex={activeImageIdx}
         productName={product.name}
       />

@@ -21,6 +21,10 @@ export interface Product {
   sizes: string[];
   images: [string, string];
   gallery: string[];
+  /** Woo/WP-sized variants (all Woo-sourced). thumb=grid, single=PDP, full=zoom. */
+  thumb: string;
+  single: string;
+  full: string;
   fabric: string;
   stockStatus: "instock" | "outofstock" | "onbackorder";
   rating: number;

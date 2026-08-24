@@ -20,7 +20,12 @@ interface WooProduct {
   average_rating?: string;
   rating_count?: number;
   categories: { name: string }[];
-  images: { src: string }[];
+  images: {
+    src: string;
+    thumbnail?: string;
+    woocommerce_single?: string;
+    sizes?: string | Record<string, { source_url?: string }>;
+  }[];
   description?: string;
   short_description?: string;
   attributes?: { name: string; options?: string[] | string }[];
@@ -88,7 +93,16 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
   const current = Number(p.price) || 0;
   const regular = p.regular_price ? Number(p.regular_price) : pct ? Math.round(current / (1 - pct / 100)) : undefined;
   const salePrice = p.on_sale && p.sale_price ? Number(p.sale_price) : p.on_sale ? current : undefined;
-  const imgs = (p.images || []).map((i) => i.src).filter(Boolean);
+  // Pick the right Woo/WP size per surface. `src` = full original (heavy);
+  // `thumbnail` = WP-generated small (grid), `woocommerce_single` = medium (PDP).
+  // All three are Woo-sourced — we never host or generate images.
+  const pickImg = (i: (typeof p.images)[number]) => ({
+    full: i.src,
+    single: i.woocommerce_single || i.src,
+    thumb: i.thumbnail || i.woocommerce_single || i.src,
+  });
+  const picks = (p.images || []).map(pickImg).filter((x) => x.full);
+  const imgs = [picks[0]?.full ?? "", picks[1]?.full ?? picks[0]?.full ?? ""] as [string, string];
   const fabric = p.meta_data?.find((m) => m.key.toLowerCase() === "fabric")?.value ?? "";
   return {
     id: String(p.id),
@@ -101,7 +115,10 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
     salePct: pct,
     sizes,
     images: [imgs[0] ?? "", imgs[1] ?? imgs[0] ?? ""] as [string, string],
-    gallery: imgs,
+    gallery: picks.map((x) => x.full),
+    thumb: picks[0]?.thumb ?? imgs[0] ?? "",
+    single: picks[0]?.single ?? imgs[0] ?? "",
+    full: picks[0]?.full ?? imgs[0] ?? "",
     fabric,
     fit: getFit(p),
     stockStatus: (p.stock_status as DeenProduct["stockStatus"]) ?? "instock",
