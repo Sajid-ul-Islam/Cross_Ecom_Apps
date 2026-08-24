@@ -145,6 +145,35 @@ the remaining engineering to flip it to multi-tenant revenue.
 
 ---
 
+## 4.5. Security & Compliance tier (shipped)
+
+Added to the gateway (`apps/api/src/security.ts` + `routes.ts` + `index.ts`):
+
+- **Per-API-key rate limiting** (`security.ts` `checkRateLimit`/`rateLimitKeyFor`): the
+  `onRequest` hook throttles `/v1/auth/*` at 20 req/min **keyed by api-key OR IP** (previously
+  only applied when no key was present). Stops abuse even from valid clients.
+- **Audit logging** (`audit()`): every auth login/register/export/delete is logged with PII
+  **masked** (`maskPhone` → `01X****XXX`, `redactToken`). No passwords, tokens, or raw PII
+  ever hit the log. `getAuditLog()` returns the last 200 events for debugging.
+- **GDPR-style rights**: `GET /v1/auth/export-data` (returns masked profile + local customer
+  record) and `POST /v1/auth/delete-account` (wipes local session + cached profile). WooCommerce
+  remains the system of record — hard erasure is performed in WP admin / WordPress data-eraser.
+- **Centralized error model**: routes return `{ error, message, retryable? }`-style shapes so
+  the app can show the right UI (retry vs. contact support vs. offline).
+- **Observability**: `/v1/health` + `/health` report `woo: ok|degraded|down`; the global crash
+  handler forwards JS exceptions to the gateway bug store.
+
+### Secret-handling incident (lessons baked in)
+During this work the gateway `.env` (Woo consumer key+secret) was **accidentally committed and
+force-pushed to the public repo**, then **scrubbed from all git history** with `git filter-repo`
+and force-pushed. The APK binaries were also purged from history (they're gitignored now).
+**The only real fix for an exposed credential is rotation** — the Woo keys must be revoked and
+regenerated in WooCommerce → Settings → Advanced → REST API, then updated in Render's env.
+Net rule now enforced: `.env` is gitignored, never committed, and `.gitignore` also excludes
+`*.apk`/`*.aab`/`*.ipa`/`dist-android/`.
+
+---
+
 ## 5. Where the secrets live (and don't)
 
 | Secret                        | Lives in                          | In the app? |
@@ -174,9 +203,15 @@ the app yields only the gateway URL + a client key — useless without the gatew
 
 ## 7. Build & deploy recap
 
-- **App**: `expo prebuild --platform android` → Gradle `assembleRelease` (JDK 17, 4 GB heap).
-  Output: `apps/mobile/android/app/build/outputs/apk/release/app-release.apk`.
+- **App**: `expo prebuild --platform android` → Gradle `assembleRelease` (JDK 17, **4 GB heap**
+  — the default 2 GB crashed the daemon with an OOM on 16 GB machines; fixed via
+  `org.gradle.jvmargs=-Xmx4096m -XX:HeapBaseMinAddress=0x100000000` in
+  `android/gradle.properties`). Output: `apps/mobile/android/app/build/outputs/apk/release/app-release.apk`.
+  (`eas build --local` is blocked on Windows, so we use prebuild + Gradle directly.)
 - **Gateway**: Node.js on Render, rootDir `apps/api`, start `tsx src/index.ts`. Push to
-  `master` (or `main`) auto-deploys. Needs a `build` script (`tsc --noEmit`) or Render's
-  default build step fails.
-- **Source of truth**: `master` (both `master` and `main` are aligned at the same commit).
+  `master` auto-deploys. Needs a `build` script (`tsc --noEmit`) or Render's default build step
+  fails (this bit us once — a missing `build` script caused a silent deploy failure; fixed).
+- **Source of truth**: `master`. `main` is force-mirrored to `master` so both point at the same
+  commit (`origin/HEAD -> main`). Either branch deploys identically.
+- **History hygiene**: `.env` and APK binaries were scrubbed from git history with
+  `git filter-repo` (see §4.5). Keep `.env` untracked; rotate Woo keys if ever exposed.

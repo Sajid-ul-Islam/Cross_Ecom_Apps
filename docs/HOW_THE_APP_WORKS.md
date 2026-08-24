@@ -102,3 +102,17 @@ A small **Fastify server** (Node.js) hosted on Render. The brain that protects W
 **TL;DR:** The app is a thin window. It shows whatever the **gateway** fetches from
 **WooCommerce/WordPress**, and the gateway is the only place that holds the keys and the smarts
 (caching, security, retries).
+
+---
+
+## Security & recent hardening (see `HOW_THE_APP_WORKS_DEEP_DIVE.md` §4.5)
+
+- **Per-API-key rate limiting** + **PII-masked audit logging** on the gateway.
+- **GDPR endpoints**: `export-data` + `delete-account`.
+- **`.env` incident**: a gateway `.env` (Woo keys) was briefly committed to the public repo,
+  then **scrubbed from all git history** with `git filter-repo` and force-pushed. The only real
+  fix for an exposed secret is **rotating the Woo keys** (WooCommerce → Settings → Advanced →
+  REST API) and updating Render's env. `.env` is gitignored and never committed; APKs are
+  gitignored too.
+- **Build**: APK built via `expo prebuild` + Gradle `assembleRelease` (JDK 17, 4 GB heap).
+- **Branches**: `master` is the source of truth; `main` is force-mirrored to it.
