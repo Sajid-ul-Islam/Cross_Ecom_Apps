@@ -11,7 +11,7 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Gift, ShieldCheck } from "../../src/components/Icons";
 import { Header } from "../../src/components/Header";
-import { FreeTeeBanner } from "../../src/components/Banner";
+import { CashbackBanner } from "../../src/components/Banner";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useCart } from "../../src/context/CartContext";
 import { bdt, DELIVERY_OPTIONS } from "../../src/services/gateway";
@@ -26,7 +26,6 @@ export default function BagScreen() {
     updateQty,
     removeFromCart,
     subtotal,
-    freeTeeEligible,
     getDeliveryFee,
     calculateTotal,
   } = useCart();
@@ -66,7 +65,7 @@ export default function BagScreen() {
       <Header title="SHOPPING BAG" showBag={false} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        <FreeTeeBanner />
+        <CashbackBanner />
         {/* Cart Item Cards */}
         <View style={styles.itemsList}>
           {cart.map((item) => {
@@ -125,19 +124,6 @@ export default function BagScreen() {
             );
           })}
 
-          {/* Complimentary Free Tee Badge if unlocked */}
-          {freeTeeEligible && (
-            <View style={[styles.giftCard, { backgroundColor: colors.emeraldLight, borderColor: colors.emerald }]}>
-              <View style={styles.giftIcon}>
-                <Gift size={20} color={colors.emerald} />
-              </View>
-              <View style={styles.giftInfo}>
-                <Text style={[styles.giftTitle, { color: colors.emerald }]}>COMPLIMENTARY GIFT ADDED</Text>
-                <Text style={[styles.giftName, { color: colors.ink }]}>DEEN 240 GSM Heavyweight Tee (Size matches order)</Text>
-                <Text style={[styles.giftPrice, { color: colors.emerald }]}>FREE (৳850 value)</Text>
-              </View>
-            </View>
-          )}
         </View>
 
         {/* Delivery Area Selector */}
@@ -201,15 +187,6 @@ export default function BagScreen() {
             </Text>
             <Text style={[styles.summaryValue, { color: colors.ink }]}>{deliveryFee === 0 ? "FREE" : bdt(deliveryFee)}</Text>
           </View>
-
-          {freeTeeEligible && (
-            <View style={styles.summaryRow}>
-              <Text style={[styles.summaryLabel, { color: colors.emerald, fontWeight: "700" }]}>
-                Promotional Gift
-              </Text>
-              <Text style={[styles.summaryValue, { color: colors.emerald }]}>FREE</Text>
-            </View>
-          )}
 
           <View style={[styles.summaryDivider, { backgroundColor: colors.borderLight }]} />
 

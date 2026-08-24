@@ -31,10 +31,12 @@ import {
   Store,
   BookOpen,
   MessageCircle,
+  Minus,
+  Plus,
 } from "../../src/components/Icons";
 import { Colors } from "../../src/theme/colors";
 import { useTheme } from "../../src/context/ThemeContext";
-import { fetchProductById, fetchProducts, bdt, FREE_TEE_THRESHOLD } from "../../src/services/gateway";
+import { fetchProductById, fetchProducts, bdt } from "../../src/services/gateway";
 import { Product, Variation } from "../../src/types";
 import { useCart } from "../../src/context/CartContext";
 import { useProfile } from "../../src/context/ProfileContext";
@@ -66,6 +68,7 @@ export default function ProductDetailScreen() {
   const [selectedVariationId, setSelectedVariationId] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [addedNotice, setAddedNotice] = useState(false);
+  const [qty, setQty] = useState(1);
   const [expandedSection, setExpandedSection] = useState<string | null>("fabric");
   const [sizeGuideVisible, setSizeGuideVisible] = useState(false);
   const [lightboxVisible, setLightboxVisible] = useState(false);
@@ -179,14 +182,16 @@ export default function ProductDetailScreen() {
 
   const handleAddToCart = () => {
     if (!selectedSize) return;
-    addToCart(product, selectedSize, 1, selectedVariationId);
+    addToCart(product, selectedSize, qty, selectedVariationId);
     setAddedNotice(true);
+    setQty(1);
     setTimeout(() => setAddedNotice(false), 2500);
   };
 
   const handleBuyNow = () => {
     if (!selectedSize) return;
-    addToCart(product, selectedSize, 1, selectedVariationId);
+    addToCart(product, selectedSize, qty, selectedVariationId);
+    setQty(1);
     router.push("/(tabs)/bag");
   };
 
@@ -458,12 +463,27 @@ export default function ProductDetailScreen() {
             </View>
           </View>
 
-          {/* Free Gift Promo Tag */}
-          <View style={styles.promoTag}>
-            <Sparkles size={16} color={colors.emerald} />
-            <Text style={styles.promoTagText}>
-              Eligible for <Text style={styles.bold}>FREE Heavyweight Tee</Text> on cart subtotal over ৳3,500.
-            </Text>
+          {/* Quantity Selector */}
+          <View style={styles.qtySection}>
+            <Text style={styles.qtyLabel}>QUANTITY</Text>
+            <View style={styles.qtyStepper}>
+              <TouchableOpacity
+                style={[styles.qtyBtn, qty <= 1 && styles.qtyBtnDisabled]}
+                activeOpacity={0.7}
+                disabled={qty <= 1}
+                onPress={() => setQty((q) => Math.max(1, q - 1))}
+              >
+                <Minus size={16} color={qty <= 1 ? colors.sub : colors.ink} />
+              </TouchableOpacity>
+              <Text style={styles.qtyValue}>{qty}</Text>
+              <TouchableOpacity
+                style={styles.qtyBtn}
+                activeOpacity={0.7}
+                onPress={() => setQty((q) => Math.min(99, q + 1))}
+              >
+                <Plus size={16} color={colors.ink} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Accordion Details */}
@@ -948,6 +968,43 @@ const styles = StyleSheet.create({
   sizeSection: {
     marginBottom: 16,
   },
+  qtySection: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  qtyLabel: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: Colors.ink,
+    letterSpacing: 0.8,
+  },
+  qtyStepper: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    backgroundColor: Colors.card,
+  },
+  qtyBtn: {
+    width: 38,
+    height: 38,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  qtyBtnDisabled: {
+    opacity: 0.4,
+  },
+  qtyValue: {
+    minWidth: 36,
+    textAlign: "center",
+    fontSize: 16,
+    fontWeight: "800",
+    color: Colors.ink,
+  },
   sizeHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1056,22 +1113,6 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "800",
     color: Colors.indigoDark,
-  },
-  promoTag: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: Colors.emeraldLight,
-    padding: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: Colors.emerald,
-    marginBottom: 16,
-  },
-  promoTagText: {
-    fontSize: 11,
-    color: Colors.emerald,
-    flex: 1,
   },
   bold: {
     fontWeight: "700",

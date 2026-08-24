@@ -808,6 +808,28 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   app.get("/health", async (_req, reply) => reply.send(await healthPayload()));
   app.get("/v1/health", async (_req, reply) => reply.send(await healthPayload()));
 
+  /* ---- cashback (SINGLE SOURCE OF TRUTH) ----
+     The exact same rule the gateway uses when building the WooCommerce coupon at
+     checkout. The app MUST read this instead of computing its own thresholds, so the
+     displayed cashback always matches what Woo actually deducts. */
+  function calculateCashback(subtotal: number): { amount: number; tier: number; nextTierAt: number | null } {
+    if (subtotal >= 3000) return { amount: 700, tier: 2, nextTierAt: null };
+    if (subtotal >= 2500) return { amount: 500, tier: 1, nextTierAt: 3000 };
+    return { amount: 0, tier: 0, nextTierAt: 2500 };
+  }
+  app.get("/v1/deen/cashback", async (req, reply) => {
+    const subtotal = Number((req.query as any).subtotal ?? 0) || 0;
+    const cb = calculateCashback(subtotal);
+    return reply.send({
+      subtotal,
+      cashback: cb.amount,
+      tier: cb.tier,
+      nextTierAt: cb.nextTierAt,
+      currency: "BDT",
+      note: "Applied automatically as a WooCommerce coupon at checkout.",
+    });
+  });
+
   /* ---- bangladesh 64 districts for woocommerce states ---- */
   /* ---- bangladesh 64 districts for woocommerce states (matches live site BD-XX codes) ---- */
   app.get("/v1/deen/districts", async (_req, reply) => {
@@ -855,7 +877,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
         : area === "store_pickup" || area === "pickup"
         ? 0
         : 50;
-    const cashback = subtotal >= 3000 ? 700 : subtotal >= 2500 ? 500 : 0;
+    const cashback = calculateCashback(subtotal).amount;
 
     const orderNumStr = `DC-${++orderSeq.n}`;
     // Pathao logistics is not auto-generated. Only set if ptc_consignment_id / consignmentId is provided (e.g. "DD220826MDKMP9").

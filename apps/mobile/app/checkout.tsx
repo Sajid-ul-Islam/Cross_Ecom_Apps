@@ -44,7 +44,7 @@ export default function CheckoutScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ area?: string }>();
   const { colors, isDark } = useTheme();
-  const { cart, subtotal, freeTeeEligible, clearCart } = useCart();
+  const { cart, subtotal, clearCart } = useCart();
   const { placeOrder } = useOrders();
   const { profile } = useProfile();
   const { coins, tierLabel, redeemCoins, earnCoins } = useRewards();

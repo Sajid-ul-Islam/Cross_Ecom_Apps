@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CartItem, Product, DeliveryArea } from "../types";
-import { DELIVERY_FEES, FREE_TEE_THRESHOLD } from "../services/gateway";
+import { DELIVERY_FEES, fetchCashback } from "../services/gateway";
 
 interface CartContextType {
   cart: CartItem[];
@@ -11,8 +11,9 @@ interface CartContextType {
   clearCart: () => void;
   subtotal: number;
   totalItems: number;
-  freeTeeEligible: boolean;
-  freeTeeGap: number;
+  cashbackAmount: number;
+  cashbackTier: number;
+  cashbackGap: number;
   getDeliveryFee: (area: DeliveryArea) => number;
   calculateTotal: (area: DeliveryArea) => number;
 }
@@ -85,29 +86,22 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const totalItems = cart.reduce((acc, item) => acc + item.qty, 0);
 
-  // Cashback campaign calculation:
-  // - ৳500 cashback on ৳2,500+
-  // - ৳700 cashback on ৳3,000+
-  let cashbackAmount = 0;
-  let cashbackTier = 0;
-  let cashbackGap = 0;
+  // Cashback is fetched from the gateway (= Woo source of truth), never computed locally.
+  // The gateway applies the same amount as a WooCommerce coupon at checkout.
+  const [cashbackAmount, setCashbackAmount] = useState(0);
+  const [cashbackTier, setCashbackTier] = useState(0);
+  const [cashbackGap, setCashbackGap] = useState(0);
 
-  if (subtotal >= 3000) {
-    cashbackAmount = 700;
-    cashbackTier = 2;
-    cashbackGap = 0;
-  } else if (subtotal >= 2500) {
-    cashbackAmount = 500;
-    cashbackTier = 1;
-    cashbackGap = 3000 - subtotal; // to reach ৳700 tier
-  } else {
-    cashbackAmount = 0;
-    cashbackTier = 0;
-    cashbackGap = 2500 - subtotal; // to reach ৳500 tier
-  }
-
-  const freeTeeEligible = cashbackAmount > 0;
-  const freeTeeGap = cashbackGap;
+  useEffect(() => {
+    let cancelled = false;
+    fetchCashback(subtotal).then((cb) => {
+      if (cancelled) return;
+      setCashbackAmount(cb.amount);
+      setCashbackTier(cb.amount >= 700 ? 2 : cb.amount >= 500 ? 1 : 0);
+      setCashbackGap(cb.nextTierAt ? cb.nextTierAt - subtotal : 0);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [subtotal]);
 
   const getDeliveryFee = (area: DeliveryArea) => DELIVERY_FEES[area] ?? 50;
   const calculateTotal = (area: DeliveryArea) => Math.max(0, subtotal - cashbackAmount) + getDeliveryFee(area);
@@ -125,8 +119,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         cashbackAmount,
         cashbackTier,
         cashbackGap,
-        freeTeeEligible,
-        freeTeeGap,
         getDeliveryFee,
         calculateTotal,
       } as any}

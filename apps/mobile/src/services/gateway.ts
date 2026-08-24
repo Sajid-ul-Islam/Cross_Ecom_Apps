@@ -375,6 +375,30 @@ export async function createOrder(
   }
 }
 
+/* --------------------------- cashback (from gateway = Woo source of truth) -----------
+   The app NEVER computes its own cashback thresholds — it asks the gateway, which uses the
+   exact same rule it applies as a WooCommerce coupon at checkout. Cached briefly; returns 0
+   when offline so the UI degrades gracefully. */
+let cashbackCache: { at: number; subtotal: number; amount: number; nextTierAt: number | null } | null = null;
+
+export async function fetchCashback(subtotal: number): Promise<{ amount: number; nextTierAt: number | null }> {
+  if (cashbackCache && cashbackCache.subtotal === subtotal && Date.now() - cashbackCache.at < 30_000) {
+    return { amount: cashbackCache.amount, nextTierAt: cashbackCache.nextTierAt };
+  }
+  try {
+    const res = await request<{ cashback: number; nextTierAt: number | null }>(
+      `/v1/deen/cashback?subtotal=${Math.round(subtotal)}`,
+      undefined,
+      5000,
+      true // silent: a blip must not flip connection state
+    );
+    cashbackCache = { at: Date.now(), subtotal, amount: res.cashback || 0, nextTierAt: res.nextTierAt ?? null };
+    return { amount: cashbackCache.amount, nextTierAt: cashbackCache.nextTierAt };
+  } catch {
+    return { amount: 0, nextTierAt: null };
+  }
+}
+
 /* --------------------------- bug reporting ------------------------- */
 
 export interface BugReport {

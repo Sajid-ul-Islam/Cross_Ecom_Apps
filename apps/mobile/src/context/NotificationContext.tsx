@@ -42,16 +42,6 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     actionLabel: "View Product",
   },
   {
-    id: "notif_4",
-    type: "PROMO",
-    title: "🎉 Complimentary 240 GSM Tee Gift",
-    body: "Spend over ৳3,500 on your bag to automatically unlock a FREE heavyweight streetwear t-shirt (৳850 value).",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(), // 2 days ago
-    read: true,
-    actionUrl: "/(tabs)/shop",
-    actionLabel: "Browse Catalog",
-  },
-  {
     id: "notif_5",
     type: "BROADCAST",
     title: "📣 Mirpur 12 Flagship Outlet Now Open for Pickups",
