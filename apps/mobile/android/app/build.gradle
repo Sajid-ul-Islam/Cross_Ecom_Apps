@@ -92,20 +92,10 @@ android {
         applicationId 'com.deencommerce.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
+        versionCode 2
         versionName "1.0.1"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
-
-        // Force C++20 so RN 0.83's react-android prefab (uses std::format) compiles
-        // under NDK 27 (which defaults to C++17). Required for local gradle builds.
-        // CMAKE_CXX_STANDARD as a cache var (via arguments) wins over -std flags.
-        externalNativeBuild {
-            cmake {
-                cppFlags "-std=c++20"
-                arguments "-DCMAKE_CXX_STANDARD=20"
-            }
-        }
     }
     signingConfigs {
         debug {
