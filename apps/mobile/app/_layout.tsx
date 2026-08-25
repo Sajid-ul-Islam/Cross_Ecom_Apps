@@ -14,6 +14,10 @@ import { startGatewayKeepAlive, reportBug } from "../src/services/gateway";
 
 import { AnimatedSplashScreen } from "../src/components/AnimatedSplashScreen";
 
+// Tell TypeScript that React Native's `global` exists (RN exposes it at runtime
+// but TS 6 strict lib doesn't include it).
+declare var global: typeof globalThis;
+
 // Global crash catcher: forwards uncaught JS errors to the gateway bug store
 // (best-effort; must never break the app). Wrapped to avoid native double-reg.
 if ((global as any).ErrorUtils && !(global as any).__deenCrashHandlerInstalled) {

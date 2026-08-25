@@ -772,9 +772,12 @@ export function useCatalogRefreshOnFocus(
   useFocusEffect(handler);
 
   // 2) App resume from background (covers "reopen app after backend edit")
+  // Use `handler` (the memoised wrapper) instead of `onFocus` directly to
+  // avoid a stale-closure bug where the AppState listener captures an old
+  // version of the callback from the first render.
   useEffect(() => {
     const sub = AppState.addEventListener("change", (state: string) => {
-      if (state === "active") void onFocus();
+      if (state === "active") void handler();
     });
     return () => sub.remove();
   }, [handler]);
@@ -896,6 +899,9 @@ export async function lookupCustomer(
 /*  Returns a session token + the user's role (admin/customer).        */
 /* ------------------------------------------------------------------ */
 
+const AUTH_TOKEN_KEY = "deen_auth_token";
+const AUTH_USER_KEY = "deen_auth_user";
+
 export interface AuthUser {
   id: string;
   name: string;
@@ -954,8 +960,7 @@ export async function logout(): Promise<void> {
   await AsyncStorage.removeItem(AUTH_USER_KEY).catch(() => {});
 }
 
-const AUTH_TOKEN_KEY = "deen_auth_token";
-const AUTH_USER_KEY = "deen_auth_user";
+// AUTH_TOKEN_KEY and AUTH_USER_KEY are declared above the login function.
 
 /* ----------------------------- payments ---------------------------- */
 

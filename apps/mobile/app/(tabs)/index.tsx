@@ -414,7 +414,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     height: "100%",
   },
   catCardOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(10, 20, 15, 0.55)",
   },
   catCardContent: {

@@ -61,7 +61,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         barStyle={isDark ? "light-content" : "dark-content"}
         backgroundColor={colors.paper}
       />
-      {children}
+      {/* Don't render children until the persisted theme is loaded —
+          prevents a flash of the wrong theme on cold start. */}
+      {loaded ? children : null}
     </ThemeContext.Provider>
   );
 };

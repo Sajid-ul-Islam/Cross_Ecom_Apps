@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   coverOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(10, 20, 15, 0.65)",
   },
   coverContent: {

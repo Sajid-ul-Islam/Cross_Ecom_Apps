@@ -11,13 +11,13 @@
     "incremental": true,
     "isolatedModules": true,
     "jsx": "preserve",
-
+    "ignoreDeprecations": "6.0"
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts",
-
+    "expo-env.d.ts"
   ]
 }
+
