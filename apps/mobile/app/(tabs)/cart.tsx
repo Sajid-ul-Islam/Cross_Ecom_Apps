@@ -199,7 +199,7 @@ export default function BagScreen() {
         <View style={styles.securityNote}>
           <ShieldCheck size={16} color={colors.emerald} />
           <Text style={[styles.securityNoteText, { color: colors.sub }]}>
-            Official DEEN checkout · Cash on delivery &amp; bKash / Nagad accepted.
+            Official DEEN checkout · Cash on delivery & bKash / Nagad accepted.
           </Text>
         </View>
       </ScrollView>
@@ -406,6 +406,7 @@ function createStyles(colors: ThemeColors) {
       paddingVertical: 8,
       paddingHorizontal: 10,
       borderRadius: 6,
+      borderWidth: 1,
     },
     areaOptionActive: {},
     areaOptionHeader: {
@@ -491,7 +492,8 @@ function createStyles(colors: ThemeColors) {
     bottomBar: {
       borderTopWidth: 1,
       paddingHorizontal: 16,
-      paddingVertical: 12,
+      paddingTop: 12,
+      paddingBottom: 20,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",

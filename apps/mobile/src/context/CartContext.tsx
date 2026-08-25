@@ -109,7 +109,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (cancelled) return;
       setCashbackAmount(p.cashback);
       setCashbackTier(p.cashback >= 700 ? 2 : p.cashback >= 500 ? 1 : 0);
-      setCashbackGap(p.nextTierAt ? p.nextTierAt - subtotal : 0);
+      setCashbackGap(p.nextTierAt && p.nextTierAt > subtotal ? Math.max(0, p.nextTierAt - subtotal) : 0);
       setBogoDiscount(p.bogoDiscount);
       setBogoFreeIndexes(p.bogoFreeIndexes || []);
       setDeliveryFees(p.deliveryFees);

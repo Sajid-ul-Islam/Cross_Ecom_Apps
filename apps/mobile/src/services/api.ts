@@ -222,37 +222,21 @@ export const GUEST_PROFILE: UserProfile = {
 };
 
 export const DEFAULT_PROFILE: UserProfile = {
-  accountType: "customer",
-  isGuest: false,
-  username: "customer",
+  accountType: "guest",
+  isGuest: true,
   role: "customer",
-  name: "Tanvir Ahmed",
-  phone: "01712-345678",
-  email: "tanvir@deen.com",
-  address: "House 42, Road 11, Sector 4, Uttara, Dhaka",
+  name: "",
+  phone: "",
+  email: "",
+  address: "",
   area: "dhaka_standard",
-  deliverySlot: "afternoon",
-  deliveryNotes: "Please call before arrival. Leave with security if not available.",
+  deliverySlot: "any",
+  deliveryNotes: "",
   jeansSize: "32",
   topSize: "L",
   pushOrders: true,
-  pushPromos: true,
-  memberSince: "Aug 2024",
-  savedAddresses: [
-    {
-      id: "addr_1",
-      label: "Home (Uttara)",
-      address: "House 42, Road 11, Sector 4, Uttara, Dhaka",
-      area: "dhaka_standard",
-      isDefault: true,
-    },
-    {
-      id: "addr_2",
-      label: "Office (Banani)",
-      address: "Plot 68, Block C, Kemal Ataturk Ave, Banani, Dhaka",
-      area: "dhaka_express",
-    },
-  ],
+  pushPromos: false,
+  savedAddresses: [],
 };
 
 export const fetchProducts = async (category?: DeenCategory, query?: string): Promise<Product[]> => {

@@ -131,7 +131,7 @@ export const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
                 <Ruler size={18} color={colors.indigo} />
               </View>
               <View>
-                <Text style={[styles.title, { color: colors.ink }]}>SIZE CHART &amp; GUIDE</Text>
+                <Text style={[styles.title, { color: colors.ink }]}>SIZE CHART & GUIDE</Text>
                 <Text style={[styles.subtitle, { color: colors.sub }]}>
                   {catUpper === "JEANS"
                     ? `${fit ? fit + " Fit · " : ""}Raw Selvedge Denim Sizing`

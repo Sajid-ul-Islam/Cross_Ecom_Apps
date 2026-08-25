@@ -359,7 +359,7 @@ export default function ProfileScreen() {
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Truck size={18} color={colors.indigo} />
-              <Text style={[styles.cardTitle, { color: colors.ink }]}>MY ORDERS &amp; PATHAO TRACKING</Text>
+              <Text style={[styles.cardTitle, { color: colors.ink }]}>MY ORDERS & PATHAO TRACKING</Text>
             </View>
             <TouchableOpacity onPress={() => router.push("/(tabs)/orders")}>
               <Text style={{ fontSize: 12, fontWeight: "800", color: colors.indigo }}>VIEW ALL ({orders.length}) →</Text>
@@ -459,7 +459,7 @@ export default function ProfileScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Store size={16} color={colors.indigo} />
-            <Text style={styles.cardTitle}>STORE ADMIN &amp; BI ACCESS</Text>
+            <Text style={styles.cardTitle}>STORE ADMIN & BI ACCESS</Text>
           </View>
           {profile.role === "admin" ? (
             <View style={styles.adminOn}>
@@ -586,7 +586,7 @@ export default function ProfileScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Ruler size={16} color={colors.indigo} />
-            <Text style={styles.cardTitle}>FIT &amp; SIZING PREFERENCES</Text>
+            <Text style={styles.cardTitle}>FIT & SIZING PREFERENCES</Text>
           </View>
 
           <Text style={styles.fieldSub}>
@@ -634,7 +634,7 @@ export default function ProfileScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Sparkles size={16} color={colors.indigo} />
-            <Text style={styles.cardTitle}>APPEARANCE &amp; THEME</Text>
+            <Text style={styles.cardTitle}>APPEARANCE & THEME</Text>
           </View>
 
           <Text style={styles.fieldSub}>
@@ -665,7 +665,7 @@ export default function ProfileScreen() {
               <Text style={[styles.themeOptionTitle, themeMode === "light" && styles.themeOptionTitleActive]}>
                 Light Mode
               </Text>
-              <Text style={styles.themeOptionSub}>Warm Paper &amp; Indigo</Text>
+              <Text style={styles.themeOptionSub}>Warm Paper & Indigo</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -691,7 +691,7 @@ export default function ProfileScreen() {
 
           <View style={styles.toggleRow}>
             <View style={styles.toggleText}>
-              <Text style={styles.toggleLabel}>Order &amp; Parcel Tracking</Text>
+              <Text style={styles.toggleLabel}>Order & Parcel Tracking</Text>
               <Text style={styles.toggleSub}>Live updates on dispatch and delivery</Text>
             </View>
             <Switch
@@ -706,8 +706,8 @@ export default function ProfileScreen() {
 
           <View style={styles.toggleRow}>
             <View style={styles.toggleText}>
-              <Text style={styles.toggleLabel}>Drops &amp; Festive Sales</Text>
-              <Text style={styles.toggleSub}>Exclusive selvedge alerts &amp; Eid collections</Text>
+              <Text style={styles.toggleLabel}>Drops & Festive Sales</Text>
+              <Text style={styles.toggleSub}>Exclusive selvedge alerts & Eid collections</Text>
             </View>
             <Switch
               value={pushPromos}
@@ -764,7 +764,7 @@ export default function ProfileScreen() {
           <View style={styles.supportBox}>
             <HelpCircle size={16} color={colors.indigo} />
             <Text style={styles.supportText}>
-              Customer Hotline &amp; WhatsApp: <Text style={styles.bold}>+880 1952-700500</Text> (10 AM - 10 PM)
+              Customer Hotline & WhatsApp: <Text style={styles.bold}>+880 1952-700500</Text> (10 AM - 10 PM)
             </Text>
           </View>
 

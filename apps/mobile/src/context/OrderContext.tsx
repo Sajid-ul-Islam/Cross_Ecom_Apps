@@ -16,6 +16,11 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [connection, setConnection] = useState<"online" | "offline">("online");
+  const ordersRef = React.useRef<Order[]>([]);
+
+  useEffect(() => {
+    ordersRef.current = orders;
+  }, [orders]);
 
   const refreshOrders = async () => {
     setLoading(true);
@@ -30,7 +35,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // createOrder only writes a local `offline-*` order when it can't reach Woo;
   // re-calling it online pushes the real order and returns the Woo-backed one.
   const syncOfflineOrders = async () => {
-    const offline = orders.filter((o) => String(o.id).startsWith("offline-"));
+    const offline = ordersRef.current.filter((o) => String(o.id).startsWith("offline-"));
     if (offline.length === 0) return;
     for (const o of offline) {
       try {
@@ -64,7 +69,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         void syncOfflineOrders().then(() => refreshOrders());
       }
     });
-  }, [orders]);
+  }, []);
 
   const placeOrder = async (orderData: Omit<Order, "id" | "number" | "createdAt" | "status">) => {
     const created = await createOrder(orderData);

@@ -450,7 +450,7 @@ function createStyles(colors: any) {
       height: "100%",
     },
     categoryHeroOverlay: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       backgroundColor: "rgba(10, 20, 15, 0.6)",
     },
     categoryHeroContent: {

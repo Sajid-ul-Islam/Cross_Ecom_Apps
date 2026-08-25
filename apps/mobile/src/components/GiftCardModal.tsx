@@ -247,7 +247,7 @@ export const GiftCardModal: React.FC<GiftCardModalProps> = ({ visible, onClose }
                 onPress={handleCreateGiftCard}
               >
                 <Gift size={16} color="#FFFFFF" />
-                <Text style={styles.createBtnText}>GENERATE &amp; ACTIVATE GIFT CARD</Text>
+                <Text style={styles.createBtnText}>GENERATE & ACTIVATE GIFT CARD</Text>
               </TouchableOpacity>
             )}
           </ScrollView>

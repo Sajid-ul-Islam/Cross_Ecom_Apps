@@ -116,7 +116,7 @@ export const ProductReviewsModal: React.FC<ProductReviewsModalProps> = ({
                 <Star size={18} color="#FFFFFF" />
               </View>
               <View>
-                <Text style={[styles.title, { color: colors.ink }]}>VERIFIED REVIEWS &amp; FIT PHOTOS</Text>
+                <Text style={[styles.title, { color: colors.ink }]}>VERIFIED REVIEWS & FIT PHOTOS</Text>
                 <Text style={[styles.subtitle, { color: colors.sub }]}>{product.name}</Text>
               </View>
             </View>
@@ -198,7 +198,7 @@ export const ProductReviewsModal: React.FC<ProductReviewsModalProps> = ({
                 </View>
 
                 <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Fit &amp; Craft Feedback *</Text>
+                  <Text style={styles.fieldLabel}>Fit & Craft Feedback *</Text>
                   <TextInput
                     style={[styles.input, { minHeight: 70, textAlignVertical: "top" }]}
                     value={reviewText}
