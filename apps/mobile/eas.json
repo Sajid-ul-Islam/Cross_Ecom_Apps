@@ -13,6 +13,10 @@
     "production": {
       "ios": {
         "image": "latest"
+      },
+      "android": {
+        "buildType": "app-bundle",
+        "image": "latest"
       }
     },
     "production-apk": {
