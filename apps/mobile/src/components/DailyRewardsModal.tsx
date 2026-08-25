@@ -81,7 +81,7 @@ export const DailyRewardsModal: React.FC<DailyRewardsModalProps> = ({ visible, o
                 <Gift size={18} color="#FFFFFF" />
               </View>
               <View>
-                <Text style={[styles.title, { color: colors.ink }]}>DAILY REWARDS &amp; STREAK</Text>
+                <Text style={[styles.title, { color: colors.ink }]}>DAILY REWARDS & STREAK</Text>
                 <Text style={[styles.subtitle, { color: colors.sub }]}>
                   Day {dailyStreak} Streak · {tierLabel}
                 </Text>
@@ -142,8 +142,8 @@ export const DailyRewardsModal: React.FC<DailyRewardsModalProps> = ({ visible, o
                   onPress={handleReveal}
                 >
                   <Gift size={42} color="#FFFFFF" />
-                  <Text style={styles.scratchPrompt}>TAP TO SCRATCH &amp; REVEAL</Text>
-                  <Text style={styles.scratchPromptSub}>Win vouchers, free shipping &amp; bonus coins</Text>
+                  <Text style={styles.scratchPrompt}>TAP TO SCRATCH & REVEAL</Text>
+                  <Text style={styles.scratchPromptSub}>Win vouchers, free shipping & bonus coins</Text>
                 </TouchableOpacity>
               ) : (
                 <View style={styles.scratchRevealed}>

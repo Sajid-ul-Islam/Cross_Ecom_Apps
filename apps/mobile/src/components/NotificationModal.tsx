@@ -107,7 +107,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ visible, o
                     </View>
                   )}
                 </View>
-                <Text style={[styles.subtitle, { color: colors.sub }]}>Order updates, drops &amp; exclusive promos</Text>
+                <Text style={[styles.subtitle, { color: colors.sub }]}>Order updates, drops & exclusive promos</Text>
               </View>
             </View>
 

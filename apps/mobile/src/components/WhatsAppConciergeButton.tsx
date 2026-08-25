@@ -57,7 +57,7 @@ export const WhatsAppConciergeButton: React.FC<WhatsAppConciergeProps> = ({
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.conciergeTitle}>TALK TO A DEEN STYLIST</Text>
-          <Text style={styles.conciergeSub}>Free fit &amp; size consultation on WhatsApp</Text>
+          <Text style={styles.conciergeSub}>Free fit & size consultation on WhatsApp</Text>
         </View>
         <View style={styles.onlineBadge}>
           <View style={styles.onlineDot} />

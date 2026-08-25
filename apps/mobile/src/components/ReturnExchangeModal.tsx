@@ -188,7 +188,7 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
                 <RotateCcw size={18} color="#FFFFFF" />
               </View>
               <View>
-                <Text style={[styles.title, { color: colors.ink }]}>EXCHANGE &amp; RETURN PORTAL</Text>
+                <Text style={[styles.title, { color: colors.ink }]}>EXCHANGE & RETURN PORTAL</Text>
                 <Text style={[styles.subtitle, { color: colors.sub }]}>Order #{order.number} · 3-Day Exchange Policy</Text>
               </View>
             </View>
@@ -203,7 +203,7 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
             <View style={styles.policyBanner}>
               <ShieldCheck size={16} color={colors.emerald} />
               <Text style={styles.policyText}>
-                <Text style={styles.bold}>3-Day Exchange Policy:</Text> Requests must be submitted within 3 days (72 hours) of delivery. Free courier pickup in Dhaka &amp; Nationwide. Item must be unwashed with original tags attached.
+                <Text style={styles.bold}>3-Day Exchange Policy:</Text> Requests must be submitted within 3 days (72 hours) of delivery. Free courier pickup in Dhaka & Nationwide. Item must be unwashed with original tags attached.
               </Text>
             </View>
 
@@ -235,7 +235,7 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
                   <AlertCircle size={16} color={type === "RETURN" ? "#FFFFFF" : colors.ink} />
                   <View>
                     <Text style={[styles.typeTitle, type === "RETURN" && styles.typeTitleActive]}>
-                      RETURN &amp; REFUND
+                      RETURN & REFUND
                     </Text>
                     <Text style={[styles.typeSub, type === "RETURN" && styles.typeSubActive]}>
                       Full refund to bKash / Bank / Credit
@@ -393,7 +393,7 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
                   <Text style={[styles.handoverTitle, pickupMethod === "studio_dropoff" && styles.handoverTitleActive]}>
                     DEEN Outlet Dropoff (4 Outlets)
                   </Text>
-                  <Text style={styles.handoverSub}>Instant on-spot inspection &amp; size swap</Text>
+                  <Text style={styles.handoverSub}>Instant on-spot inspection & size swap</Text>
                 </TouchableOpacity>
               </View>
 

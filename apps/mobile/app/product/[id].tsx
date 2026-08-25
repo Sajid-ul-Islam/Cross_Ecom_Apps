@@ -528,7 +528,7 @@ export default function ProductDetailScreen() {
               <Star size={15} color={colors.amber} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.featurePillTitle}>FIT REVIEWS (4.9 ⭐)</Text>
-                <Text style={styles.featurePillSub}>Customer fit photos &amp; feedback</Text>
+                <Text style={styles.featurePillSub}>Customer fit photos & feedback</Text>
               </View>
             </TouchableOpacity>
 
@@ -540,7 +540,7 @@ export default function ProductDetailScreen() {
               <BookOpen size={15} color={colors.indigoDark} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.featurePillTitle}>DENIM CARE GUIDE</Text>
-                <Text style={styles.featurePillSub}>First soak &amp; fading handbook</Text>
+                <Text style={styles.featurePillSub}>First soak & fading handbook</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -552,7 +552,7 @@ export default function ProductDetailScreen() {
               style={styles.accordionHeader}
               onPress={() => toggleSection("fabric")}
             >
-              <Text style={styles.accordionTitle}>FABRIC &amp; SPECIFICATIONS</Text>
+              <Text style={styles.accordionTitle}>FABRIC & SPECIFICATIONS</Text>
               {expandedSection === "fabric" ? (
                 <ChevronUp size={18} color={colors.ink} />
               ) : (
@@ -564,9 +564,9 @@ export default function ProductDetailScreen() {
                 <Text style={styles.accordionBodyText}>
                   • Composition: {product.fabric}{"\n"}
                   • Dye Process: Traditional deep rope-dyed pure indigo{"\n"}
-                  • Hardware: Solid embossed copper rivets &amp; YKK brass zipper{"\n"}
+                  • Hardware: Solid embossed copper rivets & YKK brass zipper{"\n"}
                   • Stitching: High-tensile poly-core tobacco stitch thread{"\n"}
-                  • Origin: Proudly woven &amp; crafted in Bangladesh
+                  • Origin: Proudly woven & crafted in Bangladesh
                 </Text>
               </View>
             )}
@@ -576,7 +576,7 @@ export default function ProductDetailScreen() {
               style={styles.accordionHeader}
               onPress={() => toggleSection("care")}
             >
-              <Text style={styles.accordionTitle}>CARE &amp; WASHING INSTRUCTIONS</Text>
+              <Text style={styles.accordionTitle}>CARE & WASHING INSTRUCTIONS</Text>
               {expandedSection === "care" ? (
                 <ChevronUp size={18} color={colors.ink} />
               ) : (
@@ -599,7 +599,7 @@ export default function ProductDetailScreen() {
               style={styles.accordionHeader}
               onPress={() => toggleSection("shipping")}
             >
-              <Text style={styles.accordionTitle}>DELIVERY &amp; RETURN POLICY</Text>
+              <Text style={styles.accordionTitle}>DELIVERY & RETURN POLICY</Text>
               {expandedSection === "shipping" ? (
                 <ChevronUp size={18} color={colors.ink} />
               ) : (

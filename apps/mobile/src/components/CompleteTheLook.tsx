@@ -91,7 +91,7 @@ export const CompleteTheLook: React.FC<CompleteTheLookProps> = ({
       </View>
 
       <Text style={styles.sub}>
-        Curated menswear pairing by DEEN Dhaka stylists. Buy the full outfit &amp; save 10%.
+        Curated menswear pairing by DEEN Dhaka stylists. Buy the full outfit & save 10%.
       </Text>
 
       {/* Outfit Thumbnails Row */}

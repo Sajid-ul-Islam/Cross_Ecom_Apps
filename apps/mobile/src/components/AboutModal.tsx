@@ -89,13 +89,13 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>
                 <PhoneCall size={16} color={colors.indigo} />
-                <Text style={styles.sectionTitle}>CONTACT &amp; COMMUNITY</Text>
+                <Text style={styles.sectionTitle}>CONTACT & COMMUNITY</Text>
               </View>
               <Text style={styles.sectionBody}>
                 Need help or styling advice? Connect directly with us:
               </Text>
               <Text style={[styles.sectionBody, { marginTop: 8, fontWeight: "600", color: colors.ink }]}>
-                WhatsApp &amp; Hotline: {info.whatsapp}
+                WhatsApp & Hotline: {info.whatsapp}
               </Text>
               <Text style={[styles.sectionBody, { marginTop: 4, fontWeight: "600", color: colors.ink }]}>
                 Facebook: facebook.com/deencommerce
@@ -163,7 +163,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>
                 <ShieldCheck size={16} color={colors.indigo} />
-                <Text style={styles.sectionTitle}>PRIVACY &amp; SUPPORT</Text>
+                <Text style={styles.sectionTitle}>PRIVACY & SUPPORT</Text>
               </View>
               <Text style={styles.sectionBody}>
                 We protect your data. Your profile, addresses and order history are stored

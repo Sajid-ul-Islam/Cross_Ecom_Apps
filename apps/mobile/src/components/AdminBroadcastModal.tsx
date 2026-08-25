@@ -224,7 +224,7 @@ export const AdminBroadcastModal: React.FC<AdminBroadcastModalProps> = ({ visibl
 
                 {/* 3. Message Content */}
                 <View style={styles.section}>
-                  <Text style={styles.sectionLabel}>3. MESSAGE &amp; MARKETING COPY</Text>
+                  <Text style={styles.sectionLabel}>3. MESSAGE & MARKETING COPY</Text>
 
                   <View style={styles.field}>
                     <Text style={styles.fieldLabel}>Broadcast Title *</Text>

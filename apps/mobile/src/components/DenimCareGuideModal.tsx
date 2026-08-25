@@ -34,7 +34,7 @@ export const DenimCareGuideModal: React.FC<DenimCareGuideModalProps> = ({ visibl
                 <BookOpen size={18} color="#FFFFFF" />
               </View>
               <View>
-                <Text style={[styles.title, { color: colors.ink }]}>RAW DENIM CARE &amp; FADING GUIDE</Text>
+                <Text style={[styles.title, { color: colors.ink }]}>RAW DENIM CARE & FADING GUIDE</Text>
                 <Text style={[styles.subtitle, { color: colors.sub }]}>Artisanal Japanese Selvedge Handbook</Text>
               </View>
             </View>
@@ -65,7 +65,7 @@ export const DenimCareGuideModal: React.FC<DenimCareGuideModalProps> = ({ visibl
                 </View>
                 <View>
                   <Text style={styles.chapterTitle}>THE FIRST COLD SOAK</Text>
-                  <Text style={styles.chapterSub}>Setting the indigo &amp; achieving custom drape</Text>
+                  <Text style={styles.chapterSub}>Setting the indigo & achieving custom drape</Text>
                 </View>
               </View>
               <Text style={styles.chapterBody}>
@@ -80,8 +80,8 @@ export const DenimCareGuideModal: React.FC<DenimCareGuideModalProps> = ({ visibl
                   <Text style={styles.chapterNumText}>02</Text>
                 </View>
                 <View>
-                  <Text style={styles.chapterTitle}>BREAK-IN &amp; HIGH CONTRAST FADING</Text>
-                  <Text style={styles.chapterSub}>Whiskers, Honeycombs &amp; Stacks</Text>
+                  <Text style={styles.chapterTitle}>BREAK-IN & HIGH CONTRAST FADING</Text>
+                  <Text style={styles.chapterSub}>Whiskers, Honeycombs & Stacks</Text>
                 </View>
               </View>
               <Text style={styles.chapterBody}>
@@ -96,7 +96,7 @@ export const DenimCareGuideModal: React.FC<DenimCareGuideModalProps> = ({ visibl
                   <Text style={styles.chapterNumText}>03</Text>
                 </View>
                 <View>
-                  <Text style={styles.chapterTitle}>WASHING &amp; MAINTENANCE</Text>
+                  <Text style={styles.chapterTitle}>WASHING & MAINTENANCE</Text>
                   <Text style={styles.chapterSub}>Preserving deep rope-dyed indigo richness</Text>
                 </View>
               </View>
@@ -112,7 +112,7 @@ export const DenimCareGuideModal: React.FC<DenimCareGuideModalProps> = ({ visibl
                   <Text style={styles.chapterNumText}>04</Text>
                 </View>
                 <View>
-                  <Text style={styles.chapterTitle}>CHAINSTITCH HEMMING &amp; REPAIRS</Text>
+                  <Text style={styles.chapterTitle}>CHAINSTITCH HEMMING & REPAIRS</Text>
                   <Text style={styles.chapterSub}>DEEN Outlet Craft & Repair Services</Text>
                 </View>
               </View>

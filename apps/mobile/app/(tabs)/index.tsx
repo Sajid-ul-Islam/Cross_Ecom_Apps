@@ -115,9 +115,9 @@ export default function HomeScreen() {
               <Text style={styles.heroBadgeText}>EST. 2018 · DHAKA</Text>
             </View>
             <Text style={styles.heroTagline}>দেশের প্রথম ডেনিম ব্র্যান্ড</Text>
-            <Text style={styles.heroTitle}>ARTISANAL INDIGO &amp; RAW SELVEDGE</Text>
+            <Text style={styles.heroTitle}>ARTISANAL INDIGO & RAW SELVEDGE</Text>
             <Text style={styles.heroSub}>
-              Engineered for Bangladesh’s climate with authentic shuttle-loom selvage &amp; pure dobby jacquards.
+              Engineered for Bangladesh’s climate with authentic shuttle-loom selvage & pure dobby jacquards.
             </Text>
 
             <TouchableOpacity
@@ -284,8 +284,8 @@ export default function HomeScreen() {
         {/* New Drops Carousel */}
         <View style={styles.sectionHeader}>
           <View>
-            <Text style={styles.sectionTitle}>NEW &amp; TRENDING</Text>
-            <Text style={styles.sectionSubtitle}>Fresh denim cuts &amp; festive kurta silhouettes</Text>
+            <Text style={styles.sectionTitle}>NEW & TRENDING</Text>
+            <Text style={styles.sectionSubtitle}>Fresh denim cuts & festive kurta silhouettes</Text>
           </View>
           <TouchableOpacity onPress={() => router.push("/(tabs)/shop")}>
             <Text style={styles.seeAllText}>View All</Text>
@@ -308,7 +308,7 @@ export default function HomeScreen() {
         <View style={styles.sectionHeader}>
           <View>
             <Text style={styles.sectionTitle}>SIGNATURE DENIM</Text>
-            <Text style={styles.sectionSubtitle}>100% Cotton Selvedge &amp; Comfort Stretch Jeans</Text>
+            <Text style={styles.sectionSubtitle}>100% Cotton Selvedge & Comfort Stretch Jeans</Text>
           </View>
         </View>
 
@@ -323,7 +323,7 @@ export default function HomeScreen() {
         {/* Festive Panjabi Section */}
         <View style={styles.sectionHeader}>
           <View>
-            <Text style={styles.sectionTitle}>HERITAGE PANJABI &amp; KURTA</Text>
+            <Text style={styles.sectionTitle}>HERITAGE PANJABI & KURTA</Text>
             <Text style={styles.sectionSubtitle}>Indigo dyed pure dobby cottons</Text>
           </View>
         </View>
@@ -347,7 +347,7 @@ export default function HomeScreen() {
           <View style={styles.trustItem}>
             <ShieldCheck size={20} color={colors.emerald} />
             <Text style={styles.trustTitle}>e-CAB Registered</Text>
-            <Text style={styles.trustDesc}>Trusted e-commerce brand with official registration &amp; COD nationwide.</Text>
+            <Text style={styles.trustDesc}>Trusted e-commerce brand with official registration & COD nationwide.</Text>
           </View>
           <View style={styles.trustDivider} />
           <View style={styles.trustItem}>

@@ -221,7 +221,7 @@ export default function CategoryLandingScreen() {
               >
                 <Ruler size={15} color={colors.indigo} />
                 <Text style={styles.sizeGuideActionText}>
-                  VIEW {categoryInfo.name} SIZE CHART &amp; FIT GUIDE
+                  VIEW {categoryInfo.name} SIZE CHART & FIT GUIDE
                 </Text>
               </TouchableOpacity>
             </View>

@@ -375,7 +375,7 @@ export default function CheckoutScreen() {
         {/* 2. Advanced Delivery Options */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text style={[styles.stepTitle, { color: colors.indigoDark }]}>2. DELIVERY METHOD &amp; SPEED</Text>
+            <Text style={[styles.stepTitle, { color: colors.indigoDark }]}>2. DELIVERY METHOD & SPEED</Text>
             <Truck size={16} color={colors.indigo} />
           </View>
 
