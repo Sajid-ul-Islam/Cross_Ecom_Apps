@@ -90,8 +90,8 @@ Cross_Ecom_Apps/
 │       │   └── config.ts         # Render environment & secret loader
 │       └── Dockerfile            # Production container deployment on Render
 │
-├── BLUEPRINT.md                  # Comprehensive engineering blueprint & agent specification
-└── README.md                     # This file
+├── docs/                         # Comprehensive engineering blueprint & system guides
+└── README.md                     # Root workspace documentation
 ```
 
 ---
