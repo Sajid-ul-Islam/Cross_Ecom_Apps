@@ -1,57 +1,83 @@
 #!/usr/bin/env bash
+#
+# auto_commit_push.sh
+#
+# Automatically stages, commits (if there are changes), and pushes
+# uncommitted changes on the `master` branch.
+#
+# - Identity: uses bengali@example.com (via env-var override so it
+#   works even if the local user.name/user.email differ).
+# - Commit only runs when there are staged changes.
+# - Never fails loudly when the working tree is clean.
+# - Prints a git status summary and the push result.
+#
 set -uo pipefail
 
 REPO_DIR="/home/bearded/Documents/GitHub/Cross_Ecom_Apps"
-cd "$REPO_DIR" || { echo "ERROR: cannot cd to $REPO_DIR"; exit 1; }
+BRANCH="master"
 
-echo "=== Git Status (pre-add) ==="
-git -c color.ui=always status
+# Identity to use for auto-commits
+export GIT_AUTHOR_NAME="Bengali User"
+export GIT_AUTHOR_EMAIL="bengali@example.com"
+export GIT_COMMITTER_NAME="Bengali User"
+export GIT_COMMITTER_EMAIL="bengali@example.com"
 
-echo ""
-echo "=== Staging all changes ==="
+# --- Ensure we're inside the repo -------------------------------------------
+if ! cd "$REPO_DIR" 2>/dev/null; then
+  echo "ERROR: repository directory not found: $REPO_DIR" >&2
+  exit 1
+fi
+
+# Verify this is actually a git repo
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "ERROR: not a git repository: $REPO_DIR" >&2
+  exit 1
+fi
+
+# --- Stage everything -------------------------------------------------------
 git add -A
 
-# Check if there is anything staged
-if git diff --cached --quiet; then
-    echo ""
-    echo "=== Working tree clean — nothing to commit ==="
-    echo "(No new changes after staging.)"
-    exit 0
+# --- Determine if there's anything staged -----------------------------------
+# Compare the index against HEAD.  If empty, there is nothing to commit.
+staged_diff=$(git diff --cached --name-only)
+
+if [ -z "$staged_diff" ]; then
+  echo "=== nothing to commit — working tree clean ==="
+  echo
+  echo "=== git status ==="
+  git status
+  echo
+  echo "=== (no push performed; nothing was committed) ==="
+  exit 0
 fi
 
-# Build commit timestamp
-TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
-COMMIT_MSG="Auto-commit: sync changes (YYYY-MM-DD HH:MM:SS)"
-COMMIT_MSG=$(echo "$COMMIT_MSG" | sed "s/YYYY-MM-DD HH:MM:SS/${TIMESTAMP}/")
+# --- Commit with a timestamped message --------------------------------------
+timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+commit_msg="Auto-commit: sync changes (${timestamp})"
+git commit -m "$commit_msg"
+commit_rc=$?
 
-# Commit using the bengali@example.com identity
-echo ""
-echo "=== Committing ==="
-COMMIT_OUTPUT=$(git -c user.name="Bengali User" \
-                 -c user.email="bengali@example.com" \
-                 commit -m "$COMMIT_MSG" 2>&1)
-echo "$COMMIT_OUTPUT"
-
-if [ $? -ne 0 ]; then
-    echo ""
-    echo "=== Commit failed ==="
-    echo "$COMMIT_OUTPUT"
-    exit 1
+if [ $commit_rc -ne 0 ]; then
+  echo "ERROR: git commit failed (exit ${commit_rc})" >&2
+  echo "=== current git status ==="
+  git status
+  exit $commit_rc
 fi
 
-# Push to origin master
-echo ""
-echo "=== Pushing to origin master ==="
-PUSH_OUTPUT=$(git push origin master 2>&1)
-echo "$PUSH_OUTPUT"
+# --- Push ---------------------------------------------------------------
+echo "=== git status (after commit) ==="
+git status
+echo
+echo "=== pushing ${BRANCH} to origin ==="
+push_output=$(git push origin "$BRANCH" 2>&1)
+push_rc=$?
+echo "$push_output"
 
-PUSH_EXIT=$?
-if [ $PUSH_EXIT -ne 0 ]; then
-    echo ""
-    echo "=== Push may have failed ==="
-    exit $PUSH_EXIT
+if [ $push_rc -ne 0 ]; then
+  echo "ERROR: git push failed (exit ${push_rc})" >&2
+  exit $push_rc
 fi
 
-echo ""
-echo "=== Final Git Status ==="
-git -c color.ui=always status
+echo
+echo "=== push result: SUCCESS ==="
+exit 0
