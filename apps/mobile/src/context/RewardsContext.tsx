@@ -45,45 +45,11 @@ interface RewardsContextType {
 const RewardsContext = createContext<RewardsContextType | undefined>(undefined);
 
 export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [coins, setCoins] = useState<number>(650); // Default balance for demonstration
-  const [dailyStreak, setDailyStreak] = useState<number>(3);
+  const [coins, setCoins] = useState<number>(0);
+  const [dailyStreak, setDailyStreak] = useState<number>(0);
   const [lastClaimDate, setLastClaimDate] = useState<string | null>(null);
-  const [transactions, setTransactions] = useState<RewardTransaction[]>([
-    {
-      id: "tx_init_1",
-      type: "DAILY_BONUS",
-      coins: 150,
-      description: "Day 3 Streak Bonus",
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 20).toISOString(),
-    },
-    {
-      id: "tx_init_2",
-      type: "EARNED",
-      coins: 500,
-      description: "Welcome to DEEN VIP Club Bonus",
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-    },
-  ]);
-  const [vouchers, setVouchers] = useState<ClaimedVoucher[]>([
-    {
-      id: "v_init_1",
-      code: "DEEN20",
-      title: "20% OFF Raw Selvedge Denim",
-      discountType: "percentage",
-      discountValue: 20,
-      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
-      used: false,
-    },
-    {
-      id: "v_init_2",
-      code: "FREESHIP",
-      title: "Free Dhaka Express Shipping",
-      discountType: "free_shipping",
-      discountValue: 150,
-      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 14).toISOString(),
-      used: false,
-    },
-  ]);
+  const [transactions, setTransactions] = useState<RewardTransaction[]>([]);
+  const [vouchers, setVouchers] = useState<ClaimedVoucher[]>([]);
   const [loading, setLoading] = useState(true);
   const { addNotification } = useNotifications();
 
@@ -93,8 +59,9 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const json = await AsyncStorage.getItem(REWARDS_STORAGE_KEY);
         if (json) {
           const parsed = JSON.parse(json);
-          setCoins(parsed.coins ?? 650);
-          setDailyStreak(parsed.dailyStreak ?? 3);
+          // Only restore real persisted state — never fall back to demo defaults.
+          setCoins(parsed.coins ?? 0);
+          setDailyStreak(parsed.dailyStreak ?? 0);
           setLastClaimDate(parsed.lastClaimDate ?? null);
           setTransactions(parsed.transactions ?? []);
           setVouchers(parsed.vouchers ?? []);
@@ -178,7 +145,10 @@ export const RewardsProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const claimDailyReward = async (rewardTitle: string, voucherCode?: string, coinBonus = 100) => {
     const newCoins = coins + coinBonus;
-    const newStreak = dailyStreak + 1;
+    // Streak logic: increment only if last claim was yesterday.
+    // If the user missed a day (or never claimed), reset to Day 1.
+    const yesterdayStr = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    const newStreak = lastClaimDate === yesterdayStr ? dailyStreak + 1 : 1;
     const newTx: RewardTransaction = {
       id: `tx_${Date.now()}`,
       type: "DAILY_BONUS",

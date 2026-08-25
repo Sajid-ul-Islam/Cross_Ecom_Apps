@@ -44,7 +44,7 @@ export default function CheckoutScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ area?: string }>();
   const { colors, isDark } = useTheme();
-  const { cart, subtotal, clearCart } = useCart();
+  const { cart, subtotal, clearCart, cashbackAmount = 0, bogoDiscount = 0 } = useCart();
   const { placeOrder } = useOrders();
   const { profile } = useProfile();
   const { coins, tierLabel, redeemCoins, earnCoins } = useRewards();
@@ -105,13 +105,16 @@ export default function CheckoutScreen() {
   const deliveryFee = deliveryOpt.fee;
   const maxCoinDiscount = Math.min(Math.floor(coins / 2), Math.floor(subtotal * 0.2));
   const coinDiscountBDT = redeemPoints ? maxCoinDiscount : 0;
-  const cashbackBDT = subtotal >= 3000 ? 700 : subtotal >= 2500 ? 500 : 0;
+  const cashbackBDT = cashbackAmount ?? (subtotal >= 3000 ? 700 : subtotal >= 2500 ? 500 : 0);
   const couponDiscountBDT = couponInfo
     ? (couponInfo.type === "percent"
         ? Math.round((subtotal * couponInfo.amount) / 100)
         : Math.min(couponInfo.amount, subtotal))
     : 0;
-  const total = Math.max(0, subtotal + deliveryFee - coinDiscountBDT - cashbackBDT - couponDiscountBDT);
+  const total = Math.max(
+    0,
+    subtotal + deliveryFee - coinDiscountBDT - cashbackBDT - (bogoDiscount || 0) - couponDiscountBDT
+  );
 
   const handleApplyCoupon = async () => {
     const code = coupon.trim();
