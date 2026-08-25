@@ -12,42 +12,21 @@ const INITIAL_NOTIFICATIONS: NotificationItem[] = [
   {
     id: "notif_1",
     type: "PROMO",
-    title: "🔥 Flash Sale: 20% OFF Raw Selvedge Denim",
+    title: "🔥 Welcome to DEEN: 20% OFF Raw Selvedge Denim",
     body: "Use promo code DEEN20 at checkout to claim 20% discount on all artisanal Japanese-grade rigid jeans.",
-    timestamp: new Date(Date.now() - 1000 * 60 * 35).toISOString(), // 35 mins ago
+    timestamp: new Date().toISOString(),
     read: false,
     promoCode: "DEEN20",
     actionUrl: "/category/JEANS",
     actionLabel: "Shop Selvedge Jeans",
-    bannerImage: "https://image.qwenlm.ai/generated-images/79c9339e-d306-4444-aee3-bc6da2b12cf3/_result.png",
   },
   {
     id: "notif_2",
-    type: "ORDER",
-    title: "📦 Parcel Dispatched: Order #DC-1041",
-    body: "Your package containing 1x Heritage Raw Denim has been handed over to delivery agent. Expected arrival within 24-48h.",
-    timestamp: new Date(Date.now() - 1000 * 60 * 180).toISOString(), // 3 hours ago
-    read: false,
-    actionUrl: "/(tabs)/orders",
-    actionLabel: "Track Order Status",
-  },
-  {
-    id: "notif_3",
-    type: "RESTOCK",
-    title: "⚡ Restock Alert: Vintage Whisker Slim Jeans",
-    body: "Back in stock in your favorite waist sizes (30, 32, 34). Crafted from 12 oz flex selvedge.",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-    read: true,
-    actionUrl: "/product/dn-02",
-    actionLabel: "View Product",
-  },
-  {
-    id: "notif_5",
     type: "BROADCAST",
     title: "📣 Mirpur 12 Flagship Outlet Now Open for Pickups",
     body: "Select 'Store Pickup' at checkout to collect your orders free of charge from Ramzannesa Super Market, Mirpur 12.",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(), // 3 days ago
-    read: true,
+    timestamp: new Date().toISOString(),
+    read: false,
     actionUrl: "/(tabs)/profile",
     actionLabel: "View Outlet Details",
   },

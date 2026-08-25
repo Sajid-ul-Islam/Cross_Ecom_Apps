@@ -165,16 +165,18 @@ function GuestSavePrompt({ name, phone }: { name: string; phone: string }) {
       const existing = await lookupCustomer(phone);
       if (existing?.found) {
         setSaved(true);
+        Alert.alert("Welcome Back", "Your profile has been recognized and updated.");
       } else {
         const res = await registerCustomer(name, phone);
-        if (res?.success) setSaved(true);
-      }
-      // Brief confirmation, then go home (COD orders are already placed).
-      if (!saved) {
-        Alert.alert("Saved", "Your details are saved. Next checkout will greet you by name.");
+        if (res?.success) {
+          setSaved(true);
+          Alert.alert("Profile Saved", "Your details are saved. Your next checkout will greet you by name.");
+        } else {
+          Alert.alert("Notice", res?.message || "Could not register customer at this time.");
+        }
       }
     } catch (e) {
-      Alert.alert("Saved", "Your order is placed (COD). Profile save skipped — you can save later from your profile.");
+      Alert.alert("Notice", "Profile save skipped — you can save your details later from your profile screen.");
     } finally {
       setChecking(false);
     }
