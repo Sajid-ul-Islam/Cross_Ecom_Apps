@@ -29,6 +29,10 @@ git -c user.email='bengali@example.com' \
     commit -m "${COMMIT_MSG}"
 
 echo ""
+echo "=== PULL (integrate remote changes before push) ==="
+git pull --no-edit -X ours origin master
+
+echo ""
 echo "=== PUSH ==="
 git push origin master
 
