@@ -7,11 +7,6 @@
     "icon": "./assets/icon.png",
     "scheme": "deen",
     "userInterfaceStyle": "automatic",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#000000"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.deencommerce.app"
@@ -38,7 +33,10 @@
           "android": {
             "compileSdkVersion": 36,
             "targetSdkVersion": 36,
-            "minSdkVersion": 24
+            "minSdkVersion": 24,
+            "extraGradleProperties": {
+              "org.gradle.jvmargs": "-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:HeapBaseMinAddress=0x100000000"
+            }
           },
           "ios": {
             "deploymentTarget": "16.4"
