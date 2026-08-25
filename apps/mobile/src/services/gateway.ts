@@ -159,6 +159,10 @@ export async function request<T>(path: string, init?: RequestInit, timeoutMs = 8
         // is a definitive client error and must NOT fail over.
         if (res.status >= 500) {
           lastErr = new Error(`Gateway ${base} returned ${res.status}`);
+          const idx = GATEWAY_URLS.indexOf(base);
+          if (idx === preferredGatewayIdx) {
+            preferredGatewayIdx = (preferredGatewayIdx + 1) % GATEWAY_URLS.length;
+          }
           continue;
         }
         throw new Error(`Gateway returned ${res.status}: ${body.slice(0, 200)}`);
@@ -413,6 +417,26 @@ export async function getOrders(phone?: string): Promise<Order[]> {
     } catch {}
   }
   return [];
+}
+
+/**
+ * Fetch live Pathao parcel tracking info by consignment ID.
+ * Calls GET /v1/deen/pathao/track/:consignmentId on the gateway,
+ * which in turn calls the Pathao API and returns normalized status steps.
+ */
+export async function requestTracking(consignmentId: string): Promise<any | null> {
+  if (!consignmentId) return null;
+  try {
+    const info = await request<any>(
+      `/v1/deen/pathao/track/${encodeURIComponent(consignmentId)}`,
+      undefined,
+      6000,
+      true // silent: don't flip connection state for tracking lookup failures
+    );
+    return info;
+  } catch {
+    return null;
+  }
 }
 
 export async function createOrder(

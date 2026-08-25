@@ -310,7 +310,7 @@ export const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
             <View style={styles.policyCard}>
               <CheckCircle2 size={16} color={colors.emerald} />
               <Text style={styles.policyText}>
-                Size didn't fit perfectly? Enjoy our <Text style={styles.bold}>7-Day Free Size Exchange</Text> across Bangladesh.
+                Size didn't fit perfectly? Enjoy our <Text style={styles.bold}>3-Day Free Size Exchange</Text> across Bangladesh.
               </Text>
             </View>
           </ScrollView>

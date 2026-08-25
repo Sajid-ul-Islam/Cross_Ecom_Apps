@@ -150,7 +150,7 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
 
       Alert.alert(
         "Request Submitted! 🎉",
-        `Your ${type === "EXCHANGE" ? "Exchange" : "Return"} ticket #${ticket.ticketNumber} is confirmed.\n\nOur courier will collect the item from your address within 24-48 hours.`,
+        `Your ${type === "EXCHANGE" ? "Exchange" : "Return"} ticket #${ticket.ticketNumber} is confirmed.\n\nOur courier will collect the item from your address within 24-48 hours.\n\nA copy of this request (with photos) has also been sent to our WhatsApp support team for faster processing.`,
         [
           {
             text: "View Status in Orders",
@@ -161,8 +161,17 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
           },
         ]
       );
-    } catch {
-      Alert.alert("Submission Failed", "Could not submit request. Please try again.");
+    } catch (err: any) {
+      // Handle 3-day policy rejection from server
+      if (err?.message?.includes("EXCHANGE_WINDOW_EXPIRED") || err?.message?.includes("3 days")) {
+        Alert.alert(
+          "Exchange Window Expired",
+          "Exchange/return requests must be submitted within 3 days of delivery. This order is outside the eligible window.",
+          [{ text: "OK" }]
+        );
+      } else {
+        Alert.alert("Submission Failed", "Could not submit request. Please try again.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -180,7 +189,7 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
               </View>
               <View>
                 <Text style={[styles.title, { color: colors.ink }]}>EXCHANGE &amp; RETURN PORTAL</Text>
-                <Text style={[styles.subtitle, { color: colors.sub }]}>Order #{order.number} · 7-Day Hassle Free</Text>
+                <Text style={[styles.subtitle, { color: colors.sub }]}>Order #{order.number} · 3-Day Exchange Policy</Text>
               </View>
             </View>
 
@@ -194,7 +203,7 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
             <View style={styles.policyBanner}>
               <ShieldCheck size={16} color={colors.emerald} />
               <Text style={styles.policyText}>
-                <Text style={styles.bold}>100% Guaranteed:</Text> Free courier pickup in Dhaka &amp; Nationwide. Item must be unwashed with original tags attached.
+                <Text style={styles.bold}>3-Day Exchange Policy:</Text> Requests must be submitted within 3 days (72 hours) of delivery. Free courier pickup in Dhaka &amp; Nationwide. Item must be unwashed with original tags attached.
               </Text>
             </View>
 

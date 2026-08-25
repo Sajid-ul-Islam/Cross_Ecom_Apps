@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Dimensions,
   Linking,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import {
   X,
@@ -24,6 +25,7 @@ import { LottieAnimation } from "./LottieAnimation";
 import { Colors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { Order } from "../types";
+import { requestTracking } from "../services/gateway";
 
 const { width, height } = Dimensions.get("window");
 
@@ -43,7 +45,28 @@ export const CourierTrackingModal: React.FC<CourierTrackingModalProps> = ({
 
   const hasConsignment = Boolean(order.pathaoConsignmentId);
   const trackingId = order.pathaoConsignmentId || "Awaiting Courier Dispatch";
-  const trackingUrl = order.pathaoTrackingUrl || (hasConsignment ? `https://merchant.pathao.com/tracking?consignment_id=${trackingId}` : "");
+  const trackingUrl =
+    order.pathaoTrackingUrl ||
+    (hasConsignment ? `https://merchant.pathao.com/tracking?consignment_id=${trackingId}` : "");
+
+  // Live tracking info from the gateway (fetched via GET /v1/deen/pathao/track/:id)
+  const [trackingInfo, setTrackingInfo] = useState<any>(order.pathaoTrackingInfo || null);
+  const [fetchingTracking, setFetchingTracking] = useState(false);
+
+  useEffect(() => {
+    if (hasConsignment && !order.pathaoTrackingInfo) {
+      setFetchingTracking(true);
+      requestTracking(order.pathaoConsignmentId as string)
+        .then(setTrackingInfo)
+        .catch(() => setTrackingInfo(null))
+        .finally(() => setFetchingTracking(false));
+    }
+  }, [order.pathaoConsignmentId]);
+
+  // Determine which milestone is current/completed from live data
+  const liveSteps = trackingInfo?.steps || [];
+  const liveSummary = trackingInfo?.summary || (hasConsignment ? "Tracking dispatched" : "Preparing Dispatch");
+
   const riderName = "Pathao Express Delivery";
   const riderPhone = "+8801877076200";
 
@@ -107,9 +130,17 @@ export const CourierTrackingModal: React.FC<CourierTrackingModalProps> = ({
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <Clock size={14} color={colors.emerald} />
                   <Text style={styles.etaText}>
-                    ESTIMATED ARRIVAL: <Text style={styles.bold}>24–48 HOURS</Text>
+                    LIVE STATUS: <Text style={styles.bold}>{liveSummary}</Text>
                   </Text>
                 </View>
+                {trackingInfo && (
+                  <Text style={{ fontSize: 10, color: Colors.faint, marginTop: 2 }}>
+                    Last updated: {new Date(trackingInfo.lastUpdated).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                  </Text>
+                )}
+                {fetchingTracking && (
+                  <ActivityIndicator size="small" color={colors.indigo} style={{ marginTop: 4 }} />
+                )}
               </View>
             </View>
 
@@ -120,7 +151,7 @@ export const CourierTrackingModal: React.FC<CourierTrackingModalProps> = ({
                   <Text style={[styles.riderAvatarText, { color: colors.indigo }]}>PT</Text>
                 </View>
                 <View>
-                  <Text style={[styles.riderName, { color: colors.ink }]}>Pathao Courier</Text>
+                  <Text style={[styles.riderName, { color: colors.ink }]}>{riderName}</Text>
                   <Text style={[styles.riderRole, { color: colors.sub }]}>Consignment: {trackingId}</Text>
                   <Text style={[styles.riderVehicle, { color: colors.indigo }]}>
                     Payment: {order.payment === "cod" ? "COD (Pay on Delivery)" : "Paid"} · ৳{order.total}
@@ -138,31 +169,80 @@ export const CourierTrackingModal: React.FC<CourierTrackingModalProps> = ({
               </View>
             </View>
 
-            {/* Delivery Milestones Timeline */}
+            {/* Delivery Milestones Timeline — driven by live Pathao API data */}
             <View style={[styles.timelineCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Text style={[styles.timelineTitle, { color: colors.sub }]}>SHIPMENT MILESTONES</Text>
 
-              <View style={styles.milestoneItem}>
-                <View style={[styles.milestoneDot, styles.milestoneDotDone, { backgroundColor: colors.indigo }]}>
-                  <CheckCircle2 size={12} color="#FFFFFF" />
+              {liveSteps.length > 0 ? (
+                liveSteps.map((step: any, idx: number) => {
+                  const isDone = step.completed;
+                  const isCurrent = step.current;
+                  return (
+                    <React.Fragment key={step.status}>
+                      <View style={styles.milestoneItem}>
+                        <View
+                          style={[
+                            styles.milestoneDot,
+                            isDone && styles.milestoneDotDone,
+                            isDone && { backgroundColor: colors.emerald, borderColor: colors.emerald },
+                            isCurrent && { backgroundColor: colors.indigo, borderColor: colors.indigo },
+                          ]}
+                        >
+                          {isDone ? (
+                            <CheckCircle2 size={12} color="#FFFFFF" />
+                          ) : (
+                            <View style={[styles.stepDotInner, { backgroundColor: colors.border }]} />
+                          )}
+                        </View>
+                        <View style={styles.milestoneContent}>
+                          <Text style={[styles.milestoneHeading, { color: colors.ink }]}>
+                            {step.label}
+                          </Text>
+                          {step.location ? (
+                            <Text style={[styles.milestoneSub, { color: colors.sub }]}>
+                              {step.location}
+                            </Text>
+                          ) : null}
+                          {step.timestamp ? (
+                            <Text style={[styles.milestoneTime, { color: colors.sub }]}>
+                              {new Date(step.timestamp).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                            </Text>
+                          ) : (
+                            <Text style={[styles.milestoneTime, { color: colors.faint }]}>
+                              {isCurrent ? "In progress…" : "Pending"}
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                      {idx < liveSteps.length - 1 && (
+                        <View
+                          style={[
+                            styles.stepLine,
+                            { backgroundColor: colors.borderLight },
+                            isDone && { backgroundColor: colors.emerald },
+                          ]}
+                        />
+                      )}
+                    </React.Fragment>
+                  );
+                })
+              ) : (
+                <View style={styles.milestoneItem}>
+                  <View style={[styles.milestoneDot, { backgroundColor: colors.cardSecondary, borderColor: colors.border }]}>
+                    <Clock size={12} color={colors.sub} />
+                  </View>
+                  <View style={styles.milestoneContent}>
+                    <Text style={[styles.milestoneHeading, { color: colors.ink }]}>
+                      {liveSummary}
+                    </Text>
+                    <Text style={[styles.milestoneSub, { color: colors.sub }]}>
+                      {hasConsignment
+                        ? "Live tracking data will appear once Pathao updates the status."
+                        : "Awaiting Pathao courier dispatch."}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.milestoneContent}>
-                  <Text style={[styles.milestoneHeading, { color: colors.ink }]}>Order Placed & Assigned to Pathao</Text>
-                  <Text style={[styles.milestoneSub, { color: colors.sub }]}>Consignment ID {trackingId} generated for doorstep dispatch</Text>
-                  <Text style={[styles.milestoneTime, { color: colors.sub }]}>{new Date(order.createdAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}</Text>
-                </View>
-              </View>
-
-              <View style={styles.milestoneItem}>
-                <View style={[styles.milestoneDot, styles.milestoneDotDone, { backgroundColor: colors.emerald }]}>
-                  <CheckCircle2 size={12} color="#FFFFFF" />
-                </View>
-                <View style={styles.milestoneContent}>
-                  <Text style={[styles.milestoneHeading, { color: colors.ink }]}>Quality Inspection & Packing</Text>
-                  <Text style={[styles.milestoneSub, { color: colors.sub }]}>Handcrafted garments sealed with tamper-proof DEEN packaging</Text>
-                  <Text style={[styles.milestoneTime, { color: colors.sub }]}>Fulfillment Center</Text>
-                </View>
-              </View>
+              )}
             </View>
 
             {/* Delivery & Payment Summary */}
@@ -427,6 +507,18 @@ const styles = StyleSheet.create({
   milestoneDotDone: {
     backgroundColor: Colors.indigo,
     borderColor: Colors.indigo,
+  },
+  stepDotInner: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.border,
+  },
+  stepLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: Colors.borderLight,
+    marginBottom: 12,
   },
   milestoneContent: {
     flex: 1,

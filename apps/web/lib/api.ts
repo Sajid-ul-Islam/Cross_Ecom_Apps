@@ -127,6 +127,22 @@ export interface OrderResult {
   address?: string;
   pathaoConsignmentId?: string;
   pathaoTrackingUrl?: string;
+  /** Live Pathao tracking info embedded by the gateway when consignmentId exists. */
+  pathaoTrackingInfo?: {
+    consignmentId: string;
+    summary: string;
+    status: string;
+    steps: Array<{
+      timestamp: string;
+      status: string;
+      label: string;
+      location?: string;
+      completed: boolean;
+      current: boolean;
+    }>;
+    trackingUrl: string;
+    lastUpdated: string;
+  };
   lines?: { name: string; size: string; qty: number; unit: number; gift?: boolean }[];
 }
 
@@ -235,4 +251,44 @@ export async function verifyPayment(
     throw new Error(err.message || "Payment verification failed");
   }
   return res.json();
+}
+
+/* --------------------------- Pathao tracking ---------------------------- */
+
+export interface PathaoStep {
+  timestamp: string;
+  status: string;
+  label: string;
+  location?: string;
+  completed: boolean;
+  current: boolean;
+}
+
+export interface PathaoTrackingResult {
+  success: boolean;
+  consignmentId: string;
+  summary: string;
+  status: string;
+  steps: PathaoStep[];
+  trackingUrl: string;
+  lastUpdated: string;
+  message?: string;
+}
+
+/**
+ * Fetch live Pathao tracking info by consignment ID.
+ * Calls GET /v1/deen/pathao/track/:consignmentId on the gateway.
+ */
+export async function fetchPathaoTracking(consignmentId: string): Promise<PathaoTrackingResult | null> {
+  if (!consignmentId) return null;
+  try {
+    const res = await apiFetch(
+      `${API_URL}/v1/deen/pathao/track/${encodeURIComponent(consignmentId)}`,
+      { cache: "no-store" },
+    );
+    if (!res.ok) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
 }

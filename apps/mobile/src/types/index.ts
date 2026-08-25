@@ -135,6 +135,22 @@ export interface Order {
   courier?: string;
   pathaoConsignmentId?: string;
   pathaoTrackingUrl?: string;
+  /** Live Pathao tracking info embedded by the gateway when consignmentId exists. */
+  pathaoTrackingInfo?: {
+    consignmentId: string;
+    summary: string;
+    status: string;
+    steps: Array<{
+      timestamp: string;
+      status: string;
+      label: string;
+      location?: string;
+      completed: boolean;
+      current: boolean;
+    }>;
+    trackingUrl: string;
+    lastUpdated: string;
+  };
   wooId?: number;
   wooNumber?: string; // REAL WooCommerce order number (e.g. "1042") shown to customer
   isGuestOrder?: boolean;

@@ -72,10 +72,11 @@ export default function OrdersLookupPage() {
       ) : orders && orders.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 720 }}>
           {orders.map((order) => {
-            const pathaoId = order.pathaoConsignmentId || `PT-${order.number.replace(/[^0-9]/g, "")}921`;
+            const hasPathao = Boolean(order.pathaoConsignmentId);
+            const pathaoId = order.pathaoConsignmentId || "";
             const trackingUrl =
               order.pathaoTrackingUrl ||
-              `https://merchant.pathao.com/tracking?consignment_id=${pathaoId}`;
+              (hasPathao ? `https://merchant.pathao.com/tracking?consignment_id=${pathaoId}` : "");
 
             return (
               <div
@@ -140,38 +141,131 @@ export default function OrdersLookupPage() {
                   </span>
                 </div>
 
-                {/* Pathao Consignment Tracker */}
-                <div
-                  style={{
-                    background: "var(--surface-2)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 8,
-                    padding: "12px 16px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    gap: 10,
-                    marginBottom: 16,
-                  }}
-                >
-                  <div>
-                    <p style={{ fontSize: 11, fontWeight: 800, color: "var(--indigo)", letterSpacing: 0.5 }}>
-                      🚚 PATHAO EXPRESS COURIER
-                    </p>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", marginTop: 2 }}>
-                      Consignment ID: {pathaoId}
-                    </p>
-                  </div>
-                  <a
-                    href={trackingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn-sm btn-primary"
+                {/* Pathao Consignment Tracker — only when real consignment exists */}
+                {hasPathao ? (
+                  <div
+                    style={{
+                      background: "var(--surface-2)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 8,
+                      padding: "12px 16px",
+                      marginBottom: 16,
+                    }}
                   >
-                    Track on Pathao →
-                  </a>
-                </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 12 }}>
+                      <div>
+                        <p style={{ fontSize: 11, fontWeight: 800, color: "var(--indigo)", letterSpacing: 0.5 }}>
+                          🚚 PATHAO EXPRESS COURIER
+                        </p>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", marginTop: 2 }}>
+                          Consignment ID: {pathaoId}
+                        </p>
+                      </div>
+                      <a
+                        href={trackingUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn-sm btn-primary"
+                      >
+                        Track on Pathao →
+                      </a>
+                    </div>
+
+                    {/* Live Tracking Milestones — when tracking info is embedded by gateway */}
+                    {order.pathaoTrackingInfo ? (
+                      <div>
+                        <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 8 }}>
+                          <span style={{ fontSize: 12, color: "var(--sub)" }}>Live Status:</span>
+                          <strong style={{ fontSize: 12, color: "var(--indigo)" }}>{order.pathaoTrackingInfo.summary}</strong>
+                          <span style={{ fontSize: 10, color: "var(--faint)", marginLeft: "auto" }}>
+                            Updated: {new Date(order.pathaoTrackingInfo.lastUpdated).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          {order.pathaoTrackingInfo.steps.map((step) => (
+                            <div
+                              key={step.status}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 8,
+                                padding: "2px 0",
+                              }}
+                            >
+                              <div style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: 4,
+                                backgroundColor: step.completed
+                                  ? "var(--emerald)"
+                                  : step.current
+                                  ? "var(--indigo)"
+                                  : "var(--border)",
+                                flexShrink: 0,
+                              }} />
+                              <span style={{
+                                fontSize: 11,
+                                fontWeight: step.current || step.completed ? 700 : 400,
+                                color: step.completed
+                                  ? "var(--emerald)"
+                                  : step.current
+                                  ? "var(--indigo)"
+                                  : "var(--sub)",
+                              }}>
+                                {step.label}
+                              </span>
+                              {step.location && (
+                                <span style={{ fontSize: 10, color: "var(--sub)", marginLeft: 4 }}>
+                                  • {step.location}
+                                </span>
+                              )}
+                              {step.timestamp && (
+                                <span style={{ fontSize: 10, color: "var(--faint)", marginLeft: "auto" }}>
+                                  {new Date(step.timestamp).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0" }}>
+                        <span style={{ fontSize: 14 }}>📦</span>
+                        <div>
+                          <p style={{ fontSize: 11, fontWeight: 800, color: "var(--indigo)", letterSpacing: 0.5 }}>
+                            Delivery Status
+                          </p>
+                          <p style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", marginTop: 2 }}>
+                            Preparing Dispatch
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      background: "var(--surface-2)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 8,
+                      padding: "12px 16px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      marginBottom: 16,
+                    }}
+                  >
+                    <span style={{ fontSize: 14 }}>📦</span>
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 800, color: "var(--indigo)", letterSpacing: 0.5 }}>
+                        Delivery Status
+                      </p>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", marginTop: 2 }}>
+                        Preparing Dispatch
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Lines */}
                 {order.lines && order.lines.length > 0 && (
