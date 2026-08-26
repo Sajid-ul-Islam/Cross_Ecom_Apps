@@ -3,17 +3,16 @@ import { View, Text } from "react-native";
 import { Gift, Truck } from "./Icons";
 import { useCart } from "../context/CartContext";
 import { useTheme } from "../context/ThemeContext";
-import { bdt } from "../services/gateway";
+import { bdt, CASHBACK_TIERS } from "../services/gateway";
 
 export const CashbackBanner: React.FC = () => {
   const { subtotal } = useCart();
   const { colors } = useTheme();
 
-  // Tier 1: ৳2,500 (৳500 cashback)
-  // Tier 2: ৳3,000 (৳700 cashback)
-  const isTier2 = subtotal >= 3000;
-  const isTier1 = subtotal >= 2500;
-  const progress = Math.min(1, subtotal / 3000);
+  // Tiers sourced from the single source of truth (CASHBACK_TIERS in api.ts).
+  const isTier2 = subtotal >= CASHBACK_TIERS.tier2.minSpend;
+  const isTier1 = subtotal >= CASHBACK_TIERS.tier1.minSpend;
+  const progress = Math.min(1, subtotal / CASHBACK_TIERS.tier2.minSpend);
   const accentColor = isTier2 ? colors.emerald : isTier1 ? colors.denimStitch : colors.indigo;
 
   return (

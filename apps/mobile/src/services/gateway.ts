@@ -26,6 +26,8 @@ import {
   bdt,
   CATEGORIES,
   FREE_TEE_THRESHOLD,
+  CASHBACK_TIERS,
+  getCashbackAmount,
 } from "./api";
 export {
   DELIVERY_FEES,
@@ -36,6 +38,8 @@ export {
   bdt,
   CATEGORIES,
   FREE_TEE_THRESHOLD,
+  CASHBACK_TIERS,
+  getCashbackAmount,
 };
 import { getBundledProducts } from "./catalog";
 import type {

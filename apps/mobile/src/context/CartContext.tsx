@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CartItem, Product, DeliveryArea } from "../types";
-import { DELIVERY_FEES, fetchCashback, fetchPricing } from "../services/gateway";
+import { DELIVERY_FEES, fetchCashback, fetchPricing, CASHBACK_TIERS } from "../services/gateway";
 
 interface CartContextType {
   cart: CartItem[];
@@ -108,7 +108,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchPricing(items, area).then((p) => {
       if (cancelled) return;
       setCashbackAmount(p.cashback);
-      setCashbackTier(p.cashback >= 700 ? 2 : p.cashback >= 500 ? 1 : 0);
+      setCashbackTier(p.cashback >= CASHBACK_TIERS.tier2.cashback ? 2 : p.cashback >= CASHBACK_TIERS.tier1.cashback ? 1 : 0);
       setCashbackGap(p.nextTierAt && p.nextTierAt > subtotal ? Math.max(0, p.nextTierAt - subtotal) : 0);
       setBogoDiscount(p.bogoDiscount);
       setBogoFreeIndexes(p.bogoFreeIndexes || []);

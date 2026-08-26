@@ -32,7 +32,7 @@ interface ReviewItem {
 const INITIAL_REVIEWS: ReviewItem[] = [
   {
     id: "rev_1",
-    name: "Tanvir Hasan",
+    name: "Names",
     rating: 5,
     date: "2 days ago",
     fitInfo: "Height: 5'10\" · Weight: 72kg",

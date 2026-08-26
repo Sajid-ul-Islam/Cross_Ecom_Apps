@@ -25,7 +25,7 @@ import { useCart } from "../src/context/CartContext";
 import { useOrders } from "../src/context/OrderContext";
 import { useProfile } from "../src/context/ProfileContext";
 import { useRewards } from "../src/context/RewardsContext";
-import { bdt, DELIVERY_OPTIONS, createGuestSession, getGuestSession, fetchPaymentMethods, fetchCoupon } from "../src/services/gateway";
+import { bdt, DELIVERY_OPTIONS, createGuestSession, getGuestSession, fetchPaymentMethods, fetchCoupon, getCashbackAmount } from "../src/services/gateway";
 
 import { BD_DISTRICTS, BdDistrict } from "../src/data/districts";
 import {
@@ -105,7 +105,7 @@ export default function CheckoutScreen() {
   const deliveryFee = deliveryOpt.fee;
   const maxCoinDiscount = Math.min(Math.floor(coins / 2), Math.floor(subtotal * 0.2));
   const coinDiscountBDT = redeemPoints ? maxCoinDiscount : 0;
-  const cashbackBDT = cashbackAmount ?? (subtotal >= 3000 ? 700 : subtotal >= 2500 ? 500 : 0);
+  const cashbackBDT = cashbackAmount ?? getCashbackAmount(subtotal);
   const couponDiscountBDT = couponInfo
     ? (couponInfo.type === "percent"
         ? Math.round((subtotal * couponInfo.amount) / 100)
@@ -342,7 +342,7 @@ export default function CheckoutScreen() {
               style={[styles.input, { backgroundColor: colors.paper, borderColor: colors.border, color: colors.ink }]}
               value={name}
               onChangeText={setName}
-              placeholder="e.g. Tanvir Ahmed"
+              placeholder="e.g. First Name Last Name"
               placeholderTextColor={colors.faint}
             />
           </View>
