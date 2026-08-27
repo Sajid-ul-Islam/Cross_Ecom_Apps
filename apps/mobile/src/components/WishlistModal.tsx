@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { X, Heart, ShoppingBag, Trash2, ArrowRight, Check } from "./Icons";
-import { Colors } from "../theme/colors";
+import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useWishlist } from "../context/WishlistContext";
 import { useCart } from "../context/CartContext";
@@ -31,6 +31,7 @@ export const WishlistModal: React.FC<WishlistModalProps> = ({ visible, onClose }
   const { colors, isDark } = useTheme();
   const { wishlist, removeFromWishlist, clearWishlist } = useWishlist();
   const { addToCart } = useCart();
+  const styles = createStyles(colors);
 
   const handleMoveToBag = (product: Product) => {
     const selectedSize = product.sizes?.[0] || "FREE";
@@ -46,7 +47,7 @@ export const WishlistModal: React.FC<WishlistModalProps> = ({ visible, onClose }
     });
     clearWishlist();
     onClose();
-    router.push("/(tabs)/bag");
+    router.push("/(tabs)/cart");
   };
 
   const handleItemPress = (productId: string) => {
@@ -179,233 +180,235 @@ export const WishlistModal: React.FC<WishlistModalProps> = ({ visible, onClose }
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
-    justifyContent: "flex-end",
-  },
-  modalCard: {
-    backgroundColor: Colors.paper,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: height * 0.88,
-    paddingTop: 16,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  iconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: Colors.crimsonLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: "900",
-    color: Colors.ink,
-    letterSpacing: 0.8,
-  },
-  countBadge: {
-    backgroundColor: Colors.indigo,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 10,
-  },
-  countBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 9,
-    fontWeight: "900",
-  },
-  subtitle: {
-    fontSize: 11,
-    color: Colors.sub,
-    marginTop: 2,
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.cardSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: {
-    padding: 16,
-    gap: 12,
-    paddingBottom: 36,
-  },
-  actionsBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
-  itemsCountText: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: Colors.sub,
-    letterSpacing: 0.6,
-  },
-  moveAllBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: Colors.indigoLight,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 5,
-  },
-  moveAllText: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: Colors.indigoDark,
-  },
-  itemCard: {
-    flexDirection: "row",
-    backgroundColor: Colors.card,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: 10,
-    gap: 12,
-  },
-  itemImgWrapper: {
-    width: 84,
-    height: 105,
-    borderRadius: 6,
-    overflow: "hidden",
-    backgroundColor: Colors.paper,
-    position: "relative",
-  },
-  itemImg: {
-    width: "100%",
-    height: "100%",
-  },
-  saleBadge: {
-    position: "absolute",
-    top: 4,
-    left: 4,
-    backgroundColor: Colors.crimson,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderRadius: 3,
-  },
-  saleBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 8,
-    fontWeight: "900",
-  },
-  itemDetails: {
-    flex: 1,
-    justifyContent: "space-between",
-  },
-  itemCategory: {
-    fontSize: 8,
-    fontWeight: "800",
-    color: Colors.sub,
-    letterSpacing: 0.5,
-    marginBottom: 2,
-  },
-  itemName: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: Colors.ink,
-    lineHeight: 16,
-  },
-  priceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginVertical: 4,
-  },
-  priceCurrent: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: Colors.indigoDark,
-  },
-  priceRegular: {
-    fontSize: 11,
-    color: Colors.sub,
-    textDecorationLine: "line-through",
-  },
-  cardActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  addToBagBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: Colors.indigo,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 5,
-  },
-  addToBagBtnText: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  removeBtn: {
-    padding: 6,
-  },
-  emptyContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 48,
-    gap: 10,
-  },
-  emptyIconCircle: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: Colors.cardSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: Colors.ink,
-  },
-  emptySub: {
-    fontSize: 12,
-    color: Colors.sub,
-    textAlign: "center",
-    maxWidth: 260,
-    lineHeight: 18,
-  },
-  shopBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: Colors.indigo,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 6,
-    marginTop: 6,
-  },
-  shopBtnText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.65)",
+      justifyContent: "flex-end",
+    },
+    modalCard: {
+      backgroundColor: colors.paper,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      maxHeight: height * 0.88,
+      paddingTop: 16,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingBottom: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    headerLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    iconCircle: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: colors.crimsonLight,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    title: {
+      fontSize: 14,
+      fontWeight: "900",
+      color: colors.ink,
+      letterSpacing: 0.8,
+    },
+    countBadge: {
+      backgroundColor: colors.indigo,
+      paddingHorizontal: 6,
+      paddingVertical: 1,
+      borderRadius: 10,
+    },
+    countBadgeText: {
+      color: "#FFFFFF",
+      fontSize: 9,
+      fontWeight: "900",
+    },
+    subtitle: {
+      fontSize: 11,
+      color: colors.sub,
+      marginTop: 2,
+    },
+    closeBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.cardSecondary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    content: {
+      padding: 16,
+      gap: 12,
+      paddingBottom: 36,
+    },
+    actionsBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 4,
+    },
+    itemsCountText: {
+      fontSize: 10,
+      fontWeight: "800",
+      color: colors.sub,
+      letterSpacing: 0.6,
+    },
+    moveAllBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: colors.indigoLight,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 5,
+    },
+    moveAllText: {
+      fontSize: 10,
+      fontWeight: "800",
+      color: colors.indigoDark,
+    },
+    itemCard: {
+      flexDirection: "row",
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 10,
+      gap: 12,
+    },
+    itemImgWrapper: {
+      width: 84,
+      height: 105,
+      borderRadius: 6,
+      overflow: "hidden",
+      backgroundColor: colors.paper,
+      position: "relative",
+    },
+    itemImg: {
+      width: "100%",
+      height: "100%",
+    },
+    saleBadge: {
+      position: "absolute",
+      top: 4,
+      left: 4,
+      backgroundColor: colors.crimson,
+      paddingHorizontal: 4,
+      paddingVertical: 2,
+      borderRadius: 3,
+    },
+    saleBadgeText: {
+      color: "#FFFFFF",
+      fontSize: 8,
+      fontWeight: "900",
+    },
+    itemDetails: {
+      flex: 1,
+      justifyContent: "space-between",
+    },
+    itemCategory: {
+      fontSize: 8,
+      fontWeight: "800",
+      color: colors.sub,
+      letterSpacing: 0.5,
+      marginBottom: 2,
+    },
+    itemName: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: colors.ink,
+      lineHeight: 16,
+    },
+    priceRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginVertical: 4,
+    },
+    priceCurrent: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: colors.indigoDark,
+    },
+    priceRegular: {
+      fontSize: 11,
+      color: colors.sub,
+      textDecorationLine: "line-through",
+    },
+    cardActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    addToBagBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      backgroundColor: colors.indigo,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 5,
+    },
+    addToBagBtnText: {
+      color: "#FFFFFF",
+      fontSize: 10,
+      fontWeight: "800",
+      letterSpacing: 0.5,
+    },
+    removeBtn: {
+      padding: 6,
+    },
+    emptyContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 48,
+      gap: 10,
+    },
+    emptyIconCircle: {
+      width: 68,
+      height: 68,
+      borderRadius: 34,
+      backgroundColor: colors.cardSecondary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    emptyTitle: {
+      fontSize: 16,
+      fontWeight: "800",
+      color: colors.ink,
+    },
+    emptySub: {
+      fontSize: 12,
+      color: colors.sub,
+      textAlign: "center",
+      maxWidth: 260,
+      lineHeight: 18,
+    },
+    shopBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      backgroundColor: colors.indigo,
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      borderRadius: 6,
+      marginTop: 6,
+    },
+    shopBtnText: {
+      color: "#FFFFFF",
+      fontSize: 11,
+      fontWeight: "800",
+      letterSpacing: 0.8,
+    },
+  });
+}

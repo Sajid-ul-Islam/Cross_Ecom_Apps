@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 15,
-    fontFamily: "CabinetGrotesk-Bold",
+    fontWeight: "900",
     letterSpacing: 0.8,
   },
   subtitle: {
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
   submitBtnText: {
     color: "#FFFFFF",
     fontSize: 15,
-    fontFamily: "CabinetGrotesk-Bold",
+    fontWeight: "900",
     letterSpacing: 0.5,
   },
   guestLink: {

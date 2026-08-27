@@ -12,9 +12,8 @@ import {
   NativeScrollEvent,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+
 import {
-  ArrowLeft,
   ShoppingBag,
   Heart,
   Truck,
@@ -34,7 +33,8 @@ import {
   Minus,
   Plus,
 } from "../../src/components/Icons";
-import { Colors } from "../../src/theme/colors";
+import { ThemeColors } from "../../src/theme/colors";
+import { sharedStyles } from "../../src/theme/sharedStyles";
 import { useTheme } from "../../src/context/ThemeContext";
 import { fetchProductById, fetchProducts, bdt } from "../../src/services/gateway";
 import { Product, Variation } from "../../src/types";
@@ -42,6 +42,8 @@ import { useCart } from "../../src/context/CartContext";
 import { useProfile } from "../../src/context/ProfileContext";
 import { useWishlist } from "../../src/context/WishlistContext";
 import { SizeGuideModal } from "../../src/components/SizeGuideModal";
+import { NavBar } from "../../src/components/NavBar";
+import { ScreenShell } from "../../src/components/ScreenShell";
 import { ImageLightboxModal } from "../../src/components/ImageLightboxModal";
 import { CompleteTheLook } from "../../src/components/CompleteTheLook";
 import { StoreStockModal } from "../../src/components/StoreStockModal";
@@ -56,7 +58,9 @@ export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { addToCart, totalItems } = useCart();
+  const s = sharedStyles(colors);
+  const styles = createStyles(colors, s);
+  const { addToCart } = useCart();
   const { profile } = useProfile();
   const { isInWishlist, toggleWishlist } = useWishlist();
 
@@ -151,33 +155,30 @@ export default function ProductDetailScreen() {
   };
 
   if (loading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.indigo} />
-        </View>
-      </SafeAreaView>
-    );
+    return <ScreenShell loading />;
   }
 
   if (!product) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.loadingContainer}>
-          <Text style={{ fontSize: 16, fontWeight: "700", color: colors.ink, marginBottom: 8 }}>
-            Product Unavailable
-          </Text>
-          <Text style={{ fontSize: 13, color: colors.sub, marginBottom: 16, textAlign: "center" }}>
-            This item could not be loaded from the store.
-          </Text>
-          <TouchableOpacity
-            style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.indigo, borderRadius: 6 }}
-            onPress={() => router.replace("/(tabs)/shop")}
-          >
-            <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>BACK TO SHOP</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+      <ScreenShell
+        empty
+        emptyContent={
+          <View style={styles.loadingContainer}>
+            <Text style={{ fontSize: 16, fontWeight: "700", color: colors.ink, marginBottom: 8 }}>
+              Product Unavailable
+            </Text>
+            <Text style={{ fontSize: 13, color: colors.sub, marginBottom: 16, textAlign: "center" }}>
+              This item could not be loaded from the store.
+            </Text>
+            <TouchableOpacity
+              style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.indigo, borderRadius: 6 }}
+              onPress={() => router.replace("/(tabs)/shop")}
+            >
+              <Text style={{ color: "#FFFFFF", fontWeight: "700" }}>BACK TO SHOP</Text>
+            </TouchableOpacity>
+          </View>
+        }
+      />
     );
   }
 
@@ -217,33 +218,7 @@ export default function ProductDetailScreen() {
   const isSavedMatch = selectedSize === savedSizeMatch;
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
-      {/* Top Header */}
-      <View style={[styles.navBar, { backgroundColor: colors.paper, borderBottomColor: colors.border }]}>
-        <TouchableOpacity
-          style={[styles.iconBtn, { backgroundColor: colors.cardSecondary }]}
-          onPress={() => router.back()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <ArrowLeft size={20} color={colors.ink} />
-        </TouchableOpacity>
-
-        <Text style={[styles.navTitle, { color: colors.ink }]} numberOfLines={1}>
-          {product.sku}
-        </Text>
-
-        <TouchableOpacity
-          style={[styles.bagBtn, { backgroundColor: colors.cardSecondary }]}
-          onPress={() => router.push("/(tabs)/cart")}
-        >
-          <ShoppingBag size={20} color={colors.ink} />
-          {totalItems > 0 && (
-            <View style={[styles.badge, { backgroundColor: colors.indigo }]}>
-              <Text style={styles.badgeText}>{totalItems}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
+    <ScreenShell renderNav={<NavBar title={product.sku} />}>
 
       {addedNotice && (
         <View style={styles.toastBanner}>
@@ -684,546 +659,489 @@ export default function ProductDetailScreen() {
         visible={careGuideVisible}
         onClose={() => setCareGuideVisible(false)}
       />
-    </SafeAreaView>
+    </ScreenShell>
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.paper,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  navBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: Colors.paper,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  navTitle: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: Colors.sub,
-    letterSpacing: 1,
-  },
-  iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.card,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  bagBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.card,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: Colors.border,
-    position: "relative",
-  },
-  badge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: Colors.crimson,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-  },
-  badgeText: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "800",
-  },
-  toastBanner: {
-    backgroundColor: Colors.emerald,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    alignItems: "center",
-  },
-  toastText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  scrollContent: {
-    paddingBottom: 40,
-  },
-  galleryWrapper: {
-    width: width,
-    height: IMAGE_HEIGHT,
-    backgroundColor: Colors.cardSecondary,
-    position: "relative",
-  },
-  galleryScroll: {
-    width: width,
-    height: IMAGE_HEIGHT,
-  },
-  slideItem: {
-    width: width,
-    height: IMAGE_HEIGHT,
-  },
-  mainHeroImage: {
-    width: width,
-    height: IMAGE_HEIGHT,
-  },
-  imageCounterBadge: {
-    position: "absolute",
-    top: 14,
-    left: 16,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  imageCounterText: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  zoomPill: {
-    position: "absolute",
-    bottom: 16,
-    right: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 14,
-  },
-  zoomPillText: {
-    color: "#FFFFFF",
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  wishlistBtn: {
-    position: "absolute",
-    top: 14,
-    right: 16,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.85)",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  wishlistBtnActive: {
-    backgroundColor: "#FFFFFF",
-  },
-  dotsRow: {
-    position: "absolute",
-    bottom: 16,
-    left: 0,
-    right: 0,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 6,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "rgba(255, 255, 255, 0.45)",
-  },
-  dotActive: {
-    width: 16,
-    backgroundColor: "#FFFFFF",
-  },
-  thumbStripWrapper: {
-    backgroundColor: Colors.paper,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  thumbStrip: {
-    gap: 8,
-  },
-  thumbBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    overflow: "hidden",
-    backgroundColor: Colors.cardSecondary,
-  },
-  thumbBtnActive: {
-    borderColor: Colors.indigo,
-  },
-  thumbImage: {
-    width: "100%",
-    height: "100%",
-  },
-  metaContainer: {
-    padding: 16,
-  },
-  categoryRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 6,
-  },
-  categoryText: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: Colors.sub,
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-  },
-  newPill: {
-    backgroundColor: Colors.indigo,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  newPillText: {
-    color: "#FFFFFF",
-    fontSize: 9,
-    fontWeight: "800",
-  },
-  craftBadge: {
-    backgroundColor: Colors.amberLight,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  craftBadgeText: {
-    color: Colors.amber,
-    fontSize: 9,
-    fontWeight: "800",
-  },
-  productName: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: Colors.ink,
-    lineHeight: 26,
-    marginBottom: 8,
-  },
-  priceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
-  },
-  price: {
-    fontSize: 22,
-    fontWeight: "900",
-    color: Colors.indigoDark,
-  },
-  origPrice: {
-    fontSize: 16,
-    color: Colors.faint,
-    textDecorationLine: "line-through",
-  },
-  discountBadge: {
-    backgroundColor: Colors.crimsonLight,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
-  },
-  discountText: {
-    color: Colors.crimson,
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  blurb: {
-    fontSize: 13,
-    color: Colors.sub,
-    lineHeight: 20,
-    marginBottom: 14,
-  },
-  fabricHighlight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: Colors.card,
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: 16,
-  },
-  fabricHighlightText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: Colors.indigoDark,
-    flex: 1,
-  },
-  sizeSection: {
-    marginBottom: 16,
-  },
-  qtySection: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 16,
-    paddingHorizontal: 4,
-  },
-  qtyLabel: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: Colors.ink,
-    letterSpacing: 0.8,
-  },
-  qtyStepper: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 8,
-    backgroundColor: Colors.card,
-  },
-  qtyBtn: {
-    width: 38,
-    height: 38,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  qtyBtnDisabled: {
-    opacity: 0.4,
-  },
-  qtyValue: {
-    minWidth: 36,
-    textAlign: "center",
-    fontSize: 16,
-    fontWeight: "800",
-    color: Colors.ink,
-  },
-  sizeHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  sizeTitleWrap: {
-    flex: 1,
-  },
-  sizeSectionTitle: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: Colors.ink,
-    letterSpacing: 0.8,
-  },
-  sizeGuideHint: {
-    fontSize: 11,
-    color: Colors.sub,
-    marginTop: 2,
-  },
-  sizeGuideBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: Colors.indigoLight,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: Colors.indigo,
-  },
-  sizeGuideBtnText: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: Colors.indigoDark,
-    letterSpacing: 0.5,
-  },
-  sizeGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  sizeOption: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 6,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    minWidth: 50,
-    alignItems: "center",
-    position: "relative",
-  },
-  sizeOptionActive: {
-    backgroundColor: Colors.indigoDark,
-    borderColor: Colors.indigoDark,
-  },
-  sizeOptionText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: Colors.ink,
-  },
-  sizeOptionTextActive: {
-    color: "#FFFFFF",
-  },
-  sizeOptionDisabled: {
-    backgroundColor: Colors.cardSecondary,
-    borderColor: Colors.borderLight,
-  },
-  sizeOptionTextDisabled: {
-    color: Colors.faint,
-    textDecorationLine: "line-through",
-  },
-  prefDot: {
-    position: "absolute",
-    top: 4,
-    right: 4,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.indigo,
-  },
-  sizeStatusRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 8,
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  sizeStockHint: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.sub,
-  },
-  savedFitPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: Colors.indigoLight,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
-  },
-  savedFitPillText: {
-    fontSize: 9,
-    fontWeight: "800",
-    color: Colors.indigoDark,
-  },
-  bold: {
-    fontWeight: "700",
-  },
-  accordionContainer: {
-    backgroundColor: Colors.card,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: "hidden",
-  },
-  accordionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  accordionTitle: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: Colors.ink,
-    letterSpacing: 0.6,
-  },
-  accordionBody: {
-    padding: 14,
-    backgroundColor: Colors.paper,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  accordionBodyText: {
-    fontSize: 12,
-    color: Colors.sub,
-    lineHeight: 20,
-  },
-  quickFeaturesGrid: {
-    gap: 8,
-    marginVertical: 8,
-  },
-  featurePillCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.card,
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 10,
-  },
-  featurePillTitle: {
-    fontSize: 11,
-    fontWeight: "900",
-    color: Colors.ink,
-    letterSpacing: 0.5,
-  },
-  featurePillSub: {
-    fontSize: 10,
-    color: Colors.sub,
-    marginTop: 1,
-  },
-  bottomBar: {
-    flexDirection: "row",
-    backgroundColor: Colors.card,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 10,
-  },
-  addToCartBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: 6,
-    backgroundColor: Colors.paper,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  addToCartBtnText: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: Colors.indigoDark,
-    letterSpacing: 0.8,
-  },
-  buyNowBtn: {
-    flex: 1.2,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 12,
-    borderRadius: 6,
-    backgroundColor: Colors.indigo,
-  },
-  buyNowBtnText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-  },
-});
+function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
+  return StyleSheet.create({
+    loadingContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    toastBanner: {
+      backgroundColor: colors.emerald,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      alignItems: "center",
+    },
+    toastText: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    scrollContent: s.scrollContent,
+    galleryWrapper: {
+      width: width,
+      height: IMAGE_HEIGHT,
+      backgroundColor: colors.cardSecondary,
+      position: "relative",
+    },
+    galleryScroll: {
+      width: width,
+      height: IMAGE_HEIGHT,
+    },
+    slideItem: {
+      width: width,
+      height: IMAGE_HEIGHT,
+    },
+    mainHeroImage: {
+      width: width,
+      height: IMAGE_HEIGHT,
+    },
+    imageCounterBadge: {
+      position: "absolute",
+      top: 14,
+      left: 16,
+      backgroundColor: "rgba(0, 0, 0, 0.6)",
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+    },
+    imageCounterText: {
+      color: "#FFFFFF",
+      fontSize: 10,
+      fontWeight: "800",
+      letterSpacing: 0.5,
+    },
+    zoomPill: {
+      position: "absolute",
+      bottom: 16,
+      right: 16,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      backgroundColor: "rgba(0, 0, 0, 0.65)",
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 14,
+    },
+    zoomPillText: {
+      color: "#FFFFFF",
+      fontSize: 9,
+      fontWeight: "800",
+      letterSpacing: 0.5,
+    },
+    wishlistBtn: {
+      position: "absolute",
+      top: 14,
+      right: 16,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: "rgba(255, 255, 255, 0.85)",
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: "#000",
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    wishlistBtnActive: {
+      backgroundColor: "#FFFFFF",
+    },
+    dotsRow: {
+      position: "absolute",
+      bottom: 16,
+      left: 0,
+      right: 0,
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: 6,
+    },
+    dot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: "rgba(255, 255, 255, 0.45)",
+    },
+    dotActive: {
+      width: 16,
+      backgroundColor: "#FFFFFF",
+    },
+    thumbStripWrapper: {
+      backgroundColor: colors.paper,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    thumbStrip: {
+      gap: 8,
+    },
+    thumbBtn: {
+      width: 56,
+      height: 56,
+      borderRadius: 6,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      overflow: "hidden",
+      backgroundColor: colors.cardSecondary,
+    },
+    thumbBtnActive: {
+      borderColor: colors.indigo,
+    },
+    thumbImage: {
+      width: "100%",
+      height: "100%",
+    },
+    metaContainer: {
+      padding: 16,
+    },
+    categoryRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 6,
+    },
+    categoryText: {
+      fontSize: 11,
+      fontWeight: "800",
+      color: colors.sub,
+      letterSpacing: 0.8,
+      textTransform: "uppercase",
+    },
+    newPill: {
+      backgroundColor: colors.indigo,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    newPillText: {
+      color: "#FFFFFF",
+      fontSize: 9,
+      fontWeight: "800",
+    },
+    craftBadge: {
+      backgroundColor: colors.amberLight,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    craftBadgeText: {
+      color: colors.amber,
+      fontSize: 9,
+      fontWeight: "800",
+    },
+    productName: {
+      fontSize: 20,
+      fontWeight: "800",
+      color: colors.ink,
+      lineHeight: 26,
+      marginBottom: 8,
+    },
+    priceRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 12,
+    },
+    price: {
+      fontSize: 22,
+      fontWeight: "900",
+      color: colors.indigoDark,
+    },
+    origPrice: {
+      fontSize: 16,
+      color: colors.faint,
+      textDecorationLine: "line-through",
+    },
+    discountBadge: {
+      backgroundColor: colors.crimsonLight,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 4,
+    },
+    discountText: {
+      color: colors.crimson,
+      fontSize: 11,
+      fontWeight: "800",
+    },
+    blurb: {
+      fontSize: 13,
+      color: colors.sub,
+      lineHeight: 20,
+      marginBottom: 14,
+    },
+    fabricHighlight: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: colors.card,
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 16,
+    },
+    fabricHighlightText: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: colors.indigoDark,
+      flex: 1,
+    },
+    sizeSection: {
+      marginBottom: 16,
+    },
+    qtySection: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 16,
+      paddingHorizontal: 4,
+    },
+    qtyLabel: {
+      fontSize: 12,
+      fontWeight: "800",
+      color: colors.ink,
+      letterSpacing: 0.8,
+    },
+    qtyStepper: {
+      flexDirection: "row",
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      backgroundColor: colors.card,
+    },
+    qtyBtn: {
+      width: 38,
+      height: 38,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    qtyBtnDisabled: {
+      opacity: 0.4,
+    },
+    qtyValue: {
+      minWidth: 36,
+      textAlign: "center",
+      fontSize: 16,
+      fontWeight: "800",
+      color: colors.ink,
+    },
+    sizeHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 10,
+    },
+    sizeTitleWrap: {
+      flex: 1,
+    },
+    sizeSectionTitle: {
+      fontSize: 12,
+      fontWeight: "800",
+      color: colors.ink,
+      letterSpacing: 0.8,
+    },
+    sizeGuideHint: {
+      fontSize: 11,
+      color: colors.sub,
+      marginTop: 2,
+    },
+    sizeGuideBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      backgroundColor: colors.indigoLight,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: colors.indigo,
+    },
+    sizeGuideBtnText: {
+      fontSize: 10,
+      fontWeight: "800",
+      color: colors.indigoDark,
+      letterSpacing: 0.5,
+    },
+    sizeGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+    },
+    sizeOption: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 6,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      minWidth: 50,
+      alignItems: "center",
+      position: "relative",
+    },
+    sizeOptionActive: {
+      backgroundColor: colors.indigoDark,
+      borderColor: colors.indigoDark,
+    },
+    sizeOptionText: {
+      fontSize: 13,
+      fontWeight: "700",
+      color: colors.ink,
+    },
+    sizeOptionTextActive: {
+      color: "#FFFFFF",
+    },
+    sizeOptionDisabled: {
+      backgroundColor: colors.cardSecondary,
+      borderColor: colors.borderLight,
+    },
+    sizeOptionTextDisabled: {
+      color: colors.faint,
+      textDecorationLine: "line-through",
+    },
+    prefDot: {
+      position: "absolute",
+      top: 4,
+      right: 4,
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.indigo,
+    },
+    sizeStatusRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginTop: 8,
+      flexWrap: "wrap",
+      gap: 6,
+    },
+    sizeStockHint: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.sub,
+    },
+    savedFitPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: colors.indigoLight,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 4,
+    },
+    savedFitPillText: {
+      fontSize: 9,
+      fontWeight: "800",
+      color: colors.indigoDark,
+    },
+    bold: {
+      fontWeight: "700",
+    },
+    accordionContainer: {
+      backgroundColor: colors.card,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: "hidden",
+    },
+    accordionHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    accordionTitle: {
+      fontSize: 11,
+      fontWeight: "800",
+      color: colors.ink,
+      letterSpacing: 0.6,
+    },
+    accordionBody: {
+      padding: 14,
+      backgroundColor: colors.paper,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    accordionBodyText: {
+      fontSize: 12,
+      color: colors.sub,
+      lineHeight: 20,
+    },
+    quickFeaturesGrid: {
+      gap: 8,
+      marginVertical: 8,
+    },
+    featurePillCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.card,
+      borderRadius: 8,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 10,
+    },
+    featurePillTitle: {
+      fontSize: 11,
+      fontWeight: "900",
+      color: colors.ink,
+      letterSpacing: 0.5,
+    },
+    featurePillSub: {
+      fontSize: 10,
+      color: colors.sub,
+      marginTop: 1,
+    },
+    bottomBar: {
+      flexDirection: "row",
+      backgroundColor: colors.card,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      gap: 10,
+    },
+    addToCartBtn: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingVertical: 12,
+      borderRadius: 6,
+      backgroundColor: colors.paper,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    addToCartBtnText: {
+      fontSize: 12,
+      fontWeight: "800",
+      color: colors.indigoDark,
+      letterSpacing: 0.8,
+    },
+    buyNowBtn: {
+      flex: 1.2,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 12,
+      borderRadius: 6,
+      backgroundColor: colors.indigo,
+    },
+    buyNowBtnText: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "800",
+      letterSpacing: 0.8,
+    },
+  });
+}

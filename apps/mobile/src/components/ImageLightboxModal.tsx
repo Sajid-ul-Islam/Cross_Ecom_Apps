@@ -11,7 +11,8 @@ import {
   StatusBar,
 } from "react-native";
 import { X, ZoomIn, ZoomOut, Maximize2 } from "./Icons";
-import { Colors } from "../theme/colors";
+import { ThemeColors } from "../theme/colors";
+import { useTheme } from "../context/ThemeContext";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -30,6 +31,8 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
   initialIndex = 0,
   productName,
 }) => {
+  const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
   const [activeIndex, setActiveIndex] = useState(initialIndex);
   const [isZoomed, setIsZoomed] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
@@ -143,87 +146,89 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#000000",
-    justifyContent: "space-between",
-  },
-  topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingTop: 44,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    backgroundColor: "rgba(0, 0, 0, 0.75)",
-    zIndex: 10,
-  },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  titleWrap: {
-    flex: 1,
-    alignItems: "center",
-    paddingHorizontal: 10,
-  },
-  productTitle: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.5,
-  },
-  counterText: {
-    color: "rgba(255, 255, 255, 0.6)",
-    fontSize: 10,
-    fontWeight: "600",
-    marginTop: 2,
-  },
-  galleryScroll: {
-    flex: 1,
-  },
-  slideContainer: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT * 0.75,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  lightboxImage: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT * 0.72,
-  },
-  lightboxImageZoomed: {
-    width: SCREEN_WIDTH * 1.5,
-    height: SCREEN_HEIGHT * 0.9,
-  },
-  bottomBar: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    backgroundColor: "rgba(0, 0, 0, 0.75)",
-  },
-  thumbStrip: {
-    gap: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  thumbBox: {
-    width: 52,
-    height: 52,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.3)",
-    overflow: "hidden",
-  },
-  thumbBoxActive: {
-    borderColor: Colors.indigo,
-  },
-  thumbImg: {
-    width: "100%",
-    height: "100%",
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: "#000000",
+      justifyContent: "space-between",
+    },
+    topBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingTop: 44,
+      paddingHorizontal: 16,
+      paddingBottom: 12,
+      backgroundColor: "rgba(0, 0, 0, 0.75)",
+      zIndex: 10,
+    },
+    iconBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: "rgba(255, 255, 255, 0.15)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    titleWrap: {
+      flex: 1,
+      alignItems: "center",
+      paddingHorizontal: 10,
+    },
+    productTitle: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "700",
+      letterSpacing: 0.5,
+    },
+    counterText: {
+      color: "rgba(255, 255, 255, 0.6)",
+      fontSize: 10,
+      fontWeight: "600",
+      marginTop: 2,
+    },
+    galleryScroll: {
+      flex: 1,
+    },
+    slideContainer: {
+      width: SCREEN_WIDTH,
+      height: SCREEN_HEIGHT * 0.75,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    lightboxImage: {
+      width: SCREEN_WIDTH,
+      height: SCREEN_HEIGHT * 0.72,
+    },
+    lightboxImageZoomed: {
+      width: SCREEN_WIDTH * 1.5,
+      height: SCREEN_HEIGHT * 0.9,
+    },
+    bottomBar: {
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      backgroundColor: "rgba(0, 0, 0, 0.75)",
+    },
+    thumbStrip: {
+      gap: 10,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    thumbBox: {
+      width: 52,
+      height: 52,
+      borderRadius: 6,
+      borderWidth: 2,
+      borderColor: "rgba(255, 255, 255, 0.3)",
+      overflow: "hidden",
+    },
+    thumbBoxActive: {
+      borderColor: colors.indigo,
+    },
+    thumbImg: {
+      width: "100%",
+      height: "100%",
+    },
+  });
+}

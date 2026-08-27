@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { UserProfile, AccountType } from "../types";
+import { UserProfile, AccountType, SavedAddress } from "../types";
 import { DEFAULT_PROFILE, GUEST_PROFILE } from "../services/api";
 import {
   getProfile,
@@ -28,6 +28,8 @@ function normalizeProfile(p: Partial<UserProfile> | null): UserProfile {
     phone: p.phone ?? (isGuest ? "" : DEFAULT_PROFILE.phone),
     email: p.email ?? (isGuest ? "" : DEFAULT_PROFILE.email),
     address: p.address ?? (isGuest ? "" : DEFAULT_PROFILE.address),
+    district: p.district ?? "BD-13",
+    city: p.city ?? "Dhaka",
     area: p.area ?? "dhaka_standard",
     deliverySlot: p.deliverySlot ?? "any",
     deliveryNotes: p.deliveryNotes ?? "",
@@ -49,7 +51,9 @@ interface ProfileContextType {
   isLoggedIn: boolean;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   switchToGuestMode: () => Promise<void>;
-  registerCustomer: (data: { name: string; phone: string; email?: string; address?: string }) => Promise<void>;
+  registerCustomer: (data: { name: string; phone: string; email?: string; address?: string; district?: string; city?: string }) => Promise<void>;
+  addSavedAddress: (addr: Omit<SavedAddress, "id">) => Promise<void>;
+  removeSavedAddress: (id: string) => Promise<void>;
   login: (username: string, password: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
 }
@@ -111,7 +115,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
-  const registerCustomer = async (data: { name: string; phone: string; email?: string; address?: string }) => {
+  const registerCustomer = async (data: { name: string; phone: string; email?: string; address?: string; district?: string; city?: string }) => {
     persist({
       ...profile,
       accountType: "customer",
@@ -121,7 +125,31 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       phone: data.phone.trim(),
       email: data.email?.trim() || profile.email,
       address: data.address?.trim() || profile.address,
-      memberSince: new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+      district: data.district || profile.district,
+      city: data.city?.trim() || profile.city,
+      memberSince: profile.memberSince || new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+    });
+  };
+
+  const addSavedAddress = async (addr: Omit<SavedAddress, "id">) => {
+    const newAddress: SavedAddress = {
+      ...addr,
+      id: `addr_${Date.now()}`,
+    };
+    const prevList = profile.savedAddresses || [];
+    const updated = [newAddress, ...prevList];
+    persist({
+      ...profile,
+      savedAddresses: updated,
+    });
+  };
+
+  const removeSavedAddress = async (id: string) => {
+    const prevList = profile.savedAddresses || [];
+    const updated = prevList.filter((a) => a.id !== id);
+    persist({
+      ...profile,
+      savedAddresses: updated,
     });
   };
 
@@ -162,6 +190,8 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updateProfile,
         switchToGuestMode,
         registerCustomer,
+        addSavedAddress,
+        removeSavedAddress,
         login,
         logout,
       }}

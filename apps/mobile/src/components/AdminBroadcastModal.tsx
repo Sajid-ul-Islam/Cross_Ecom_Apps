@@ -22,7 +22,7 @@ import {
   ArrowRight,
   ShieldCheck,
 } from "./Icons";
-import { Colors } from "../theme/colors";
+import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useNotifications } from "../context/NotificationContext";
 import { BroadcastAudience, NotificationType } from "../types";
@@ -37,11 +37,11 @@ const AUDIENCES: { key: BroadcastAudience; label: string; count: string }[] = [
   { key: "DHAKA_ONLY", label: "Dhaka Express Region", count: "Dhaka Metro Hub" },
 ];
 
-const NOTIF_TYPES: { key: NotificationType; label: string; badgeColor: string }[] = [
-  { key: "PROMO", label: "🔥 Flash Promo", badgeColor: Colors.amber },
-  { key: "RESTOCK", label: "⚡ Restock Alert", badgeColor: Colors.crimson },
-  { key: "BROADCAST", label: "📣 Store Notice", badgeColor: Colors.indigo },
-  { key: "ORDER", label: "📦 Order Event", badgeColor: Colors.emerald },
+const NOTIF_TYPES: { key: NotificationType; label: string }[] = [
+  { key: "PROMO", label: "🔥 Flash Promo" },
+  { key: "RESTOCK", label: "⚡ Restock Alert" },
+  { key: "BROADCAST", label: "📣 Store Notice" },
+  { key: "ORDER", label: "📦 Order Event" },
 ];
 
 interface AdminBroadcastModalProps {
@@ -52,6 +52,7 @@ interface AdminBroadcastModalProps {
 export const AdminBroadcastModal: React.FC<AdminBroadcastModalProps> = ({ visible, onClose }) => {
   const { broadcasts, sendBroadcast, refreshBroadcasts } = useNotifications();
   const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
 
   const [activeTab, setActiveTab] = useState<"compose" | "history">("compose");
   const [title, setTitle] = useState("🔥 Midnight Selvedge Drop: 20% OFF");
@@ -377,383 +378,385 @@ export const AdminBroadcastModal: React.FC<AdminBroadcastModalProps> = ({ visibl
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
-    justifyContent: "flex-end",
-  },
-  modalCard: {
-    backgroundColor: Colors.paper,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: height * 0.9,
-    paddingTop: 16,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  iconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: Colors.indigo,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: Colors.ink,
-    letterSpacing: 0.8,
-  },
-  subtitle: {
-    fontSize: 11,
-    color: Colors.sub,
-    marginTop: 2,
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.cardSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tabsRow: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-    backgroundColor: Colors.card,
-  },
-  modeTab: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  modeTabActive: {
-    borderBottomWidth: 2,
-    borderBottomColor: Colors.indigo,
-  },
-  modeTabText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.sub,
-    letterSpacing: 0.5,
-  },
-  modeTabTextActive: {
-    color: Colors.indigoDark,
-    fontWeight: "900",
-  },
-  successToast: {
-    backgroundColor: Colors.emerald,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    alignItems: "center",
-  },
-  successToastText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  content: {
-    padding: 18,
-    gap: 16,
-    paddingBottom: 36,
-  },
-  section: {
-    gap: 8,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: Colors.sub,
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-    marginBottom: 4,
-  },
-  audienceGrid: {
-    gap: 6,
-  },
-  audCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 10,
-    backgroundColor: Colors.card,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 10,
-  },
-  audCardActive: {
-    borderColor: Colors.indigo,
-    backgroundColor: Colors.indigoLight,
-  },
-  radioOuter: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: Colors.indigo,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.indigo,
-  },
-  audLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: Colors.ink,
-  },
-  audLabelActive: {
-    color: Colors.indigoDark,
-  },
-  audCount: {
-    fontSize: 10,
-    color: Colors.sub,
-    marginTop: 1,
-  },
-  typesRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  typeChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  typeChipActive: {
-    backgroundColor: Colors.indigo,
-    borderColor: Colors.indigo,
-  },
-  typeChipText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.ink,
-  },
-  typeChipTextActive: {
-    color: "#FFFFFF",
-  },
-  field: {
-    marginBottom: 10,
-  },
-  fieldLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.ink,
-    marginBottom: 6,
-  },
-  rowFields: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  input: {
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 13,
-    color: Colors.ink,
-  },
-  multilineInput: {
-    minHeight: 70,
-    textAlignVertical: "top",
-  },
-  previewCard: {
-    backgroundColor: Colors.card,
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  previewHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 10,
-  },
-  previewTitle: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: Colors.indigoDark,
-    letterSpacing: 0.5,
-  },
-  simulatedBanner: {
-    backgroundColor: "#161B2E",
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
-  },
-  simTop: {
-    flexDirection: "row",
-    marginBottom: 6,
-  },
-  simAppBadge: {
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 3,
-  },
-  simAppBadgeText: {
-    color: "rgba(255, 255, 255, 0.8)",
-    fontSize: 8,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  simTitle: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "800",
-    marginBottom: 4,
-  },
-  simBody: {
-    color: "rgba(255, 255, 255, 0.8)",
-    fontSize: 11,
-    lineHeight: 16,
-  },
-  simCodeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: Colors.indigoLight,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    alignSelf: "flex-start",
-    marginTop: 8,
-  },
-  simCodeText: {
-    color: Colors.indigoDark,
-    fontSize: 10,
-    fontWeight: "800",
-  },
-  sendBtn: {
-    backgroundColor: Colors.indigo,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 8,
-  },
-  sendBtnText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "900",
-    letterSpacing: 0.8,
-  },
-  historyList: {
-    gap: 12,
-  },
-  historyCard: {
-    backgroundColor: Colors.card,
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  historyTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  historyTypeBadge: {
-    backgroundColor: Colors.indigoLight,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  historyTypeBadgeText: {
-    color: Colors.indigoDark,
-    fontSize: 8,
-    fontWeight: "800",
-  },
-  historyDate: {
-    fontSize: 10,
-    color: Colors.sub,
-  },
-  historyTitle: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: Colors.ink,
-    marginBottom: 4,
-  },
-  historyBody: {
-    fontSize: 11,
-    color: Colors.sub,
-    lineHeight: 16,
-    marginBottom: 8,
-  },
-  historyMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  statPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: Colors.paper,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  statText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: Colors.ink,
-  },
-  networkStatusCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: 16,
-  },
-  networkStatusLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  networkStatusTitle: {
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-  },
-  networkStatusSub: {
-    fontSize: 11,
-    marginTop: 1,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.65)",
+      justifyContent: "flex-end",
+    },
+    modalCard: {
+      backgroundColor: colors.paper,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      maxHeight: height * 0.9,
+      paddingTop: 16,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingBottom: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    headerLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    iconCircle: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: colors.indigo,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    title: {
+      fontSize: 13,
+      fontWeight: "900",
+      color: colors.ink,
+      letterSpacing: 0.8,
+    },
+    subtitle: {
+      fontSize: 11,
+      color: colors.sub,
+      marginTop: 2,
+    },
+    closeBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.cardSecondary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    tabsRow: {
+      flexDirection: "row",
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+      backgroundColor: colors.card,
+    },
+    modeTab: {
+      flex: 1,
+      paddingVertical: 12,
+      alignItems: "center",
+    },
+    modeTabActive: {
+      borderBottomWidth: 2,
+      borderBottomColor: colors.indigo,
+    },
+    modeTabText: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.sub,
+      letterSpacing: 0.5,
+    },
+    modeTabTextActive: {
+      color: colors.indigoDark,
+      fontWeight: "900",
+    },
+    successToast: {
+      backgroundColor: colors.emerald,
+      paddingVertical: 8,
+      paddingHorizontal: 16,
+      alignItems: "center",
+    },
+    successToastText: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    content: {
+      padding: 18,
+      gap: 16,
+      paddingBottom: 36,
+    },
+    section: {
+      gap: 8,
+    },
+    sectionLabel: {
+      fontSize: 11,
+      fontWeight: "800",
+      color: colors.sub,
+      letterSpacing: 0.6,
+      textTransform: "uppercase",
+      marginBottom: 4,
+    },
+    audienceGrid: {
+      gap: 6,
+    },
+    audCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 10,
+      backgroundColor: colors.card,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 10,
+    },
+    audCardActive: {
+      borderColor: colors.indigo,
+      backgroundColor: colors.indigoLight,
+    },
+    radioOuter: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      borderWidth: 2,
+      borderColor: colors.indigo,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    radioInner: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: colors.indigo,
+    },
+    audLabel: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: colors.ink,
+    },
+    audLabelActive: {
+      color: colors.indigoDark,
+    },
+    audCount: {
+      fontSize: 10,
+      color: colors.sub,
+      marginTop: 1,
+    },
+    typesRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 6,
+    },
+    typeChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 6,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    typeChipActive: {
+      backgroundColor: colors.indigo,
+      borderColor: colors.indigo,
+    },
+    typeChipText: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.ink,
+    },
+    typeChipTextActive: {
+      color: "#FFFFFF",
+    },
+    field: {
+      marginBottom: 10,
+    },
+    fieldLabel: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.ink,
+      marginBottom: 6,
+    },
+    rowFields: {
+      flexDirection: "row",
+      gap: 10,
+    },
+    input: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      fontSize: 13,
+      color: colors.ink,
+    },
+    multilineInput: {
+      minHeight: 70,
+      textAlignVertical: "top",
+    },
+    previewCard: {
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    previewHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginBottom: 10,
+    },
+    previewTitle: {
+      fontSize: 11,
+      fontWeight: "800",
+      color: colors.indigoDark,
+      letterSpacing: 0.5,
+    },
+    simulatedBanner: {
+      backgroundColor: "#161B2E",
+      borderRadius: 8,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: "rgba(255, 255, 255, 0.15)",
+    },
+    simTop: {
+      flexDirection: "row",
+      marginBottom: 6,
+    },
+    simAppBadge: {
+      backgroundColor: "rgba(255, 255, 255, 0.15)",
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 3,
+    },
+    simAppBadgeText: {
+      color: "rgba(255, 255, 255, 0.8)",
+      fontSize: 8,
+      fontWeight: "800",
+      letterSpacing: 0.5,
+    },
+    simTitle: {
+      color: "#FFFFFF",
+      fontSize: 13,
+      fontWeight: "800",
+      marginBottom: 4,
+    },
+    simBody: {
+      color: "rgba(255, 255, 255, 0.8)",
+      fontSize: 11,
+      lineHeight: 16,
+    },
+    simCodeRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      backgroundColor: colors.indigoLight,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 4,
+      alignSelf: "flex-start",
+      marginTop: 8,
+    },
+    simCodeText: {
+      color: colors.indigoDark,
+      fontSize: 10,
+      fontWeight: "800",
+    },
+    sendBtn: {
+      backgroundColor: colors.indigo,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 14,
+      borderRadius: 8,
+    },
+    sendBtnText: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "900",
+      letterSpacing: 0.8,
+    },
+    historyList: {
+      gap: 12,
+    },
+    historyCard: {
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    historyTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 6,
+    },
+    historyTypeBadge: {
+      backgroundColor: colors.indigoLight,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    historyTypeBadgeText: {
+      color: colors.indigoDark,
+      fontSize: 8,
+      fontWeight: "800",
+    },
+    historyDate: {
+      fontSize: 10,
+      color: colors.sub,
+    },
+    historyTitle: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: colors.ink,
+      marginBottom: 4,
+    },
+    historyBody: {
+      fontSize: 11,
+      color: colors.sub,
+      lineHeight: 16,
+      marginBottom: 8,
+    },
+    historyMeta: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    statPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: colors.paper,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    statText: {
+      fontSize: 10,
+      fontWeight: "700",
+      color: colors.ink,
+    },
+    networkStatusCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      marginBottom: 16,
+    },
+    networkStatusLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    liveDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    networkStatusTitle: {
+      fontSize: 10,
+      fontWeight: "800",
+      letterSpacing: 0.8,
+    },
+    networkStatusSub: {
+      fontSize: 11,
+      marginTop: 1,
+    },
+  });
+}

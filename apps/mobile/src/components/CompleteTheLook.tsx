@@ -10,7 +10,8 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Sparkles, ShoppingBag, Plus, Check, ArrowRight, Tag } from "./Icons";
-import { Colors } from "../theme/colors";
+import { ThemeColors } from "../theme/colors";
+import { useTheme } from "../context/ThemeContext";
 import { useCart } from "../context/CartContext";
 import { Product } from "../types";
 import { bdt } from "../services/gateway";
@@ -27,6 +28,8 @@ export const CompleteTheLook: React.FC<CompleteTheLookProps> = ({
   allProducts,
 }) => {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
   const { addToCart } = useCart();
   const [added, setAdded] = useState(false);
 
@@ -85,7 +88,7 @@ export const CompleteTheLook: React.FC<CompleteTheLookProps> = ({
         </View>
 
         <View style={styles.savingsPill}>
-          <Tag size={11} color={Colors.emerald} />
+          <Tag size={11} color={colors.emerald} />
           <Text style={styles.savingsPillText}>SAVE 10% BUNDLE</Text>
         </View>
       </View>
@@ -115,7 +118,7 @@ export const CompleteTheLook: React.FC<CompleteTheLookProps> = ({
 
             {idx < fullLook.length - 1 && (
               <View style={styles.plusIconWrapper}>
-                <Plus size={14} color={Colors.indigo} />
+                <Plus size={14} color={colors.indigo} />
               </View>
             )}
           </React.Fragment>
@@ -157,173 +160,175 @@ export const CompleteTheLook: React.FC<CompleteTheLookProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: Colors.card,
-    borderRadius: 12,
-    padding: 16,
-    marginVertical: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  headerLeft: {
-    gap: 4,
-  },
-  badgePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: Colors.indigo,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 3,
-    alignSelf: "flex-start",
-  },
-  badgePillText: {
-    color: "#FFFFFF",
-    fontSize: 8,
-    fontWeight: "900",
-    letterSpacing: 0.6,
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: "900",
-    color: Colors.ink,
-    letterSpacing: 0.6,
-  },
-  savingsPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: Colors.emeraldLight,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: Colors.emerald,
-  },
-  savingsPillText: {
-    fontSize: 9,
-    fontWeight: "800",
-    color: Colors.emerald,
-    letterSpacing: 0.4,
-  },
-  sub: {
-    fontSize: 11,
-    color: Colors.sub,
-    lineHeight: 16,
-    marginBottom: 12,
-  },
-  outfitRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 6,
-    marginBottom: 14,
-  },
-  itemCard: {
-    flex: 1,
-    height: 130,
-    borderRadius: 8,
-    overflow: "hidden",
-    backgroundColor: Colors.paper,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    position: "relative",
-  },
-  itemImage: {
-    width: "100%",
-    height: "100%",
-  },
-  itemOverlay: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: "rgba(10, 20, 15, 0.75)",
-    padding: 6,
-  },
-  itemCat: {
-    color: "rgba(255, 255, 255, 0.7)",
-    fontSize: 7,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  itemName: {
-    color: "#FFFFFF",
-    fontSize: 9,
-    fontWeight: "700",
-  },
-  itemPrice: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "900",
-    marginTop: 2,
-  },
-  plusIconWrapper: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: Colors.indigoLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  pricingCard: {
-    backgroundColor: Colors.paper,
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 10,
-  },
-  priceBreakdown: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  totalLabel: {
-    fontSize: 9,
-    fontWeight: "800",
-    color: Colors.sub,
-    letterSpacing: 0.5,
-  },
-  bundlePrice: {
-    fontSize: 16,
-    fontWeight: "900",
-    color: Colors.indigoDark,
-  },
-  strikePrice: {
-    fontSize: 12,
-    color: Colors.sub,
-    textDecorationLine: "line-through",
-  },
-  savingsAmount: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: Colors.emerald,
-  },
-  addBundleBtn: {
-    backgroundColor: Colors.indigo,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 6,
-  },
-  addBundleBtnSuccess: {
-    backgroundColor: Colors.emerald,
-  },
-  addBundleBtnText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 0.6,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 16,
+      marginVertical: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 6,
+    },
+    headerLeft: {
+      gap: 4,
+    },
+    badgePill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: colors.indigo,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 3,
+      alignSelf: "flex-start",
+    },
+    badgePillText: {
+      color: "#FFFFFF",
+      fontSize: 8,
+      fontWeight: "900",
+      letterSpacing: 0.6,
+    },
+    title: {
+      fontSize: 14,
+      fontWeight: "900",
+      color: colors.ink,
+      letterSpacing: 0.6,
+    },
+    savingsPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: colors.emeraldLight,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 4,
+      borderWidth: 1,
+      borderColor: colors.emerald,
+    },
+    savingsPillText: {
+      fontSize: 9,
+      fontWeight: "800",
+      color: colors.emerald,
+      letterSpacing: 0.4,
+    },
+    sub: {
+      fontSize: 11,
+      color: colors.sub,
+      lineHeight: 16,
+      marginBottom: 12,
+    },
+    outfitRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 6,
+      marginBottom: 14,
+    },
+    itemCard: {
+      flex: 1,
+      height: 130,
+      borderRadius: 8,
+      overflow: "hidden",
+      backgroundColor: colors.paper,
+      borderWidth: 1,
+      borderColor: colors.border,
+      position: "relative",
+    },
+    itemImage: {
+      width: "100%",
+      height: "100%",
+    },
+    itemOverlay: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: "rgba(10, 20, 15, 0.75)",
+      padding: 6,
+    },
+    itemCat: {
+      color: "rgba(255, 255, 255, 0.7)",
+      fontSize: 7,
+      fontWeight: "800",
+      letterSpacing: 0.5,
+    },
+    itemName: {
+      color: "#FFFFFF",
+      fontSize: 9,
+      fontWeight: "700",
+    },
+    itemPrice: {
+      color: "#FFFFFF",
+      fontSize: 10,
+      fontWeight: "900",
+      marginTop: 2,
+    },
+    plusIconWrapper: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: colors.indigoLight,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    pricingCard: {
+      backgroundColor: colors.paper,
+      borderRadius: 8,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 10,
+    },
+    priceBreakdown: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    totalLabel: {
+      fontSize: 9,
+      fontWeight: "800",
+      color: colors.sub,
+      letterSpacing: 0.5,
+    },
+    bundlePrice: {
+      fontSize: 16,
+      fontWeight: "900",
+      color: colors.indigoDark,
+    },
+    strikePrice: {
+      fontSize: 12,
+      color: colors.sub,
+      textDecorationLine: "line-through",
+    },
+    savingsAmount: {
+      fontSize: 11,
+      fontWeight: "800",
+      color: colors.emerald,
+    },
+    addBundleBtn: {
+      backgroundColor: colors.indigo,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 12,
+      borderRadius: 6,
+    },
+    addBundleBtnSuccess: {
+      backgroundColor: colors.emerald,
+    },
+    addBundleBtnText: {
+      color: "#FFFFFF",
+      fontSize: 11,
+      fontWeight: "900",
+      letterSpacing: 0.6,
+    },
+  });
+}

@@ -9,12 +9,14 @@ import {
   Linking,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+
 import { CheckCircle2, Package, ArrowRight, Home, PhoneCall } from "../src/components/Icons";
 import { LottieAnimation } from "../src/components/LottieAnimation";
 import { useTheme } from "../src/context/ThemeContext";
+import { ScreenShell } from "../src/components/ScreenShell";
 import { bdt, lookupCustomer, registerCustomer } from "../src/services/gateway";
 import { ThemeColors } from "../src/theme/colors";
+import { sharedStyles } from "../src/theme/sharedStyles";
 
 export default function OrderSuccessScreen() {
   const router = useRouter();
@@ -29,12 +31,13 @@ export default function OrderSuccessScreen() {
     guestPhone?: string;
   }>();
   const { colors, isDark } = useTheme();
-  const styles = createStyles(colors);
+  const s = sharedStyles(colors);
+  const styles = createStyles(colors, s);
   const isGuestCheckout = Boolean(params.guestName && params.guestPhone);
   const needsPayment = Boolean(params.paymentUrl) && params.paymentMethodId !== "cod";
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
+    <ScreenShell title="ORDER CONFIRMED" showSearch={false} showBag={false} showNotif={false}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Animated Lottie Success Icon */}
         <View style={[styles.iconCircle, { backgroundColor: colors.emeraldLight }]}>
@@ -146,7 +149,7 @@ export default function OrderSuccessScreen() {
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </ScreenShell>
   );
 }
 
@@ -202,12 +205,8 @@ function GuestSavePrompt({ name, phone }: { name: string; phone: string }) {
   );
 }
 
-function createStyles(colors: ThemeColors) {
+function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
   return StyleSheet.create({
-    safeArea: {
-      flex: 1,
-      backgroundColor: colors.paper,
-    },
     scrollContent: {
       padding: 20,
       alignItems: "center",

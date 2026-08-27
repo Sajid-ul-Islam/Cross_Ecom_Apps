@@ -166,6 +166,8 @@ export interface SavedAddress {
   id: string;
   label: string; // e.g. "Home", "Office"
   address: string;
+  district?: string;
+  city?: string;
   area: DeliveryOptionKey;
   isDefault?: boolean;
 }
@@ -179,6 +181,8 @@ export interface UserProfile {
   phone: string;
   email?: string;
   address: string;
+  district?: string;
+  city?: string;
   area: DeliveryOptionKey;
   deliverySlot?: DeliverySlot;
   deliveryNotes?: string;

@@ -22,7 +22,7 @@ import {
   ShieldCheck,
 } from "./Icons";
 import { LottieAnimation } from "./LottieAnimation";
-import { Colors } from "../theme/colors";
+import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { Order } from "../types";
 import { requestTracking } from "../services/gateway";
@@ -42,6 +42,7 @@ export const CourierTrackingModal: React.FC<CourierTrackingModalProps> = ({
 }) => {
   if (!order) return null;
   const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
 
   const hasConsignment = Boolean(order.pathaoConsignmentId);
   const trackingId = order.pathaoConsignmentId || "Awaiting Courier Dispatch";
@@ -134,7 +135,7 @@ export const CourierTrackingModal: React.FC<CourierTrackingModalProps> = ({
                   </Text>
                 </View>
                 {trackingInfo && (
-                  <Text style={{ fontSize: 10, color: Colors.faint, marginTop: 2 }}>
+                  <Text style={{ fontSize: 10, color: colors.sub, marginTop: 2 }}>
                     Last updated: {new Date(trackingInfo.lastUpdated).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
                   </Text>
                 )}
@@ -265,304 +266,306 @@ export const CourierTrackingModal: React.FC<CourierTrackingModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
-    justifyContent: "flex-end",
-  },
-  modalCard: {
-    backgroundColor: Colors.paper,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: height * 0.9,
-    paddingTop: 16,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  iconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: Colors.indigo,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: Colors.ink,
-    letterSpacing: 0.8,
-  },
-  subtitle: {
-    fontSize: 11,
-    color: Colors.sub,
-    marginTop: 2,
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.cardSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: {
-    padding: 18,
-    gap: 14,
-    paddingBottom: 36,
-  },
-  mapContainer: {
-    backgroundColor: "#161B2E",
-    borderRadius: 12,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
-  },
-  mapGraphic: {
-    height: 140,
-    position: "relative",
-    justifyContent: "center",
-    paddingHorizontal: 24,
-  },
-  mapRouteLine: {
-    position: "absolute",
-    left: 40,
-    right: 40,
-    height: 3,
-    backgroundColor: Colors.indigo,
-    top: "50%",
-    borderRadius: 2,
-  },
-  hubNode: {
-    position: "absolute",
-    left: 20,
-    top: "32%",
-    alignItems: "center",
-    gap: 4,
-  },
-  hubDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: Colors.emerald,
-    borderWidth: 2,
-    borderColor: "#FFFFFF",
-  },
-  hubLabel: {
-    color: "#FFFFFF",
-    fontSize: 9,
-    fontWeight: "700",
-  },
-  riderNode: {
-    position: "absolute",
-    left: "52%",
-    top: "22%",
-    alignItems: "center",
-  },
-  riderPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: Colors.indigo,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#FFFFFF",
-  },
-  riderPillText: {
-    color: "#FFFFFF",
-    fontSize: 8,
-    fontWeight: "800",
-  },
-  destNode: {
-    position: "absolute",
-    right: 20,
-    top: "30%",
-    alignItems: "center",
-    gap: 2,
-  },
-  destLabel: {
-    color: "#FFFFFF",
-    fontSize: 9,
-    fontWeight: "700",
-  },
-  etaBar: {
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.1)",
-  },
-  etaText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  bold: {
-    fontWeight: "900",
-    color: Colors.emerald,
-  },
-  riderCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: Colors.card,
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  riderInfoLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flex: 1,
-  },
-  riderAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: Colors.indigoLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  riderAvatarText: {
-    color: Colors.indigoDark,
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  riderName: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: Colors.ink,
-  },
-  riderRole: {
-    fontSize: 10,
-    color: Colors.sub,
-    marginTop: 1,
-  },
-  riderVehicle: {
-    fontSize: 9,
-    color: Colors.faint,
-    marginTop: 1,
-  },
-  callBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: Colors.emerald,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  callBtnText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-  timelineCard: {
-    backgroundColor: Colors.card,
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 12,
-  },
-  timelineTitle: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: Colors.sub,
-    letterSpacing: 0.6,
-  },
-  milestoneItem: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  milestoneDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: Colors.paper,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 2,
-  },
-  milestoneDotDone: {
-    backgroundColor: Colors.indigo,
-    borderColor: Colors.indigo,
-  },
-  stepDotInner: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.border,
-  },
-  stepLine: {
-    flex: 1,
-    height: 2,
-    backgroundColor: Colors.borderLight,
-    marginBottom: 12,
-  },
-  milestoneContent: {
-    flex: 1,
-    gap: 2,
-  },
-  milestoneHeading: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: Colors.ink,
-  },
-  milestoneSub: {
-    fontSize: 10,
-    color: Colors.sub,
-    lineHeight: 14,
-  },
-  milestoneTime: {
-    fontSize: 9,
-    color: Colors.faint,
-    marginTop: 1,
-  },
-  addressBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: Colors.card,
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  addressTitle: {
-    fontSize: 9,
-    fontWeight: "800",
-    color: Colors.sub,
-    letterSpacing: 0.5,
-  },
-  addressText: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: Colors.ink,
-  },
-  addressSub: {
-    fontSize: 10,
-    color: Colors.sub,
-    marginTop: 1,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.65)",
+      justifyContent: "flex-end",
+    },
+    modalCard: {
+      backgroundColor: colors.paper,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      maxHeight: height * 0.9,
+      paddingTop: 16,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingBottom: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    headerLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    iconCircle: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: colors.indigo,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    title: {
+      fontSize: 13,
+      fontWeight: "900",
+      color: colors.ink,
+      letterSpacing: 0.8,
+    },
+    subtitle: {
+      fontSize: 11,
+      color: colors.sub,
+      marginTop: 2,
+    },
+    closeBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.cardSecondary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    content: {
+      padding: 18,
+      gap: 14,
+      paddingBottom: 36,
+    },
+    mapContainer: {
+      backgroundColor: "#161B2E",
+      borderRadius: 12,
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: "rgba(255, 255, 255, 0.15)",
+    },
+    mapGraphic: {
+      height: 140,
+      position: "relative",
+      justifyContent: "center",
+      paddingHorizontal: 24,
+    },
+    mapRouteLine: {
+      position: "absolute",
+      left: 40,
+      right: 40,
+      height: 3,
+      backgroundColor: colors.indigo,
+      top: "50%",
+      borderRadius: 2,
+    },
+    hubNode: {
+      position: "absolute",
+      left: 20,
+      top: "32%",
+      alignItems: "center",
+      gap: 4,
+    },
+    hubDot: {
+      width: 14,
+      height: 14,
+      borderRadius: 7,
+      backgroundColor: colors.emerald,
+      borderWidth: 2,
+      borderColor: "#FFFFFF",
+    },
+    hubLabel: {
+      color: "#FFFFFF",
+      fontSize: 9,
+      fontWeight: "700",
+    },
+    riderNode: {
+      position: "absolute",
+      left: "52%",
+      top: "22%",
+      alignItems: "center",
+    },
+    riderPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: colors.indigo,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: "#FFFFFF",
+    },
+    riderPillText: {
+      color: "#FFFFFF",
+      fontSize: 8,
+      fontWeight: "800",
+    },
+    destNode: {
+      position: "absolute",
+      right: 20,
+      top: "30%",
+      alignItems: "center",
+      gap: 2,
+    },
+    destLabel: {
+      color: "#FFFFFF",
+      fontSize: 9,
+      fontWeight: "700",
+    },
+    etaBar: {
+      backgroundColor: "rgba(255, 255, 255, 0.08)",
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderTopWidth: 1,
+      borderTopColor: "rgba(255, 255, 255, 0.1)",
+    },
+    etaText: {
+      color: "#FFFFFF",
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    bold: {
+      fontWeight: "900",
+      color: colors.emerald,
+    },
+    riderCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    riderInfoLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      flex: 1,
+    },
+    riderAvatar: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      backgroundColor: colors.indigoLight,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    riderAvatarText: {
+      color: colors.indigoDark,
+      fontSize: 14,
+      fontWeight: "900",
+    },
+    riderName: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: colors.ink,
+    },
+    riderRole: {
+      fontSize: 10,
+      color: colors.sub,
+      marginTop: 1,
+    },
+    riderVehicle: {
+      fontSize: 9,
+      color: colors.faint,
+      marginTop: 1,
+    },
+    callBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      backgroundColor: colors.emerald,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 6,
+    },
+    callBtnText: {
+      color: "#FFFFFF",
+      fontSize: 11,
+      fontWeight: "900",
+      letterSpacing: 0.5,
+    },
+    timelineCard: {
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 12,
+    },
+    timelineTitle: {
+      fontSize: 11,
+      fontWeight: "800",
+      color: colors.sub,
+      letterSpacing: 0.6,
+    },
+    milestoneItem: {
+      flexDirection: "row",
+      gap: 10,
+    },
+    milestoneDot: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: colors.paper,
+      borderWidth: 2,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 2,
+    },
+    milestoneDotDone: {
+      backgroundColor: colors.indigo,
+      borderColor: colors.indigo,
+    },
+    stepDotInner: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.border,
+    },
+    stepLine: {
+      flex: 1,
+      height: 2,
+      backgroundColor: colors.borderLight,
+      marginBottom: 12,
+    },
+    milestoneContent: {
+      flex: 1,
+      gap: 2,
+    },
+    milestoneHeading: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: colors.ink,
+    },
+    milestoneSub: {
+      fontSize: 10,
+      color: colors.sub,
+      lineHeight: 14,
+    },
+    milestoneTime: {
+      fontSize: 9,
+      color: colors.faint,
+      marginTop: 1,
+    },
+    addressBox: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    addressTitle: {
+      fontSize: 9,
+      fontWeight: "800",
+      color: colors.sub,
+      letterSpacing: 0.5,
+    },
+    addressText: {
+      fontSize: 12,
+      fontWeight: "800",
+      color: colors.ink,
+    },
+    addressSub: {
+      fontSize: 10,
+      color: colors.sub,
+      marginTop: 1,
+    },
+  });
+}

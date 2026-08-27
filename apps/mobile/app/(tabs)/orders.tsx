@@ -5,15 +5,15 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
-  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+
 import { Package, Clock, CheckCircle2, Truck, ShoppingBag, ArrowRight, RotateCcw, Camera, FileText, ShieldCheck } from "../../src/components/Icons";
-import { Header } from "../../src/components/Header";
-import { Colors } from "../../src/theme/colors";
+import { ScreenShell } from "../../src/components/ScreenShell";
+import { ThemeColors } from "../../src/theme/colors";
+import { sharedStyles } from "../../src/theme/sharedStyles";
 import { useTheme } from "../../src/context/ThemeContext";
+import { usePullToRefresh } from "../../src/hooks/usePullToRefresh";
 import { useOrders } from "../../src/context/OrderContext";
 import { useReturns } from "../../src/context/ReturnContext";
 import { ReturnExchangeModal } from "../../src/components/ReturnExchangeModal";
@@ -31,75 +31,55 @@ const STATUS_STEPS: { key: OrderStatus; label: string }[] = [
 export default function OrdersScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const s = sharedStyles(colors);
+  const styles = createStyles(colors, s);
   const { orders, loading, refreshOrders } = useOrders();
   const { returns, getReturnForOrder } = useReturns();
-  const [refreshing, setRefreshing] = useState(false);
+
   const [returnModalVisible, setReturnModalVisible] = useState(false);
   const [trackingModalVisible, setTrackingModalVisible] = useState(false);
   const [selectedOrderForReturn, setSelectedOrderForReturn] = useState<Order | null>(null);
   const [selectedOrderForTracking, setSelectedOrderForTracking] = useState<Order | null>(null);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await refreshOrders();
-    setRefreshing(false);
-  };
+  const { refreshControl } = usePullToRefresh(refreshOrders);
 
   const getStepIndex = (st: OrderStatus) => {
     return STATUS_STEPS.findIndex((s) => s.key === st);
   };
 
-  if (loading) {
-    return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
-        <Header title="MY ORDERS" showSearch={false} />
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.indigo} />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (orders.length === 0) {
-    return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
-        <Header title="MY ORDERS" showSearch={false} />
-        <View style={styles.emptyContainer}>
-          <View style={styles.emptyIconCircle}>
-            <Package size={36} color={colors.indigo} />
-          </View>
-          <Text style={styles.emptyTitle}>No Orders Yet</Text>
-          <Text style={styles.emptySub}>
-            Your placed orders and live parcel tracking updates will appear here.
-          </Text>
-          <TouchableOpacity
-            style={styles.shopBtn}
-            activeOpacity={0.85}
-            onPress={() => router.push("/(tabs)/shop")}
-          >
-            <Text style={styles.shopBtnText}>BROWSE CATALOG</Text>
-            <ArrowRight size={16} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const emptyContent = (
+    <View style={styles.emptyContainer}>
+      <View style={styles.emptyIconCircle}>
+        <Package size={36} color={colors.indigo} />
+      </View>
+      <Text style={styles.emptyTitle}>No Orders Yet</Text>
+      <Text style={styles.emptySub}>
+        Your placed orders and live parcel tracking updates will appear here.
+      </Text>
+      <TouchableOpacity
+        style={styles.shopBtn}
+        activeOpacity={0.85}
+        onPress={() => router.push("/(tabs)/shop")}
+      >
+        <Text style={styles.shopBtnText}>BROWSE CATALOG</Text>
+        <ArrowRight size={16} color="#FFFFFF" />
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
-      <Header title="MY ORDERS" showSearch={false} />
+    <ScreenShell
+      title="MY ORDERS"
+      showSearch={false}
+      loading={loading}
+      empty={orders.length === 0}
+      emptyContent={emptyContent}
+    >
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.indigo}
-            colors={[colors.indigo]}
-          />
-        }
+        refreshControl={refreshControl}
       >
         <View style={styles.ordersList}>
           {orders.map((order) => {
@@ -352,342 +332,328 @@ export default function OrdersScreen() {
           setSelectedOrderForReturn(null);
         }}
       />
-    </SafeAreaView>
+    </ScreenShell>
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.paper,
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scrollContent: {
-    padding: 16,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 32,
-    gap: 12,
-  },
-  emptyIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: Colors.indigoLight,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: Colors.ink,
-  },
-  emptySub: {
-    fontSize: 13,
-    color: Colors.sub,
-    textAlign: "center",
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  shopBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: Colors.indigo,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 6,
-  },
-  shopBtnText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 1,
-  },
-  orderActionsRow: {
-    flexDirection: "row",
-    gap: 8,
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-    paddingTop: 10,
-    marginTop: 4,
-  },
-  trackBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: Colors.indigo,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  trackBtnText: {
-    fontSize: 10,
-    fontWeight: "900",
-    color: "#FFFFFF",
-    letterSpacing: 0.4,
-  },
-  returnActionRow: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-    paddingTop: 10,
-    marginTop: 4,
-  },
-  returnBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 8,
-    backgroundColor: Colors.indigoLight,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: Colors.indigo,
-  },
-  returnBtnText: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: Colors.indigoDark,
-    letterSpacing: 0.5,
-  },
-  activeReturnBox: {
-    marginTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-    paddingTop: 10,
-    backgroundColor: "#FAFBFD",
-    padding: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 4,
-  },
-  activeReturnHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  activeReturnTitle: {
-    fontSize: 11,
-    fontWeight: "900",
-    color: Colors.indigoDark,
-    letterSpacing: 0.5,
-  },
-  retStatusBadge: {
-    backgroundColor: Colors.amberLight,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  retStatusBadgeText: {
-    color: Colors.amber,
-    fontSize: 8,
-    fontWeight: "900",
-    letterSpacing: 0.4,
-  },
-  retTicketLine: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.ink,
-  },
-  retNotes: {
-    fontSize: 10,
-    color: Colors.sub,
-    fontStyle: "italic",
-  },
-  retMetaRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 4,
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-    paddingTop: 4,
-  },
-  retMetaText: {
-    fontSize: 9,
-    color: Colors.sub,
-    fontWeight: "600",
-  },
-  ordersList: {
-    gap: 14,
-  },
-  orderCard: {
-    backgroundColor: Colors.card,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: 14,
-  },
-  orderHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-    paddingBottom: 10,
-  },
-  orderNumber: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: Colors.indigoDark,
-  },
-  orderDate: {
-    fontSize: 11,
-    color: Colors.sub,
-    marginTop: 2,
-  },
-  statusBadge: {
-    backgroundColor: Colors.indigoLight,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
-  },
-  statusBadgeText: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: Colors.indigo,
-    letterSpacing: 0.5,
-  },
-  stepperContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 14,
-    paddingHorizontal: 4,
-  },
-  stepNode: {
-    alignItems: "center",
-    width: 54,
-  },
-  stepDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: Colors.paper,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  stepDotDone: {
-    backgroundColor: Colors.emerald,
-    borderColor: Colors.emerald,
-  },
-  stepDotCurrent: {
-    borderColor: Colors.indigo,
-    backgroundColor: Colors.indigo,
-  },
-  stepDotInner: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.border,
-  },
-  stepLabel: {
-    fontSize: 9,
-    fontWeight: "600",
-    color: Colors.faint,
-  },
-  stepLabelDone: {
-    color: Colors.ink,
-    fontWeight: "700",
-  },
-  stepLabelCurrent: {
-    color: Colors.indigoDark,
-    fontWeight: "800",
-  },
-  stepLine: {
-    flex: 1,
-    height: 2,
-    backgroundColor: Colors.borderLight,
-    marginBottom: 16,
-  },
-  stepLineDone: {
-    backgroundColor: Colors.emerald,
-  },
-  itemsSummary: {
-    backgroundColor: Colors.paper,
-    borderRadius: 6,
-    padding: 10,
-    gap: 6,
-    marginVertical: 8,
-  },
-  orderLineItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  orderLineQty: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.indigo,
-  },
-  orderLineName: {
-    flex: 1,
-    fontSize: 11,
-    color: Colors.ink,
-  },
-  orderLinePrice: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.ink,
-  },
-  orderFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    paddingTop: 8,
-  },
-  paymentInfo: {
-    fontSize: 11,
-    color: Colors.sub,
-  },
-  delOptionBadge: {
-    backgroundColor: Colors.indigoLight,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  delOptionBadgeText: {
-    color: Colors.indigoDark,
-    fontSize: 9,
-    fontWeight: "700",
-  },
-  guestBadge: {
-    backgroundColor: Colors.amberLight,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 3,
-  },
-  guestBadgeText: {
-    color: Colors.amber,
-    fontSize: 8,
-    fontWeight: "800",
-  },
-  addressInfo: {
-    fontSize: 10,
-    color: Colors.faint,
-    maxWidth: 200,
-    marginTop: 2,
-  },
-  bold: {
-    fontWeight: "700",
-    color: Colors.ink,
-  },
-  orderTotal: {
-    fontSize: 16,
-    fontWeight: "900",
-    color: Colors.indigoDark,
-  },
-});
+function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
+  return StyleSheet.create({
+    center: s.center,
+    scrollContent: s.scrollContent,
+    emptyContainer: s.emptyContainer,
+    emptyIconCircle: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: colors.indigoLight,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 8,
+    },
+    emptyTitle: {
+      fontSize: 20,
+      fontWeight: "800",
+      color: colors.ink,
+    },
+    emptySub: {
+      fontSize: 13,
+      color: colors.sub,
+      textAlign: "center",
+      lineHeight: 20,
+      marginBottom: 8,
+    },
+    shopBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: colors.indigo,
+      paddingVertical: 12,
+      paddingHorizontal: 24,
+      borderRadius: 6,
+    },
+    shopBtnText: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "800",
+      letterSpacing: 1,
+    },
+    orderActionsRow: {
+      flexDirection: "row",
+      gap: 8,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
+      paddingTop: 10,
+      marginTop: 4,
+    },
+    trackBtn: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      backgroundColor: colors.indigo,
+      paddingVertical: 8,
+      borderRadius: 6,
+    },
+    trackBtnText: {
+      fontSize: 10,
+      fontWeight: "900",
+      color: "#FFFFFF",
+      letterSpacing: 0.4,
+    },
+    returnActionRow: {
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
+      paddingTop: 10,
+      marginTop: 4,
+    },
+    returnBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingVertical: 8,
+      backgroundColor: colors.indigoLight,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: colors.indigo,
+    },
+    returnBtnText: {
+      fontSize: 10,
+      fontWeight: "800",
+      color: colors.indigoDark,
+      letterSpacing: 0.5,
+    },
+    activeReturnBox: {
+      marginTop: 10,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
+      paddingTop: 10,
+      backgroundColor: colors.cardSecondary,
+      padding: 10,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 4,
+    },
+    activeReturnHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    activeReturnTitle: {
+      fontSize: 11,
+      fontWeight: "900",
+      color: colors.indigoDark,
+      letterSpacing: 0.5,
+    },
+    retStatusBadge: {
+      backgroundColor: colors.amberLight,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    retStatusBadgeText: {
+      color: colors.amber,
+      fontSize: 8,
+      fontWeight: "900",
+      letterSpacing: 0.4,
+    },
+    retTicketLine: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.ink,
+    },
+    retNotes: {
+      fontSize: 10,
+      color: colors.sub,
+      fontStyle: "italic",
+    },
+    retMetaRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: 4,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
+      paddingTop: 4,
+    },
+    retMetaText: {
+      fontSize: 9,
+      color: colors.sub,
+      fontWeight: "600",
+    },
+    ordersList: {
+      gap: 14,
+    },
+    orderCard: {
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 14,
+    },
+    orderHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+      paddingBottom: 10,
+    },
+    orderNumber: {
+      fontSize: 15,
+      fontWeight: "800",
+      color: colors.indigoDark,
+    },
+    orderDate: {
+      fontSize: 11,
+      color: colors.sub,
+      marginTop: 2,
+    },
+    statusBadge: {
+      backgroundColor: colors.indigoLight,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 4,
+    },
+    statusBadgeText: {
+      fontSize: 10,
+      fontWeight: "800",
+      color: colors.indigo,
+      letterSpacing: 0.5,
+    },
+    stepperContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 14,
+      paddingHorizontal: 4,
+    },
+    stepNode: {
+      alignItems: "center",
+      width: 54,
+    },
+    stepDot: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: colors.paper,
+      borderWidth: 2,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 4,
+    },
+    stepDotDone: {
+      backgroundColor: colors.emerald,
+      borderColor: colors.emerald,
+    },
+    stepDotCurrent: {
+      borderColor: colors.indigo,
+      backgroundColor: colors.indigo,
+    },
+    stepDotInner: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.border,
+    },
+    stepLabel: {
+      fontSize: 9,
+      fontWeight: "600",
+      color: colors.faint,
+    },
+    stepLabelDone: {
+      color: colors.ink,
+      fontWeight: "700",
+    },
+    stepLabelCurrent: {
+      color: colors.indigoDark,
+      fontWeight: "800",
+    },
+    stepLine: {
+      flex: 1,
+      height: 2,
+      backgroundColor: colors.borderLight,
+      marginBottom: 16,
+    },
+    stepLineDone: {
+      backgroundColor: colors.emerald,
+    },
+    itemsSummary: {
+      backgroundColor: colors.paper,
+      borderRadius: 6,
+      padding: 10,
+      gap: 6,
+      marginVertical: 8,
+    },
+    orderLineItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    orderLineQty: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.indigo,
+    },
+    orderLineName: {
+      flex: 1,
+      fontSize: 11,
+      color: colors.ink,
+    },
+    orderLinePrice: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.ink,
+    },
+    orderFooter: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-end",
+      paddingTop: 8,
+    },
+    paymentInfo: {
+      fontSize: 11,
+      color: colors.sub,
+    },
+    delOptionBadge: {
+      backgroundColor: colors.indigoLight,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    delOptionBadgeText: {
+      color: colors.indigoDark,
+      fontSize: 9,
+      fontWeight: "700",
+    },
+    guestBadge: {
+      backgroundColor: colors.amberLight,
+      paddingHorizontal: 5,
+      paddingVertical: 2,
+      borderRadius: 3,
+    },
+    guestBadgeText: {
+      color: colors.amber,
+      fontSize: 8,
+      fontWeight: "800",
+    },
+    addressInfo: {
+      fontSize: 10,
+      color: colors.faint,
+      maxWidth: 200,
+      marginTop: 2,
+    },
+    bold: {
+      fontWeight: "700",
+      color: colors.ink,
+    },
+    orderTotal: {
+      fontSize: 16,
+      fontWeight: "900",
+      color: colors.indigoDark,
+    },
+  });
+}

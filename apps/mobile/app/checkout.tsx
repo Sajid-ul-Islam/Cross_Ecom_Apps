@@ -10,7 +10,7 @@ import {
   Linking,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+
 import { Modal } from "react-native";
 import {
   ArrowLeft,
@@ -21,6 +21,8 @@ import {
   MapPin,
 } from "../src/components/Icons";
 import { useTheme } from "../src/context/ThemeContext";
+import { sharedStyles } from "../src/theme/sharedStyles";
+import { ScreenShell } from "../src/components/ScreenShell";
 import { useCart } from "../src/context/CartContext";
 import { useOrders } from "../src/context/OrderContext";
 import { useProfile } from "../src/context/ProfileContext";
@@ -44,11 +46,12 @@ export default function CheckoutScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ area?: string }>();
   const { colors, isDark } = useTheme();
+  const s = sharedStyles(colors);
   const { cart, subtotal, clearCart, cashbackAmount = 0, bogoDiscount = 0 } = useCart();
   const { placeOrder } = useOrders();
   const { profile } = useProfile();
   const { coins, tierLabel, redeemCoins, earnCoins } = useRewards();
-  const styles = createStyles(colors);
+  const styles = createStyles(colors, s);
 
   const [name, setName] = useState(profile.name || "");
   const [phone, setPhone] = useState(profile.phone || "");
@@ -221,26 +224,27 @@ export default function CheckoutScreen() {
     }
   };
 
-  return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
-      {/* Top Header */}
-      <View style={[styles.navBar, { backgroundColor: colors.paper, borderBottomColor: colors.border }]}>
-        <TouchableOpacity
-          style={[styles.iconBtn, { backgroundColor: colors.cardSecondary }]}
-          onPress={() => router.back()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <ArrowLeft size={20} color={colors.ink} />
-        </TouchableOpacity>
+  const checkoutNav = (
+    <View style={[styles.navBar, { backgroundColor: colors.paper, borderBottomColor: colors.border }]}>
+      <TouchableOpacity
+        style={[styles.iconBtn, { backgroundColor: colors.cardSecondary }]}
+        onPress={() => router.back()}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        <ArrowLeft size={20} color={colors.ink} />
+      </TouchableOpacity>
 
-        <Text style={[styles.navTitle, { color: colors.ink }]}>SECURE CHECKOUT</Text>
+      <Text style={[styles.navTitle, { color: colors.ink }]}>SECURE CHECKOUT</Text>
 
-        <View style={styles.lockBadge}>
-          <Lock size={13} color={colors.emerald} />
-          <Text style={[styles.lockText, { color: colors.emerald }]}>256-BIT SSL</Text>
-        </View>
+      <View style={styles.lockBadge}>
+        <Lock size={13} color={colors.emerald} />
+        <Text style={[styles.lockText, { color: colors.emerald }]}>256-BIT SSL</Text>
       </View>
+    </View>
+  );
 
+  return (
+    <ScreenShell renderNav={checkoutNav}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {errorMsg ? (
           <View style={[styles.errorBanner, { backgroundColor: colors.crimsonLight, borderColor: colors.crimson }]}>
@@ -838,16 +842,12 @@ export default function CheckoutScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </ScreenShell>
   );
 }
 
-function createStyles(colors: any) {
+function createStyles(colors: any, s: ReturnType<typeof sharedStyles>) {
   return StyleSheet.create({
-    safeArea: {
-      flex: 1,
-      backgroundColor: colors.paper,
-    },
     navBar: {
       flexDirection: "row",
       alignItems: "center",
@@ -880,10 +880,7 @@ function createStyles(colors: any) {
       fontWeight: "800",
       letterSpacing: 0.5,
     },
-    scrollContent: {
-      padding: 16,
-      gap: 12,
-    },
+    scrollContent: s.scrollContent,
     errorBanner: {
       borderWidth: 1,
       borderRadius: 8,
@@ -968,9 +965,7 @@ function createStyles(colors: any) {
       letterSpacing: 0.8,
       marginBottom: 12,
     },
-    field: {
-      marginBottom: 12,
-    },
+    field: s.field,
     label: {
       fontSize: 11,
       fontWeight: "700",
@@ -987,10 +982,7 @@ function createStyles(colors: any) {
       paddingVertical: 10,
       fontSize: 13,
     },
-    multilineInput: {
-      minHeight: 70,
-      textAlignVertical: "top",
-    },
+    multilineInput: s.multilineInput,
     deliveryGrid: {
       gap: 8,
     },

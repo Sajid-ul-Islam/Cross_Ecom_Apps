@@ -25,7 +25,7 @@ import {
   ShieldCheck,
   AlertCircle,
 } from "./Icons";
-import { Colors } from "../theme/colors";
+import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { Order, ReturnType, ReturnReason, ReturnExchangeItem } from "../types";
 import { useReturns } from "../context/ReturnContext";
@@ -74,6 +74,7 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
 }) => {
   const { createReturnRequest } = useReturns();
   const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
 
   const [type, setType] = useState<ReturnType>("EXCHANGE");
   const [selectedReason, setSelectedReason] = useState<ReturnReason>("SIZE_FIT_TOO_TIGHT");
@@ -491,405 +492,407 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
-    justifyContent: "flex-end",
-  },
-  modalCard: {
-    backgroundColor: Colors.paper,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: height * 0.92,
-    paddingTop: 16,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  iconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: Colors.indigo,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: Colors.ink,
-    letterSpacing: 0.8,
-  },
-  subtitle: {
-    fontSize: 11,
-    color: Colors.sub,
-    marginTop: 2,
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.cardSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: {
-    padding: 18,
-    gap: 16,
-    paddingBottom: 36,
-  },
-  policyBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: Colors.emeraldLight,
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.emerald,
-  },
-  policyText: {
-    flex: 1,
-    fontSize: 11,
-    color: Colors.ink,
-    lineHeight: 16,
-  },
-  bold: {
-    fontWeight: "800",
-  },
-  section: {
-    gap: 8,
-  },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: Colors.sub,
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-  },
-  photoCount: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.indigo,
-  },
-  typeRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  typeBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  typeBtnActive: {
-    backgroundColor: Colors.indigo,
-    borderColor: Colors.indigo,
-  },
-  typeTitle: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: Colors.ink,
-  },
-  typeTitleActive: {
-    color: "#FFFFFF",
-  },
-  typeSub: {
-    fontSize: 9,
-    color: Colors.sub,
-    marginTop: 2,
-  },
-  typeSubActive: {
-    color: "rgba(255, 255, 255, 0.8)",
-  },
-  itemCard: {
-    backgroundColor: Colors.card,
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 12,
-  },
-  itemInfo: {
-    gap: 2,
-  },
-  itemLabel: {
-    fontSize: 9,
-    fontWeight: "800",
-    color: Colors.sub,
-    letterSpacing: 0.5,
-  },
-  itemName: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: Colors.ink,
-  },
-  itemSku: {
-    fontSize: 11,
-    color: Colors.sub,
-    marginTop: 2,
-  },
-  sizeSection: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-    paddingTop: 10,
-  },
-  sizesScroll: {
-    gap: 8,
-    paddingTop: 6,
-  },
-  sizeChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-    backgroundColor: Colors.paper,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: "center",
-  },
-  sizeChipActive: {
-    backgroundColor: Colors.indigo,
-    borderColor: Colors.indigo,
-  },
-  sizeChipSame: {
-    opacity: 0.6,
-  },
-  sizeChipText: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: Colors.ink,
-  },
-  sizeChipTextActive: {
-    color: "#FFFFFF",
-  },
-  sameTag: {
-    fontSize: 7,
-    fontWeight: "900",
-    color: Colors.sub,
-    marginTop: 1,
-  },
-  reasonsList: {
-    gap: 6,
-  },
-  reasonCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 10,
-    borderRadius: 8,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 10,
-  },
-  reasonCardActive: {
-    borderColor: Colors.indigo,
-    backgroundColor: Colors.indigoLight,
-  },
-  radioOuter: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: Colors.indigo,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.indigo,
-  },
-  reasonLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: Colors.ink,
-  },
-  reasonLabelActive: {
-    color: Colors.indigoDark,
-  },
-  reasonSub: {
-    fontSize: 10,
-    color: Colors.sub,
-    marginTop: 1,
-  },
-  notesInput: {
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 12,
-    color: Colors.ink,
-    minHeight: 70,
-    textAlignVertical: "top",
-  },
-  hintText: {
-    fontSize: 11,
-    color: Colors.sub,
-  },
-  photoScroll: {
-    gap: 10,
-    paddingVertical: 6,
-  },
-  photoThumbWrapper: {
-    position: "relative",
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  photoThumb: {
-    width: "100%",
-    height: "100%",
-  },
-  removePhotoBtn: {
-    position: "absolute",
-    top: 4,
-    right: 4,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  sampleHeader: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: Colors.sub,
-    marginTop: 4,
-  },
-  samplePresetRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  presetChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  presetChipText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: Colors.indigoDark,
-  },
-  handoverRow: {
-    gap: 8,
-  },
-  handoverCard: {
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 3,
-  },
-  handoverCardActive: {
-    borderColor: Colors.indigo,
-    backgroundColor: Colors.indigoLight,
-  },
-  handoverTitle: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: Colors.ink,
-  },
-  handoverTitleActive: {
-    color: Colors.indigoDark,
-  },
-  handoverSub: {
-    fontSize: 10,
-    color: Colors.sub,
-  },
-  pickupFields: {
-    gap: 10,
-    marginTop: 6,
-  },
-  field: {
-    gap: 6,
-  },
-  fieldLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.ink,
-  },
-  input: {
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    fontSize: 12,
-    color: Colors.ink,
-  },
-  refundMethodGrid: {
-    gap: 6,
-  },
-  refundCard: {
-    padding: 10,
-    borderRadius: 6,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  refundCardActive: {
-    backgroundColor: Colors.indigo,
-    borderColor: Colors.indigo,
-  },
-  refundLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.ink,
-  },
-  refundLabelActive: {
-    color: "#FFFFFF",
-  },
-  submitBtn: {
-    backgroundColor: Colors.indigo,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  submitBtnText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "900",
-    letterSpacing: 0.8,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.65)",
+      justifyContent: "flex-end",
+    },
+    modalCard: {
+      backgroundColor: colors.paper,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      maxHeight: height * 0.92,
+      paddingTop: 16,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingBottom: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    headerLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    iconCircle: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: colors.indigo,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    title: {
+      fontSize: 13,
+      fontWeight: "900",
+      color: colors.ink,
+      letterSpacing: 0.8,
+    },
+    subtitle: {
+      fontSize: 11,
+      color: colors.sub,
+      marginTop: 2,
+    },
+    closeBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.cardSecondary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    content: {
+      padding: 18,
+      gap: 16,
+      paddingBottom: 36,
+    },
+    policyBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: colors.emeraldLight,
+      padding: 10,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.emerald,
+    },
+    policyText: {
+      flex: 1,
+      fontSize: 11,
+      color: colors.ink,
+      lineHeight: 16,
+    },
+    bold: {
+      fontWeight: "800",
+    },
+    section: {
+      gap: 8,
+    },
+    sectionHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    sectionLabel: {
+      fontSize: 11,
+      fontWeight: "800",
+      color: colors.sub,
+      letterSpacing: 0.6,
+      textTransform: "uppercase",
+    },
+    photoCount: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.indigo,
+    },
+    typeRow: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    typeBtn: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      padding: 12,
+      borderRadius: 8,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    typeBtnActive: {
+      backgroundColor: colors.indigo,
+      borderColor: colors.indigo,
+    },
+    typeTitle: {
+      fontSize: 11,
+      fontWeight: "800",
+      color: colors.ink,
+    },
+    typeTitleActive: {
+      color: "#FFFFFF",
+    },
+    typeSub: {
+      fontSize: 9,
+      color: colors.sub,
+      marginTop: 2,
+    },
+    typeSubActive: {
+      color: "rgba(255, 255, 255, 0.8)",
+    },
+    itemCard: {
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 12,
+    },
+    itemInfo: {
+      gap: 2,
+    },
+    itemLabel: {
+      fontSize: 9,
+      fontWeight: "800",
+      color: colors.sub,
+      letterSpacing: 0.5,
+    },
+    itemName: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: colors.ink,
+    },
+    itemSku: {
+      fontSize: 11,
+      color: colors.sub,
+      marginTop: 2,
+    },
+    sizeSection: {
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
+      paddingTop: 10,
+    },
+    sizesScroll: {
+      gap: 8,
+      paddingTop: 6,
+    },
+    sizeChip: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 6,
+      backgroundColor: colors.paper,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+    },
+    sizeChipActive: {
+      backgroundColor: colors.indigo,
+      borderColor: colors.indigo,
+    },
+    sizeChipSame: {
+      opacity: 0.6,
+    },
+    sizeChipText: {
+      fontSize: 12,
+      fontWeight: "800",
+      color: colors.ink,
+    },
+    sizeChipTextActive: {
+      color: "#FFFFFF",
+    },
+    sameTag: {
+      fontSize: 7,
+      fontWeight: "900",
+      color: colors.sub,
+      marginTop: 1,
+    },
+    reasonsList: {
+      gap: 6,
+    },
+    reasonCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 10,
+      borderRadius: 8,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 10,
+    },
+    reasonCardActive: {
+      borderColor: colors.indigo,
+      backgroundColor: colors.indigoLight,
+    },
+    radioOuter: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      borderWidth: 2,
+      borderColor: colors.indigo,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    radioInner: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: colors.indigo,
+    },
+    reasonLabel: {
+      fontSize: 12,
+      fontWeight: "700",
+      color: colors.ink,
+    },
+    reasonLabelActive: {
+      color: colors.indigoDark,
+    },
+    reasonSub: {
+      fontSize: 10,
+      color: colors.sub,
+      marginTop: 1,
+    },
+    notesInput: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      padding: 12,
+      fontSize: 12,
+      color: colors.ink,
+      minHeight: 70,
+      textAlignVertical: "top",
+    },
+    hintText: {
+      fontSize: 11,
+      color: colors.sub,
+    },
+    photoScroll: {
+      gap: 10,
+      paddingVertical: 6,
+    },
+    photoThumbWrapper: {
+      position: "relative",
+      width: 80,
+      height: 80,
+      borderRadius: 8,
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    photoThumb: {
+      width: "100%",
+      height: "100%",
+    },
+    removePhotoBtn: {
+      position: "absolute",
+      top: 4,
+      right: 4,
+      backgroundColor: "rgba(0, 0, 0, 0.7)",
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    sampleHeader: {
+      fontSize: 10,
+      fontWeight: "700",
+      color: colors.sub,
+      marginTop: 4,
+    },
+    samplePresetRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 6,
+    },
+    presetChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 6,
+    },
+    presetChipText: {
+      fontSize: 10,
+      fontWeight: "700",
+      color: colors.indigoDark,
+    },
+    handoverRow: {
+      gap: 8,
+    },
+    handoverCard: {
+      padding: 12,
+      borderRadius: 8,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 3,
+    },
+    handoverCardActive: {
+      borderColor: colors.indigo,
+      backgroundColor: colors.indigoLight,
+    },
+    handoverTitle: {
+      fontSize: 12,
+      fontWeight: "800",
+      color: colors.ink,
+    },
+    handoverTitleActive: {
+      color: colors.indigoDark,
+    },
+    handoverSub: {
+      fontSize: 10,
+      color: colors.sub,
+    },
+    pickupFields: {
+      gap: 10,
+      marginTop: 6,
+    },
+    field: {
+      gap: 6,
+    },
+    fieldLabel: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.ink,
+    },
+    input: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 9,
+      fontSize: 12,
+      color: colors.ink,
+    },
+    refundMethodGrid: {
+      gap: 6,
+    },
+    refundCard: {
+      padding: 10,
+      borderRadius: 6,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    refundCardActive: {
+      backgroundColor: colors.indigo,
+      borderColor: colors.indigo,
+    },
+    refundLabel: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.ink,
+    },
+    refundLabelActive: {
+      color: "#FFFFFF",
+    },
+    submitBtn: {
+      backgroundColor: colors.indigo,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 14,
+      borderRadius: 8,
+      marginTop: 8,
+    },
+    submitBtnText: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "900",
+      letterSpacing: 0.8,
+    },
+  });
+}

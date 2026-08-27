@@ -12,7 +12,7 @@ import {
   Alert,
 } from "react-native";
 import { X, Star, CheckCircle2, Camera, ShieldCheck, User } from "./Icons";
-import { Colors } from "../theme/colors";
+import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { Product } from "../types";
 
@@ -71,6 +71,7 @@ export const ProductReviewsModal: React.FC<ProductReviewsModalProps> = ({
   onClose,
 }) => {
   const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
   const [reviews, setReviews] = useState<ReviewItem[]>(INITIAL_REVIEWS);
   const [showWriteForm, setShowWriteForm] = useState(false);
   const [userName, setUserName] = useState("Sajid");
@@ -277,261 +278,263 @@ export const ProductReviewsModal: React.FC<ProductReviewsModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
-    justifyContent: "flex-end",
-  },
-  modalCard: {
-    backgroundColor: Colors.paper,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: height * 0.92,
-    paddingTop: 16,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  iconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: Colors.amber,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: Colors.ink,
-    letterSpacing: 0.8,
-  },
-  subtitle: {
-    fontSize: 11,
-    color: Colors.sub,
-    marginTop: 2,
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.cardSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: {
-    padding: 18,
-    gap: 14,
-    paddingBottom: 36,
-  },
-  ratingSummaryCard: {
-    flexDirection: "row",
-    backgroundColor: Colors.card,
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 14,
-  },
-  ratingScoreBox: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingRight: 14,
-    borderRightWidth: 1,
-    borderRightColor: Colors.borderLight,
-    gap: 4,
-  },
-  scoreNumber: {
-    fontSize: 28,
-    fontWeight: "900",
-    color: Colors.ink,
-  },
-  scoreSub: {
-    fontSize: 9,
-    color: Colors.sub,
-    textAlign: "center",
-    maxWidth: 90,
-  },
-  fitStatsBox: {
-    flex: 1,
-    justifyContent: "center",
-    gap: 3,
-  },
-  fitStatsTitle: {
-    fontSize: 9,
-    fontWeight: "800",
-    color: Colors.sub,
-    letterSpacing: 0.5,
-  },
-  fitStatItem: {
-    fontSize: 11,
-    color: Colors.ink,
-  },
-  bold: {
-    fontWeight: "800",
-    color: Colors.indigoDark,
-  },
-  writeReviewBtn: {
-    backgroundColor: Colors.indigo,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  writeReviewBtnText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 0.8,
-  },
-  formCard: {
-    backgroundColor: Colors.card,
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 10,
-  },
-  formTitle: {
-    fontSize: 12,
-    fontWeight: "900",
-    color: Colors.ink,
-  },
-  starSelectRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  field: {
-    gap: 6,
-  },
-  rowFields: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  fieldLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.ink,
-  },
-  input: {
-    backgroundColor: Colors.paper,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 12,
-    color: Colors.ink,
-  },
-  formActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 10,
-    marginTop: 6,
-  },
-  cancelBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  cancelBtnText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.sub,
-  },
-  submitRevBtn: {
-    backgroundColor: Colors.indigo,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  submitRevBtnText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  reviewsList: {
-    gap: 12,
-  },
-  reviewCard: {
-    backgroundColor: Colors.card,
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 8,
-  },
-  revTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  revName: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: Colors.ink,
-  },
-  verifiedPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    backgroundColor: Colors.emeraldLight,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 3,
-  },
-  verifiedText: {
-    color: Colors.emerald,
-    fontSize: 8,
-    fontWeight: "900",
-  },
-  revDate: {
-    fontSize: 10,
-    color: Colors.sub,
-    marginTop: 2,
-  },
-  fitInfoBadge: {
-    backgroundColor: Colors.paper,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    alignSelf: "flex-start",
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  fitInfoText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: Colors.indigoDark,
-  },
-  revComment: {
-    fontSize: 12,
-    color: Colors.ink,
-    lineHeight: 18,
-  },
-  revPhotosScroll: {
-    gap: 8,
-    paddingTop: 4,
-  },
-  revPhoto: {
-    width: 70,
-    height: 70,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.65)",
+      justifyContent: "flex-end",
+    },
+    modalCard: {
+      backgroundColor: colors.paper,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      maxHeight: height * 0.92,
+      paddingTop: 16,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingBottom: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    headerLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    iconCircle: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: colors.amber,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    title: {
+      fontSize: 13,
+      fontWeight: "900",
+      color: colors.ink,
+      letterSpacing: 0.8,
+    },
+    subtitle: {
+      fontSize: 11,
+      color: colors.sub,
+      marginTop: 2,
+    },
+    closeBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.cardSecondary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    content: {
+      padding: 18,
+      gap: 14,
+      paddingBottom: 36,
+    },
+    ratingSummaryCard: {
+      flexDirection: "row",
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 14,
+    },
+    ratingScoreBox: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingRight: 14,
+      borderRightWidth: 1,
+      borderRightColor: colors.borderLight,
+      gap: 4,
+    },
+    scoreNumber: {
+      fontSize: 28,
+      fontWeight: "900",
+      color: colors.ink,
+    },
+    scoreSub: {
+      fontSize: 9,
+      color: colors.sub,
+      textAlign: "center",
+      maxWidth: 90,
+    },
+    fitStatsBox: {
+      flex: 1,
+      justifyContent: "center",
+      gap: 3,
+    },
+    fitStatsTitle: {
+      fontSize: 9,
+      fontWeight: "800",
+      color: colors.sub,
+      letterSpacing: 0.5,
+    },
+    fitStatItem: {
+      fontSize: 11,
+      color: colors.ink,
+    },
+    bold: {
+      fontWeight: "800",
+      color: colors.indigoDark,
+    },
+    writeReviewBtn: {
+      backgroundColor: colors.indigo,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 12,
+      borderRadius: 8,
+    },
+    writeReviewBtnText: {
+      color: "#FFFFFF",
+      fontSize: 11,
+      fontWeight: "900",
+      letterSpacing: 0.8,
+    },
+    formCard: {
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 10,
+    },
+    formTitle: {
+      fontSize: 12,
+      fontWeight: "900",
+      color: colors.ink,
+    },
+    starSelectRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    field: {
+      gap: 6,
+    },
+    rowFields: {
+      flexDirection: "row",
+      gap: 10,
+    },
+    fieldLabel: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.ink,
+    },
+    input: {
+      backgroundColor: colors.paper,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      fontSize: 12,
+      color: colors.ink,
+    },
+    formActions: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      gap: 10,
+      marginTop: 6,
+    },
+    cancelBtn: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+    },
+    cancelBtnText: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.sub,
+    },
+    submitRevBtn: {
+      backgroundColor: colors.indigo,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: 6,
+    },
+    submitRevBtnText: {
+      color: "#FFFFFF",
+      fontSize: 11,
+      fontWeight: "800",
+    },
+    reviewsList: {
+      gap: 12,
+    },
+    reviewCard: {
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 8,
+    },
+    revTop: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+    },
+    revName: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: colors.ink,
+    },
+    verifiedPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 3,
+      backgroundColor: colors.emeraldLight,
+      paddingHorizontal: 5,
+      paddingVertical: 2,
+      borderRadius: 3,
+    },
+    verifiedText: {
+      color: colors.emerald,
+      fontSize: 8,
+      fontWeight: "900",
+    },
+    revDate: {
+      fontSize: 10,
+      color: colors.sub,
+      marginTop: 2,
+    },
+    fitInfoBadge: {
+      backgroundColor: colors.paper,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 4,
+      alignSelf: "flex-start",
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    fitInfoText: {
+      fontSize: 10,
+      fontWeight: "700",
+      color: colors.indigoDark,
+    },
+    revComment: {
+      fontSize: 12,
+      color: colors.ink,
+      lineHeight: 18,
+    },
+    revPhotosScroll: {
+      gap: 8,
+      paddingTop: 4,
+    },
+    revPhoto: {
+      width: 70,
+      height: 70,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+  });
+}

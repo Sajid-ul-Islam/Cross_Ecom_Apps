@@ -10,7 +10,7 @@ import {
   Image,
 } from "react-native";
 import { X, BookOpen, Sparkles, ShieldCheck, CheckCircle2 } from "./Icons";
-import { Colors } from "../theme/colors";
+import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 
 const { width, height } = Dimensions.get("window");
@@ -22,6 +22,7 @@ interface DenimCareGuideModalProps {
 
 export const DenimCareGuideModal: React.FC<DenimCareGuideModalProps> = ({ visible, onClose }) => {
   const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -127,136 +128,138 @@ export const DenimCareGuideModal: React.FC<DenimCareGuideModalProps> = ({ visibl
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
-    justifyContent: "flex-end",
-  },
-  modalCard: {
-    backgroundColor: Colors.paper,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: height * 0.9,
-    paddingTop: 16,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  iconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: Colors.indigoDark,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: Colors.ink,
-    letterSpacing: 0.8,
-  },
-  subtitle: {
-    fontSize: 11,
-    color: Colors.sub,
-    marginTop: 2,
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.cardSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: {
-    padding: 18,
-    gap: 14,
-    paddingBottom: 36,
-  },
-  introCard: {
-    backgroundColor: Colors.indigoDark,
-    borderRadius: 10,
-    padding: 16,
-    gap: 8,
-  },
-  introBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 3,
-    alignSelf: "flex-start",
-  },
-  introBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 8,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-  introTitle: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "900",
-  },
-  introBody: {
-    color: "rgba(255, 255, 255, 0.85)",
-    fontSize: 11,
-    lineHeight: 16,
-  },
-  chapterCard: {
-    backgroundColor: Colors.card,
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 8,
-  },
-  chapterHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  chapterNum: {
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    backgroundColor: Colors.indigoLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  chapterNumText: {
-    fontSize: 12,
-    fontWeight: "900",
-    color: Colors.indigoDark,
-  },
-  chapterTitle: {
-    fontSize: 12,
-    fontWeight: "900",
-    color: Colors.ink,
-    letterSpacing: 0.4,
-  },
-  chapterSub: {
-    fontSize: 10,
-    color: Colors.sub,
-  },
-  chapterBody: {
-    fontSize: 11,
-    color: Colors.ink,
-    lineHeight: 17,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.65)",
+      justifyContent: "flex-end",
+    },
+    modalCard: {
+      backgroundColor: colors.paper,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      maxHeight: height * 0.9,
+      paddingTop: 16,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingBottom: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    headerLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    iconCircle: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: colors.indigoDark,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    title: {
+      fontSize: 13,
+      fontWeight: "900",
+      color: colors.ink,
+      letterSpacing: 0.8,
+    },
+    subtitle: {
+      fontSize: 11,
+      color: colors.sub,
+      marginTop: 2,
+    },
+    closeBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.cardSecondary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    content: {
+      padding: 18,
+      gap: 14,
+      paddingBottom: 36,
+    },
+    introCard: {
+      backgroundColor: colors.indigoDark,
+      borderRadius: 10,
+      padding: 16,
+      gap: 8,
+    },
+    introBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: "rgba(255, 255, 255, 0.15)",
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 3,
+      alignSelf: "flex-start",
+    },
+    introBadgeText: {
+      color: "#FFFFFF",
+      fontSize: 8,
+      fontWeight: "900",
+      letterSpacing: 0.5,
+    },
+    introTitle: {
+      color: "#FFFFFF",
+      fontSize: 14,
+      fontWeight: "900",
+    },
+    introBody: {
+      color: "rgba(255, 255, 255, 0.85)",
+      fontSize: 11,
+      lineHeight: 16,
+    },
+    chapterCard: {
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 8,
+    },
+    chapterHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    chapterNum: {
+      width: 28,
+      height: 28,
+      borderRadius: 6,
+      backgroundColor: colors.indigoLight,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    chapterNumText: {
+      fontSize: 12,
+      fontWeight: "900",
+      color: colors.indigoDark,
+    },
+    chapterTitle: {
+      fontSize: 12,
+      fontWeight: "900",
+      color: colors.ink,
+      letterSpacing: 0.4,
+    },
+    chapterSub: {
+      fontSize: 10,
+      color: colors.sub,
+    },
+    chapterBody: {
+      fontSize: 11,
+      color: colors.ink,
+      lineHeight: 17,
+    },
+  });
+}

@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
   },
   topTitle: {
     fontSize: 11,
-    fontFamily: "CabinetGrotesk-Bold",
+    fontWeight: "900",
     letterSpacing: 0.7,
   },
   modeIndicator: {

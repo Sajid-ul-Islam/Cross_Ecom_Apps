@@ -10,7 +10,7 @@ import {
   Linking,
 } from "react-native";
 import { X, Sparkles, Store, ShieldCheck, Heart, MapPin, PhoneCall, Truck, WhatsApp, Instagram, Facebook } from "./Icons";
-import { Colors } from "../theme/colors";
+import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useStore } from "../context/StoreContext";
 
@@ -23,6 +23,7 @@ interface AboutModalProps {
 
 export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
   const { colors } = useTheme();
+  const styles = createStyles(colors);
   const { info } = useStore();
   const waNumber = info.whatsapp.replace(/[^0-9]/g, "");
 
@@ -196,128 +197,130 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
-    justifyContent: "flex-end",
-  },
-  modalCard: {
-    backgroundColor: Colors.paper,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: height * 0.9,
-    paddingTop: 16,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  iconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: Colors.indigoDark,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: Colors.ink,
-    letterSpacing: 0.8,
-  },
-  subtitle: {
-    fontSize: 11,
-    color: Colors.sub,
-    marginTop: 2,
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.cardSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: {
-    padding: 18,
-    gap: 14,
-    paddingBottom: 36,
-  },
-  introCard: {
-    backgroundColor: Colors.indigoDark,
-    borderRadius: 10,
-    padding: 16,
-    gap: 8,
-  },
-  introBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 3,
-    alignSelf: "flex-start",
-  },
-  introBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 8,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-  introTitle: {
-    color: "#FFFFFF",
-    fontSize: 13,
-    fontWeight: "700",
-    lineHeight: 20,
-  },
-  sectionCard: {
-    backgroundColor: Colors.card,
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 8,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 4,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: "900",
-    color: Colors.ink,
-    letterSpacing: 0.4,
-  },
-  sectionBody: {
-    fontSize: 11,
-    color: Colors.sub,
-    lineHeight: 17,
-  },
-  socialRound: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.65)",
+      justifyContent: "flex-end",
+    },
+    modalCard: {
+      backgroundColor: colors.paper,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      maxHeight: height * 0.9,
+      paddingTop: 16,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingBottom: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    headerLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    iconCircle: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: colors.indigoDark,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    title: {
+      fontSize: 13,
+      fontWeight: "900",
+      color: colors.ink,
+      letterSpacing: 0.8,
+    },
+    subtitle: {
+      fontSize: 11,
+      color: colors.sub,
+      marginTop: 2,
+    },
+    closeBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.cardSecondary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    content: {
+      padding: 18,
+      gap: 14,
+      paddingBottom: 36,
+    },
+    introCard: {
+      backgroundColor: colors.indigoDark,
+      borderRadius: 10,
+      padding: 16,
+      gap: 8,
+    },
+    introBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: "rgba(255, 255, 255, 0.15)",
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 3,
+      alignSelf: "flex-start",
+    },
+    introBadgeText: {
+      color: "#FFFFFF",
+      fontSize: 8,
+      fontWeight: "900",
+      letterSpacing: 0.5,
+    },
+    introTitle: {
+      color: "#FFFFFF",
+      fontSize: 13,
+      fontWeight: "700",
+      lineHeight: 20,
+    },
+    sectionCard: {
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 8,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 4,
+    },
+    sectionTitle: {
+      fontSize: 12,
+      fontWeight: "900",
+      color: colors.ink,
+      letterSpacing: 0.4,
+    },
+    sectionBody: {
+      fontSize: 11,
+      color: colors.sub,
+      lineHeight: 17,
+    },
+    socialRound: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: "#000",
+      shadowOpacity: 0.18,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 3 },
+      elevation: 4,
+    },
+  });
+}

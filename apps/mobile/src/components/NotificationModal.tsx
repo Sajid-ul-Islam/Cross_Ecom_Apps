@@ -23,7 +23,7 @@ import {
   Layers,
   Store,
 } from "./Icons";
-import { Colors } from "../theme/colors";
+import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useNotifications } from "../context/NotificationContext";
 import { NotificationItem, NotificationType } from "../types";
@@ -38,6 +38,7 @@ interface NotificationModalProps {
 export const NotificationModal: React.FC<NotificationModalProps> = ({ visible, onClose }) => {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } =
     useNotifications();
 
@@ -244,242 +245,244 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ visible, o
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
-    justifyContent: "flex-end",
-  },
-  modalCard: {
-    backgroundColor: Colors.paper,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: height * 0.88,
-    paddingTop: 16,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  iconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: Colors.indigoLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: "900",
-    color: Colors.ink,
-    letterSpacing: 0.8,
-  },
-  unreadBadge: {
-    backgroundColor: Colors.crimson,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  unreadBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 8,
-    fontWeight: "800",
-  },
-  subtitle: {
-    fontSize: 11,
-    color: Colors.sub,
-    marginTop: 2,
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.cardSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  toolBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: Colors.card,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  tabsScroll: {
-    gap: 6,
-  },
-  tabChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
-    backgroundColor: Colors.paper,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  tabChipActive: {
-    backgroundColor: Colors.indigo,
-    borderColor: Colors.indigo,
-  },
-  tabChipText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: Colors.sub,
-  },
-  tabChipTextActive: {
-    color: "#FFFFFF",
-  },
-  markAllBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  markAllText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: Colors.indigo,
-  },
-  copiedToast: {
-    backgroundColor: Colors.emerald,
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    alignItems: "center",
-  },
-  copiedToastText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  content: {
-    padding: 16,
-    gap: 12,
-    paddingBottom: 30,
-  },
-  notifCard: {
-    backgroundColor: Colors.card,
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  notifCardUnread: {
-    borderColor: Colors.indigo,
-    borderLeftWidth: 4,
-    borderLeftColor: Colors.indigo,
-    backgroundColor: "#FAFBFD",
-  },
-  notifCardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  typeBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 4,
-  },
-  typeBadgeText: {
-    fontSize: 8,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-  timeText: {
-    fontSize: 10,
-    color: Colors.sub,
-  },
-  notifTitle: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: Colors.ink,
-    lineHeight: 18,
-    marginBottom: 4,
-  },
-  notifBody: {
-    fontSize: 11,
-    color: Colors.sub,
-    lineHeight: 16,
-    marginBottom: 10,
-  },
-  promoCodeBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: Colors.indigoLight,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: Colors.indigo,
-    borderStyle: "dashed",
-  },
-  promoCodeLabel: {
-    fontSize: 9,
-    fontWeight: "800",
-    color: Colors.indigoDark,
-  },
-  promoCodeValue: {
-    fontSize: 11,
-    fontWeight: "900",
-    color: Colors.indigoDark,
-    letterSpacing: 0.5,
-  },
-  copyBtn: {
-    backgroundColor: Colors.indigo,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
-  },
-  copyBtnText: {
-    color: "#FFFFFF",
-    fontSize: 9,
-    fontWeight: "800",
-  },
-  actionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: Colors.indigo,
-    paddingVertical: 9,
-    borderRadius: 6,
-  },
-  actionBtnText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  emptyContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 48,
-    gap: 8,
-  },
-  emptyTitle: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: Colors.ink,
-  },
-  emptySub: {
-    fontSize: 12,
-    color: Colors.sub,
-    textAlign: "center",
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.65)",
+      justifyContent: "flex-end",
+    },
+    modalCard: {
+      backgroundColor: colors.paper,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      maxHeight: height * 0.88,
+      paddingTop: 16,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingBottom: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    headerLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    iconCircle: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: colors.indigoLight,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    title: {
+      fontSize: 14,
+      fontWeight: "900",
+      color: colors.ink,
+      letterSpacing: 0.8,
+    },
+    unreadBadge: {
+      backgroundColor: colors.crimson,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    unreadBadgeText: {
+      color: "#FFFFFF",
+      fontSize: 8,
+      fontWeight: "800",
+    },
+    subtitle: {
+      fontSize: 11,
+      color: colors.sub,
+      marginTop: 2,
+    },
+    closeBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.cardSecondary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    toolBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      backgroundColor: colors.card,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    tabsScroll: {
+      gap: 6,
+    },
+    tabChip: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 6,
+      backgroundColor: colors.paper,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    tabChipActive: {
+      backgroundColor: colors.indigo,
+      borderColor: colors.indigo,
+    },
+    tabChipText: {
+      fontSize: 10,
+      fontWeight: "700",
+      color: colors.sub,
+    },
+    tabChipTextActive: {
+      color: "#FFFFFF",
+    },
+    markAllBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+    },
+    markAllText: {
+      fontSize: 10,
+      fontWeight: "700",
+      color: colors.indigo,
+    },
+    copiedToast: {
+      backgroundColor: colors.emerald,
+      paddingVertical: 6,
+      paddingHorizontal: 16,
+      alignItems: "center",
+    },
+    copiedToastText: {
+      color: "#FFFFFF",
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    content: {
+      padding: 16,
+      gap: 12,
+      paddingBottom: 30,
+    },
+    notifCard: {
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    notifCardUnread: {
+      borderColor: colors.indigo,
+      borderLeftWidth: 4,
+      borderLeftColor: colors.indigo,
+      backgroundColor: colors.cardSecondary,
+    },
+    notifCardHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 8,
+    },
+    typeBadge: {
+      paddingHorizontal: 7,
+      paddingVertical: 3,
+      borderRadius: 4,
+    },
+    typeBadgeText: {
+      fontSize: 8,
+      fontWeight: "900",
+      letterSpacing: 0.5,
+    },
+    timeText: {
+      fontSize: 10,
+      color: colors.sub,
+    },
+    notifTitle: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: colors.ink,
+      lineHeight: 18,
+      marginBottom: 4,
+    },
+    notifBody: {
+      fontSize: 11,
+      color: colors.sub,
+      lineHeight: 16,
+      marginBottom: 10,
+    },
+    promoCodeBox: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: colors.indigoLight,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 6,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: colors.indigo,
+      borderStyle: "dashed",
+    },
+    promoCodeLabel: {
+      fontSize: 9,
+      fontWeight: "800",
+      color: colors.indigoDark,
+    },
+    promoCodeValue: {
+      fontSize: 11,
+      fontWeight: "900",
+      color: colors.indigoDark,
+      letterSpacing: 0.5,
+    },
+    copyBtn: {
+      backgroundColor: colors.indigo,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 4,
+    },
+    copyBtnText: {
+      color: "#FFFFFF",
+      fontSize: 9,
+      fontWeight: "800",
+    },
+    actionBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      backgroundColor: colors.indigo,
+      paddingVertical: 9,
+      borderRadius: 6,
+    },
+    actionBtnText: {
+      color: "#FFFFFF",
+      fontSize: 11,
+      fontWeight: "800",
+      letterSpacing: 0.5,
+    },
+    emptyContainer: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 48,
+      gap: 8,
+    },
+    emptyTitle: {
+      fontSize: 15,
+      fontWeight: "800",
+      color: colors.ink,
+    },
+    emptySub: {
+      fontSize: 12,
+      color: colors.sub,
+      textAlign: "center",
+    },
+  });
+}

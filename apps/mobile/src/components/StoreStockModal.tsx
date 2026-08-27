@@ -10,7 +10,7 @@ import {
   Linking,
 } from "react-native";
 import { X, Store, MapPin, PhoneCall, CheckCircle2, Navigation } from "./Icons";
-import { Colors } from "../theme/colors";
+import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { Product } from "../types";
 
@@ -77,6 +77,7 @@ export const StoreStockModal: React.FC<StoreStockModalProps> = ({
   onClose,
 }) => {
   const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
   const handleOpenMap = (query: string) => {
     Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`);
   };
@@ -169,200 +170,202 @@ export const StoreStockModal: React.FC<StoreStockModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
-    justifyContent: "flex-end",
-  },
-  modalCard: {
-    backgroundColor: Colors.paper,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: height * 0.88,
-    paddingTop: 16,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  iconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: Colors.indigo,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: Colors.ink,
-    letterSpacing: 0.8,
-  },
-  subtitle: {
-    fontSize: 11,
-    color: Colors.sub,
-    marginTop: 2,
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.cardSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: {
-    padding: 18,
-    gap: 14,
-    paddingBottom: 36,
-  },
-  prodSummary: {
-    backgroundColor: Colors.card,
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 3,
-  },
-  prodLabel: {
-    fontSize: 9,
-    fontWeight: "800",
-    color: Colors.sub,
-    letterSpacing: 0.5,
-  },
-  prodName: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: Colors.ink,
-  },
-  prodSku: {
-    fontSize: 11,
-    color: Colors.sub,
-  },
-  bold: {
-    fontWeight: "800",
-    color: Colors.indigoDark,
-  },
-  outletsList: {
-    gap: 12,
-  },
-  outletCard: {
-    backgroundColor: Colors.card,
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 10,
-  },
-  outletHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  tagPill: {
-    backgroundColor: Colors.indigoLight,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 3,
-    alignSelf: "flex-start",
-    marginBottom: 4,
-  },
-  tagPillText: {
-    color: Colors.indigoDark,
-    fontSize: 8,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-  outletName: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: Colors.ink,
-  },
-  stockBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: Colors.emeraldLight,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  stockDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.emerald,
-  },
-  stockText: {
-    color: Colors.emerald,
-    fontSize: 9,
-    fontWeight: "900",
-    letterSpacing: 0.4,
-  },
-  outletDetails: {
-    gap: 4,
-  },
-  detailRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 6,
-  },
-  detailText: {
-    flex: 1,
-    fontSize: 11,
-    color: Colors.sub,
-    lineHeight: 16,
-  },
-  hoursText: {
-    fontSize: 10,
-    color: Colors.faint,
-    marginTop: 2,
-  },
-  outletActions: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 4,
-  },
-  dirBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: Colors.indigoLight,
-    paddingVertical: 9,
-    borderRadius: 6,
-  },
-  dirBtnText: {
-    color: Colors.indigoDark,
-    fontSize: 10,
-    fontWeight: "800",
-  },
-  callBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: Colors.indigo,
-    paddingVertical: 9,
-    borderRadius: 6,
-  },
-  callBtnText: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "800",
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.65)",
+      justifyContent: "flex-end",
+    },
+    modalCard: {
+      backgroundColor: colors.paper,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      maxHeight: height * 0.88,
+      paddingTop: 16,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingBottom: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    headerLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    iconCircle: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: colors.indigo,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    title: {
+      fontSize: 13,
+      fontWeight: "900",
+      color: colors.ink,
+      letterSpacing: 0.8,
+    },
+    subtitle: {
+      fontSize: 11,
+      color: colors.sub,
+      marginTop: 2,
+    },
+    closeBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.cardSecondary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    content: {
+      padding: 18,
+      gap: 14,
+      paddingBottom: 36,
+    },
+    prodSummary: {
+      backgroundColor: colors.card,
+      borderRadius: 8,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 3,
+    },
+    prodLabel: {
+      fontSize: 9,
+      fontWeight: "800",
+      color: colors.sub,
+      letterSpacing: 0.5,
+    },
+    prodName: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: colors.ink,
+    },
+    prodSku: {
+      fontSize: 11,
+      color: colors.sub,
+    },
+    bold: {
+      fontWeight: "800",
+      color: colors.indigoDark,
+    },
+    outletsList: {
+      gap: 12,
+    },
+    outletCard: {
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 10,
+    },
+    outletHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+    },
+    tagPill: {
+      backgroundColor: colors.indigoLight,
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 3,
+      alignSelf: "flex-start",
+      marginBottom: 4,
+    },
+    tagPillText: {
+      color: colors.indigoDark,
+      fontSize: 8,
+      fontWeight: "900",
+      letterSpacing: 0.5,
+    },
+    outletName: {
+      fontSize: 13,
+      fontWeight: "800",
+      color: colors.ink,
+    },
+    stockBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      backgroundColor: colors.emeraldLight,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 4,
+    },
+    stockDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: colors.emerald,
+    },
+    stockText: {
+      color: colors.emerald,
+      fontSize: 9,
+      fontWeight: "900",
+      letterSpacing: 0.4,
+    },
+    outletDetails: {
+      gap: 4,
+    },
+    detailRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 6,
+    },
+    detailText: {
+      flex: 1,
+      fontSize: 11,
+      color: colors.sub,
+      lineHeight: 16,
+    },
+    hoursText: {
+      fontSize: 10,
+      color: colors.faint,
+      marginTop: 2,
+    },
+    outletActions: {
+      flexDirection: "row",
+      gap: 8,
+      marginTop: 4,
+    },
+    dirBtn: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      backgroundColor: colors.indigoLight,
+      paddingVertical: 9,
+      borderRadius: 6,
+    },
+    dirBtnText: {
+      color: colors.indigoDark,
+      fontSize: 10,
+      fontWeight: "800",
+    },
+    callBtn: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      backgroundColor: colors.indigo,
+      paddingVertical: 9,
+      borderRadius: 6,
+    },
+    callBtnText: {
+      color: "#FFFFFF",
+      fontSize: 10,
+      fontWeight: "800",
+    },
+  });
+}

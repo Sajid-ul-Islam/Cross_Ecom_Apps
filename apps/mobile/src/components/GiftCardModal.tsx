@@ -13,7 +13,7 @@ import {
   Share,
 } from "react-native";
 import { X, Gift, Sparkles, Share2, Check, Tag } from "./Icons";
-import { Colors } from "../theme/colors";
+import { Colors, ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { bdt } from "../services/gateway";
 import { useRewards } from "../context/RewardsContext";
@@ -54,6 +54,7 @@ interface GiftCardModalProps {
 export const GiftCardModal: React.FC<GiftCardModalProps> = ({ visible, onClose }) => {
   const { addVoucher } = useRewards();
   const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
 
   const [selectedTheme, setSelectedTheme] = useState(CARD_THEMES[0]);
   const [amount, setAmount] = useState<number>(2500);
@@ -257,267 +258,269 @@ export const GiftCardModal: React.FC<GiftCardModalProps> = ({ visible, onClose }
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
-    justifyContent: "flex-end",
-  },
-  modalCard: {
-    backgroundColor: Colors.paper,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: height * 0.9,
-    paddingTop: 16,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  iconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: Colors.indigo,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: Colors.ink,
-    letterSpacing: 0.8,
-  },
-  subtitle: {
-    fontSize: 11,
-    color: Colors.sub,
-    marginTop: 2,
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.cardSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: {
-    padding: 18,
-    gap: 16,
-    paddingBottom: 36,
-  },
-  cardPreview: {
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
-    gap: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  cardTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  cardBrand: {
-    fontSize: 14,
-    fontWeight: "900",
-    letterSpacing: 1.5,
-  },
-  cardOccasion: {
-    fontSize: 10,
-    color: "rgba(255, 255, 255, 0.7)",
-    marginTop: 2,
-  },
-  cardAmount: {
-    fontSize: 18,
-    fontWeight: "900",
-  },
-  cardCenter: {
-    gap: 3,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
-    padding: 10,
-    borderRadius: 6,
-  },
-  cardTo: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  cardMessage: {
-    color: "rgba(255, 255, 255, 0.85)",
-    fontSize: 10,
-    fontStyle: "italic",
-    lineHeight: 14,
-  },
-  cardFrom: {
-    color: "rgba(255, 255, 255, 0.7)",
-    fontSize: 10,
-    fontWeight: "600",
-    marginTop: 2,
-  },
-  cardBottom: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255, 255, 255, 0.15)",
-    paddingTop: 8,
-  },
-  cardCodeLabel: {
-    color: "rgba(255, 255, 255, 0.7)",
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  cardCode: {
-    fontSize: 12,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
-  generatedShareBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.emeraldLight,
-    borderWidth: 1,
-    borderColor: Colors.emerald,
-    borderRadius: 8,
-    padding: 12,
-    gap: 10,
-  },
-  genTitle: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: Colors.emerald,
-  },
-  genCode: {
-    fontSize: 14,
-    fontWeight: "900",
-    color: Colors.ink,
-    letterSpacing: 1,
-  },
-  shareBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: Colors.emerald,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  shareBtnText: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-  section: {
-    gap: 8,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: Colors.sub,
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
-  },
-  themesRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  themeChip: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-    paddingVertical: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  themeChipActive: {
-    borderColor: Colors.indigo,
-    borderWidth: 2,
-  },
-  themeChipText: {
-    fontSize: 10,
-    fontWeight: "800",
-  },
-  amountGrid: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  amountChip: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 6,
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: "center",
-  },
-  amountChipActive: {
-    backgroundColor: Colors.indigo,
-    borderColor: Colors.indigo,
-  },
-  amountChipText: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: Colors.ink,
-  },
-  amountChipTextActive: {
-    color: "#FFFFFF",
-  },
-  rowFields: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  field: {
-    gap: 6,
-    marginBottom: 8,
-  },
-  fieldLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.ink,
-  },
-  input: {
-    backgroundColor: Colors.card,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    fontSize: 12,
-    color: Colors.ink,
-  },
-  createBtn: {
-    backgroundColor: Colors.indigo,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 13,
-    borderRadius: 8,
-  },
-  createBtnText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "900",
-    letterSpacing: 0.8,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.65)",
+      justifyContent: "flex-end",
+    },
+    modalCard: {
+      backgroundColor: colors.paper,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      maxHeight: height * 0.9,
+      paddingTop: 16,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingBottom: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    headerLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    iconCircle: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      backgroundColor: colors.indigo,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    title: {
+      fontSize: 13,
+      fontWeight: "900",
+      color: colors.ink,
+      letterSpacing: 0.8,
+    },
+    subtitle: {
+      fontSize: 11,
+      color: colors.sub,
+      marginTop: 2,
+    },
+    closeBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.cardSecondary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    content: {
+      padding: 18,
+      gap: 16,
+      paddingBottom: 36,
+    },
+    cardPreview: {
+      borderRadius: 12,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: "rgba(255, 255, 255, 0.15)",
+      gap: 12,
+      shadowColor: "#000",
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+    },
+    cardTop: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+    },
+    cardBrand: {
+      fontSize: 14,
+      fontWeight: "900",
+      letterSpacing: 1.5,
+    },
+    cardOccasion: {
+      fontSize: 10,
+      color: "rgba(255, 255, 255, 0.7)",
+      marginTop: 2,
+    },
+    cardAmount: {
+      fontSize: 18,
+      fontWeight: "900",
+    },
+    cardCenter: {
+      gap: 3,
+      backgroundColor: "rgba(255, 255, 255, 0.05)",
+      padding: 10,
+      borderRadius: 6,
+    },
+    cardTo: {
+      color: "#FFFFFF",
+      fontSize: 11,
+      fontWeight: "800",
+    },
+    cardMessage: {
+      color: "rgba(255, 255, 255, 0.85)",
+      fontSize: 10,
+      fontStyle: "italic",
+      lineHeight: 14,
+    },
+    cardFrom: {
+      color: "rgba(255, 255, 255, 0.7)",
+      fontSize: 10,
+      fontWeight: "600",
+      marginTop: 2,
+    },
+    cardBottom: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      borderTopWidth: 1,
+      borderTopColor: "rgba(255, 255, 255, 0.15)",
+      paddingTop: 8,
+    },
+    cardCodeLabel: {
+      color: "rgba(255, 255, 255, 0.7)",
+      fontSize: 9,
+      fontWeight: "800",
+      letterSpacing: 0.5,
+    },
+    cardCode: {
+      fontSize: 12,
+      fontWeight: "900",
+      letterSpacing: 1,
+    },
+    generatedShareBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.emeraldLight,
+      borderWidth: 1,
+      borderColor: colors.emerald,
+      borderRadius: 8,
+      padding: 12,
+      gap: 10,
+    },
+    genTitle: {
+      fontSize: 11,
+      fontWeight: "800",
+      color: colors.emerald,
+    },
+    genCode: {
+      fontSize: 14,
+      fontWeight: "900",
+      color: colors.ink,
+      letterSpacing: 1,
+    },
+    shareBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      backgroundColor: colors.emerald,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 6,
+    },
+    shareBtnText: {
+      color: "#FFFFFF",
+      fontSize: 10,
+      fontWeight: "900",
+      letterSpacing: 0.5,
+    },
+    section: {
+      gap: 8,
+    },
+    sectionLabel: {
+      fontSize: 11,
+      fontWeight: "800",
+      color: colors.sub,
+      letterSpacing: 0.6,
+      textTransform: "uppercase",
+    },
+    themesRow: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    themeChip: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 4,
+      paddingVertical: 10,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    themeChipActive: {
+      borderColor: colors.indigo,
+      borderWidth: 2,
+    },
+    themeChipText: {
+      fontSize: 10,
+      fontWeight: "800",
+    },
+    amountGrid: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    amountChip: {
+      flex: 1,
+      paddingVertical: 10,
+      borderRadius: 6,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+    },
+    amountChipActive: {
+      backgroundColor: colors.indigo,
+      borderColor: colors.indigo,
+    },
+    amountChipText: {
+      fontSize: 12,
+      fontWeight: "800",
+      color: colors.ink,
+    },
+    amountChipTextActive: {
+      color: "#FFFFFF",
+    },
+    rowFields: {
+      flexDirection: "row",
+      gap: 10,
+    },
+    field: {
+      gap: 6,
+      marginBottom: 8,
+    },
+    fieldLabel: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.ink,
+    },
+    input: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 9,
+      fontSize: 12,
+      color: colors.ink,
+    },
+    createBtn: {
+      backgroundColor: colors.indigo,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 13,
+      borderRadius: 8,
+    },
+    createBtnText: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "900",
+      letterSpacing: 0.8,
+    },
+  });
+}

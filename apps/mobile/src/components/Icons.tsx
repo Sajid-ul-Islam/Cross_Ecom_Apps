@@ -107,6 +107,17 @@ export const ChevronDown = make(<Path d="m6 9 6 6 6-6" />);
 
 export const ChevronUp = make(<Path d="m18 15-6-6-6 6" />);
 
+export const ChevronRight = make(<Path d="m9 18 6-6-6-6" />);
+
+export const ChevronLeft = make(<Path d="m15 18-6-6 6-6" />);
+
+export const Mail = make(
+  <>
+    <Rect width="20" height="16" x="2" y="4" rx="2" />
+    <Path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+  </>,
+);
+
 export const Clock = make(
   <>
     <Circle cx="12" cy="12" r="10" />

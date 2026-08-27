@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,18 +8,20 @@ import {
   StyleSheet,
   Dimensions,
   ActivityIndicator,
-  RefreshControl,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+
 import { ArrowRight, Sparkles, ShieldCheck, MapPin, Award, TrendingUp, Package, Tag, Users } from "../../src/components/Icons";
-import { Header } from "../../src/components/Header";
+import { SectionHeader } from "../../src/components/SectionHeader";
+import { ScreenShell } from "../../src/components/ScreenShell";
 import { CashbackBanner, DeliveryNoticeBanner } from "../../src/components/Banner";
 import { StoreNoticeBanner } from "../../src/components/StoreNoticeBanner";
 import { ProductCard } from "../../src/components/ProductCard";
 import { Sparkline, CategoryBars, Donut, KpiTile } from "../../src/components/Charts";
 import { ThemeColors } from "../../src/theme/colors";
+import { sharedStyles } from "../../src/theme/sharedStyles";
 import { useTheme } from "../../src/context/ThemeContext";
+import { usePullToRefresh } from "../../src/hooks/usePullToRefresh";
 import { fetchProducts, fetchStats, CATEGORIES, bdt, useCatalogRefreshOnFocus } from "../../src/services/gateway";
 import { Product, DeenCategory, Stats } from "../../src/types";
 import { useProfile } from "../../src/context/ProfileContext";
@@ -32,14 +34,15 @@ export default function HomeScreen() {
   const router = useRouter();
   const { profile } = useProfile();
   const { colors, isDark } = useTheme();
+  const s = sharedStyles(colors);
   const isAdmin = profile.role === "admin" || profile.username === "admin";
-  const styles = createStyles(colors);
+  const styles = createStyles(colors, s);
   const [products, setProducts] = useState<Product[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
+
   const [broadcastModalVisible, setBroadcastModalVisible] = useState(false);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const p = await fetchProducts();
       setProducts(p);
@@ -48,7 +51,7 @@ export default function HomeScreen() {
         setStats(s);
       }
     } catch {}
-  };
+  }, [isAdmin]);
 
   // Refresh catalog + admin stats whenever the home screen regains focus or
   // the app resumes from background — keeps live WooCommerce changes (stock,
@@ -59,11 +62,7 @@ export default function HomeScreen() {
     loadData();
   }, [isAdmin]);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  };
+  const { refreshControl } = usePullToRefresh(loadData);
 
   const newDrops = products.filter((p) => p.isNew || (p.salePct && p.salePct > 0)).slice(0, 10);
   const jeansCollection = products.filter((p) => p.category === "JEANS").slice(0, 10);
@@ -80,22 +79,14 @@ export default function HomeScreen() {
   const salesSeries = stats?.sales.series.map((d) => d.sales) ?? [];
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
-      <Header />
+    <ScreenShell>
       <StoreNoticeBanner />
       <DeliveryNoticeBanner />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.indigo}
-            colors={[colors.indigo]}
-          />
-        }
+        refreshControl={refreshControl}
       >
 
         <CashbackBanner />
@@ -214,15 +205,12 @@ export default function HomeScreen() {
         ) : null}
 
         {/* Categories Showcase with Cover Images */}
-        <View style={styles.sectionHeader}>
-          <View>
-            <Text style={styles.sectionTitle}>EXPLORE COLLECTIONS</Text>
-            <Text style={styles.sectionSubtitle}>Tailored menswear crafted in Bangladesh</Text>
-          </View>
-          <TouchableOpacity onPress={() => router.push("/(tabs)/shop")}>
-            <Text style={styles.seeAllText}>All Items →</Text>
-          </TouchableOpacity>
-        </View>
+        <SectionHeader
+          title="EXPLORE COLLECTIONS"
+          subtitle="Tailored menswear crafted in Bangladesh"
+          actionText="All Items →"
+          onActionPress={() => router.push("/(tabs)/shop")}
+        />
 
         <ScrollView
           horizontal
@@ -258,15 +246,12 @@ export default function HomeScreen() {
         {/* Best Deals */}
         {bestDeals.length > 0 && (
           <>
-            <View style={styles.sectionHeader}>
-              <View>
-                <Text style={styles.sectionTitle}>BEST DEALS</Text>
-                <Text style={styles.sectionSubtitle}>Highest discount live right now</Text>
-              </View>
-              <TouchableOpacity onPress={() => router.push("/(tabs)/shop")}>
-                <Text style={styles.seeAllText}>View All</Text>
-              </TouchableOpacity>
-            </View>
+            <SectionHeader
+              title="BEST DEALS"
+              subtitle="Highest discount live right now"
+              actionText="View All"
+              onActionPress={() => router.push("/(tabs)/shop")}
+            />
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -282,15 +267,12 @@ export default function HomeScreen() {
         )}
 
         {/* New Drops Carousel */}
-        <View style={styles.sectionHeader}>
-          <View>
-            <Text style={styles.sectionTitle}>NEW & TRENDING</Text>
-            <Text style={styles.sectionSubtitle}>Fresh denim cuts & festive kurta silhouettes</Text>
-          </View>
-          <TouchableOpacity onPress={() => router.push("/(tabs)/shop")}>
-            <Text style={styles.seeAllText}>View All</Text>
-          </TouchableOpacity>
-        </View>
+        <SectionHeader
+          title="NEW & TRENDING"
+          subtitle="Fresh denim cuts & festive kurta silhouettes"
+          actionText="View All"
+          onActionPress={() => router.push("/(tabs)/shop")}
+        />
 
         <ScrollView
           horizontal
@@ -305,12 +287,10 @@ export default function HomeScreen() {
         </ScrollView>
 
         {/* Denim Masterpieces */}
-        <View style={styles.sectionHeader}>
-          <View>
-            <Text style={styles.sectionTitle}>SIGNATURE DENIM</Text>
-            <Text style={styles.sectionSubtitle}>100% Cotton Selvedge & Comfort Stretch Jeans</Text>
-          </View>
-        </View>
+        <SectionHeader
+          title="SIGNATURE DENIM"
+          subtitle="100% Cotton Selvedge & Comfort Stretch Jeans"
+        />
 
         <View style={styles.grid}>
           {jeansCollection.map((product) => (
@@ -321,12 +301,10 @@ export default function HomeScreen() {
         </View>
 
         {/* Festive Panjabi Section */}
-        <View style={styles.sectionHeader}>
-          <View>
-            <Text style={styles.sectionTitle}>HERITAGE PANJABI & KURTA</Text>
-            <Text style={styles.sectionSubtitle}>Indigo dyed pure dobby cottons</Text>
-          </View>
-        </View>
+        <SectionHeader
+          title="HERITAGE PANJABI & KURTA"
+          subtitle="Indigo dyed pure dobby cottons"
+        />
 
         <View style={styles.grid}>
           {festivePanjabi.map((product) => (
@@ -363,13 +341,12 @@ export default function HomeScreen() {
         visible={broadcastModalVisible}
         onClose={() => setBroadcastModalVisible(false)}
       />
-    </SafeAreaView>
+    </ScreenShell>
   );
 }
 
-const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.paper },
-  scrollContent: { paddingBottom: 24 },
+const createStyles = (colors: ThemeColors, s: ReturnType<typeof sharedStyles>) => StyleSheet.create({
+  scrollContent: { ...s.scrollContent, paddingBottom: 24 },
   heroWrapper: {
     marginHorizontal: 16, marginTop: 8, marginBottom: 16, height: 380,
     borderRadius: 12, overflow: "hidden", backgroundColor: colors.indigoDark, position: "relative",
@@ -393,13 +370,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderWidth: 1, borderColor: "rgba(255, 255, 255, 0.2)",
   },
   heroBtnText: { color: "#FFFFFF", fontSize: 11, fontWeight: "800", letterSpacing: 1 },
-  sectionHeader: {
-    flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end",
-    paddingHorizontal: 16, marginTop: 18, marginBottom: 10,
-  },
-  sectionTitle: { fontSize: 14, fontWeight: "800", color: colors.ink, letterSpacing: 0.8 },
-  sectionSubtitle: { fontSize: 11, color: colors.sub, marginTop: 2 },
-  seeAllText: { fontSize: 12, color: colors.indigo, fontWeight: "700" },
   categoryCardScroll: { paddingHorizontal: 16, gap: 12, paddingBottom: 4 },
   catCard: {
     width: 140,

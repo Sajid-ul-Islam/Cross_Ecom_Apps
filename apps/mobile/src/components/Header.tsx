@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { ShoppingBag, ArrowLeft, Search, Bell } from "./Icons";
+import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useCart } from "../context/CartContext";
 import { useNotifications } from "../context/NotificationContext";
@@ -28,6 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
   const { totalItems } = useCart();
   const { unreadCount } = useNotifications();
   const [notifVisible, setNotifVisible] = useState(false);
@@ -103,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
           {showBag && (
             <TouchableOpacity
               style={[styles.bagButton, { backgroundColor: colors.cardSecondary }]}
-              onPress={() => router.push("/(tabs)/bag")}
+              onPress={() => router.push("/(tabs)/cart")}
             >
               <ShoppingBag size={20} color={colors.ink} />
               {totalItems > 0 && (
@@ -125,130 +127,132 @@ export const Header: React.FC<HeaderProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    paddingTop: 8,
-    paddingBottom: 10,
-    paddingHorizontal: 16,
-  },
-  inner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    minHeight: 44,
-  },
-  brandContainer: {
-    flexDirection: "column",
-  },
-  brandRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  brandTitle: {
-    fontSize: 22,
-    fontWeight: "900",
-    letterSpacing: 2,
-  },
-  brandLogo: {
-    width: 26,
-    height: 26,
-    borderRadius: 6,
-  },
-  brandTag: {
-    fontSize: 9,
-    letterSpacing: 1.2,
-    fontWeight: "700",
-  },
-  connDot: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  connText: {
-    fontSize: 8,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    letterSpacing: 0.5,
-  },
-  brandSubtitle: {
-    fontSize: 11,
-    marginTop: 2,
-  },
-  centerTitleContainer: {
-    flex: 1,
-    paddingHorizontal: 12,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  headerSubtitle: {
-    fontSize: 11,
-    marginTop: 1,
-  },
-  rightActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  iconButton: {
-    width: 38,
-    height: 38,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 19,
-  },
-  notifButton: {
-    width: 38,
-    height: 38,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 19,
-    position: "relative",
-  },
-  notifBadge: {
-    position: "absolute",
-    top: 4,
-    right: 4,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 3,
-  },
-  notifBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 9,
-    fontWeight: "900",
-  },
-  bagButton: {
-    width: 38,
-    height: 38,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 19,
-    position: "relative",
-  },
-  badge: {
-    position: "absolute",
-    top: 4,
-    right: 4,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 3,
-  },
-  badgeText: {
-    color: "#FFFFFF",
-    fontSize: 9,
-    fontWeight: "900",
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    container: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      paddingTop: 8,
+      paddingBottom: 10,
+      paddingHorizontal: 16,
+    },
+    inner: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      minHeight: 44,
+    },
+    brandContainer: {
+      flexDirection: "column",
+    },
+    brandRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    brandTitle: {
+      fontSize: 22,
+      fontWeight: "900",
+      letterSpacing: 2,
+    },
+    brandLogo: {
+      width: 26,
+      height: 26,
+      borderRadius: 6,
+    },
+    brandTag: {
+      fontSize: 9,
+      letterSpacing: 1.2,
+      fontWeight: "700",
+    },
+    connDot: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    connText: {
+      fontSize: 8,
+      fontWeight: "800",
+      color: "#FFFFFF",
+      letterSpacing: 0.5,
+    },
+    brandSubtitle: {
+      fontSize: 11,
+      marginTop: 2,
+    },
+    centerTitleContainer: {
+      flex: 1,
+      paddingHorizontal: 12,
+    },
+    headerTitle: {
+      fontSize: 16,
+      fontWeight: "800",
+      letterSpacing: 0.5,
+    },
+    headerSubtitle: {
+      fontSize: 11,
+      marginTop: 1,
+    },
+    rightActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    iconButton: {
+      width: 38,
+      height: 38,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 19,
+    },
+    notifButton: {
+      width: 38,
+      height: 38,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 19,
+      position: "relative",
+    },
+    notifBadge: {
+      position: "absolute",
+      top: 4,
+      right: 4,
+      minWidth: 16,
+      height: 16,
+      borderRadius: 8,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 3,
+    },
+    notifBadgeText: {
+      color: "#FFFFFF",
+      fontSize: 9,
+      fontWeight: "900",
+    },
+    bagButton: {
+      width: 38,
+      height: 38,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 19,
+      position: "relative",
+    },
+    badge: {
+      position: "absolute",
+      top: 4,
+      right: 4,
+      minWidth: 16,
+      height: 16,
+      borderRadius: 8,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 3,
+    },
+    badgeText: {
+      color: "#FFFFFF",
+      fontSize: 9,
+      fontWeight: "900",
+    },
+  });
+}

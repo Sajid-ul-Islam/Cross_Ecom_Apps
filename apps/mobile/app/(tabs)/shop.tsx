@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,11 +11,13 @@ import {
   Image,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+
 import { Search, X, ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowRight } from "../../src/components/Icons";
-import { Header } from "../../src/components/Header";
+import { ScreenShell } from "../../src/components/ScreenShell";
 import { ProductCard } from "../../src/components/ProductCard";
 import { useTheme } from "../../src/context/ThemeContext";
+import { sharedStyles } from "../../src/theme/sharedStyles";
+import { usePullToRefresh } from "../../src/hooks/usePullToRefresh";
 import { fetchProducts, CATEGORIES, useCatalogRefreshOnFocus } from "../../src/services/gateway";
 import { Product, DeenCategory } from "../../src/types";
 import { getCategoryInfo } from "../../src/data/categories";
@@ -25,6 +27,7 @@ type SortKey = "default" | "price-asc" | "price-desc" | "name-asc" | "new";
 export default function ShopScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const s = sharedStyles(colors);
   const params = useLocalSearchParams<{ category?: string }>();
   const [selectedCategory, setSelectedCategory] = useState<DeenCategory>(
     (params.category as DeenCategory) || "ALL"
@@ -34,8 +37,8 @@ export default function ShopScreen() {
   const [sort, setSort] = useState<SortKey>("default");
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const styles = createStyles(colors);
+
+  const styles = createStyles(colors, s);
 
   // Debounce search input (200ms) so filtering large lists stays smooth.
   useEffect(() => {
@@ -49,13 +52,13 @@ export default function ShopScreen() {
     }
   }, [params.category]);
 
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     const sortParam = sort === "default" ? undefined : (sort as "price-asc" | "price-desc" | "name-asc" | "new");
     try {
       const data = await fetchProducts(selectedCategory, deferredQuery, sortParam);
       setProducts(data);
     } catch {}
-  };
+  }, [selectedCategory, deferredQuery, sort]);
 
   // Refresh catalog whenever the shop screen regains focus or the app resumes
   // from background — surfaces live WooCommerce stock/product changes without
@@ -67,15 +70,10 @@ export default function ShopScreen() {
     loadProducts().finally(() => setLoading(false));
   }, [selectedCategory, deferredQuery, sort]);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await loadProducts();
-    setRefreshing(false);
-  };
+  const { refreshing, onRefresh: handleRefresh } = usePullToRefresh(loadProducts);
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
-      <Header title="SHOP COLLECTION" showSearch={false} />
+    <ScreenShell title="SHOP COLLECTION" showSearch={false}>
 
       {/* Search Bar */}
       <View style={[styles.searchSection, { backgroundColor: colors.paper }]}>
@@ -300,16 +298,12 @@ export default function ShopScreen() {
           )}
         />
       )}
-    </SafeAreaView>
+    </ScreenShell>
   );
 }
 
-function createStyles(colors: any) {
+function createStyles(colors: any, s: ReturnType<typeof sharedStyles>) {
   return StyleSheet.create({
-    safeArea: {
-      flex: 1,
-      backgroundColor: colors.paper,
-    },
     searchSection: {
       paddingHorizontal: 16,
       paddingVertical: 10,
@@ -392,10 +386,7 @@ function createStyles(colors: any) {
       fontSize: 11,
       fontWeight: "600",
     },
-    scrollContent: {
-      paddingBottom: 24,
-      paddingHorizontal: 16,
-    },
+    scrollContent: { ...s.scrollContent, paddingBottom: 24, paddingHorizontal: 16 },
     row: {
       justifyContent: "space-between",
     },

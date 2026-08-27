@@ -1,7 +1,8 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Svg, { Polyline, Path, Circle, Rect, Line } from "react-native-svg";
-import { Colors } from "../theme/colors";
+import { ThemeColors } from "../theme/colors";
+import { useTheme } from "../context/ThemeContext";
 import { bdt } from "../services/gateway";
 
 /* ----------------------------- Sparkline ----------------------------- */
@@ -17,9 +18,13 @@ export const Sparkline: React.FC<SparklineProps> = ({
   data,
   width = 280,
   height = 56,
-  color = Colors.indigo,
+  color,
   fill = true,
 }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+  const strokeColor = color || colors.indigo;
+
   if (!data.length) return null;
   const max = Math.max(...data, 1);
   const min = Math.min(...data, 0);
@@ -44,9 +49,9 @@ export const Sparkline: React.FC<SparklineProps> = ({
 
   return (
     <Svg width={width} height={height} style={styles.svg}>
-      {fill && <Path d={area} fill={color} opacity={0.1} />}
-      <Polyline points={line} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-      <Circle cx={last.x} cy={last.y} r={3} fill={color} />
+      {fill && <Path d={area} fill={strokeColor} opacity={0.1} />}
+      <Polyline points={line} fill="none" stroke={strokeColor} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+      <Circle cx={last.x} cy={last.y} r={3} fill={strokeColor} />
     </Svg>
   );
 };
@@ -58,8 +63,10 @@ interface CategoryBarProps {
 }
 
 export const CategoryBars: React.FC<CategoryBarProps> = ({ data, max }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
   const top = (max ?? Math.max(...data.map((d) => d.count), 1));
-  const palette = [Colors.indigo, Colors.denimStitch, Colors.emerald, Colors.crimson, Colors.amber, Colors.bkash, Colors.nagad];
+  const palette = [colors.indigo, colors.denimStitch, colors.emerald, colors.crimson, colors.amber, colors.bkash, colors.nagad];
   return (
     <View style={styles.barWrap}>
       {data.map((d, i) => {
@@ -87,7 +94,10 @@ interface DonutProps {
   size?: number;
 }
 
-export const Donut: React.FC<DonutProps> = ({ value, total, label, color = Colors.emerald, size = 84 }) => {
+export const Donut: React.FC<DonutProps> = ({ value, total, label, color, size = 84 }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+  const strokeColor = color || colors.emerald;
   const r = size / 2 - 8;
   const cx = size / 2;
   const cy = size / 2;
@@ -97,19 +107,19 @@ export const Donut: React.FC<DonutProps> = ({ value, total, label, color = Color
   return (
     <View style={{ alignItems: "center" }}>
       <Svg width={size} height={size}>
-        <Circle cx={cx} cy={cy} r={r} stroke={Colors.border} strokeWidth={8} fill="none" />
+        <Circle cx={cx} cy={cy} r={r} stroke={colors.border} strokeWidth={8} fill="none" />
         <Circle
           cx={cx}
           cy={cy}
           r={r}
-          stroke={color}
+          stroke={strokeColor}
           strokeWidth={8}
           fill="none"
           strokeDasharray={`${dash} ${circ - dash}`}
           strokeLinecap="round"
           transform={`rotate(-90 ${cx} ${cy})`}
         />
-        <Circle cx={cx} cy={cy} r={r * 0.62} stroke={Colors.cardSecondary} strokeWidth={6} fill="none" />
+        <Circle cx={cx} cy={cy} r={r * 0.62} stroke={colors.cardSecondary} strokeWidth={6} fill="none" />
       </Svg>
       <Text style={styles.donutValue}>{Math.round(frac * 100)}%</Text>
       <Text style={styles.donutLabel}>{label}</Text>
@@ -125,14 +135,19 @@ interface KpiProps {
   accent?: string;
 }
 
-export const KpiTile: React.FC<KpiProps> = ({ label, value, sub, accent = Colors.indigo }) => (
-  <View style={styles.kpi}>
-    <View style={[styles.kpiAccent, { backgroundColor: accent }]} />
-    <Text style={styles.kpiLabel}>{label}</Text>
-    <Text style={styles.kpiValue}>{value}</Text>
-    {sub && <Text style={styles.kpiSub}>{sub}</Text>}
-  </View>
-);
+export const KpiTile: React.FC<KpiProps> = ({ label, value, sub, accent }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+  const accentColor = accent || colors.indigo;
+  return (
+    <View style={styles.kpi}>
+      <View style={[styles.kpiAccent, { backgroundColor: accentColor }]} />
+      <Text style={styles.kpiLabel}>{label}</Text>
+      <Text style={styles.kpiValue}>{value}</Text>
+      {sub && <Text style={styles.kpiSub}>{sub}</Text>}
+    </View>
+  );
+};
 
 /* ----------------------------- Price Bars --------------------------- */
 interface PriceBarProps {
@@ -140,45 +155,51 @@ interface PriceBarProps {
   markers: { label: string; value: number; color: string }[];
 }
 
-export const PriceBars: React.FC<PriceBarProps> = ({ max, markers }) => (
-  <View style={styles.barWrap}>
-    {markers.map((m) => {
-      const pct = Math.max(3, Math.round((m.value / (max || 1)) * 100));
-      return (
-        <View key={m.label} style={styles.barRow}>
-          <Text style={styles.barLabel} numberOfLines={1}>{m.label}</Text>
-          <View style={styles.barTrack}>
-            <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: m.color }]} />
+export const PriceBars: React.FC<PriceBarProps> = ({ max, markers }) => {
+  const { colors } = useTheme();
+  const styles = createStyles(colors);
+  return (
+    <View style={styles.barWrap}>
+      {markers.map((m) => {
+        const pct = Math.max(3, Math.round((m.value / (max || 1)) * 100));
+        return (
+          <View key={m.label} style={styles.barRow}>
+            <Text style={styles.barLabel} numberOfLines={1}>{m.label}</Text>
+            <View style={styles.barTrack}>
+              <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: m.color }]} />
+            </View>
+            <Text style={styles.barValue}>{bdt(m.value)}</Text>
           </View>
-          <Text style={styles.barValue}>{bdt(m.value)}</Text>
-        </View>
-      );
-    })}
-  </View>
-);
+        );
+      })}
+    </View>
+  );
+};
 
-const styles = StyleSheet.create({
-  svg: { alignSelf: "center" },
-  barWrap: { gap: 8, marginTop: 4 },
-  barRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  barLabel: { width: 78, fontSize: 10, fontWeight: "700", color: Colors.sub, textTransform: "uppercase" },
-  barTrack: { flex: 1, height: 10, backgroundColor: Colors.cardSecondary, borderRadius: 5, overflow: "hidden" },
-  barFill: { height: 10, borderRadius: 5 },
-  barValue: { width: 40, textAlign: "right", fontSize: 11, fontWeight: "800", color: Colors.ink },
-  donutValue: { position: "absolute", top: 30, fontSize: 16, fontWeight: "900", color: Colors.ink },
-  donutLabel: { fontSize: 10, color: Colors.sub, marginTop: 2 },
-  kpi: {
-    flex: 1,
-    backgroundColor: Colors.card,
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    position: "relative",
-    overflow: "hidden",
-  },
-  kpiAccent: { position: "absolute", top: 0, left: 0, right: 0, height: 3 },
-  kpiLabel: { fontSize: 10, color: Colors.sub, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 },
-  kpiValue: { fontSize: 18, fontWeight: "900", color: Colors.ink },
-  kpiSub: { fontSize: 10, color: Colors.sub, marginTop: 2 },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    svg: { alignSelf: "center" },
+    barWrap: { gap: 8, marginTop: 4 },
+    barRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+    barLabel: { width: 78, fontSize: 10, fontWeight: "700", color: colors.sub, textTransform: "uppercase" },
+    barTrack: { flex: 1, height: 10, backgroundColor: colors.cardSecondary, borderRadius: 5, overflow: "hidden" },
+    barFill: { height: 10, borderRadius: 5 },
+    barValue: { width: 40, textAlign: "right", fontSize: 11, fontWeight: "800", color: colors.ink },
+    donutValue: { position: "absolute", top: 30, fontSize: 16, fontWeight: "900", color: colors.ink },
+    donutLabel: { fontSize: 10, color: colors.sub, marginTop: 2 },
+    kpi: {
+      flex: 1,
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      position: "relative",
+      overflow: "hidden",
+    },
+    kpiAccent: { position: "absolute", top: 0, left: 0, right: 0, height: 3 },
+    kpiLabel: { fontSize: 10, color: colors.sub, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 },
+    kpiValue: { fontSize: 18, fontWeight: "900", color: colors.ink },
+    kpiSub: { fontSize: 10, color: colors.sub, marginTop: 2 },
+  });
+}

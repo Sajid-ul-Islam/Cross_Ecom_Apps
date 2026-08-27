@@ -9,7 +9,7 @@ import {
   Dimensions,
 } from "react-native";
 import { X, Ruler, CheckCircle2, Info, Sparkles } from "./Icons";
-import { Colors } from "../theme/colors";
+import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { DeenCategory } from "../types";
 
@@ -98,6 +98,7 @@ export const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
   fit,
 }) => {
   const { colors, isDark } = useTheme();
+  const styles = createStyles(colors);
   const [unit, setUnit] = useState<UnitType>("in");
 
   const catUpper = (category || "").toUpperCase();
@@ -329,243 +330,245 @@ export const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.65)",
-    justifyContent: "flex-end",
-  },
-  modalCard: {
-    backgroundColor: Colors.paper,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: height * 0.88,
-    paddingTop: 16,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.indigoLight,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: "900",
-    color: Colors.ink,
-    letterSpacing: 0.8,
-  },
-  subtitle: {
-    fontSize: 11,
-    color: Colors.sub,
-    marginTop: 2,
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.cardSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  toolBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: Colors.card,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  unitToggleContainer: {
-    flexDirection: "row",
-    backgroundColor: Colors.paper,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: 2,
-  },
-  unitBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 4,
-  },
-  unitBtnActive: {
-    backgroundColor: Colors.indigo,
-  },
-  unitBtnText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: Colors.sub,
-  },
-  unitBtnTextActive: {
-    color: "#FFFFFF",
-  },
-  savedMatchBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: Colors.indigoLight,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 6,
-  },
-  savedMatchText: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: Colors.indigoDark,
-  },
-  content: {
-    padding: 18,
-    gap: 16,
-  },
-  tableCard: {
-    backgroundColor: Colors.card,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    overflow: "hidden",
-  },
-  tableHeaderRow: {
-    flexDirection: "row",
-    backgroundColor: Colors.cardSecondary,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  tableHeadCell: {
-    flex: 1,
-    fontSize: 10,
-    fontWeight: "800",
-    color: Colors.sub,
-    textAlign: "center",
-    letterSpacing: 0.5,
-  },
-  sizeCol: {
-    flex: 1.2,
-    textAlign: "left",
-  },
-  tableRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  tableRowSelected: {
-    backgroundColor: Colors.indigoLight,
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.indigo,
-  },
-  tableCellWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  tableCellText: {
-    flex: 1,
-    fontSize: 12,
-    color: Colors.ink,
-    textAlign: "center",
-  },
-  sizeCellText: {
-    fontWeight: "800",
-    textAlign: "left",
-  },
-  cellSelectedText: {
-    color: Colors.indigoDark,
-    fontWeight: "800",
-  },
-  matchTag: {
-    fontSize: 8,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    backgroundColor: Colors.emerald,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderRadius: 3,
-  },
-  guideCard: {
-    backgroundColor: Colors.card,
-    borderRadius: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  guideHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 10,
-  },
-  guideTitle: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: Colors.indigoDark,
-    letterSpacing: 0.5,
-  },
-  guideSteps: {
-    gap: 6,
-  },
-  guideStep: {
-    fontSize: 11,
-    color: Colors.sub,
-    lineHeight: 17,
-  },
-  bold: {
-    fontWeight: "700",
-    color: Colors.ink,
-  },
-  policyCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: Colors.emeraldLight,
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Colors.emerald,
-  },
-  policyText: {
-    flex: 1,
-    fontSize: 11,
-    color: Colors.emerald,
-    lineHeight: 16,
-  },
-  footer: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-    backgroundColor: Colors.paper,
-  },
-  confirmBtn: {
-    backgroundColor: Colors.indigo,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  confirmBtnText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.65)",
+      justifyContent: "flex-end",
+    },
+    modalCard: {
+      backgroundColor: colors.paper,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      maxHeight: height * 0.88,
+      paddingTop: 16,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingBottom: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    headerLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    iconCircle: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.indigoLight,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    title: {
+      fontSize: 14,
+      fontWeight: "900",
+      color: colors.ink,
+      letterSpacing: 0.8,
+    },
+    subtitle: {
+      fontSize: 11,
+      color: colors.sub,
+      marginTop: 2,
+    },
+    closeBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.cardSecondary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    toolBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      backgroundColor: colors.card,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    unitToggleContainer: {
+      flexDirection: "row",
+      backgroundColor: colors.paper,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 2,
+    },
+    unitBtn: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 4,
+    },
+    unitBtnActive: {
+      backgroundColor: colors.indigo,
+    },
+    unitBtnText: {
+      fontSize: 10,
+      fontWeight: "700",
+      color: colors.sub,
+    },
+    unitBtnTextActive: {
+      color: "#FFFFFF",
+    },
+    savedMatchBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      backgroundColor: colors.indigoLight,
+      paddingHorizontal: 8,
+      paddingVertical: 5,
+      borderRadius: 6,
+    },
+    savedMatchText: {
+      fontSize: 10,
+      fontWeight: "800",
+      color: colors.indigoDark,
+    },
+    content: {
+      padding: 18,
+      gap: 16,
+    },
+    tableCard: {
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: "hidden",
+    },
+    tableHeaderRow: {
+      flexDirection: "row",
+      backgroundColor: colors.cardSecondary,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    tableHeadCell: {
+      flex: 1,
+      fontSize: 10,
+      fontWeight: "800",
+      color: colors.sub,
+      textAlign: "center",
+      letterSpacing: 0.5,
+    },
+    sizeCol: {
+      flex: 1.2,
+      textAlign: "left",
+    },
+    tableRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 12,
+      paddingHorizontal: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    tableRowSelected: {
+      backgroundColor: colors.indigoLight,
+      borderLeftWidth: 3,
+      borderLeftColor: colors.indigo,
+    },
+    tableCellWrap: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    tableCellText: {
+      flex: 1,
+      fontSize: 12,
+      color: colors.ink,
+      textAlign: "center",
+    },
+    sizeCellText: {
+      fontWeight: "800",
+      textAlign: "left",
+    },
+    cellSelectedText: {
+      color: colors.indigoDark,
+      fontWeight: "800",
+    },
+    matchTag: {
+      fontSize: 8,
+      fontWeight: "800",
+      color: "#FFFFFF",
+      backgroundColor: colors.emerald,
+      paddingHorizontal: 4,
+      paddingVertical: 1,
+      borderRadius: 3,
+    },
+    guideCard: {
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    guideHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginBottom: 10,
+    },
+    guideTitle: {
+      fontSize: 11,
+      fontWeight: "800",
+      color: colors.indigoDark,
+      letterSpacing: 0.5,
+    },
+    guideSteps: {
+      gap: 6,
+    },
+    guideStep: {
+      fontSize: 11,
+      color: colors.sub,
+      lineHeight: 17,
+    },
+    bold: {
+      fontWeight: "700",
+      color: colors.ink,
+    },
+    policyCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: colors.emeraldLight,
+      borderRadius: 8,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: colors.emerald,
+    },
+    policyText: {
+      flex: 1,
+      fontSize: 11,
+      color: colors.emerald,
+      lineHeight: 16,
+    },
+    footer: {
+      padding: 16,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
+      backgroundColor: colors.paper,
+    },
+    confirmBtn: {
+      backgroundColor: colors.indigo,
+      paddingVertical: 14,
+      borderRadius: 8,
+      alignItems: "center",
+    },
+    confirmBtnText: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "800",
+      letterSpacing: 0.8,
+    },
+  });
+}

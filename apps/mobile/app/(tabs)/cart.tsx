@@ -8,19 +8,21 @@ import {
   StyleSheet,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+
 import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Gift, ShieldCheck } from "../../src/components/Icons";
-import { Header } from "../../src/components/Header";
+import { ScreenShell } from "../../src/components/ScreenShell";
 import { CashbackBanner } from "../../src/components/Banner";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useCart } from "../../src/context/CartContext";
 import { bdt, DELIVERY_OPTIONS } from "../../src/services/gateway";
 import { DeliveryArea, DeliveryOptionKey } from "../../src/types";
 import { ThemeColors } from "../../src/theme/colors";
+import { sharedStyles } from "../../src/theme/sharedStyles";
 
 export default function BagScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const s = sharedStyles(colors);
   const {
     cart,
     updateQty,
@@ -30,39 +32,38 @@ export default function BagScreen() {
     calculateTotal,
   } = useCart();
   const [selectedArea, setSelectedArea] = useState<DeliveryArea>("dhaka_standard");
-  const styles = createStyles(colors);
+  const styles = createStyles(colors, s);
 
   const deliveryFee = getDeliveryFee(selectedArea);
   const total = calculateTotal(selectedArea);
 
-  if (cart.length === 0) {
-    return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
-        <Header title="CART" showBag={false} />
-        <View style={[styles.emptyContainer, { flex: 1 }]}>
-          <View style={[styles.emptyIconCircle, { backgroundColor: colors.indigoLight }]}>
-            <ShoppingBag size={36} color={colors.indigo} />
-          </View>
-          <Text style={[styles.emptyTitle, { color: colors.ink }]}>Your Cart is Empty</Text>
-          <Text style={[styles.emptySub, { color: colors.sub }]}>
-            Explore our artisanal selvedge jeans, dobby panjabis, and heavyweight tees.
-          </Text>
-          <TouchableOpacity
-            style={[styles.shopBtn, { backgroundColor: colors.indigo }]}
-            activeOpacity={0.85}
-            onPress={() => router.push("/(tabs)/shop")}
-          >
-            <Text style={styles.shopBtnText}>CONTINUE SHOPPING</Text>
-            <ArrowRight size={16} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const emptyContent = (
+    <View style={[styles.emptyContainer, { flex: 1 }]}>
+      <View style={[styles.emptyIconCircle, { backgroundColor: colors.indigoLight }]}>
+        <ShoppingBag size={36} color={colors.indigo} />
+      </View>
+      <Text style={[styles.emptyTitle, { color: colors.ink }]}>Your Cart is Empty</Text>
+      <Text style={[styles.emptySub, { color: colors.sub }]}>
+        Explore our artisanal selvedge jeans, dobby panjabis, and heavyweight tees.
+      </Text>
+      <TouchableOpacity
+        style={[styles.shopBtn, { backgroundColor: colors.indigo }]}
+        activeOpacity={0.85}
+        onPress={() => router.push("/(tabs)/shop")}
+      >
+        <Text style={styles.shopBtnText}>CONTINUE SHOPPING</Text>
+        <ArrowRight size={16} color="#FFFFFF" />
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
-      <Header title="CART" showBag={false} />
+    <ScreenShell
+      title="CART"
+      showBag={false}
+      empty={cart.length === 0}
+      emptyContent={emptyContent}
+    >
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <CashbackBanner />
@@ -220,26 +221,14 @@ export default function BagScreen() {
           <ArrowRight size={16} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </ScreenShell>
   );
 }
 
-function createStyles(colors: ThemeColors) {
+function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
   return StyleSheet.create({
-    safeArea: {
-      flex: 1,
-      backgroundColor: colors.paper,
-    },
-    scrollContent: {
-      paddingBottom: 30,
-    },
-    emptyContainer: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-      paddingHorizontal: 32,
-      gap: 12,
-    },
+    scrollContent: { ...s.scrollContent, paddingBottom: 30 },
+    emptyContainer: s.emptyContainer,
     emptyIconCircle: {
       width: 72,
       height: 72,

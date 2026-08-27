@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,13 +9,10 @@ import {
   Dimensions,
   ActivityIndicator,
   FlatList,
-  RefreshControl,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocalSearchParams } from "expo-router";
+
 import {
-  ArrowLeft,
-  ShoppingBag,
   SlidersHorizontal,
   Ruler,
   Sparkles,
@@ -23,13 +20,16 @@ import {
   ArrowUpNarrowWide,
   Layers,
 } from "../../src/components/Icons";
-import { Colors } from "../../src/theme/colors";
+import { ThemeColors } from "../../src/theme/colors";
+import { sharedStyles } from "../../src/theme/sharedStyles";
 import { useTheme } from "../../src/context/ThemeContext";
+import { usePullToRefresh } from "../../src/hooks/usePullToRefresh";
 import { ProductCard } from "../../src/components/ProductCard";
+import { NavBar } from "../../src/components/NavBar";
+import { ScreenShell } from "../../src/components/ScreenShell";
 import { SizeGuideModal } from "../../src/components/SizeGuideModal";
 import { fetchProducts, isGatewayConfigured, useCatalogRefreshOnFocus, fetchCategoryCovers } from "../../src/services/gateway";
 import { Product, DeenCategory } from "../../src/types";
-import { useCart } from "../../src/context/CartContext";
 import { useProfile } from "../../src/context/ProfileContext";
 import { getCategoryInfo } from "../../src/data/categories";
 
@@ -40,16 +40,17 @@ type SortOption = "featured" | "price_asc" | "price_desc" | "newest" | "discount
 
 export default function CategoryLandingScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
-  const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { totalItems } = useCart();
+  const s = sharedStyles(colors);
+  const styles = createStyles(colors, s);
+
   const { profile } = useProfile();
 
   const categoryInfo = useMemo(() => getCategoryInfo(slug || "JEANS"), [slug]);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+
   const [selectedTag, setSelectedTag] = useState("All");
   const [sortBy, setSortBy] = useState<SortOption>("featured");
   const [sizeGuideVisible, setSizeGuideVisible] = useState(false);
@@ -61,7 +62,7 @@ export default function CategoryLandingScreen() {
       .catch(() => {});
   }, []);
 
-  const loadCategoryProducts = async () => {
+  const loadCategoryProducts = useCallback(async () => {
     try {
       const all = await fetchProducts();
       const targetCat = categoryInfo.name;
@@ -74,9 +75,8 @@ export default function CategoryLandingScreen() {
       console.error("Failed to load category products", e);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
-  };
+  }, [categoryInfo.name]);
 
   // Refresh catalog whenever this category screen regains focus or the app
   // resumes from background — surfaces live WooCommerce stock/product changes.
@@ -87,10 +87,7 @@ export default function CategoryLandingScreen() {
     loadCategoryProducts();
   }, [slug]);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadCategoryProducts();
-  };
+  const { refreshControl } = usePullToRefresh(loadCategoryProducts);
 
   // Filter and Sort items
   const displayedProducts = useMemo(() => {
@@ -134,38 +131,14 @@ export default function CategoryLandingScreen() {
       : profile.topSize;
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.paper }]} edges={["top"]}>
-      {/* Top Header */}
-      <View style={[styles.navBar, { backgroundColor: colors.paper, borderBottomColor: colors.border }]}>
-        <TouchableOpacity
-          style={[styles.iconBtn, { backgroundColor: colors.cardSecondary }]}
-          onPress={() => router.back()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <ArrowLeft size={20} color={colors.ink} />
-        </TouchableOpacity>
-
-        <View style={styles.navTitleCenter}>
-          <Text style={[styles.navTitle, { color: colors.ink }]} numberOfLines={1}>
-            {categoryInfo.title}
-          </Text>
-          <Text style={[styles.navSub, { color: colors.sub }]}>
-            {products.length} {products.length === 1 ? "Item" : "Items"} in Collection
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.bagBtn, { backgroundColor: colors.cardSecondary }]}
-          onPress={() => router.push("/(tabs)/cart")}
-        >
-          <ShoppingBag size={20} color={colors.ink} />
-          {totalItems > 0 && (
-            <View style={[styles.badge, { backgroundColor: colors.indigo }]}>
-              <Text style={styles.badgeText}>{totalItems}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
+    <ScreenShell
+      renderNav={
+        <NavBar
+          title={categoryInfo.title}
+          subtitle={`${products.length} ${products.length === 1 ? "Item" : "Items"} in Collection`}
+        />
+      }
+    >
 
       <FlatList
         data={displayedProducts}
@@ -174,14 +147,7 @@ export default function CategoryLandingScreen() {
         columnWrapperStyle={styles.columnWrapper}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.indigo}
-            colors={[colors.indigo]}
-          />
-        }
+        refreshControl={refreshControl}
         ListHeaderComponent={
           <View style={styles.headerContainer}>
             {/* Category Hero Cover Card */}
@@ -334,276 +300,196 @@ export default function CategoryLandingScreen() {
         onSelectSize={() => {}}
         savedUserSize={savedSizeMatch}
       />
-    </SafeAreaView>
+    </ScreenShell>
   );
 }
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.paper,
-  },
-  navBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: Colors.paper,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.card,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  navTitleCenter: {
-    flex: 1,
-    alignItems: "center",
-    paddingHorizontal: 10,
-  },
-  navTitle: {
-    fontSize: 12,
-    fontWeight: "900",
-    color: Colors.ink,
-    letterSpacing: 0.8,
-  },
-  navSub: {
-    fontSize: 10,
-    color: Colors.sub,
-    marginTop: 2,
-  },
-  bagBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.card,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: Colors.border,
-    position: "relative",
-  },
-  badge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: Colors.crimson,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-  },
-  badgeText: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "800",
-  },
-  listContent: {
-    paddingBottom: 40,
-  },
-  headerContainer: {
-    marginBottom: 12,
-  },
-  coverWrapper: {
-    width: width,
-    height: COVER_HEIGHT,
-    position: "relative",
-    backgroundColor: Colors.indigoDark,
-    overflow: "hidden",
-  },
-  coverImage: {
-    width: "100%",
-    height: "100%",
-  },
-  coverOverlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: "rgba(10, 20, 15, 0.65)",
-  },
-  coverContent: {
-    position: "absolute",
-    bottom: 16,
-    left: 16,
-    right: 16,
-  },
-  heroBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: Colors.indigo,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
-    marginBottom: 6,
-  },
-  heroBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 9,
-    fontWeight: "900",
-    letterSpacing: 0.8,
-  },
-  heroTitle: {
-    color: "#FFFFFF",
-    fontSize: 20,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-  },
-  heroSubtitle: {
-    color: "rgba(255, 255, 255, 0.85)",
-    fontSize: 12,
-    marginTop: 4,
-    lineHeight: 16,
-  },
-  craftPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
-  },
-  craftPillText: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "600",
-    flex: 1,
-  },
-  actionBar: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-  },
-  sizeGuideAction: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: Colors.indigoLight,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.indigo,
-  },
-  sizeGuideActionText: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: Colors.indigoDark,
-    letterSpacing: 0.6,
-  },
-  tagsScroll: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 8,
-  },
-  tagChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    backgroundColor: Colors.card,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  tagChipActive: {
-    backgroundColor: Colors.indigo,
-    borderColor: Colors.indigo,
-  },
-  tagChipText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: Colors.ink,
-  },
-  tagChipTextActive: {
-    color: "#FFFFFF",
-  },
-  sortBar: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-  },
-  resultsCount: {
-    fontSize: 11,
-    color: Colors.sub,
-    marginBottom: 6,
-  },
-  sortOptions: {
-    gap: 6,
-  },
-  sortChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    backgroundColor: Colors.paper,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  sortChipActive: {
-    backgroundColor: Colors.indigoLight,
-    borderColor: Colors.indigo,
-  },
-  sortChipText: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: Colors.sub,
-  },
-  sortChipTextActive: {
-    color: Colors.indigoDark,
-    fontWeight: "800",
-  },
-  columnWrapper: {
-    paddingHorizontal: 16,
-    gap: 12,
-  },
-  gridItem: {
-    flex: 1,
-    maxWidth: (width - 44) / 2,
-  },
-  bold: {
-    fontWeight: "800",
-    color: Colors.ink,
-  },
-  emptyWrap: {
-    padding: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: "800",
-    color: Colors.ink,
-    marginBottom: 6,
-  },
-  emptySub: {
-    fontSize: 12,
-    color: Colors.sub,
-    textAlign: "center",
-    lineHeight: 18,
-    marginBottom: 16,
-  },
-  emptyText: {
-    marginTop: 10,
-    fontSize: 12,
-    color: Colors.sub,
-  },
-  clearFilterBtn: {
-    backgroundColor: Colors.indigo,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 6,
-  },
-  clearFilterText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "800",
-  },
-});
+function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
+  return StyleSheet.create({
+    listContent: {
+      paddingBottom: 40,
+    },
+    headerContainer: {
+      marginBottom: 12,
+    },
+    coverWrapper: {
+      width: width,
+      height: COVER_HEIGHT,
+      position: "relative",
+      backgroundColor: colors.indigoDark,
+      overflow: "hidden",
+    },
+    coverImage: {
+      width: "100%",
+      height: "100%",
+    },
+    coverOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(10, 20, 15, 0.65)",
+    },
+    coverContent: {
+      position: "absolute",
+      bottom: 16,
+      left: 16,
+      right: 16,
+    },
+    heroBadge: {
+      alignSelf: "flex-start",
+      backgroundColor: colors.indigo,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 4,
+      marginBottom: 6,
+    },
+    heroBadgeText: {
+      color: "#FFFFFF",
+      fontSize: 9,
+      fontWeight: "900",
+      letterSpacing: 0.8,
+    },
+    heroTitle: {
+      color: "#FFFFFF",
+      fontSize: 20,
+      fontWeight: "900",
+      letterSpacing: 0.5,
+      textTransform: "uppercase",
+    },
+    heroSubtitle: {
+      color: "rgba(255, 255, 255, 0.85)",
+      fontSize: 12,
+      marginTop: 4,
+      lineHeight: 16,
+    },
+    craftPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      backgroundColor: "rgba(255, 255, 255, 0.15)",
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 6,
+      marginTop: 10,
+      borderWidth: 1,
+      borderColor: "rgba(255, 255, 255, 0.2)",
+    },
+    craftPillText: {
+      color: "#FFFFFF",
+      fontSize: 10,
+      fontWeight: "600",
+      flex: 1,
+    },
+    actionBar: {
+      paddingHorizontal: 16,
+      paddingTop: 12,
+    },
+    sizeGuideAction: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      backgroundColor: colors.indigoLight,
+      paddingVertical: 10,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.indigo,
+    },
+    sizeGuideActionText: {
+      fontSize: 11,
+      fontWeight: "800",
+      color: colors.indigoDark,
+      letterSpacing: 0.6,
+    },
+    tagsScroll: {
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      gap: 8,
+    },
+    tagChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      backgroundColor: colors.card,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    tagChipActive: {
+      backgroundColor: colors.indigo,
+      borderColor: colors.indigo,
+    },
+    tagChipText: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.ink,
+    },
+    tagChipTextActive: {
+      color: "#FFFFFF",
+    },
+    sortBar: {
+      paddingHorizontal: 16,
+      paddingVertical: 6,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
+    },
+    resultsCount: {
+      fontSize: 11,
+      color: colors.sub,
+      marginBottom: 6,
+    },
+    sortOptions: {
+      gap: 6,
+    },
+    sortChip: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      backgroundColor: colors.paper,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    sortChipActive: {
+      backgroundColor: colors.indigoLight,
+      borderColor: colors.indigo,
+    },
+    sortChipText: {
+      fontSize: 10,
+      fontWeight: "600",
+      color: colors.sub,
+    },
+    sortChipTextActive: {
+      color: colors.indigoDark,
+      fontWeight: "800",
+    },
+    columnWrapper: {
+      paddingHorizontal: 16,
+      gap: 12,
+    },
+    gridItem: {
+      flex: 1,
+      maxWidth: (width - 44) / 2,
+    },
+    bold: s.bold,
+    emptyWrap: {
+      padding: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    emptyTitle: s.emptyTitle,
+    emptySub: s.emptySub,
+    emptyText: {
+      marginTop: 10,
+      fontSize: 12,
+      color: colors.sub,
+    },
+    clearFilterBtn: {
+      backgroundColor: colors.indigo,
+      paddingHorizontal: 18,
+      paddingVertical: 10,
+      borderRadius: 6,
+    },
+    clearFilterText: {
+      color: "#FFFFFF",
+      fontSize: 11,
+      fontWeight: "800",
+    },
+  });
+}
