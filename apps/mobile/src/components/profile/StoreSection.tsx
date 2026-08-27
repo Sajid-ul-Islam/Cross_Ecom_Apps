@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, TouchableOpacity, Linking, StyleSheet } from "react-native";
-import { Store, HelpCircle, Sparkles } from "../Icons";
+import { Store, HelpCircle, Sparkles, Facebook, Instagram } from "../Icons";
 import { ThemeColors } from "../../theme/colors";
 import { sharedStyles } from "../../theme/sharedStyles";
 import { useTheme } from "../../context/ThemeContext";
@@ -75,32 +75,38 @@ export const StoreSection: React.FC<StoreSectionProps> = ({
           <TouchableOpacity
             style={{
               flex: 1,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
               backgroundColor: "#1877F2",
               paddingVertical: 10,
               borderRadius: 8,
-              alignItems: "center",
-              justifyContent: "center",
             }}
             onPress={() => Linking.openURL("https://www.facebook.com/deencommerce")}
           >
+            <Facebook size={16} color="#FFFFFF" />
             <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 11 }}>
-              FACEBOOK PAGE →
+              FACEBOOK
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={{
               flex: 1,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
               backgroundColor: "#E1306C",
               paddingVertical: 10,
               borderRadius: 8,
-              alignItems: "center",
-              justifyContent: "center",
             }}
             onPress={() => Linking.openURL("https://www.instagram.com/deencommerce")}
           >
+            <Instagram size={16} color="#FFFFFF" />
             <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 11 }}>
-              INSTAGRAM →
+              INSTAGRAM
             </Text>
           </TouchableOpacity>
         </View>

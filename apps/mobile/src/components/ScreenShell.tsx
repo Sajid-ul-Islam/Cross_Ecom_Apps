@@ -96,11 +96,7 @@ export const ScreenShell: React.FC<ScreenShellProps> = ({
 
 function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
   return StyleSheet.create({
-    center: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-    },
+    center: s.center,
     loadingMessage: {
       marginTop: 10,
       fontSize: 12,

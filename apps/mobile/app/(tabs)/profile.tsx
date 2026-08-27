@@ -14,7 +14,7 @@ import { BD_DISTRICTS, BdDistrict } from "../../src/data/districts";
 
 // Extracted sub-components
 import { AccountHeader } from "../../src/components/profile/AccountHeader";
-import { VipClubCard } from "../../src/components/profile/VipClubCard";
+
 import { RecentOrderPreview } from "../../src/components/profile/RecentOrderPreview";
 import { ContactDetailsForm } from "../../src/components/profile/ContactDetailsForm";
 import { DeliveryOptions } from "../../src/components/profile/DeliveryOptions";
@@ -24,10 +24,7 @@ import { StoreSection } from "../../src/components/profile/StoreSection";
 
 // Modals
 import { AdminBroadcastModal } from "../../src/components/AdminBroadcastModal";
-import { WishlistModal } from "../../src/components/WishlistModal";
-import { DailyRewardsModal } from "../../src/components/DailyRewardsModal";
-import { GiftCardModal } from "../../src/components/GiftCardModal";
-import { DenimCareGuideModal } from "../../src/components/DenimCareGuideModal";
+
 import { LoginModal } from "../../src/components/LoginModal";
 import { AboutModal } from "../../src/components/AboutModal";
 import { CourierTrackingModal } from "../../src/components/CourierTrackingModal";
@@ -65,10 +62,7 @@ export default function ProfileScreen() {
 
   // Modal visibility
   const [broadcastModalVisible, setBroadcastModalVisible] = useState(false);
-  const [wishlistModalVisible, setWishlistModalVisible] = useState(false);
-  const [rewardsModalVisible, setRewardsModalVisible] = useState(false);
-  const [giftCardModalVisible, setGiftCardModalVisible] = useState(false);
-  const [careGuideVisible, setCareGuideVisible] = useState(false);
+
   const [loginModalVisible, setLoginModalVisible] = useState(false);
   const [aboutModalVisible, setAboutModalVisible] = useState(false);
   const [trackingModalVisible, setTrackingModalVisible] = useState(false);
@@ -161,15 +155,7 @@ export default function ProfileScreen() {
           onRegister={handleRegister}
         />
 
-        {/* 2. VIP Club & Loyalty Rewards Portal */}
-        <VipClubCard
-          onRewardsPress={() => setRewardsModalVisible(true)}
-          onWishlistPress={() => setWishlistModalVisible(true)}
-          onGiftCardPress={() => setGiftCardModalVisible(true)}
-          onCareGuidePress={() => setCareGuideVisible(true)}
-        />
-
-        {/* 3. My Orders & Live Pathao Tracking Hub */}
+        {/* My Orders & Live Pathao Tracking Hub */}
         <RecentOrderPreview
           onTrackingPress={(order) => {
             setSelectedOrderForTracking(order);
@@ -240,22 +226,7 @@ export default function ProfileScreen() {
         visible={broadcastModalVisible}
         onClose={() => setBroadcastModalVisible(false)}
       />
-      <WishlistModal
-        visible={wishlistModalVisible}
-        onClose={() => setWishlistModalVisible(false)}
-      />
-      <DailyRewardsModal
-        visible={rewardsModalVisible}
-        onClose={() => setRewardsModalVisible(false)}
-      />
-      <GiftCardModal
-        visible={giftCardModalVisible}
-        onClose={() => setGiftCardModalVisible(false)}
-      />
-      <DenimCareGuideModal
-        visible={careGuideVisible}
-        onClose={() => setCareGuideVisible(false)}
-      />
+
       <LoginModal
         visible={loginModalVisible}
         onClose={() => setLoginModalVisible(false)}
