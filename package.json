@@ -10,7 +10,8 @@
     "typecheck:web": "cd apps/web && npx tsc --noEmit",
     "typecheck:mobile": "cd apps/mobile && npx tsc --noEmit",
     "typecheck:all": "npm run typecheck:api && npm run typecheck:web && npm run typecheck:mobile",
-    "typecheck": "npm run typecheck:all"
+    "typecheck": "npm run typecheck:all",
+    "test": "npm run --prefix apps/api test"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",

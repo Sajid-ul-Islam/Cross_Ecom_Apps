@@ -176,8 +176,8 @@ async function wooFetchResilient<T = any>(path: string, params: Record<string, s
   url.searchParams.set("consumer_key", consumerKey);
   url.searchParams.set("consumer_secret", consumerSecret);
 
-  const MAX_RETRIES = 3;
-  const TIMEOUT_MS = 8000;
+  const MAX_RETRIES = 2;
+  const TIMEOUT_MS = 6000;
   let lastErr: unknown;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const controller = new AbortController();
@@ -203,7 +203,9 @@ async function wooFetchResilient<T = any>(path: string, params: Record<string, s
         break;
       }
       if (attempt < MAX_RETRIES) {
-        await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+        const baseDelay = 200 * Math.pow(2, attempt);
+        const jitter = Math.floor(Math.random() * 150);
+        await new Promise((r) => setTimeout(r, baseDelay + jitter));
         continue;
       }
     }
@@ -235,7 +237,7 @@ export async function wpFetch(path: string, params: Record<string, string> = {})
   let lastErr: unknown;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), 8000);
+    const t = setTimeout(() => controller.abort(), 6000);
     try {
       const res = await fetch(url.toString(), { signal: controller.signal });
       clearTimeout(t);
@@ -244,7 +246,11 @@ export async function wpFetch(path: string, params: Record<string, string> = {})
     } catch (e) {
       clearTimeout(t);
       lastErr = e;
-      await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
+      if (attempt < MAX_RETRIES) {
+        const baseDelay = 200 * Math.pow(2, attempt);
+        const jitter = Math.floor(Math.random() * 100);
+        await new Promise((r) => setTimeout(r, baseDelay + jitter));
+      }
     }
   }
   throw lastErr instanceof Error ? lastErr : new Error("wpFetch failed");
@@ -257,11 +263,11 @@ export async function wooPost<T = any>(path: string, body: Record<string, unknow
   const url = new URL(`${site.replace(/\/$/, "")}/wp-json/wc/v3/${path}`);
   url.searchParams.set("consumer_key", consumerKey);
   url.searchParams.set("consumer_secret", consumerSecret);
-  const MAX_RETRIES = 3;
+  const MAX_RETRIES = 2;
   let lastErr: unknown;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), 8000);
+    const t = setTimeout(() => controller.abort(), 6000);
     try {
       const res = await fetch(url.toString(), {
         method: "POST",
@@ -281,7 +287,12 @@ export async function wooPost<T = any>(path: string, body: Record<string, unknow
       clearTimeout(t);
       lastErr = err;
       if (err instanceof Error && /failed: [45]/.test(err.message)) break;
-      if (attempt < MAX_RETRIES) { await new Promise((r) => setTimeout(r, 300 * (attempt + 1))); continue; }
+      if (attempt < MAX_RETRIES) {
+        const baseDelay = 200 * Math.pow(2, attempt);
+        const jitter = Math.floor(Math.random() * 100);
+        await new Promise((r) => setTimeout(r, baseDelay + jitter));
+        continue;
+      }
     }
   }
   lastWooErrorAt = Date.now();

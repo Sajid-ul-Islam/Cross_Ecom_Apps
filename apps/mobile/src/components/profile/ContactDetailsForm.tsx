@@ -132,14 +132,10 @@ export const ContactDetailsForm: React.FC<ContactDetailsFormProps> = ({
           <Text style={[styles.label, { color: colors.ink }]}>District / State (All 64 BD Districts) *</Text>
           <TouchableOpacity
             style={[
-              styles.input,
+              styles.districtSelectInput,
               {
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
                 backgroundColor: colors.paper,
                 borderColor: colors.indigo,
-                borderWidth: 1.5,
               },
             ]}
             onPress={() => setDistrictModalOpen(true)}
@@ -381,6 +377,15 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
     label: s.label,
     input: s.input,
     multilineInput: s.multilineInput,
+    districtSelectInput: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      borderWidth: 1.5,
+    },
     savedAddressesSection: {
       marginTop: 6,
       paddingTop: 10,

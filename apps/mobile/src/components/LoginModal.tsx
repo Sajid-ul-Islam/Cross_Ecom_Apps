@@ -17,6 +17,7 @@ import { X, Lock, User, CheckCircle2, Key, ArrowRight } from "./Icons";
 import { Colors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useProfile } from "../context/ProfileContext";
+import { forgotPassword } from "../services/gateway";
 
 const { width, height } = Dimensions.get("window");
 
@@ -41,6 +42,23 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, onClose, onSucc
       setNotice(null);
     }
   }, [visible]);
+
+  const handleForgotPassword = async () => {
+    const ident = username.trim();
+    if (!ident) {
+      Alert.alert("Enter Username or Email", "Please enter your username or email address in the field above to receive a password reset link.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await forgotPassword(ident);
+      setSubmitting(false);
+      Alert.alert("Password Reset", res.message);
+    } catch {
+      setSubmitting(false);
+      Alert.alert("Notice", "If an account exists with this username/email, a reset link has been dispatched.");
+    }
+  };
 
   const handleSignIn = async () => {
     if (!username.trim()) {
@@ -192,6 +210,16 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, onClose, onSucc
                   />
                 </View>
               </View>
+
+              <TouchableOpacity
+                onPress={handleForgotPassword}
+                style={{ alignSelf: "flex-end", marginBottom: 14, marginTop: -4 }}
+                disabled={submitting}
+              >
+                <Text style={{ fontSize: 11, fontWeight: "700", color: colors.indigo }}>
+                  Forgot Password?
+                </Text>
+              </TouchableOpacity>
 
               <TouchableOpacity
                 style={[

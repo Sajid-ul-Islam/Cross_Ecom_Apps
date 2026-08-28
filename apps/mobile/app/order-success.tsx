@@ -31,8 +31,7 @@ export default function OrderSuccessScreen() {
     guestPhone?: string;
   }>();
   const { colors, isDark } = useTheme();
-  const s = sharedStyles(colors);
-  const styles = createStyles(colors, s);
+  const styles = createStyles(colors);
   const isGuestCheckout = Boolean(params.guestName && params.guestPhone);
   const needsPayment = Boolean(params.paymentUrl) && params.paymentMethodId !== "cod";
 
@@ -205,7 +204,7 @@ function GuestSavePrompt({ name, phone }: { name: string; phone: string }) {
   );
 }
 
-function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
+function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
     scrollContent: {
       padding: 20,

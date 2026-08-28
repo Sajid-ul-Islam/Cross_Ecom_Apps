@@ -28,7 +28,7 @@ interface ScreenShellProps {
   /** Custom empty state content — replaces the default empty view */
   emptyContent?: React.ReactNode;
   /** Screen content (rendered when not loading and not empty) */
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 /**

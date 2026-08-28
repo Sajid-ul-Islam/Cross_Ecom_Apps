@@ -1,21 +1,24 @@
-import React from "react";
-import { View, Text, TouchableOpacity, Linking, StyleSheet } from "react-native";
-import { Store, HelpCircle, Sparkles, Facebook, Instagram } from "../Icons";
+import React, { useState } from "react";
+import { View, Text, TouchableOpacity, Linking, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import { Store, HelpCircle, Sparkles, Facebook, Instagram, Shield, Trash2, CheckCircle2 } from "../Icons";
 import { ThemeColors } from "../../theme/colors";
 import { sharedStyles } from "../../theme/sharedStyles";
 import { useTheme } from "../../context/ThemeContext";
 import { useProfile } from "../../context/ProfileContext";
+import { exportUserData, deleteUserAccount } from "../../services/gateway";
 
 interface StoreSectionProps {
   onAboutPress: () => void;
   onReportPress: () => void;
   onBroadcastPress: () => void;
+  onAnalyticsPress: () => void;
 }
 
 export const StoreSection: React.FC<StoreSectionProps> = ({
   onAboutPress,
   onReportPress,
   onBroadcastPress,
+  onAnalyticsPress,
 }) => {
   const { colors } = useTheme();
   const { profile } = useProfile();
@@ -130,6 +133,65 @@ export const StoreSection: React.FC<StoreSectionProps> = ({
         </View>
       </View>
 
+      {/* Privacy, GDPR & Account Data Management */}
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={styles.cardHeader}>
+          <Shield size={17} color={colors.indigo} />
+          <Text style={[styles.cardTitle, { color: colors.ink }]}>PRIVACY & ACCOUNT DATA</Text>
+        </View>
+        <Text style={{ fontSize: 11, color: colors.sub, marginBottom: 12, lineHeight: 16 }}>
+          You have full control over your saved personal data and session preferences.
+        </Text>
+
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <TouchableOpacity
+            style={[styles.reportBtn, { flex: 1, backgroundColor: colors.cardSecondary, borderColor: colors.border }]}
+            onPress={async () => {
+              try {
+                const res = await exportUserData();
+                if (res.success) {
+                  Alert.alert(
+                    "Account Data Exported",
+                    `Profile Name: ${res.data?.profile?.name || "Guest"}\nIdentifier: ${res.data?.profile?.username || "N/A"}\nExported: ${new Date().toLocaleDateString()}`
+                  );
+                } else {
+                  Alert.alert("Account Data", "You are currently browsing as a guest. Register or sign in to export your permanent order history.");
+                }
+              } catch {
+                Alert.alert("Notice", "Your local profile data is safely stored on this device.");
+              }
+            }}
+          >
+            <Shield size={14} color={colors.indigo} />
+            <Text style={[styles.reportBtnText, { color: colors.indigo }]}>EXPORT DATA</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.reportBtn, { flex: 1, backgroundColor: colors.cardSecondary, borderColor: colors.border }]}
+            onPress={() => {
+              Alert.alert(
+                "Delete Account & Data",
+                "Are you sure you want to clear your local customer profile, saved addresses, and active sessions on this device?",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                      await deleteUserAccount();
+                      Alert.alert("Account Cleared", "Your local customer data and sessions have been reset.");
+                    },
+                  },
+                ]
+              );
+            }}
+          >
+            <Trash2 size={14} color={colors.crimson} />
+            <Text style={[styles.reportBtnText, { color: colors.crimson }]}>DELETE ACCOUNT</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       {/* Store Admin Portal (Gated) */}
       {profile.role === "admin" && (
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.indigo }]}>
@@ -141,12 +203,21 @@ export const StoreSection: React.FC<StoreSectionProps> = ({
             Logged in with full Store Admin privileges. BI Analytics are active on Home.
           </Text>
           <TouchableOpacity
-            style={[styles.broadcastBtn, { backgroundColor: colors.indigo }]}
+            style={[styles.broadcastBtn, { backgroundColor: colors.indigo, marginBottom: 8 }]}
+            activeOpacity={0.88}
+            onPress={onAnalyticsPress}
+          >
+            <Sparkles size={16} color="#FFFFFF" />
+            <Text style={styles.broadcastBtnText}>📊 VIEW DETAILED BI ANALYTICS</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.broadcastBtn, { backgroundColor: colors.cardSecondary, borderColor: colors.indigo, borderWidth: 1 }]}
             activeOpacity={0.88}
             onPress={onBroadcastPress}
           >
-            <Sparkles size={16} color="#FFFFFF" />
-            <Text style={styles.broadcastBtnText}>📢 SEND MARKETING BROADCAST PUSH</Text>
+            <Sparkles size={16} color={colors.indigo} />
+            <Text style={[styles.broadcastBtnText, { color: colors.indigo }]}>📢 SEND MARKETING BROADCAST PUSH</Text>
           </TouchableOpacity>
         </View>
       )}

@@ -4,7 +4,15 @@ import { config } from "./config.js";
 import { registerDeenRoutes } from "./routes.js";
 
 async function build() {
-  const app = Fastify({ logger: { level: config.logLevel } });
+  const app = Fastify({
+    logger: { level: config.logLevel },
+    bodyLimit: 524_288, // 512 KB
+    connectionTimeout: 10_000,
+  });
+
+  // Align HTTP keep-alive with cloud reverse proxies / load balancers
+  app.server.keepAliveTimeout = 65_000;
+  app.server.headersTimeout = 66_000;
 
   // CORS: restrict to known origins (SEC-8). Avoids reflecting arbitrary
   // origins which would let any website call the gateway with a user's cookies.
@@ -38,20 +46,29 @@ async function build() {
     });
   }
 
-
 /* ------------------------------------------------------------------ */
-/*  Lightweight in-memory rate limiter for auth endpoints (SEC-9).       */
-/*  No external dependency needed — simple sliding-window per IP.        */
+/*  Multi-tier in-memory rate limiter with bounded storage (SEC-9).   */
+/*  Protects Auth (10/m), Orders (6/m), and Catalog (120/m).          */
 /* ------------------------------------------------------------------ */
 type _RateEntry = { count: number; resetAt: number };
 const _rateStore: Map<string, _RateEntry> = new Map();
 const _RL_WINDOW_MS = 60_000;
+const _MAX_STORE_SIZE = 10_000;
 
-function _checkRateLimit(ip: string, limit: number): boolean {
+function _pruneExpired(now: number) {
+  if (_rateStore.size > _MAX_STORE_SIZE) {
+    for (const [k, v] of _rateStore.entries()) {
+      if (v.resetAt <= now) _rateStore.delete(k);
+    }
+  }
+}
+
+function _checkRateLimit(key: string, limit: number): boolean {
   const now = Date.now();
-  const entry = _rateStore.get(ip);
+  _pruneExpired(now);
+  const entry = _rateStore.get(key);
   if (!entry || entry.resetAt <= now) {
-    _rateStore.set(ip, { count: 1, resetAt: now + _RL_WINDOW_MS });
+    _rateStore.set(key, { count: 1, resetAt: now + _RL_WINDOW_MS });
     return true;
   }
   entry.count += 1;
@@ -60,14 +77,35 @@ function _checkRateLimit(ip: string, limit: number): boolean {
 
 function _rateLimitHook() {
   return app.addHook("onRequest", async (req, reply) => {
+    if (req.method === "OPTIONS") return;
+    const path = req.url.split("?")[0] || "";
+    if (path === "/" || path === "/health" || path.startsWith("/v1/health")) return;
+
     const ip = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
-    const isAuthRoute = req.url.startsWith("/v1/auth/");
-    if (isAuthRoute && !req.headers["x-api-key"]) {
-      // Only rate-limit when api-key is not present (i.e. the gateway is "open").
-      // When api-key is enforced, that's the primary auth surface.
-      const limit = config.authRateLimit || 20;
-      if (!_checkRateLimit(ip, limit)) {
-        return reply.code(429).send({ error: "RATE_LIMITED", message: "Too many requests. Please wait a minute and try again." });
+
+    // Tier 1: Auth routes (10 req/min/IP)
+    if (path.startsWith("/v1/auth/") || path.startsWith("/v1/deen/auth/")) {
+      const limit = config.authRateLimit || 10;
+      if (!_checkRateLimit(`auth:${ip}`, limit)) {
+        return reply.code(429).send({ error: "RATE_LIMITED", message: "Too many login attempts. Please wait a minute and try again." });
+      }
+      return;
+    }
+
+    // Tier 2: Order placement POST (6 req/min/IP)
+    if (req.method === "POST" && (path === "/v1/deen/orders" || path === "/v1/orders")) {
+      const limit = config.orderRateLimit || 6;
+      if (!_checkRateLimit(`order:${ip}`, limit)) {
+        return reply.code(429).send({ error: "RATE_LIMITED", message: "Too many orders placed in a short window. Please wait a minute." });
+      }
+      return;
+    }
+
+    // Tier 3: General public browsing (120 req/min/IP when unauthenticated)
+    if (!req.headers["x-api-key"]) {
+      const limit = config.catalogRateLimit || 120;
+      if (!_checkRateLimit(`catalog:${ip}`, limit)) {
+        return reply.code(429).send({ error: "RATE_LIMITED", message: "Too many requests. Please slow down." });
       }
     }
   });

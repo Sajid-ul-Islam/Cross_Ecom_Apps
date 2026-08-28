@@ -25,8 +25,10 @@ export const config = {
   allowedOrigins: (process.env.ALLOWED_ORIGINS ?? "").length
     ? process.env.ALLOWED_ORIGINS!.split(",").map((s) => s.trim()).filter(Boolean)
     : ["https://cross-ecom-apps.onrender.com", "http://localhost:3001", "http://localhost:8081", "exp://10.0.0.2:19000"],
-  /** Rate-limit threshold (auth endpoints, per IP per window). */
-  authRateLimit: Number(process.env.AUTH_RATE_LIMIT ?? 20),
+  /** Rate-limit thresholds (per IP per minute). */
+  authRateLimit: Number(process.env.AUTH_RATE_LIMIT ?? 10),
+  catalogRateLimit: Number(process.env.CATALOG_RATE_LIMIT ?? 120),
+  orderRateLimit: Number(process.env.ORDER_RATE_LIMIT ?? 6),
   logLevel: (process.env.LOG_LEVEL as "info" | "debug" | "warn" | "error") ?? "info",
   /** Multi-tenant store registry (SaaS). JSON array in STORES env.
       When set, each store is keyed by its own apiKey and carries its own

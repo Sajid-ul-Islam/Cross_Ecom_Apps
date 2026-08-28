@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   NativeSyntheticEvent,
   NativeScrollEvent,
+  Alert,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
@@ -32,6 +33,7 @@ import {
   MessageCircle,
   Minus,
   Plus,
+  Bell,
 } from "../../src/components/Icons";
 import { ThemeColors } from "../../src/theme/colors";
 import { sharedStyles } from "../../src/theme/sharedStyles";
@@ -598,22 +600,40 @@ export default function ProductDetailScreen() {
 
       {/* Sticky Bottom Actions */}
       <View style={styles.bottomBar}>
-        <TouchableOpacity
-          style={styles.addToCartBtn}
-          activeOpacity={0.85}
-          onPress={handleAddToCart}
-        >
-          <ShoppingBag size={18} color={colors.indigoDark} />
-          <Text style={styles.addToCartBtnText}>ADD TO BAG</Text>
-        </TouchableOpacity>
+        {product.stockStatus === "outofstock" ? (
+          <TouchableOpacity
+            style={[styles.notifyBtn, { backgroundColor: colors.indigoDark }]}
+            activeOpacity={0.85}
+            onPress={() => {
+              Alert.alert(
+                "Restock Alert Registered",
+                `We will notify you via in-app notification when ${product.name} (Size: ${selectedSize}) is restocked at deencommerce.com!`
+              );
+            }}
+          >
+            <Bell size={18} color="#FFFFFF" />
+            <Text style={styles.notifyBtnText}>NOTIFY ME WHEN RESTOCKED</Text>
+          </TouchableOpacity>
+        ) : (
+          <>
+            <TouchableOpacity
+              style={styles.addToCartBtn}
+              activeOpacity={0.85}
+              onPress={handleAddToCart}
+            >
+              <ShoppingBag size={18} color={colors.indigoDark} />
+              <Text style={styles.addToCartBtnText}>ADD TO BAG</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.buyNowBtn}
-          activeOpacity={0.88}
-          onPress={handleBuyNow}
-        >
-          <Text style={styles.buyNowBtnText}>BUY NOW ({bdt(currentPrice)})</Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.buyNowBtn}
+              activeOpacity={0.88}
+              onPress={handleBuyNow}
+            >
+              <Text style={styles.buyNowBtnText}>BUY NOW ({bdt(currentPrice)})</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
       {/* Size Guide Modal */}
@@ -1138,6 +1158,21 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
       backgroundColor: colors.indigo,
     },
     buyNowBtnText: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "800",
+      letterSpacing: 0.8,
+    },
+    notifyBtn: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 14,
+      borderRadius: 6,
+    },
+    notifyBtnText: {
       color: "#FFFFFF",
       fontSize: 12,
       fontWeight: "800",

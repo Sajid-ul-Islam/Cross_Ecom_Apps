@@ -23,8 +23,8 @@ interface SharedStyleMap {
   // Forms
   field: ViewStyle;
   label: TextStyle;
-  input: ViewStyle;
-  multilineInput: ViewStyle;
+  input: TextStyle;
+  multilineInput: TextStyle;
 
   // Chips / selectors
   chipsRow: ViewStyle;

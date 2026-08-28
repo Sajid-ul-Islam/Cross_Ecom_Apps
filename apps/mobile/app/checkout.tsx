@@ -354,16 +354,31 @@ export default function CheckoutScreen() {
           <View style={styles.field}>
             <Text style={[styles.label, { color: colors.ink }]}>Bangladeshi Mobile Number *</Text>
             <TextInput
-              style={[styles.input, { backgroundColor: colors.paper, borderColor: colors.border, color: colors.ink }]}
+              style={[
+                styles.input,
+                { backgroundColor: colors.paper, borderColor: colors.border, color: colors.ink },
+                phone.trim().length > 0 && !/^01[3-9]\d{8}$/.test(phone.replace(/[^0-9]/g, "").replace(/^880/, "0")) && { borderColor: colors.crimson },
+                phone.trim().length > 0 && /^01[3-9]\d{8}$/.test(phone.replace(/[^0-9]/g, "").replace(/^880/, "0")) && { borderColor: colors.emerald },
+              ]}
               value={phone}
               onChangeText={setPhone}
               keyboardType="phone-pad"
               placeholder="017XX-XXXXXX"
               placeholderTextColor={colors.faint}
             />
-            <Text style={[styles.helperText, { color: colors.sub }]}>
-              Delivery rider will contact this number prior to arrival
-            </Text>
+            {phone.trim().length > 0 && !/^01[3-9]\d{8}$/.test(phone.replace(/[^0-9]/g, "").replace(/^880/, "0")) ? (
+              <Text style={[styles.helperText, { color: colors.crimson, fontWeight: "700" }]}>
+                Must be an 11-digit number starting with 01 (e.g. 017XXXXXXXX)
+              </Text>
+            ) : phone.trim().length > 0 && /^01[3-9]\d{8}$/.test(phone.replace(/[^0-9]/g, "").replace(/^880/, "0")) ? (
+              <Text style={[styles.helperText, { color: colors.emerald, fontWeight: "700" }]}>
+                ✓ Valid Bangladeshi mobile number
+              </Text>
+            ) : (
+              <Text style={[styles.helperText, { color: colors.sub }]}>
+                Delivery rider will contact this number prior to arrival
+              </Text>
+            )}
           </View>
 
           <View style={styles.field}>
@@ -729,7 +744,9 @@ export default function CheckoutScreen() {
             <>
               <ShieldCheck size={18} color="#FFFFFF" />
               <Text style={styles.placeOrderBtnText}>
-                CONFIRM ORDER · {bdt(total)}
+                {payment === "cod"
+                  ? `PLACE CASH ON DELIVERY ORDER · ${bdt(total)}`
+                  : `PROCEED TO PAYMENT · ${bdt(total)}`}
               </Text>
             </>
           )}

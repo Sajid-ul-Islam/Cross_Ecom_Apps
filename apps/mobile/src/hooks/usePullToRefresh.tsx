@@ -25,7 +25,7 @@ export function usePullToRefresh(
 ): {
   refreshing: boolean;
   onRefresh: () => Promise<void>;
-  refreshControl: React.ReactElement;
+  refreshControl: React.ReactElement<any>;
 } {
   const { colors } = useTheme();
   const [refreshing, setRefreshing] = useState(false);

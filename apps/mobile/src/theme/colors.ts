@@ -14,8 +14,8 @@ export const LightColors = {
 
   // Typography
   ink: "#151A2C",
-  sub: "#636B7F",
-  faint: "#9DA3B4",
+  sub: "#525A6C",
+  faint: "#7E869B",
 
   // Status & Accents
   crimson: "#C93B36",
@@ -47,8 +47,8 @@ export const DarkColors: typeof LightColors = {
 
   // Typography
   ink: "#F4F6FC",
-  sub: "#A2ABC3",
-  faint: "#6C7691",
+  sub: "#B2BBD4",
+  faint: "#8C96B2",
 
   // Status & Accents
   crimson: "#F25F5C",

@@ -59,7 +59,7 @@ const extra = (Constants.expoConfig?.extra ?? {}) as {
 };
 
 /** Default to Render live gateway */
-const DEFAULT_GATEWAY_URL = "https://cross-ecom-apps.onrender.com";
+const DEFAULT_GATEWAY_URL = "https://cross-ecom-apps-4b4n.onrender.com";
 
 /** Ordered list of gateway base URLs.
  *  Source of truth (per-build) = app.json `extra.gatewayUrl` (primary) and
@@ -169,7 +169,15 @@ export async function request<T>(path: string, init?: RequestInit, timeoutMs = 8
           }
           continue;
         }
-        throw new Error(`Gateway returned ${res.status}: ${body.slice(0, 200)}`);
+        let cleanMsg = `HTTP ${res.status}`;
+        try {
+          const parsed = JSON.parse(body);
+          if (parsed.message) cleanMsg = parsed.message;
+          else if (parsed.error) cleanMsg = parsed.error;
+        } catch {
+          if (body) cleanMsg = body.slice(0, 150);
+        }
+        throw new Error(cleanMsg);
       }
 
       if (!silent) markOnline();
@@ -181,13 +189,15 @@ export async function request<T>(path: string, init?: RequestInit, timeoutMs = 8
         err?.name === "AbortError" ||
         err?.message?.includes("Network request failed") ||
         err?.message?.includes("Failed to fetch") ||
+        err?.message?.includes("aborted") ||
+        err?.message?.includes("cancelled") ||
         err?.message?.includes("timeout");
       if (!isNetworkFailure) {
         // Definitive HTTP error from a reachable gateway — do not fail over.
         if (!silent) markFail();
         throw err;
       }
-      lastErr = err;
+      lastErr = new Error("Connection timed out. Please check your internet or try again.");
       // Mark the failed origin so future calls start on a healthy one.
       const idx = GATEWAY_URLS.indexOf(base);
       if (idx === preferredGatewayIdx) {
@@ -196,7 +206,7 @@ export async function request<T>(path: string, init?: RequestInit, timeoutMs = 8
       if (!silent) markFail();
     }
   }
-  throw lastErr instanceof Error ? lastErr : new Error("All gateways unreachable");
+  throw lastErr instanceof Error ? lastErr : new Error("Unable to connect to server. Please try again.");
 }
 
 /** Probe a single gateway's /health (used by keep-alive / startup checks). */
@@ -960,11 +970,95 @@ export async function getAuthToken(): Promise<string | null> {
 }
 
 export async function logout(): Promise<void> {
+  const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY).catch(() => null);
+  if (token) {
+    try {
+      await request<{ success: boolean }>("/v1/auth/logout", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      }, 4000);
+    } catch {}
+  }
   await AsyncStorage.removeItem(AUTH_TOKEN_KEY).catch(() => {});
   await AsyncStorage.removeItem(AUTH_USER_KEY).catch(() => {});
 }
 
-// AUTH_TOKEN_KEY and AUTH_USER_KEY are declared above the login function.
+export async function forgotPassword(identifier: string): Promise<{ success: boolean; message: string }> {
+  try {
+    const res = await request<{ success: boolean; message: string }>("/v1/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ identifier }),
+    }, 8000);
+    return {
+      success: Boolean(res?.success),
+      message: res?.message || "Password reset request sent.",
+    };
+  } catch (e: any) {
+    return {
+      success: false,
+      message: e?.message || "Could not process password reset at this time.",
+    };
+  }
+}
+
+export async function exportUserData(): Promise<{ success: boolean; data?: any; message?: string }> {
+  const token = await getAuthToken();
+  if (!token) return { success: false, message: "Authentication required." };
+  try {
+    const res = await request<any>("/v1/auth/export-data", {
+      headers: { Authorization: `Bearer ${token}` },
+    }, 6000);
+    return { success: true, data: res };
+  } catch (e: any) {
+    return { success: false, message: e?.message || "Failed to export data." };
+  }
+}
+
+export async function deleteUserAccount(): Promise<{ success: boolean; message: string }> {
+  const token = await getAuthToken();
+  if (!token) return { success: false, message: "Authentication required." };
+  try {
+    const res = await request<{ success: boolean; message: string }>("/v1/auth/delete-account", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    }, 6000);
+    await AsyncStorage.removeItem(AUTH_TOKEN_KEY).catch(() => {});
+    await AsyncStorage.removeItem(AUTH_USER_KEY).catch(() => {});
+    return { success: true, message: res?.message || "Account deleted successfully." };
+  } catch (e: any) {
+    return { success: false, message: e?.message || "Failed to delete account." };
+  }
+}
+
+export interface AdminAnalyticsResult {
+  success: boolean;
+  timeframe: string;
+  metrics: {
+    grossRevenue: number;
+    totalOrders: number;
+    codOrders: number;
+    prepaidOrders: number;
+    aov: number;
+    lowStockCount: number;
+    outOfStockCount: number;
+    activeCustomersCount: number;
+  };
+  categoryPerformance: Array<{ category: string; revenue: number }>;
+  generatedAt: string;
+}
+
+export async function fetchAdminAnalytics(timeframe = "30d"): Promise<AdminAnalyticsResult | null> {
+  const token = await getAuthToken();
+  if (!token) return null;
+  try {
+    const res = await request<AdminAnalyticsResult>(`/v1/deen/admin/analytics?timeframe=${timeframe}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }, 8000);
+    return res?.success ? res : null;
+  } catch {
+    return null;
+  }
+}
 
 /* ----------------------------- payments ---------------------------- */
 

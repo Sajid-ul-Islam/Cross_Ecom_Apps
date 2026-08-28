@@ -83,6 +83,9 @@ export const Header: React.FC<HeaderProps> = ({
             <TouchableOpacity
               style={[styles.iconButton, { backgroundColor: colors.cardSecondary }]}
               onPress={onSearchPress || (() => router.push("/(tabs)/shop"))}
+              accessibilityRole="button"
+              accessibilityLabel="Search catalog"
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <Search size={20} color={colors.ink} />
             </TouchableOpacity>
@@ -92,6 +95,9 @@ export const Header: React.FC<HeaderProps> = ({
             <TouchableOpacity
               style={[styles.notifButton, { backgroundColor: colors.cardSecondary }]}
               onPress={() => setNotifVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`Notifications, ${unreadCount} unread`}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <Bell size={20} color={colors.ink} />
               {unreadCount > 0 && (
@@ -106,6 +112,9 @@ export const Header: React.FC<HeaderProps> = ({
             <TouchableOpacity
               style={[styles.bagButton, { backgroundColor: colors.cardSecondary }]}
               onPress={() => router.push("/(tabs)/cart")}
+              accessibilityRole="button"
+              accessibilityLabel={`Shopping Bag, ${totalItems} items`}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <ShoppingBag size={20} color={colors.ink} />
               {totalItems > 0 && (

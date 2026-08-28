@@ -24,7 +24,7 @@ import { StoreSection } from "../../src/components/profile/StoreSection";
 
 // Modals
 import { AdminBroadcastModal } from "../../src/components/AdminBroadcastModal";
-
+import { AdminAnalyticsModal } from "../../src/components/AdminAnalyticsModal";
 import { LoginModal } from "../../src/components/LoginModal";
 import { AboutModal } from "../../src/components/AboutModal";
 import { CourierTrackingModal } from "../../src/components/CourierTrackingModal";
@@ -62,7 +62,7 @@ export default function ProfileScreen() {
 
   // Modal visibility
   const [broadcastModalVisible, setBroadcastModalVisible] = useState(false);
-
+  const [analyticsModalVisible, setAnalyticsModalVisible] = useState(false);
   const [loginModalVisible, setLoginModalVisible] = useState(false);
   const [aboutModalVisible, setAboutModalVisible] = useState(false);
   const [trackingModalVisible, setTrackingModalVisible] = useState(false);
@@ -218,10 +218,16 @@ export default function ProfileScreen() {
           onAboutPress={() => setAboutModalVisible(true)}
           onReportPress={handleReport}
           onBroadcastPress={() => setBroadcastModalVisible(true)}
+          onAnalyticsPress={() => setAnalyticsModalVisible(true)}
         />
       </ScrollView>
 
       {/* Embedded Modals */}
+      <AdminAnalyticsModal
+        visible={analyticsModalVisible}
+        onClose={() => setAnalyticsModalVisible(false)}
+      />
+
       <AdminBroadcastModal
         visible={broadcastModalVisible}
         onClose={() => setBroadcastModalVisible(false)}
