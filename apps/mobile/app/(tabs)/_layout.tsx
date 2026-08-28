@@ -1,6 +1,6 @@
 import React from "react";
 import { Tabs } from "expo-router";
-import { Home, Compass, ShoppingBag, Clock, User } from "../../src/components/Icons";
+import { Home, Layers, ShoppingBag, Clock, User } from "../../src/components/Icons";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useCart } from "../../src/context/CartContext";
 
@@ -39,8 +39,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="shop"
         options={{
-          title: "Shop",
-          tabBarIcon: ({ color, size }) => <Compass size={size} color={String(color)} />,
+          title: "Categories",
+          tabBarIcon: ({ color, size }) => <Layers size={size} color={String(color)} />,
         }}
       />
       <Tabs.Screen

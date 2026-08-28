@@ -109,3 +109,23 @@ test("Phone validation: rejects invalid numbers", () => {
   assert.equal(normalizePhone("1712345678"), null);  // missing 0
   assert.equal(normalizePhone("017123456"), null);   // too short
 });
+
+function calculateDynamicCashback(subtotal: number, enabled: boolean): { amount: number; tier: number; nextTierAt: number | null } {
+  if (!enabled) return { amount: 0, tier: 0, nextTierAt: null };
+  if (subtotal >= 3000) return { amount: 700, tier: 2, nextTierAt: null };
+  if (subtotal >= 2500) return { amount: 500, tier: 1, nextTierAt: 3000 };
+  return { amount: 0, tier: 0, nextTierAt: 2500 };
+}
+
+test("Campaign: Cashback returns ৳0 when cashback offer is toggled off", () => {
+  const res = calculateDynamicCashback(3500, false);
+  assert.equal(res.amount, 0);
+  assert.equal(res.tier, 0);
+  assert.equal(res.nextTierAt, null);
+});
+
+test("Campaign: Cashback applies when cashback offer is toggled on", () => {
+  const res = calculateDynamicCashback(3500, true);
+  assert.equal(res.amount, 700);
+  assert.equal(res.tier, 2);
+});

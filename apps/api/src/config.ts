@@ -57,6 +57,16 @@ export const config = {
   combos: (() => {
     try { return JSON.parse(process.env.COMBOS ?? "[]"); } catch { return []; }
   })(),
+  /** Dynamic campaign controls (Cashback vs Up to 50% Sale).
+      Source of truth = gateway env / REST API, allows auto-triggering on/off. */
+  campaigns: {
+    cashbackEnabled: process.env.CAMPAIGN_CASHBACK_ENABLED === "true", // Default false: Cashback offer is currently OFF
+    saleEnabled: process.env.CAMPAIGN_SALE_ENABLED !== "false", // Default true: Up to 50% Sale is LIVE
+    saleTitle: process.env.CAMPAIGN_SALE_TITLE ?? "FLAT UP TO 50% OFF",
+    saleSubtitle: process.env.CAMPAIGN_SALE_SUBTITLE ?? "Season Clearance: 40%–50% discount on selected artisanal denim & apparel",
+    saleBadge: process.env.CAMPAIGN_SALE_BADGE ?? "LIMITED TIME SALE",
+    discountRange: "40%–50%",
+  },
   /** Store contact details (source of truth = gateway env, falls back to the
       real DEEN numbers). Admin can change via env without an app rebuild. */
   contact: {

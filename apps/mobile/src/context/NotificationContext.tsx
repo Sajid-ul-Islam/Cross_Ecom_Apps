@@ -8,58 +8,6 @@ const NOTIFICATIONS_STORAGE_KEY = "deen_mobile_notifications_v1";
 const BROADCASTS_STORAGE_KEY = "deen_mobile_broadcasts_v1";
 const PUSH_TOKEN_STORAGE_KEY = "deen_mobile_push_token_v1";
 
-const INITIAL_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: "notif_1",
-    type: "PROMO",
-    title: "🔥 Welcome to DEEN: 20% OFF Raw Selvedge Denim",
-    body: "Use promo code DEEN20 at checkout to claim 20% discount on all artisanal Japanese-grade rigid jeans.",
-    timestamp: new Date().toISOString(),
-    read: false,
-    promoCode: "DEEN20",
-    actionUrl: "/category/JEANS",
-    actionLabel: "Shop Selvedge Jeans",
-  },
-  {
-    id: "notif_2",
-    type: "BROADCAST",
-    title: "📣 Mirpur 12 Flagship Outlet Now Open for Pickups",
-    body: "Select 'Store Pickup' at checkout to collect your orders free of charge from Ramzannesa Super Market, Mirpur 12.",
-    timestamp: new Date().toISOString(),
-    read: false,
-    actionUrl: "/(tabs)/profile",
-    actionLabel: "View Outlet Details",
-  },
-];
-
-const INITIAL_BROADCASTS: BroadcastMessage[] = [
-  {
-    id: "bc_1",
-    title: "🔥 Flash Sale: 20% OFF Raw Selvedge Denim",
-    body: "Use promo code DEEN20 at checkout to claim 20% discount on all artisanal Japanese-grade rigid jeans.",
-    type: "PROMO",
-    audience: "ALL",
-    promoCode: "DEEN20",
-    actionUrl: "/category/JEANS",
-    actionLabel: "Shop Selvedge Jeans",
-    sentAt: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
-    sentBy: "Admin",
-    recipientCount: 1420,
-  },
-  {
-    id: "bc_2",
-    title: "📣 Mirpur 12 Flagship Outlet Now Open for Pickups",
-    body: "Select 'Store Pickup' at checkout to collect your orders free of charge from Ramzannesa Super Market, Mirpur 12.",
-    type: "BROADCAST",
-    audience: "DHAKA_ONLY",
-    actionUrl: "/(tabs)/profile",
-    actionLabel: "View Outlet Details",
-    sentAt: new Date(Date.now() - 1000 * 60 * 60 * 72).toISOString(),
-    sentBy: "Admin",
-    recipientCount: 890,
-  },
-];
-
 interface NotificationContextType {
   notifications: NotificationItem[];
   broadcasts: BroadcastMessage[];
@@ -77,8 +25,8 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
-  const [broadcasts, setBroadcasts] = useState<BroadcastMessage[]>(INITIAL_BROADCASTS);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [broadcasts, setBroadcasts] = useState<BroadcastMessage[]>([]);
   const [pushToken, setPushToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -152,17 +100,17 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         if (notifJson) {
           setNotifications(JSON.parse(notifJson));
         } else {
-          await AsyncStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(INITIAL_NOTIFICATIONS));
+          await AsyncStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify([]));
         }
 
         const bcJson = await AsyncStorage.getItem(BROADCASTS_STORAGE_KEY);
         if (bcJson) {
           setBroadcasts(JSON.parse(bcJson));
         } else {
-          await AsyncStorage.setItem(BROADCASTS_STORAGE_KEY, JSON.stringify(INITIAL_BROADCASTS));
+          await AsyncStorage.setItem(BROADCASTS_STORAGE_KEY, JSON.stringify([]));
         }
 
-        // Initialize push token and sync broadcasts
+        // Initialize push token and sync live broadcasts from REST API
         await initPushToken();
         await syncLiveBroadcasts();
       } catch (e) {

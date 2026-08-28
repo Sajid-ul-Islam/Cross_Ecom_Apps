@@ -1,10 +1,13 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { LogOut, CheckCircle2, Key } from "../Icons";
+import { useRouter } from "expo-router";
+import { LogOut, CheckCircle2, Key, Sparkles, Package, Heart, MapPin, User } from "../Icons";
 import { ThemeColors } from "../../theme/colors";
 import { sharedStyles } from "../../theme/sharedStyles";
 import { useTheme } from "../../context/ThemeContext";
 import { useProfile } from "../../context/ProfileContext";
+import { useOrders } from "../../context/OrderContext";
+import { useWishlist } from "../../context/WishlistContext";
 
 interface AccountHeaderProps {
   onLoginPress: () => void;
@@ -12,130 +15,209 @@ interface AccountHeaderProps {
 }
 
 export const AccountHeader: React.FC<AccountHeaderProps> = ({ onLoginPress, onRegister }) => {
+  const router = useRouter();
   const { colors } = useTheme();
-  const { profile, isLoggedIn, switchToGuestMode, logout } = useProfile();
+  const { profile, isLoggedIn, logout } = useProfile();
+  const { orders } = useOrders();
+  const { wishlist } = useWishlist();
   const s = sharedStyles(colors);
   const styles = createStyles(colors, s);
 
+  const isAdmin = profile.role === "admin";
+  const isGuest = profile.isGuest;
+
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <View style={styles.accountHeader}>
-        <View style={[styles.avatarCircle, { backgroundColor: colors.indigo }]}>
-          <Text style={styles.avatarText}>
-            {profile.role === "admin"
-              ? "👑"
-              : profile.isGuest
-              ? "👤"
-              : profile.name
-              ? profile.name.charAt(0).toUpperCase()
-              : "D"}
-          </Text>
-        </View>
+      {/* Top Banner Accent */}
+      <View
+        style={[
+          styles.bannerAccent,
+          { backgroundColor: isAdmin ? colors.indigo : isGuest ? colors.amber : colors.indigoDark },
+        ]}
+      />
 
-        <View style={styles.accountInfo}>
-          <View style={styles.badgeRow}>
+      <View style={styles.cardBody}>
+        <View style={styles.accountHeader}>
+          {/* Avatar with Glow/Border */}
+          <View
+            style={[
+              styles.avatarWrapper,
+              {
+                borderColor: isAdmin ? colors.amber : isGuest ? colors.border : colors.indigo,
+                backgroundColor: colors.cardSecondary,
+              },
+            ]}
+          >
             <View
               style={[
-                styles.roleBadge,
-                profile.role === "admin"
-                  ? { backgroundColor: colors.indigoLight }
-                  : profile.isGuest
-                  ? { backgroundColor: colors.amberLight }
-                  : { backgroundColor: colors.emeraldLight },
+                styles.avatarCircle,
+                { backgroundColor: isAdmin ? colors.indigoDark : isGuest ? colors.paper : colors.indigo },
               ]}
             >
-              <Text
-                style={[
-                  styles.roleBadgeText,
-                  profile.role === "admin"
-                    ? { color: colors.indigo }
-                    : profile.isGuest
-                    ? { color: colors.amber }
-                    : { color: colors.emerald },
-                ]}
-              >
-                {profile.role === "admin"
-                  ? "STORE ADMIN"
-                  : profile.isGuest
-                  ? "GUEST SHOPPER"
-                  : "VERIFIED MEMBER"}
+              <Text style={styles.avatarText}>
+                {isAdmin
+                  ? "👑"
+                  : isGuest
+                  ? "👤"
+                  : profile.name
+                  ? profile.name.charAt(0).toUpperCase()
+                  : "D"}
               </Text>
             </View>
-
-            {!profile.isGuest && profile.memberSince ? (
-              <Text style={[styles.memberSinceText, { color: colors.sub }]}>
-                Since {profile.memberSince}
-              </Text>
-            ) : null}
           </View>
 
-          <Text style={[styles.accountName, { color: colors.ink }]}>
-            {profile.role === "admin"
-              ? "Store Administrator"
-              : profile.isGuest
-              ? "Guest User"
-              : profile.name || "DEEN Member"}
-          </Text>
+          {/* Identity & Status */}
+          <View style={styles.accountInfo}>
+            <View style={styles.badgeRow}>
+              <View
+                style={[
+                  styles.roleBadge,
+                  isAdmin
+                    ? { backgroundColor: "rgba(102, 126, 234, 0.15)", borderColor: colors.indigo }
+                    : isGuest
+                    ? { backgroundColor: "rgba(245, 158, 11, 0.15)", borderColor: colors.amber }
+                    : { backgroundColor: "rgba(16, 185, 129, 0.15)", borderColor: colors.emerald },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.roleBadgeText,
+                    isAdmin
+                      ? { color: colors.indigo }
+                      : isGuest
+                      ? { color: colors.amber }
+                      : { color: colors.emerald },
+                  ]}
+                >
+                  {isAdmin
+                    ? "👑 STORE ADMINISTRATOR"
+                    : isGuest
+                    ? "🛍️ GUEST SHOPPER"
+                    : "💎 DEEN CLUB MEMBER"}
+                </Text>
+              </View>
 
-          <Text style={[styles.accountSub, { color: colors.sub }]}>
-            {profile.role === "admin"
-              ? "Full BI & Sales Insights Active"
-              : profile.phone || profile.email || "Fast guest checkout active"}
-          </Text>
+              {!isGuest && profile.memberSince ? (
+                <Text style={[styles.memberSinceText, { color: colors.sub }]}>
+                  Since {profile.memberSince}
+                </Text>
+              ) : null}
+            </View>
+
+            <Text style={[styles.accountName, { color: colors.ink }]} numberOfLines={1}>
+              {isAdmin
+                ? profile.name || "Store Administrator"
+                : isGuest
+                ? "Guest User"
+                : profile.name || "DEEN Customer"}
+            </Text>
+
+            <Text style={[styles.accountSub, { color: colors.sub }]} numberOfLines={1}>
+              {isAdmin
+                ? "Verified WordPress Admin Credentials"
+                : profile.phone
+                ? `📞 ${profile.phone}`
+                : profile.email
+                ? `✉️ ${profile.email}`
+                : "Fast Guest Checkout Active"}
+            </Text>
+          </View>
         </View>
-      </View>
 
-      {/* Mode Switching / Authentication Buttons */}
-      <View style={[styles.authActionsRow, { borderTopColor: colors.borderLight }]}>
-        {isLoggedIn ? (
+        {/* Quick Stats Bar */}
+        <View style={[styles.statsRow, { backgroundColor: colors.paper, borderColor: colors.borderLight }]}>
           <TouchableOpacity
-            style={[styles.authActionBtn, { backgroundColor: colors.cardSecondary, borderColor: colors.border }]}
-            activeOpacity={0.85}
-            onPress={() => logout()}
+            style={styles.statItem}
+            activeOpacity={0.75}
+            onPress={() => router.push("/(tabs)/orders")}
           >
-            <LogOut size={14} color={colors.crimson} />
-            <Text style={[styles.authActionBtnText, { color: colors.crimson }]}>LOG OUT</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Package size={14} color={colors.indigo} />
+              <Text style={[styles.statValue, { color: colors.ink }]}>{orders.length}</Text>
+            </View>
+            <Text style={[styles.statLabel, { color: colors.sub }]}>Orders</Text>
           </TouchableOpacity>
-        ) : profile.isGuest ? (
-          <>
-            <TouchableOpacity
-              style={[styles.authActionBtn, { backgroundColor: colors.indigo }]}
-              activeOpacity={0.88}
-              onPress={onRegister}
-            >
-              <CheckCircle2 size={14} color="#FFFFFF" />
-              <Text style={[styles.authActionBtnText, { color: "#FFFFFF" }]}>SAVE PROFILE</Text>
-            </TouchableOpacity>
 
+          <View style={[styles.statDivider, { backgroundColor: colors.borderLight }]} />
+
+          <View style={styles.statItem}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <MapPin size={14} color={colors.emerald} />
+              <Text style={[styles.statValue, { color: colors.ink }]}>
+                {profile.city || "Dhaka"}
+              </Text>
+            </View>
+            <Text style={[styles.statLabel, { color: colors.sub }]}>District</Text>
+          </View>
+
+          <View style={[styles.statDivider, { backgroundColor: colors.borderLight }]} />
+
+          <TouchableOpacity
+            style={styles.statItem}
+            activeOpacity={0.75}
+            onPress={() => router.push("/(tabs)/shop")}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Heart size={14} color={colors.crimson} />
+              <Text style={[styles.statValue, { color: colors.ink }]}>{wishlist.length}</Text>
+            </View>
+            <Text style={[styles.statLabel, { color: colors.sub }]}>Saved</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Authentication Actions */}
+        <View style={[styles.authActionsRow, { borderTopColor: colors.borderLight }]}>
+          {isLoggedIn ? (
             <TouchableOpacity
-              style={[styles.authActionBtn, { backgroundColor: colors.indigoLight, borderColor: colors.indigo }]}
-              activeOpacity={0.88}
-              onPress={onLoginPress}
-            >
-              <Key size={14} color={colors.indigo} />
-              <Text style={[styles.authActionBtnText, { color: colors.indigo }]}>SIGN IN</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <TouchableOpacity
-              style={[styles.authActionBtn, { backgroundColor: colors.cardSecondary, borderColor: colors.border }]}
+              style={[styles.authActionBtn, { backgroundColor: colors.cardSecondary, borderColor: colors.crimson }]}
               activeOpacity={0.85}
-              onPress={switchToGuestMode}
+              onPress={() => logout()}
             >
-              <Text style={[styles.authActionBtnText, { color: colors.ink }]}>GUEST MODE</Text>
+              <LogOut size={14} color={colors.crimson} />
+              <Text style={[styles.authActionBtnText, { color: colors.crimson }]}>LOG OUT</Text>
             </TouchableOpacity>
+          ) : isGuest ? (
+            <>
+              <TouchableOpacity
+                style={[styles.authActionBtn, { flex: 1.2, backgroundColor: colors.indigo }]}
+                activeOpacity={0.88}
+                onPress={onRegister}
+              >
+                <Sparkles size={14} color="#FFFFFF" />
+                <Text style={[styles.authActionBtnText, { color: "#FFFFFF" }]}>CREATE ACCOUNT</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.authActionBtn, { backgroundColor: colors.indigoLight, borderColor: colors.indigo }]}
-              activeOpacity={0.88}
-              onPress={onLoginPress}
-            >
-              <Key size={14} color={colors.indigo} />
-              <Text style={[styles.authActionBtnText, { color: colors.indigo }]}>SWITCH ACCOUNT</Text>
-            </TouchableOpacity>
-          </>
-        )}
+              <TouchableOpacity
+                style={[styles.authActionBtn, { flex: 1, backgroundColor: colors.paper, borderColor: colors.indigo }]}
+                activeOpacity={0.88}
+                onPress={onLoginPress}
+              >
+                <Key size={14} color={colors.indigo} />
+                <Text style={[styles.authActionBtnText, { color: colors.indigo }]}>SIGN IN</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={[styles.authActionBtn, { backgroundColor: colors.cardSecondary, borderColor: colors.border }]}
+                activeOpacity={0.85}
+                onPress={() => logout()}
+              >
+                <LogOut size={14} color={colors.crimson} />
+                <Text style={[styles.authActionBtnText, { color: colors.crimson }]}>LOG OUT</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.authActionBtn, { backgroundColor: colors.indigoLight, borderColor: colors.indigo }]}
+                activeOpacity={0.85}
+                onPress={onLoginPress}
+              >
+                <Key size={14} color={colors.indigo} />
+                <Text style={[styles.authActionBtnText, { color: colors.indigo }]}>SWITCH ACCOUNT</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -143,16 +225,32 @@ export const AccountHeader: React.FC<AccountHeaderProps> = ({ onLoginPress, onRe
 
 function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
   return StyleSheet.create({
-    card: s.card,
+    card: {
+      ...s.card,
+      padding: 0,
+      overflow: "hidden",
+    },
+    bannerAccent: {
+      height: 4,
+      width: "100%",
+    },
+    cardBody: {
+      padding: 16,
+    },
     accountHeader: {
       flexDirection: "row",
       alignItems: "center",
       gap: 14,
     },
+    avatarWrapper: {
+      padding: 3,
+      borderRadius: 30,
+      borderWidth: 1.5,
+    },
     avatarCircle: {
-      width: 52,
-      height: 52,
-      borderRadius: 26,
+      width: 48,
+      height: 48,
+      borderRadius: 24,
       alignItems: "center",
       justifyContent: "center",
     },
@@ -171,9 +269,10 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
       marginBottom: 4,
     },
     roleBadge: {
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 4,
+      paddingHorizontal: 7,
+      paddingVertical: 2.5,
+      borderRadius: 5,
+      borderWidth: 1,
     },
     roleBadgeText: {
       fontSize: 9,
@@ -184,36 +283,64 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
       fontSize: 10,
     },
     accountName: {
-      fontSize: 16,
-      fontWeight: "900",
-      letterSpacing: 0.3,
+      fontSize: 15,
+      fontWeight: "800",
+      letterSpacing: 0.2,
+      marginBottom: 2,
     },
     accountSub: {
-      fontSize: 12,
-      marginTop: 2,
+      fontSize: 11,
+    },
+    statsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-around",
+      borderRadius: 10,
+      paddingVertical: 10,
+      paddingHorizontal: 8,
+      marginTop: 14,
+      borderWidth: 1,
+    },
+    statItem: {
+      alignItems: "center",
+      justifyContent: "center",
+      flex: 1,
+      gap: 2,
+    },
+    statValue: {
+      fontSize: 13,
+      fontWeight: "900",
+    },
+    statLabel: {
+      fontSize: 10,
+      fontWeight: "600",
+      letterSpacing: 0.3,
+    },
+    statDivider: {
+      width: 1,
+      height: 24,
     },
     authActionsRow: {
+      flexDirection: "row",
+      gap: 10,
       marginTop: 14,
       paddingTop: 12,
       borderTopWidth: 1,
-      flexDirection: "row",
-      gap: 8,
     },
     authActionBtn: {
       flex: 1,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
+      gap: 6,
       paddingVertical: 10,
       borderRadius: 8,
-      gap: 6,
       borderWidth: 1,
-      borderColor: "transparent",
     },
     authActionBtnText: {
       fontSize: 11,
-      fontWeight: "900",
-      letterSpacing: 0.5,
+      fontWeight: "800",
+      letterSpacing: 0.6,
     },
   });
 }

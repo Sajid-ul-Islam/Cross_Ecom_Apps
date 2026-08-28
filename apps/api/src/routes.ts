@@ -912,6 +912,9 @@ export async function registerDeenRoutes(app: FastifyInstance) {
      checkout. The app MUST read this instead of computing its own thresholds, so the
      displayed cashback always matches what Woo actually deducts. */
   function calculateCashback(subtotal: number): { amount: number; tier: number; nextTierAt: number | null } {
+    if (!config.campaigns?.cashbackEnabled) {
+      return { amount: 0, tier: 0, nextTierAt: null };
+    }
     if (subtotal >= 3000) return { amount: 700, tier: 2, nextTierAt: null };
     if (subtotal >= 2500) return { amount: 500, tier: 1, nextTierAt: 3000 };
     return { amount: 0, tier: 0, nextTierAt: 2500 };
@@ -1054,6 +1057,50 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   /* ---- public store notice (source of truth = gateway env PUBLIC_NOTICE) ---- */
   app.get("/v1/deen/notice", async (_req, reply) => {
     return reply.send({ notice: config.publicNotice || "" });
+  });
+
+  /* ---- active campaigns & offers (dynamic source of truth) ---- */
+  app.get("/v1/deen/campaigns", async (_req, reply) => {
+    const isCashback = Boolean(config.campaigns?.cashbackEnabled);
+    const isSale = Boolean(config.campaigns?.saleEnabled);
+    return reply.send({
+      success: true,
+      activeCampaign: isSale
+        ? {
+            type: "sale",
+            badge: config.campaigns?.saleBadge || "LIMITED TIME SALE",
+            title: config.campaigns?.saleTitle || "FLAT UP TO 50% OFF",
+            subtitle: config.campaigns?.saleSubtitle || "Season Clearance: 40%–50% discount on selected artisanal denim & apparel",
+            discountRange: config.campaigns?.discountRange || "40%–50%",
+            bannerText: `🔥 ${config.campaigns?.saleTitle || "FLAT UP TO 50% OFF"} SALE IS LIVE`,
+            actionUrl: "/(tabs)/shop",
+            actionLabel: "EXPLORE SALE",
+          }
+        : isCashback
+        ? {
+            type: "cashback",
+            badge: "INSTANT CASHBACK",
+            title: "GET UP TO ৳700 CASHBACK",
+            subtitle: "৳500 on ৳2,500+ · ৳700 on ৳3,000+",
+            discountRange: "৳500–৳700",
+            bannerText: "🎁 UNLOCK UP TO ৳700 INSTANT CASHBACK AT CHECKOUT",
+            actionUrl: "/(tabs)/shop",
+            actionLabel: "START SHOPPING",
+          }
+        : null,
+      cashback: {
+        enabled: isCashback,
+        tier1: { minSpend: 2500, amount: 500 },
+        tier2: { minSpend: 3000, amount: 700 },
+      },
+      sale: {
+        enabled: isSale,
+        title: config.campaigns?.saleTitle || "FLAT UP TO 50% OFF",
+        subtitle: config.campaigns?.saleSubtitle || "Season Clearance: 40%–50% discount on selected artisanal denim & apparel",
+        badge: config.campaigns?.saleBadge || "LIMITED TIME SALE",
+        discountRange: config.campaigns?.discountRange || "40%–50%",
+      },
+    });
   });
 
   /* ---- curated combos / bundles (source of truth = COMBOS env) ---- */
@@ -2545,6 +2592,156 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     reply.header("Content-Type", "text/csv");
     reply.header("Content-Disposition", `attachment; filename="deen-orders-${new Date().toISOString().slice(0, 10)}.csv"`);
     return reply.send(csvContent);
+  });
+
+  /* ---- ADMIN CUSTOMER DIRECTORY & ORDER PROFILES (Gated by admin role) ---- */
+  app.get("/v1/deen/admin/customers", async (req, reply) => {
+    const token = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
+    if (!token) return reply.code(401).send({ success: false, message: "Admin authorization required." });
+    const session = authSessions.get(token);
+    if (!session || session.role !== "admin") {
+      return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required." });
+    }
+
+    const q = String((req.query as any)?.q || "").trim().toLowerCase();
+    const allOrders = orders || [];
+
+    // Group all orders by customer phone / email
+    const customerMap = new Map<string, {
+      id: string;
+      name: string;
+      phone: string;
+      email: string;
+      address: string;
+      district: string;
+      city: string;
+      registeredAt?: string;
+      totalSpent: number;
+      totalOrders: number;
+      lastOrderDate?: string;
+      orders: Array<{
+        id: string;
+        orderNumber: string;
+        date: string;
+        total: number;
+        status: string;
+        paymentMethod: string;
+        pathaoConsignmentId?: string;
+        pathaoTrackingUrl?: string;
+        items: Array<{
+          id?: string;
+          name: string;
+          size?: string;
+          color?: string;
+          quantity: number;
+          price: number;
+          total: number;
+          image?: string;
+        }>;
+      }>;
+    }>();
+
+    // 1. Populate registered customer records
+    for (const [phone, c] of Object.entries(customersByPhone)) {
+      const anyC = c as any;
+      customerMap.set(phone, {
+        id: `cust_${phone}`,
+        name: c.name || "Customer",
+        phone: c.phone || phone,
+        email: c.email || "",
+        address: anyC.address || "",
+        district: anyC.district || "BD-13",
+        city: anyC.city || "Dhaka",
+        registeredAt: c.registeredAt,
+        totalSpent: 0,
+        totalOrders: 0,
+        orders: [],
+      });
+    }
+
+    // 2. Link every order to its customer
+    for (const o of allOrders) {
+      const phone = o.billing?.phone || o.customer?.phone || "";
+      const email = o.billing?.email || o.customer?.email || "";
+      const key = phone || email || `order_${o.id || o.number}`;
+
+      let cust = customerMap.get(key);
+      if (!cust) {
+        cust = {
+          id: `cust_${key}`,
+          name: (o.billing?.first_name ? `${o.billing.first_name} ${o.billing.last_name || ""}` : o.customer?.name || "Customer").trim(),
+          phone: phone,
+          email: email,
+          address: o.billing?.address_1 || o.customer?.address || "",
+          district: o.billing?.state || o.customer?.district || "BD-13",
+          city: o.billing?.city || o.customer?.city || "Dhaka",
+          totalSpent: 0,
+          totalOrders: 0,
+          orders: [],
+        };
+        customerMap.set(key, cust);
+      }
+
+      const orderTotal = Number(o.total || o.totalAmount || 0);
+      cust.totalSpent += orderTotal;
+      cust.totalOrders += 1;
+
+      const orderDate = o.date_created || o.created_at || new Date().toISOString();
+      if (!cust.lastOrderDate || new Date(orderDate) > new Date(cust.lastOrderDate)) {
+        cust.lastOrderDate = orderDate;
+      }
+
+      const rawItems = o.line_items || o.items || [];
+      const parsedItems = rawItems.map((it: any) => ({
+        id: String(it.id || it.product_id || ""),
+        name: it.name || it.product_name || "Artisanal Denim Item",
+        size: it.size || (Array.isArray(it.meta_data) ? it.meta_data.find((m: any) => m.key === "pa_size" || m.key === "Size")?.value : "") || "Standard",
+        color: it.color || "",
+        quantity: Number(it.quantity || it.qty || 1),
+        price: Number(it.price || it.unit || 0),
+        total: Number(it.total || ((it.price || 0) * (it.quantity || 1)) || 0),
+        image: it.image?.src || it.thumb || it.image || "",
+      }));
+
+      cust.orders.push({
+        id: String(o.id || o.number || ""),
+        orderNumber: String(o.wooNumber || o.number || o.id || ""),
+        date: orderDate,
+        total: orderTotal,
+        status: o.status || "processing",
+        paymentMethod: o.payment_method || o.payment || "cod",
+        pathaoConsignmentId: o.pathaoConsignmentId,
+        pathaoTrackingUrl: o.pathaoConsignmentId ? `https://merchant.pathao.com/tracking?consignment_id=${o.pathaoConsignmentId}` : undefined,
+        items: parsedItems,
+      });
+    }
+
+    let customerList = Array.from(customerMap.values());
+
+    // Sort orders for each customer descending
+    for (const c of customerList) {
+      c.orders.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }
+
+    // Sort customer list by totalSpent or totalOrders
+    customerList.sort((a, b) => b.totalSpent - a.totalSpent);
+
+    // Apply search filter if present
+    if (q) {
+      customerList = customerList.filter(
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.phone.toLowerCase().includes(q) ||
+          c.email.toLowerCase().includes(q) ||
+          c.orders.some((o) => o.orderNumber.toLowerCase().includes(q) || (o.pathaoConsignmentId && o.pathaoConsignmentId.toLowerCase().includes(q)))
+      );
+    }
+
+    return reply.send({
+      success: true,
+      totalCount: customerList.length,
+      customers: customerList,
+    });
   });
 
   /* ---- anonymous guest session (real, minted identity) ---- */

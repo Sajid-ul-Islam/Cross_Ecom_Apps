@@ -73,7 +73,7 @@ export default function ShopScreen() {
   const { refreshing, onRefresh: handleRefresh } = usePullToRefresh(loadProducts);
 
   return (
-    <ScreenShell title="SHOP COLLECTION" showSearch={false}>
+    <ScreenShell title="CATEGORIES" showSearch={false}>
 
       {/* Search Bar */}
       <View style={[styles.searchSection, { backgroundColor: colors.paper }]}>
@@ -81,7 +81,7 @@ export default function ShopScreen() {
           <Search size={18} color={colors.sub} />
           <TextInput
             style={[styles.input, { color: colors.ink }]}
-            placeholder="Search jeans, panjabi, shirts, fabric..."
+            placeholder="Search jeans, panjabi, shirts, polo, combo..."
             placeholderTextColor={colors.faint}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -95,7 +95,7 @@ export default function ShopScreen() {
         </View>
       </View>
 
-      {/* Category Pills */}
+      {/* Visual Category Showcase Tiles */}
       <View style={[styles.categoriesContainer, { borderBottomColor: colors.border }]}>
         <ScrollView
           horizontal
@@ -104,24 +104,38 @@ export default function ShopScreen() {
         >
           {CATEGORIES.map((cat) => {
             const active = selectedCategory === cat;
+            const info = getCategoryInfo(cat);
             return (
               <TouchableOpacity
                 key={cat}
                 style={[
-                  styles.categoryChip,
+                  styles.catTile,
                   { backgroundColor: colors.card, borderColor: colors.border },
-                  active && [styles.categoryChipActive, { backgroundColor: colors.indigoDark, borderColor: colors.indigoDark }],
+                  active && [styles.catTileActive, { borderColor: colors.indigoDark, backgroundColor: colors.cardSecondary }],
                 ]}
-                activeOpacity={0.75}
+                activeOpacity={0.85}
                 onPress={() => setSelectedCategory(cat)}
               >
-                <Text style={[
-                  styles.categoryChipText,
-                  { color: colors.sub },
-                  active && styles.categoryChipTextActive,
-                ]}>
-                  {cat}
-                </Text>
+                {cat !== "ALL" && info.coverImage ? (
+                  <Image source={{ uri: info.coverImage }} style={styles.catTileImg} resizeMode="cover" />
+                ) : (
+                  <View style={[styles.catTileImgPlaceholder, { backgroundColor: colors.indigoDark }]}>
+                    <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "900" }}>ALL</Text>
+                  </View>
+                )}
+                <View style={styles.catTileTextWrapper}>
+                  <Text
+                    style={[
+                      styles.catTileName,
+                      { color: colors.ink },
+                      active && { color: colors.indigo, fontWeight: "900" },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {cat}
+                  </Text>
+                  {active && <View style={[styles.activeDot, { backgroundColor: colors.indigo }]} />}
+                </View>
               </TouchableOpacity>
             );
           })}
@@ -323,11 +337,51 @@ function createStyles(colors: any, s: ReturnType<typeof sharedStyles>) {
       height: "100%",
     },
     categoriesContainer: {
-      paddingBottom: 8,
+      paddingBottom: 10,
     },
     categoryScroll: {
       paddingHorizontal: 16,
-      gap: 6,
+      gap: 10,
+    },
+    catTile: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 5,
+      paddingHorizontal: 8,
+      borderRadius: 20,
+      borderWidth: 1,
+      gap: 7,
+    },
+    catTileActive: {
+      borderWidth: 1.5,
+    },
+    catTileImg: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+    },
+    catTileImgPlaceholder: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    catTileTextWrapper: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingRight: 4,
+    },
+    catTileName: {
+      fontSize: 11,
+      fontWeight: "700",
+      letterSpacing: 0.5,
+    },
+    activeDot: {
+      width: 5,
+      height: 5,
+      borderRadius: 2.5,
     },
     categoryChip: {
       paddingHorizontal: 14,

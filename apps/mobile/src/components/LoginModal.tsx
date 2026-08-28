@@ -13,11 +13,23 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { X, Lock, User, CheckCircle2, Key, ArrowRight } from "./Icons";
-import { Colors } from "../theme/colors";
+import {
+  X,
+  Lock,
+  User,
+  CheckCircle2,
+  Key,
+  ArrowRight,
+  PhoneCall,
+  Mail,
+  Sparkles,
+  ShieldCheck,
+  Package,
+} from "./Icons";
+import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useProfile } from "../context/ProfileContext";
-import { forgotPassword } from "../services/gateway";
+import { forgotPassword, registerCustomer as registerCustomerAPI } from "../services/gateway";
 
 const { width, height } = Dimensions.get("window");
 
@@ -25,28 +37,48 @@ interface LoginModalProps {
   visible: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  initialMode?: "signin" | "signup";
 }
 
-export const LoginModal: React.FC<LoginModalProps> = ({ visible, onClose, onSuccess }) => {
-  const { colors } = useTheme();
-  const { login, profile } = useProfile();
+export const LoginModal: React.FC<LoginModalProps> = ({
+  visible,
+  onClose,
+  onSuccess,
+  initialMode = "signin",
+}) => {
+  const { colors, isDark } = useTheme();
+  const { login, registerCustomer, profile } = useProfile();
+  const styles = createStyles(colors);
 
+  const [mode, setMode] = useState<"signin" | "signup">(initialMode);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+
+  // Sign up fields
+  const [signupName, setSignupName] = useState("");
+  const [signupPhone, setSignupPhone] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
     if (visible) {
       setPassword("");
+      setSignupPassword("");
       setNotice(null);
+      setMode(initialMode);
     }
-  }, [visible]);
+  }, [visible, initialMode]);
 
   const handleForgotPassword = async () => {
     const ident = username.trim();
     if (!ident) {
-      Alert.alert("Enter Username or Email", "Please enter your username or email address in the field above to receive a password reset link.");
+      Alert.alert(
+        "Enter Username or Email",
+        "Please enter your username or email address in the field above to receive a password reset link."
+      );
       return;
     }
     setSubmitting(true);
@@ -62,11 +94,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, onClose, onSucc
 
   const handleSignIn = async () => {
     if (!username.trim()) {
-      setNotice({ type: "error", text: "Please enter your username." });
+      setNotice({ type: "error", text: "Please enter your username or email address." });
       return;
     }
     if (!password) {
-      setNotice({ type: "error", text: "Please enter your password." });
+      setNotice({ type: "error", text: "Please enter your account password." });
       return;
     }
 
@@ -82,15 +114,54 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, onClose, onSucc
         }, 600);
       } else {
         setSubmitting(false);
-        setNotice({ type: "error", text: res.message || "Invalid username or password." });
+        setNotice({ type: "error", text: res.message || "Invalid credentials. Please verify and try again." });
       }
     } catch {
       setSubmitting(false);
-      setNotice({ type: "error", text: "Network error during sign in." });
+      setNotice({ type: "error", text: "Network connection error during sign in." });
     }
   };
 
-  const isAdmin = profile.role === "admin";
+  const handleSignUp = async () => {
+    if (!signupName.trim()) {
+      setNotice({ type: "error", text: "Please enter your full name." });
+      return;
+    }
+    const cleanPhone = signupPhone.replace(/[^0-9]/g, "");
+    if (cleanPhone.length !== 11 || !cleanPhone.startsWith("01")) {
+      setNotice({ type: "error", text: "Please enter a valid 11-digit Bangladeshi mobile number (e.g. 017XXXXXXXX)." });
+      return;
+    }
+    if (!signupPassword || signupPassword.length < 6) {
+      setNotice({ type: "error", text: "Password must be at least 6 characters long." });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await registerCustomerAPI(
+        signupName.trim(),
+        cleanPhone,
+        signupEmail.trim()
+      );
+      await registerCustomer({
+        name: signupName.trim(),
+        phone: cleanPhone,
+        email: signupEmail.trim(),
+      });
+      setNotice({ type: "success", text: `Account created! Welcome to DEEN, ${signupName.trim()}!` });
+      setTimeout(() => {
+        setSubmitting(false);
+        onClose();
+        if (onSuccess) onSuccess();
+      }, 600);
+    } catch {
+      setSubmitting(false);
+      setNotice({ type: "error", text: "Network error during registration." });
+    }
+  };
+
+  const isPhoneValid = signupPhone.replace(/[^0-9]/g, "").length === 11 && signupPhone.startsWith("01");
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -103,13 +174,15 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, onClose, onSucc
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.borderLight }]}>
             <View style={styles.headerLeft}>
-              <View style={[styles.iconCircle, { backgroundColor: colors.indigo }]}>
+              <View style={[styles.iconCircle, { backgroundColor: colors.indigoDark }]}>
                 <Key size={18} color="#FFFFFF" />
               </View>
               <View>
-                <Text style={[styles.title, { color: colors.ink }]}>SIGN IN</Text>
+                <Text style={[styles.title, { color: colors.ink }]}>
+                  {mode === "signin" ? "ACCOUNT SIGN IN" : "CREATE NEW ACCOUNT"}
+                </Text>
                 <Text style={[styles.subtitle, { color: colors.sub }]}>
-                  Use your deencommerce.com account
+                  DEEN Artisanal Denim & Menswear
                 </Text>
               </View>
             </View>
@@ -117,8 +190,54 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, onClose, onSucc
             <TouchableOpacity
               style={[styles.closeBtn, { backgroundColor: colors.cardSecondary }]}
               onPress={onClose}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <X size={20} color={colors.ink} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Segmented Mode Switcher */}
+          <View style={styles.segmentContainer}>
+            <TouchableOpacity
+              style={[
+                styles.segmentBtn,
+                mode === "signin" && [styles.segmentBtnActive, { backgroundColor: colors.indigoDark }],
+              ]}
+              activeOpacity={0.8}
+              onPress={() => {
+                setMode("signin");
+                setNotice(null);
+              }}
+            >
+              <Text
+                style={[
+                  styles.segmentBtnText,
+                  { color: mode === "signin" ? "#FFFFFF" : colors.sub },
+                ]}
+              >
+                SIGN IN
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.segmentBtn,
+                mode === "signup" && [styles.segmentBtnActive, { backgroundColor: colors.indigoDark }],
+              ]}
+              activeOpacity={0.8}
+              onPress={() => {
+                setMode("signup");
+                setNotice(null);
+              }}
+            >
+              <Text
+                style={[
+                  styles.segmentBtnText,
+                  { color: mode === "signup" ? "#FFFFFF" : colors.sub },
+                ]}
+              >
+                CREATE ACCOUNT
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -131,13 +250,15 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, onClose, onSucc
               <View
                 style={[
                   styles.noticeBanner,
-                  notice.type === "success" ? styles.noticeSuccess : styles.noticeError,
+                  notice.type === "success"
+                    ? { backgroundColor: colors.emeraldLight, borderColor: colors.emerald }
+                    : { backgroundColor: colors.crimsonLight, borderColor: colors.crimson },
                 ]}
               >
                 <Text
                   style={[
                     styles.noticeText,
-                    notice.type === "success" ? styles.noticeTextSuccess : styles.noticeTextError,
+                    { color: notice.type === "success" ? colors.emerald : colors.crimson },
                   ]}
                 >
                   {notice.text}
@@ -145,108 +266,250 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, onClose, onSucc
               </View>
             )}
 
-            <View style={[styles.currentActiveBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={styles.currentActiveLeft}>
-                <View
-                  style={[
-                    styles.statusDot,
-                    { backgroundColor: isAdmin ? colors.amber : colors.emerald },
-                  ]}
-                />
-                <View>
-                  <Text style={[styles.currentActiveLabel, { color: colors.sub }]}>CURRENTLY SIGNED IN AS:</Text>
-                  <Text style={[styles.currentActiveValue, { color: colors.ink }]}>
-                    {isAdmin ? "Store Admin (Full BI Access)" : profile.isGuest ? "Guest User" : `${profile.name || "Customer"}`}
+            {/* -------------------- SIGN IN MODE -------------------- */}
+            {mode === "signin" ? (
+              <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <View style={styles.cardHeaderArea}>
+                  <Text style={[styles.formTitle, { color: colors.ink }]}>WELCOME BACK</Text>
+                  <Text style={[styles.formSub, { color: colors.sub }]}>
+                    Sign in to access your saved sizing, orders, and privileges.
                   </Text>
                 </View>
-              </View>
-            </View>
 
-            <View style={[styles.manualBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.manualHeading, { color: colors.ink }]}>SIGN IN TO YOUR ACCOUNT</Text>
-              <Text style={[styles.manualSub, { color: colors.sub }]}>
-                Enter your WordPress username and password.
-              </Text>
-
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.ink }]}>Username / Email</Text>
-                <View
-                  style={[
-                    styles.inputWrap,
-                    { backgroundColor: colors.cardSecondary, borderColor: colors.border },
-                  ]}
-                >
-                  <User size={18} color={colors.sub} />
-                  <TextInput
-                    style={[styles.inputField, { color: colors.ink }]}
-                    value={username}
-                    onChangeText={setUsername}
-                    placeholder="your username"
-                    placeholderTextColor={colors.faint}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
+                {/* Username / Email Field */}
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: colors.ink }]}>Username or Email</Text>
+                  <View
+                    style={[
+                      styles.inputWrap,
+                      { backgroundColor: colors.paper, borderColor: colors.border },
+                    ]}
+                  >
+                    <User size={18} color={colors.sub} />
+                    <TextInput
+                      style={[styles.inputField, { color: colors.ink }]}
+                      value={username}
+                      onChangeText={setUsername}
+                      placeholder="e.g. sazid or user@deencommerce.com"
+                      placeholderTextColor={colors.faint}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
                 </View>
-              </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.ink }]}>Password</Text>
-                <View
-                  style={[
-                    styles.inputWrap,
-                    { backgroundColor: colors.cardSecondary, borderColor: colors.border },
-                  ]}
-                >
-                  <Lock size={18} color={colors.sub} />
-                  <TextInput
-                    style={[styles.inputField, { color: colors.ink }]}
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder="your password"
-                    placeholderTextColor={colors.faint}
-                    secureTextEntry
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
+                {/* Password Field */}
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: colors.ink }]}>Password</Text>
+                  <View
+                    style={[
+                      styles.inputWrap,
+                      { backgroundColor: colors.paper, borderColor: colors.border },
+                    ]}
+                  >
+                    <Lock size={18} color={colors.sub} />
+                    <TextInput
+                      style={[styles.inputField, { color: colors.ink }]}
+                      value={password}
+                      onChangeText={setPassword}
+                      placeholder="Enter your account password"
+                      placeholderTextColor={colors.faint}
+                      secureTextEntry
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
                 </View>
+
+                <TouchableOpacity
+                  onPress={handleForgotPassword}
+                  style={styles.forgotBtn}
+                  disabled={submitting}
+                >
+                  <Text style={[styles.forgotBtnText, { color: colors.indigo }]}>
+                    Forgot Password?
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.primaryBtn,
+                    { backgroundColor: colors.indigo },
+                    submitting && styles.btnDisabled,
+                  ]}
+                  activeOpacity={0.88}
+                  onPress={handleSignIn}
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Text style={styles.primaryBtnText}>SIGN IN TO YOUR ACCOUNT</Text>
+                      <ArrowRight size={16} color="#FFFFFF" />
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={onClose} style={styles.guestLink}>
+                  <Text style={[styles.guestLinkText, { color: colors.sub }]}>
+                    Continue as guest shopper
+                  </Text>
+                </TouchableOpacity>
               </View>
+            ) : (
+              /* -------------------- SIGN UP MODE -------------------- */
+              <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <View style={styles.cardHeaderArea}>
+                  <Text style={[styles.formTitle, { color: colors.ink }]}>JOIN DEEN PRIVILEGE</Text>
+                  <Text style={[styles.formSub, { color: colors.sub }]}>
+                    Create an account for 1-tap checkout, order tracking & rewards.
+                  </Text>
+                </View>
 
-              <TouchableOpacity
-                onPress={handleForgotPassword}
-                style={{ alignSelf: "flex-end", marginBottom: 14, marginTop: -4 }}
-                disabled={submitting}
-              >
-                <Text style={{ fontSize: 11, fontWeight: "700", color: colors.indigo }}>
-                  Forgot Password?
-                </Text>
-              </TouchableOpacity>
+                {/* Full Name */}
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: colors.ink }]}>Full Name *</Text>
+                  <View
+                    style={[
+                      styles.inputWrap,
+                      { backgroundColor: colors.paper, borderColor: colors.border },
+                    ]}
+                  >
+                    <User size={18} color={colors.sub} />
+                    <TextInput
+                      style={[styles.inputField, { color: colors.ink }]}
+                      value={signupName}
+                      onChangeText={setSignupName}
+                      placeholder="e.g. Tanvir Ahmed"
+                      placeholderTextColor={colors.faint}
+                      autoCapitalize="words"
+                    />
+                  </View>
+                </View>
 
-              <TouchableOpacity
-                style={[
-                  styles.submitBtn,
-                  { backgroundColor: colors.indigo },
-                  submitting && styles.btnDisabled,
-                ]}
-                activeOpacity={0.88}
-                onPress={handleSignIn}
-                disabled={submitting}
-              >
-                {submitting ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <>
-                    <Key size={16} color="#FFFFFF" />
-                    <Text style={styles.submitBtnText}>SIGN IN</Text>
-                  </>
-                )}
-              </TouchableOpacity>
+                {/* Bangladeshi Phone Number */}
+                <View style={styles.inputGroup}>
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                    <Text style={[styles.inputLabel, { color: colors.ink }]}>Mobile Number *</Text>
+                    {signupPhone.length > 0 && (
+                      <Text
+                        style={{
+                          fontSize: 10,
+                          fontWeight: "800",
+                          color: isPhoneValid ? colors.emerald : colors.crimson,
+                        }}
+                      >
+                        {isPhoneValid ? "✓ Valid 11-digit BD number" : "11 digits required (01XXXXXXXXX)"}
+                      </Text>
+                    )}
+                  </View>
+                  <View
+                    style={[
+                      styles.inputWrap,
+                      {
+                        backgroundColor: colors.paper,
+                        borderColor: signupPhone.length > 0 ? (isPhoneValid ? colors.emerald : colors.crimson) : colors.border,
+                      },
+                    ]}
+                  >
+                    <PhoneCall size={18} color={colors.sub} />
+                    <TextInput
+                      style={[styles.inputField, { color: colors.ink }]}
+                      value={signupPhone}
+                      onChangeText={setSignupPhone}
+                      placeholder="01XXXXXXXXX"
+                      placeholderTextColor={colors.faint}
+                      keyboardType="phone-pad"
+                      maxLength={11}
+                    />
+                  </View>
+                </View>
 
-              <TouchableOpacity onPress={onClose} style={styles.guestLink}>
-                <Text style={[styles.guestLinkText, { color: colors.sub }]}>
-                  Continue as guest
-                </Text>
-              </TouchableOpacity>
-            </View>
+                {/* Email Address */}
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: colors.ink }]}>Email Address (Optional)</Text>
+                  <View
+                    style={[
+                      styles.inputWrap,
+                      { backgroundColor: colors.paper, borderColor: colors.border },
+                    ]}
+                  >
+                    <Mail size={18} color={colors.sub} />
+                    <TextInput
+                      style={[styles.inputField, { color: colors.ink }]}
+                      value={signupEmail}
+                      onChangeText={setSignupEmail}
+                      placeholder="name@example.com"
+                      placeholderTextColor={colors.faint}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                    />
+                  </View>
+                </View>
+
+                {/* Password */}
+                <View style={styles.inputGroup}>
+                  <Text style={[styles.inputLabel, { color: colors.ink }]}>Create Password *</Text>
+                  <View
+                    style={[
+                      styles.inputWrap,
+                      { backgroundColor: colors.paper, borderColor: colors.border },
+                    ]}
+                  >
+                    <Lock size={18} color={colors.sub} />
+                    <TextInput
+                      style={[styles.inputField, { color: colors.ink }]}
+                      value={signupPassword}
+                      onChangeText={setSignupPassword}
+                      placeholder="Minimum 6 characters"
+                      placeholderTextColor={colors.faint}
+                      secureTextEntry
+                      autoCapitalize="none"
+                    />
+                  </View>
+                </View>
+
+                {/* Member Perks Box */}
+                <View style={[styles.perksBox, { backgroundColor: colors.indigoLight, borderColor: colors.indigo }]}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                    <Sparkles size={14} color={colors.indigo} />
+                    <Text style={[styles.perksTitle, { color: colors.indigoDark }]}>MEMBERSHIP BENEFITS</Text>
+                  </View>
+                  <Text style={[styles.perksItem, { color: colors.ink }]}>
+                    • 1-Tap checkout across all Android & iOS devices{"\n"}
+                    • Real-time Pathao courier consignment updates{"\n"}
+                    • Saved sizing preferences & personalized drops
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.primaryBtn,
+                    { backgroundColor: colors.indigo },
+                    submitting && styles.btnDisabled,
+                  ]}
+                  activeOpacity={0.88}
+                  onPress={handleSignUp}
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <>
+                      <Text style={styles.primaryBtnText}>CREATE DEEN ACCOUNT</Text>
+                      <ArrowRight size={16} color="#FFFFFF" />
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={onClose} style={styles.guestLink}>
+                  <Text style={[styles.guestLinkText, { color: colors.sub }]}>
+                    Continue as guest shopper
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
@@ -254,165 +517,185 @@ export const LoginModal: React.FC<LoginModalProps> = ({ visible, onClose, onSucc
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.65)",
-    justifyContent: "flex-end",
-  },
-  modalCard: {
-    maxHeight: height * 0.9,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingBottom: 34,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    borderBottomWidth: 1,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: "900",
-    letterSpacing: 0.8,
-  },
-  subtitle: {
-    fontSize: 12,
-    marginTop: 2,
-  },
-  closeBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 40,
-  },
-  noticeBanner: {
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 16,
-  },
-  noticeSuccess: {
-    backgroundColor: "#DCFCE7",
-  },
-  noticeError: {
-    backgroundColor: "#FEE2E2",
-  },
-  noticeText: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  noticeTextSuccess: {
-    color: "#166534",
-  },
-  noticeTextError: {
-    color: "#991B1B",
-  },
-  currentActiveBox: {
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 18,
-  },
-  currentActiveLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  currentActiveLabel: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 0.8,
-  },
-  currentActiveValue: {
-    fontSize: 13,
-    fontWeight: "700",
-    marginTop: 2,
-  },
-  manualBox: {
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  manualHeading: {
-    fontSize: 13,
-    fontWeight: "800",
-    letterSpacing: 0.8,
-    marginBottom: 4,
-  },
-  manualSub: {
-    fontSize: 12,
-    marginBottom: 14,
-  },
-  inputGroup: {
-    marginBottom: 14,
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    marginBottom: 6,
-  },
-  inputWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  inputField: {
-    flex: 1,
-    fontSize: 15,
-  },
-  submitBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginTop: 4,
-  },
-  btnDisabled: {
-    opacity: 0.6,
-  },
-  submitBtnText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-  guestLink: {
-    alignItems: "center",
-    marginTop: 14,
-  },
-  guestLinkText: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-});
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: "rgba(0, 0, 0, 0.65)",
+      justifyContent: "flex-end",
+    },
+    modalCard: {
+      height: height * 0.88,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      paddingTop: 16,
+      overflow: "hidden",
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingBottom: 14,
+      borderBottomWidth: 1,
+    },
+    headerLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    iconCircle: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    title: {
+      fontSize: 14,
+      fontWeight: "900",
+      letterSpacing: 0.5,
+    },
+    subtitle: {
+      fontSize: 11,
+      marginTop: 2,
+    },
+    closeBtn: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    segmentContainer: {
+      flexDirection: "row",
+      marginHorizontal: 16,
+      marginTop: 12,
+      marginBottom: 6,
+      backgroundColor: colors.cardSecondary,
+      borderRadius: 10,
+      padding: 3,
+    },
+    segmentBtn: {
+      flex: 1,
+      paddingVertical: 9,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 8,
+    },
+    segmentBtnActive: {},
+    segmentBtnText: {
+      fontSize: 11,
+      fontWeight: "800",
+      letterSpacing: 0.6,
+    },
+    content: {
+      padding: 16,
+      paddingBottom: 40,
+    },
+    noticeBanner: {
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      marginBottom: 12,
+    },
+    noticeText: {
+      fontSize: 12,
+      fontWeight: "700",
+      textAlign: "center",
+    },
+    formCard: {
+      borderRadius: 12,
+      borderWidth: 1,
+      padding: 16,
+    },
+    cardHeaderArea: {
+      marginBottom: 14,
+    },
+    formTitle: {
+      fontSize: 13,
+      fontWeight: "900",
+      letterSpacing: 0.5,
+    },
+    formSub: {
+      fontSize: 11,
+      marginTop: 2,
+      lineHeight: 16,
+    },
+    inputGroup: {
+      marginBottom: 12,
+    },
+    inputLabel: {
+      fontSize: 11,
+      fontWeight: "800",
+      marginBottom: 6,
+      letterSpacing: 0.3,
+    },
+    inputWrap: {
+      flexDirection: "row",
+      alignItems: "center",
+      borderWidth: 1,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      height: 44,
+      gap: 10,
+    },
+    inputField: {
+      flex: 1,
+      fontSize: 13,
+      height: "100%",
+    },
+    forgotBtn: {
+      alignSelf: "flex-end",
+      marginBottom: 14,
+      marginTop: -2,
+    },
+    forgotBtnText: {
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    primaryBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 14,
+      borderRadius: 8,
+      marginTop: 6,
+    },
+    primaryBtnText: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "800",
+      letterSpacing: 0.8,
+    },
+    btnDisabled: {
+      opacity: 0.6,
+    },
+    guestLink: {
+      alignItems: "center",
+      paddingVertical: 14,
+      marginTop: 4,
+    },
+    guestLinkText: {
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    perksBox: {
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      marginBottom: 12,
+      marginTop: 4,
+    },
+    perksTitle: {
+      fontSize: 10,
+      fontWeight: "900",
+      letterSpacing: 0.5,
+    },
+    perksItem: {
+      fontSize: 11,
+      lineHeight: 17,
+    },
+  });
+}

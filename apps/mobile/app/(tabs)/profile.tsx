@@ -25,6 +25,7 @@ import { StoreSection } from "../../src/components/profile/StoreSection";
 // Modals
 import { AdminBroadcastModal } from "../../src/components/AdminBroadcastModal";
 import { AdminAnalyticsModal } from "../../src/components/AdminAnalyticsModal";
+import { AdminCustomersModal } from "../../src/components/AdminCustomersModal";
 import { LoginModal } from "../../src/components/LoginModal";
 import { AboutModal } from "../../src/components/AboutModal";
 import { CourierTrackingModal } from "../../src/components/CourierTrackingModal";
@@ -63,7 +64,9 @@ export default function ProfileScreen() {
   // Modal visibility
   const [broadcastModalVisible, setBroadcastModalVisible] = useState(false);
   const [analyticsModalVisible, setAnalyticsModalVisible] = useState(false);
+  const [customersModalVisible, setCustomersModalVisible] = useState(false);
   const [loginModalVisible, setLoginModalVisible] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<"signin" | "signup">("signin");
   const [aboutModalVisible, setAboutModalVisible] = useState(false);
   const [trackingModalVisible, setTrackingModalVisible] = useState(false);
   const [selectedOrderForTracking, setSelectedOrderForTracking] = useState<any>(null);
@@ -151,8 +154,14 @@ export default function ProfileScreen() {
 
         {/* 1. Account Identity Header */}
         <AccountHeader
-          onLoginPress={() => setLoginModalVisible(true)}
-          onRegister={handleRegister}
+          onLoginPress={() => {
+            setAuthModalMode("signin");
+            setLoginModalVisible(true);
+          }}
+          onRegister={() => {
+            setAuthModalMode("signup");
+            setLoginModalVisible(true);
+          }}
         />
 
         {/* My Orders & Live Pathao Tracking Hub */}
@@ -181,13 +190,13 @@ export default function ProfileScreen() {
           onRemoveAddress={removeSavedAddress}
         />
 
-        {/* 5. Preferred Delivery Zone / Courier Option */}
+        {/* 5. Default Delivery Speed / Slot Preferences */}
         <DeliveryOptions
           selectedArea={selectedArea}
           onSelectArea={setSelectedArea}
         />
 
-        {/* 6. Saved Sizing & Fit Preferences */}
+        {/* 6. Saved Sizing Profile */}
         <SizingPreferences
           jeansSize={jeansSize}
           topSize={topSize}
@@ -219,6 +228,7 @@ export default function ProfileScreen() {
           onReportPress={handleReport}
           onBroadcastPress={() => setBroadcastModalVisible(true)}
           onAnalyticsPress={() => setAnalyticsModalVisible(true)}
+          onCustomersPress={() => setCustomersModalVisible(true)}
         />
       </ScrollView>
 
@@ -228,6 +238,11 @@ export default function ProfileScreen() {
         onClose={() => setAnalyticsModalVisible(false)}
       />
 
+      <AdminCustomersModal
+        visible={customersModalVisible}
+        onClose={() => setCustomersModalVisible(false)}
+      />
+
       <AdminBroadcastModal
         visible={broadcastModalVisible}
         onClose={() => setBroadcastModalVisible(false)}
@@ -235,6 +250,7 @@ export default function ProfileScreen() {
 
       <LoginModal
         visible={loginModalVisible}
+        initialMode={authModalMode}
         onClose={() => setLoginModalVisible(false)}
       />
       <AboutModal

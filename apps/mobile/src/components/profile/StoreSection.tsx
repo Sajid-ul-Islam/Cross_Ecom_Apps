@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, Linking, StyleSheet, Alert, ActivityIndicator } from "react-native";
-import { Store, HelpCircle, Sparkles, Facebook, Instagram, Shield, Trash2, CheckCircle2 } from "../Icons";
+import { Store, HelpCircle, Sparkles, Users, Shield, Trash2, CheckCircle2 } from "../Icons";
 import { ThemeColors } from "../../theme/colors";
 import { sharedStyles } from "../../theme/sharedStyles";
 import { useTheme } from "../../context/ThemeContext";
@@ -12,6 +12,7 @@ interface StoreSectionProps {
   onReportPress: () => void;
   onBroadcastPress: () => void;
   onAnalyticsPress: () => void;
+  onCustomersPress: () => void;
 }
 
 export const StoreSection: React.FC<StoreSectionProps> = ({
@@ -19,6 +20,7 @@ export const StoreSection: React.FC<StoreSectionProps> = ({
   onReportPress,
   onBroadcastPress,
   onAnalyticsPress,
+  onCustomersPress,
 }) => {
   const { colors } = useTheme();
   const { profile } = useProfile();
@@ -62,57 +64,21 @@ export const StoreSection: React.FC<StoreSectionProps> = ({
           </Text>
         </View>
 
-        <View style={[styles.supportBox, { backgroundColor: colors.indigoLight }]}>
+        <TouchableOpacity
+          style={[styles.supportBox, { backgroundColor: colors.indigoLight }]}
+          activeOpacity={0.8}
+          onPress={() => Linking.openURL("https://wa.me/8801952700500")}
+        >
           <HelpCircle size={18} color={colors.indigo} />
           <View style={{ flex: 1 }}>
             <Text style={[styles.supportText, { color: colors.indigoDark }]}>
               Customer Hotline & WhatsApp: <Text style={styles.bold}>+880 1952-700500</Text>
             </Text>
             <Text style={{ fontSize: 10, color: colors.sub, marginTop: 1 }}>
-              Open 10:00 AM – 10:00 PM Daily
+              Open 10:00 AM – 10:00 PM Daily · Tap to Chat on WhatsApp
             </Text>
           </View>
-        </View>
-
-        <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
-          <TouchableOpacity
-            style={{
-              flex: 1,
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              backgroundColor: "#1877F2",
-              paddingVertical: 10,
-              borderRadius: 8,
-            }}
-            onPress={() => Linking.openURL("https://www.facebook.com/deencommerce")}
-          >
-            <Facebook size={16} color="#FFFFFF" />
-            <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 11 }}>
-              FACEBOOK
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={{
-              flex: 1,
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-              backgroundColor: "#E1306C",
-              paddingVertical: 10,
-              borderRadius: 8,
-            }}
-            onPress={() => Linking.openURL("https://www.instagram.com/deencommerce")}
-          >
-            <Instagram size={16} color="#FFFFFF" />
-            <Text style={{ color: "#FFFFFF", fontWeight: "800", fontSize: 11 }}>
-              INSTAGRAM
-            </Text>
-          </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
 
         <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
           <TouchableOpacity
@@ -139,39 +105,35 @@ export const StoreSection: React.FC<StoreSectionProps> = ({
           <Shield size={17} color={colors.indigo} />
           <Text style={[styles.cardTitle, { color: colors.ink }]}>PRIVACY & ACCOUNT DATA</Text>
         </View>
-        <Text style={{ fontSize: 11, color: colors.sub, marginBottom: 12, lineHeight: 16 }}>
-          You have full control over your saved personal data and session preferences.
+        <Text style={{ fontSize: 12, color: colors.sub, marginBottom: 12 }}>
+          Manage your personal data in accordance with Bangladesh data protection principles and DEEN privacy policy.
         </Text>
 
         <View style={{ flexDirection: "row", gap: 8 }}>
           <TouchableOpacity
             style={[styles.reportBtn, { flex: 1, backgroundColor: colors.cardSecondary, borderColor: colors.border }]}
             onPress={async () => {
-              try {
-                const res = await exportUserData();
-                if (res.success) {
-                  Alert.alert(
-                    "Account Data Exported",
-                    `Profile Name: ${res.data?.profile?.name || "Guest"}\nIdentifier: ${res.data?.profile?.username || "N/A"}\nExported: ${new Date().toLocaleDateString()}`
-                  );
-                } else {
-                  Alert.alert("Account Data", "You are currently browsing as a guest. Register or sign in to export your permanent order history.");
-                }
-              } catch {
-                Alert.alert("Notice", "Your local profile data is safely stored on this device.");
+              const res = await exportUserData();
+              if (res.success && res.data) {
+                Alert.alert(
+                  "Data Export Ready",
+                  `Exported ${res.data.profile.ordersCount || 0} order records and profile data for ${res.data.profile.phone || res.data.profile.name}.`
+                );
+              } else {
+                Alert.alert("Export Notice", res.message);
               }
             }}
           >
-            <Shield size={14} color={colors.indigo} />
+            <CheckCircle2 size={14} color={colors.indigo} />
             <Text style={[styles.reportBtnText, { color: colors.indigo }]}>EXPORT DATA</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.reportBtn, { flex: 1, backgroundColor: colors.cardSecondary, borderColor: colors.border }]}
+            style={[styles.reportBtn, { flex: 1, backgroundColor: colors.cardSecondary, borderColor: colors.crimson }]}
             onPress={() => {
               Alert.alert(
-                "Delete Account & Data",
-                "Are you sure you want to clear your local customer profile, saved addresses, and active sessions on this device?",
+                "Delete Account & Reset Local Data?",
+                "This will permanently clear your local authentication token, addresses, and saved preferences from this device.",
                 [
                   { text: "Cancel", style: "cancel" },
                   {
@@ -209,6 +171,15 @@ export const StoreSection: React.FC<StoreSectionProps> = ({
           >
             <Sparkles size={16} color="#FFFFFF" />
             <Text style={styles.broadcastBtnText}>📊 VIEW DETAILED BI ANALYTICS</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.broadcastBtn, { backgroundColor: colors.emerald, marginBottom: 8 }]}
+            activeOpacity={0.88}
+            onPress={onCustomersPress}
+          >
+            <Users size={16} color="#FFFFFF" />
+            <Text style={styles.broadcastBtnText}>👥 CUSTOMER DIRECTORY & ORDER PROFILES</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

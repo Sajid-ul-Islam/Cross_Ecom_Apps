@@ -1060,6 +1060,91 @@ export async function fetchAdminAnalytics(timeframe = "30d"): Promise<AdminAnaly
   }
 }
 
+export interface AdminCustomerOrder {
+  id: string;
+  orderNumber: string;
+  date: string;
+  total: number;
+  status: string;
+  paymentMethod: string;
+  pathaoConsignmentId?: string;
+  pathaoTrackingUrl?: string;
+  items: Array<{
+    id?: string;
+    name: string;
+    size?: string;
+    color?: string;
+    quantity: number;
+    price: number;
+    total: number;
+    image?: string;
+  }>;
+}
+
+export interface AdminCustomerRecord {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  district: string;
+  city: string;
+  registeredAt?: string;
+  totalSpent: number;
+  totalOrders: number;
+  lastOrderDate?: string;
+  orders: AdminCustomerOrder[];
+}
+
+export async function fetchAdminCustomersAPI(query = ""): Promise<{ success: boolean; customers: AdminCustomerRecord[] }> {
+  const token = await getAuthToken();
+  if (!token) return { success: false, customers: [] };
+  try {
+    const qParam = query ? `?q=${encodeURIComponent(query)}` : "";
+    const res = await request<{ success: boolean; customers: AdminCustomerRecord[] }>(`/v1/deen/admin/customers${qParam}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }, 8000);
+    return { success: Boolean(res?.success), customers: res?.customers || [] };
+  } catch {
+    return { success: false, customers: [] };
+  }
+}
+
+export interface ActiveCampaignState {
+  success: boolean;
+  activeCampaign: {
+    type: "sale" | "cashback" | "none";
+    badge: string;
+    title: string;
+    subtitle: string;
+    discountRange: string;
+    bannerText: string;
+    actionUrl: string;
+    actionLabel: string;
+  } | null;
+  cashback: {
+    enabled: boolean;
+    tier1: { minSpend: number; amount: number };
+    tier2: { minSpend: number; amount: number };
+  };
+  sale: {
+    enabled: boolean;
+    title: string;
+    subtitle: string;
+    badge: string;
+    discountRange: string;
+  };
+}
+
+export async function fetchActiveCampaigns(): Promise<ActiveCampaignState | null> {
+  try {
+    const res = await request<ActiveCampaignState>("/v1/deen/campaigns", {}, 5000, true);
+    return res?.success ? res : null;
+  } catch {
+    return null;
+  }
+}
+
 /* ----------------------------- payments ---------------------------- */
 
 export interface PaymentInitiationResult {
