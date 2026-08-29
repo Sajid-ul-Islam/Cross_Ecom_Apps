@@ -1,20 +1,39 @@
-// API client — reads NEXT_PUBLIC_API_URL or falls back to local gateway
+// API client — reads NEXT_PUBLIC_API_URL or defaults to live Render gateway (Zero config needed on Vercel)
+export const DEFAULT_GATEWAY_URL = "https://cross-ecom-apps-4b4n.onrender.com";
+export const BACKUP_GATEWAY_URL = "https://cross-ecom-apps.onrender.com";
+
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8787";
+  process.env.NEXT_PUBLIC_API_URL || DEFAULT_GATEWAY_URL;
 
 /** Shared gateway key — sent as x-api-key on every request. */
 const GATEWAY_API_KEY = process.env.NEXT_PUBLIC_GATEWAY_API_KEY || "";
 
 /**
  * Drop-in replacement for fetch() that always includes the gateway x-api-key
- * header so no endpoint is accidentally called without authentication.
+ * header and automatically falls back if the primary Render instance is spinning up.
  */
-function apiFetch(input: string, init?: RequestInit): Promise<Response> {
+async function apiFetch(input: string, init?: RequestInit): Promise<Response> {
   const headers: Record<string, string> = {
     ...(init?.headers as Record<string, string>),
   };
   if (GATEWAY_API_KEY) headers["x-api-key"] = GATEWAY_API_KEY;
-  return fetch(input, { ...init, headers });
+
+  try {
+    const res = await fetch(input, { ...init, headers });
+    if (!res.ok && input.startsWith(DEFAULT_GATEWAY_URL)) {
+      // If primary returned 502/503 (Render cold start), failover to backup gateway
+      const backupUrl = input.replace(DEFAULT_GATEWAY_URL, BACKUP_GATEWAY_URL);
+      const backupRes = await fetch(backupUrl, { ...init, headers }).catch(() => null);
+      if (backupRes && backupRes.ok) return backupRes;
+    }
+    return res;
+  } catch (err) {
+    if (input.startsWith(DEFAULT_GATEWAY_URL)) {
+      const backupUrl = input.replace(DEFAULT_GATEWAY_URL, BACKUP_GATEWAY_URL);
+      return fetch(backupUrl, { ...init, headers });
+    }
+    throw err;
+  }
 }
 
 const GUEST_TOKEN_KEY = "deen_web_guest_token";
