@@ -32,3 +32,5 @@ apps/api/.env
 
 # local test artifacts
 ord3.json
+.vercel
+.env*
