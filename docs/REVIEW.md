@@ -113,7 +113,7 @@ All packages were verified in the monorepo root via `npm run typecheck:all`:
 > typecheck:mobile -> apps/mobile (tsc --noEmit)    [0 ERRORS] ✅
 ```
 
-- **Dependencies**: Clean monorepo structure with isolated dependencies for `apps/api` (Fastify 4.x), `apps/mobile` (Expo SDK 52, React Native 0.76), and `apps/web` (Next.js 14).
+- **Dependencies**: Clean monorepo structure with isolated dependencies for `apps/api` (Fastify 4.x), `apps/mobile` (Expo SDK 57, React Native 0.86), and `apps/web` (Next.js 14). See [`docs/TECH_STACK.md`](./TECH_STACK.md) for the single authoritative version matrix.
 - **Design Tokens**: Standardized `useTheme()` tokens across mobile components ensuring crisp typography (`#F4F6FC`, `#FFFFFF`) in dark mode.
 
 ---

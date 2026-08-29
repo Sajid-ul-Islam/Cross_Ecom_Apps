@@ -2,6 +2,7 @@
 
 > Grounded in `apps/mobile/src/services/gateway.ts`, `apps/api/src/`, and `apps/web/`.
 > Core Rule: **"REST API → WooCommerce → WordPress is the single source of truth."**
+> Tech Stack & Version Matrix: See [`docs/TECH_STACK.md`](./TECH_STACK.md) for the single authoritative version matrix.
 
 ---
 

@@ -187,11 +187,13 @@ const orderSeq = { n: 1041 };
 const orders: any[] = [];
 
 /* ------------------------------------------------------------------ */
-/*  Order Deduplication & Idempotency Store (30s window).             */
-/*  Prevents duplicate orders on high-latency double-clicks / retries. */
+/*  Order Deduplication, In-Flight Locks & Idempotency Store (5 min). */
+/*  Guarantees single-flight execution and duplicate prevention       */
+/*  across high-latency failovers, double-clicks, and socket retries. */
 /* ------------------------------------------------------------------ */
 const _orderIdempotencyStore = new Map<string, { at: number; order: any }>();
-const _IDEMPOTENCY_WINDOW_MS = 30_000;
+const _inFlightOrders = new Map<string, Promise<any>>();
+const _IDEMPOTENCY_WINDOW_MS = 5 * 60 * 1000;
 
 function _getDuplicateOrder(key: string): any | null {
   const now = Date.now();
@@ -1183,245 +1185,338 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       return reply.code(422).send({ error: "VALIDATION", message: "Your bag is empty." });
     }
 
-    // Deduplication check: Phone + Address + Items + Payment
+    const clientKey = (req.headers["idempotency-key"] || req.headers["x-idempotency-key"] || body.idempotencyKey) as string | undefined;
+    const rawCoupon = String(coupon || "").trim();
+
+    // Deduplication check: Phone + Address + Items + Payment + Coupon
     const itemsKey = (items || []).map((i: any) => `${i.productId}:${i.size || "M"}:${i.qty}`).sort().join("|");
-    const idempotencyKey = `${digits}:${address.trim().toLowerCase()}:${itemsKey}:${payment}`;
-    const duplicateOrder = _getDuplicateOrder(idempotencyKey);
+    const naturalKey = `${digits}:${address.trim().toLowerCase()}:${itemsKey}:${payment}:${rawCoupon}`;
+    const idempotencyKey = clientKey && String(clientKey).trim().length > 0 ? String(clientKey).trim() : naturalKey;
+
+    // 1. Check if order was already completed
+    const duplicateOrder = _getDuplicateOrder(idempotencyKey) || _getDuplicateOrder(naturalKey);
     if (duplicateOrder) {
-      console.log(`[gateway] duplicate order intercepted for phone=${digits} — returning existing order #${duplicateOrder.number}`);
+      console.log(`[gateway] duplicate order intercepted for phone=${digits} key=${idempotencyKey} — returning existing order #${duplicateOrder.number}`);
       return reply.code(200).send(duplicateOrder);
     }
 
-    // Validate any customer-entered coupon against Woo (exact-match to the website).
-    let couponInfo: { code: string; type: string; amount: number; description: string } | null = null;
-    const rawCoupon = String(coupon || "").trim();
-    if (rawCoupon) {
-      couponInfo = await getCouponByCode(rawCoupon);
-      if (!couponInfo) {
-        return reply.code(422).send({ error: "INVALID_COUPON", message: "This coupon code is invalid or expired." });
-      }
-    }
-
-    const list = await getCatalog();
-    const lines = items.map((it: any) => {
-      const prod = list.find((x) => x.id === it.productId);
-      if (!prod) throw new Error("A product in your bag is no longer available.");
-      const unit = prod.salePrice ?? prod.price;
-      return { productId: prod.id, name: prod.name, sku: prod.sku, size: it.size, qty: it.qty, unit, category: prod.category };
-    });
-    const subtotal = lines.reduce((s: number, l: any) => s + l.unit * l.qty, 0);
-    const shipFees = await getShippingFees();
-    const delivery =
-      area === "outside" || area === "outside_standard"
-        ? shipFees.outsideDhaka
-        : area === "dhaka_express"
-        ? shipFees.insideDhaka + config.expressSurcharge
-        : area === "store_pickup" || area === "pickup"
-        ? 0
-        : shipFees.insideDhaka;
-    const cashback = calculateCashback(subtotal).amount;
-    const bogo = calculateBogo(lines);
-    // Customer coupon (validated above). Apply fixed or percent discount on subtotal.
-    const couponDiscount = couponInfo
-      ? (couponInfo.type === "percent"
-          ? Math.round((subtotal * couponInfo.amount) / 100)
-          : Math.min(couponInfo.amount, subtotal))
-      : 0;
-
-    const orderNumStr = `DC-${++orderSeq.n}`;
-    // Pathao logistics is not auto-generated. Only set if ptc_consignment_id / consignmentId is provided (e.g. "DD220826MDKMP9").
-    const rawConsId = (body as any).ptc_consignment_id || (body as any).consignmentId || (body as any).pathaoConsignmentId;
-    const pathaoConsignmentId = rawConsId && String(rawConsId).trim().length > 0 ? String(rawConsId).trim() : undefined;
-    const pathaoTrackingUrl = pathaoConsignmentId ? `https://merchant.pathao.com/tracking?consignment_id=${pathaoConsignmentId}` : undefined;
-    const courier = pathaoConsignmentId ? "Pathao Courier" : (area === "store_pickup" || area === "pickup" ? "Store Pickup" : "Home Delivery");
-
-    const paymentTitle = payment === "cod" ? "Cash on delivery"
-      : payment === "bkash" || payment === "bkash-for-woocommerce" ? "bKash"
-      : payment === "nagad" ? "Nagad"
-      : payment === "sslcommerz" ? "SSLCommerz"
-      : "Online Payment";
-    const paymentStatus = payment === "cod" ? "Pending (Cash on Delivery)" : "Awaiting Payment";
-
-    const resolvedCity = String(city || (area === "outside" ? "Chittagong" : "Dhaka")).trim();
-    // CRITICAL: the live site stores Woo state as "BD-XX" codes, never the district
-    // name. Normalize whatever the app sends (name or code) to the canonical BD-XX.
-    const resolvedState = normalizeState(state || district || (area === "outside" ? "BD-10" : "BD-13"));
-    const resolvedPostcode = String(postcode || "1200").trim();
-
-    let wooId: number | undefined;
-    let wooNumber: string | undefined;
-    let wooPaymentUrl: string | undefined;
-    if (wooEnabled) {
+    // 2. Check if identical order is currently in-flight (single-flight locking)
+    const inFlight = _inFlightOrders.get(idempotencyKey) || _inFlightOrders.get(naturalKey);
+    if (inFlight) {
+      console.log(`[gateway] in-flight order join for phone=${digits} key=${idempotencyKey} — awaiting primary completion`);
       try {
-        const shippingMethodTitle = area === "outside" || area === "outside_standard"
-          ? "Home Delivery (Outside Dhaka)"
-          : (area === "dhaka_express"
-            ? "Express Home Delivery"
-            : (area === "store_pickup" || area === "pickup" ? "Store Pickup" : "Home Delivery"));
+        const inFlightResult = await inFlight;
+        return reply.code(200).send(inFlightResult);
+      } catch (err: any) {
+        return reply.code(500).send({ error: "ORDER_FAILED", message: err?.message || "Order creation failed" });
+      }
+    }
 
-        const orderMeta: Array<{ key: string; value: string }> = [
-          { key: "city", value: resolvedCity },
-          { key: "state_district", value: resolvedState },
-          { key: "payment_type", value: payment.toUpperCase() },
-          { key: "payment_status", value: paymentStatus },
-          { key: "_shipping_phone_2", value: "" },
-          { key: "is_vat_exempt", value: "no" },
-          { key: "wt_pklist_order_language", value: "en_US" },
-          { key: "_gtm_server_side_order_sent", value: new Date().toISOString().slice(0, 19).replace("T", " ") },
-        ];
-
-        if (pathaoConsignmentId) {
-          orderMeta.push(
-            { key: "courier", value: "Pathao Courier" },
-            { key: "ptc_consignment_id", value: pathaoConsignmentId },
-            { key: "pathao_consignment_id", value: pathaoConsignmentId },
-            { key: "pathao_tracking_url", value: pathaoTrackingUrl || "" }
-          );
+    // 3. Wrap order creation in a single-flight Promise
+    const orderPromise = (async () => {
+      // Validate any customer-entered coupon against Woo (exact-match to the website).
+      let couponInfo: { code: string; type: string; amount: number; description: string } | null = null;
+      if (rawCoupon) {
+        couponInfo = await getCouponByCode(rawCoupon);
+        if (!couponInfo) {
+          throw new Error("INVALID_COUPON: This coupon code is invalid or expired.");
         }
+      }
 
-        const r = await pushWooOrder({
-          created_via: "checkout",
-          status: payment === "cod" ? "processing" : "on-hold",
-          payment_method: payment === "cod" ? "cod" : payment,
-          payment_method_title: paymentTitle,
-          set_paid: payment !== "cod",
-          billing: {
-            first_name: name,
-            last_name: lastName || name,
-            email: email || `${digits}@deencommerce.com`,
-            phone: digits,
-            address_1: address,
-            city: resolvedCity,
-            state: resolvedState,
-            postcode: resolvedPostcode,
-            country: "BD",
-          },
-          shipping: {
-            first_name: name,
-            last_name: lastName || name,
-            email: email || `${digits}@deencommerce.com`,
-            phone: digits,
-            address_1: address,
-            city: resolvedCity,
-            state: resolvedState,
-            postcode: resolvedPostcode,
-            country: "BD",
-          },
-          line_items: items.map((it: any) => ({
-            product_id: Number(it.productId),
-            variation_id: Number(it.variationId) || 0,
-            quantity: it.qty,
-          })),
-          // CRITICAL: send the cashback to Woo exactly like the live website does,
-          // so app-placed orders match website-placed orders. Without this the Woo
-          // order shows the full subtotal with no discount (exact-match break).
-          coupon_lines: [
-            ...(cashback > 0
-              ? [{
-                code: `CASHBACK${cashback}`,
-                discount_type: "fixed_cart",
-                amount: String(cashback),
-              }]
-              : []),
-            ...(bogo.discount > 0
-              ? [{
-                code: `BOGO${Math.round(bogo.discount)}`,
-                discount_type: "fixed_cart",
-                amount: String(Math.round(bogo.discount)),
-              }]
-              : []),
-            ...(couponDiscount > 0 && couponInfo
-              ? [{
-                code: String(couponInfo.code).toUpperCase(),
-                discount_type: couponInfo.type === "percent" ? "percent" : "fixed_cart",
-                amount: String(couponInfo.amount),
-              }]
-              : []),
-          ],
-          shipping_lines: [
-            {
-              method_id: area === "store_pickup" || area === "pickup" ? "local_pickup" : "flat_rate",
-              method_title: shippingMethodTitle,
-              total: String(delivery),
+      const list = await getCatalog();
+      const lines = items.map((it: any) => {
+        const prod = list.find((x) => x.id === it.productId);
+        if (!prod) throw new Error("A product in your bag is no longer available.");
+        const unit = prod.salePrice ?? prod.price;
+        return { productId: prod.id, name: prod.name, sku: prod.sku, size: it.size, qty: it.qty, unit, category: prod.category };
+      });
+      const subtotal = lines.reduce((s: number, l: any) => s + l.unit * l.qty, 0);
+      const shipFees = await getShippingFees();
+      const delivery =
+        area === "outside" || area === "outside_standard"
+          ? shipFees.outsideDhaka
+          : area === "dhaka_express"
+          ? shipFees.insideDhaka + config.expressSurcharge
+          : area === "store_pickup" || area === "pickup"
+          ? 0
+          : shipFees.insideDhaka;
+      const cashback = calculateCashback(subtotal).amount;
+      const bogo = calculateBogo(lines);
+      // Customer coupon (validated above). Apply fixed or percent discount on subtotal.
+      const couponDiscount = couponInfo
+        ? (couponInfo.type === "percent"
+            ? Math.round((subtotal * couponInfo.amount) / 100)
+            : Math.min(couponInfo.amount, subtotal))
+        : 0;
+
+      const orderNumStr = `DC-${++orderSeq.n}`;
+      // Pathao logistics is not auto-generated. Only set if ptc_consignment_id / consignmentId is provided (e.g. "DD220826MDKMP9").
+      const rawConsId = (body as any).ptc_consignment_id || (body as any).consignmentId || (body as any).pathaoConsignmentId;
+      const pathaoConsignmentId = rawConsId && String(rawConsId).trim().length > 0 ? String(rawConsId).trim() : undefined;
+      const pathaoTrackingUrl = pathaoConsignmentId ? `https://merchant.pathao.com/tracking?consignment_id=${pathaoConsignmentId}` : undefined;
+      const courier = pathaoConsignmentId ? "Pathao Courier" : (area === "store_pickup" || area === "pickup" ? "Store Pickup" : "Home Delivery");
+
+      const paymentTitle = payment === "cod" ? "Cash on delivery"
+        : payment === "bkash" || payment === "bkash-for-woocommerce" ? "bKash"
+        : payment === "nagad" ? "Nagad"
+        : payment === "sslcommerz" ? "SSLCommerz"
+        : "Online Payment";
+      const paymentStatus = payment === "cod" ? "Pending (Cash on Delivery)" : "Awaiting Payment";
+
+      const resolvedCity = String(city || (area === "outside" ? "Chittagong" : "Dhaka")).trim();
+      // CRITICAL: the live site stores Woo state as "BD-XX" codes, never the district
+      // name. Normalize whatever the app sends (name or code) to the canonical BD-XX.
+      const resolvedState = normalizeState(state || district || (area === "outside" ? "BD-10" : "BD-13"));
+      const resolvedPostcode = String(postcode || "1200").trim();
+
+      let wooId: number | undefined;
+      let wooNumber: string | undefined;
+      let wooPaymentUrl: string | undefined;
+      if (wooEnabled) {
+        try {
+          const shippingMethodTitle = area === "outside" || area === "outside_standard"
+            ? "Home Delivery (Outside Dhaka)"
+            : (area === "dhaka_express"
+              ? "Express Home Delivery"
+              : (area === "store_pickup" || area === "pickup" ? "Store Pickup" : "Home Delivery"));
+
+          const orderMeta: Array<{ key: string; value: string }> = [
+            { key: "city", value: resolvedCity },
+            { key: "state_district", value: resolvedState },
+            { key: "payment_type", value: payment.toUpperCase() },
+            { key: "payment_status", value: paymentStatus },
+            { key: "_shipping_phone_2", value: "" },
+            { key: "is_vat_exempt", value: "no" },
+            { key: "wt_pklist_order_language", value: "en_US" },
+            { key: "_gtm_server_side_order_sent", value: new Date().toISOString().slice(0, 19).replace("T", " ") },
+            { key: "_idempotency_key", value: idempotencyKey },
+            { key: "_natural_idempotency_key", value: naturalKey },
+          ];
+
+          if (pathaoConsignmentId) {
+            orderMeta.push(
+              { key: "courier", value: "Pathao Courier" },
+              { key: "ptc_consignment_id", value: pathaoConsignmentId },
+              { key: "pathao_consignment_id", value: pathaoConsignmentId },
+              { key: "pathao_tracking_url", value: pathaoTrackingUrl || "" }
+            );
+          }
+
+          const r = await pushWooOrder({
+            created_via: "checkout",
+            status: payment === "cod" ? "processing" : "on-hold",
+            payment_method: payment === "cod" ? "cod" : payment,
+            payment_method_title: paymentTitle,
+            set_paid: payment !== "cod",
+            billing: {
+              first_name: name,
+              last_name: lastName || name,
+              email: email || `${digits}@deencommerce.com`,
+              phone: digits,
+              address_1: address,
+              city: resolvedCity,
+              state: resolvedState,
+              postcode: resolvedPostcode,
+              country: "BD",
             },
-          ],
-          meta_data: orderMeta,
-          transaction_id: trxId ? String(trxId) : undefined,
-          customer_note: `City: ${resolvedCity} | District: ${resolvedState} | Delivery: ${shippingMethodTitle} (৳${delivery})${pathaoConsignmentId ? ` | Pathao: ${pathaoConsignmentId}` : ""} | Payment: ${paymentTitle}`,
+            shipping: {
+              first_name: name,
+              last_name: lastName || name,
+              email: email || `${digits}@deencommerce.com`,
+              phone: digits,
+              address_1: address,
+              city: resolvedCity,
+              state: resolvedState,
+              postcode: resolvedPostcode,
+              country: "BD",
+            },
+            line_items: items.map((it: any) => ({
+              product_id: Number(it.productId),
+              variation_id: Number(it.variationId) || 0,
+              quantity: it.qty,
+            })),
+            coupon_lines: [
+              ...(cashback > 0
+                ? [{
+                  code: `CASHBACK${cashback}`,
+                  discount_type: "fixed_cart",
+                  amount: String(cashback),
+                }]
+                : []),
+              ...(bogo.discount > 0
+                ? [{
+                  code: `BOGO${Math.round(bogo.discount)}`,
+                  discount_type: "fixed_cart",
+                  amount: String(Math.round(bogo.discount)),
+                }]
+                : []),
+              ...(couponDiscount > 0 && couponInfo
+                ? [{
+                  code: String(couponInfo.code).toUpperCase(),
+                  discount_type: couponInfo.type === "percent" ? "percent" : "fixed_cart",
+                  amount: String(couponInfo.amount),
+                }]
+                : []),
+            ],
+            shipping_lines: [
+              {
+                method_id: area === "store_pickup" || area === "pickup" ? "local_pickup" : "flat_rate",
+                method_title: shippingMethodTitle,
+                total: String(delivery),
+              },
+            ],
+            meta_data: orderMeta,
+            transaction_id: trxId ? String(trxId) : undefined,
+            customer_note: `City: ${resolvedCity} | District: ${resolvedState} | Delivery: ${shippingMethodTitle} (৳${delivery})${pathaoConsignmentId ? ` | Pathao: ${pathaoConsignmentId}` : ""} | Payment: ${paymentTitle}`,
+          });
+          wooId = r.id;
+          wooNumber = r.number;
+          wooPaymentUrl = r.paymentUrl;
+        } catch (e) {
+          console.error("[gateway] Woo order push failed:", (e as Error).message);
+        }
+      }
+
+      const order: any = {
+        id: `d-${Date.now()}`,
+        number: orderNumStr,
+        name: String(name).trim().slice(0, 50).replace(/<[^>]*>/g, ""), // SEC-5: cap length, strip HTML
+        phone: digits,
+        address: String(address).trim().slice(0, 500).replace(/<[^>]*>/g, ""), // SEC-5: cap length, strip HTML
+        city: resolvedCity,
+        district: resolvedState,
+        state: resolvedState,
+        postcode: resolvedPostcode,
+        area,
+        payment,
+        paymentTitle,
+        paymentStatus,
+        lines,
+        subtotal,
+        cashback,
+        bogoDiscount: bogo.discount,
+        bogoFreeIndexes: bogo.freeIndexes,
+        couponCode: couponInfo?.code || null,
+        couponDiscount,
+        delivery,
+        total: Math.max(0, subtotal - cashback - bogo.discount - couponDiscount) + delivery,
+        status: "received",
+        courier,
+        pathaoConsignmentId,
+        pathaoTrackingUrl,
+        createdAt: new Date().toISOString(),
+        idempotencyKey,
+        wooId,
+        wooNumber,
+        wooPaymentUrl,
+        trxId: trxId ? String(trxId) : undefined,
+      };
+      if (guestToken) {
+        const session = guestSessions.find((s) => s.token === guestToken);
+        if (session) {
+          session.orderId = wooId;
+          order.guestToken = guestToken;
+        }
+      }
+      // Remember this phone so returning guests can be recognized & prompted to register.
+      recordGuestPurchase(digits, String(name).trim());
+      orders.unshift(order);
+      saveOrders();
+
+      // Trigger transactional push notification if device push token matches phone
+      const userTokens = Array.from(pushTokens.values())
+        .filter((t) => t.phone === digits)
+        .map((t) => t.token);
+
+      if (userTokens.length > 0) {
+        void sendExpoPushNotifications(
+          userTokens.map((to) => ({
+            to,
+            title: `📦 Order Confirmed: #${order.wooNumber || order.number}`,
+            body: `Thank you, ${order.name}! Total: ৳${order.total.toLocaleString("en-BD")}.${order.pathaoConsignmentId ? ` Pathao: ${order.pathaoConsignmentId}` : ""}`,
+            data: { orderId: order.id, orderNumber: order.wooNumber || order.number, actionUrl: "/(tabs)/orders" },
+            sound: "default" as const,
+            badge: 1,
+          }))
+        );
+      }
+
+      return order;
+    })();
+
+    _inFlightOrders.set(idempotencyKey, orderPromise);
+    _inFlightOrders.set(naturalKey, orderPromise);
+
+    try {
+      const order = await orderPromise;
+      _recordOrder(idempotencyKey, order);
+      _recordOrder(naturalKey, order);
+      return reply.code(201).send(order);
+    } catch (err: any) {
+      if (err?.message?.startsWith("INVALID_COUPON:")) {
+        return reply.code(422).send({
+          error: "INVALID_COUPON",
+          message: err.message.replace("INVALID_COUPON: ", ""),
         });
-        wooId = r.id;
-        wooNumber = r.number;
-        wooPaymentUrl = r.paymentUrl;
-      } catch (e) {
-        console.error("[gateway] Woo order push failed:", (e as Error).message);
+      }
+      return reply.code(500).send({
+        error: "ORDER_FAILED",
+        message: err?.message || "Order creation failed",
+      });
+    } finally {
+      _inFlightOrders.delete(idempotencyKey);
+      _inFlightOrders.delete(naturalKey);
+    }
+  });
+
+  /* ---- reconcile order by idempotency key (Multi-Gateway Failover Safety) ---- */
+  app.get("/v1/deen/orders/reconcile", async (req, reply) => {
+    const key = (req.query as any).key as string | undefined;
+    const phone = (req.query as any).phone as string | undefined;
+    if (!key && !phone) {
+      return reply.code(400).send({ error: "MISSING_PARAM", message: "key or phone required for reconciliation." });
+    }
+
+    // 1. Check in-flight orders
+    if (key && _inFlightOrders.has(key)) {
+      try {
+        const inFlightOrder = await _inFlightOrders.get(key);
+        if (inFlightOrder) {
+          return reply.code(200).send({ reconciled: true, order: inFlightOrder });
+        }
+      } catch {}
+    }
+
+    // 2. Check in-memory idempotency store
+    if (key) {
+      const dup = _getDuplicateOrder(key);
+      if (dup) {
+        return reply.code(200).send({ reconciled: true, order: dup });
       }
     }
 
-    const order: any = {
-      id: `d-${Date.now()}`,
-      number: orderNumStr,
-      name: String(name).trim().slice(0, 50).replace(/<[^>]*>/g, ""), // SEC-5: cap length, strip HTML
-      phone: digits,
-      address: String(address).trim().slice(0, 500).replace(/<[^>]*>/g, ""), // SEC-5: cap length, strip HTML
-      city: resolvedCity,
-      district: resolvedState,
-      state: resolvedState,
-      postcode: resolvedPostcode,
-      area,
-      payment,
-      paymentTitle,
-      paymentStatus,
-      lines,
-      subtotal,
-      cashback,
-      bogoDiscount: bogo.discount,
-      bogoFreeIndexes: bogo.freeIndexes,
-      couponCode: couponInfo?.code || null,
-      couponDiscount,
-      delivery,
-      total: Math.max(0, subtotal - cashback - bogo.discount - couponDiscount) + delivery,
-      status: "received",
-      courier,
-      pathaoConsignmentId,
-      pathaoTrackingUrl,
-      createdAt: new Date().toISOString(),
-      wooId,
-      wooNumber,
-      wooPaymentUrl,
-      trxId: trxId ? String(trxId) : undefined,
-    };
-    if (guestToken) {
-      const session = guestSessions.find((s) => s.token === guestToken);
-      if (session) {
-        session.orderId = wooId;
-        order.guestToken = guestToken;
+    // 3. Check memory orders array
+    if (key) {
+      const found = orders.find((o) => o.idempotencyKey === key || o.trxId === key || o.id === key);
+      if (found) {
+        return reply.code(200).send({ reconciled: true, order: found });
       }
     }
-    // Remember this phone so returning guests can be recognized & prompted to register.
-    recordGuestPurchase(digits, String(name).trim());
-    orders.unshift(order);
-    saveOrders();
 
-    // Trigger transactional push notification if device push token matches phone
-    const userTokens = Array.from(pushTokens.values())
-      .filter((t) => t.phone === digits)
-      .map((t) => t.token);
-
-    if (userTokens.length > 0) {
-      void sendExpoPushNotifications(
-        userTokens.map((to) => ({
-          to,
-          title: `📦 Order Confirmed: #${order.wooNumber || order.number}`,
-          body: `Thank you, ${order.name}! Total: ৳${order.total.toLocaleString("en-BD")}.${order.pathaoConsignmentId ? ` Pathao: ${order.pathaoConsignmentId}` : ""}`,
-          data: { orderId: order.id, orderNumber: order.wooNumber || order.number, actionUrl: "/(tabs)/orders" },
-          sound: "default" as const,
-          badge: 1,
-        }))
-      );
+    // 4. If phone is provided, check if a recent order exists matching key or phone within 5 min
+    if (phone) {
+      const digits = phone.replace(/[^0-9]/g, "");
+      const recent = orders.find((o) => {
+        if (o.phone !== digits) return false;
+        const age = Date.now() - new Date(o.createdAt).getTime();
+        return age < _IDEMPOTENCY_WINDOW_MS;
+      });
+      if (recent && key && (recent.idempotencyKey === key || recent.id === key)) {
+        return reply.code(200).send({ reconciled: true, order: recent });
+      }
     }
 
-    _recordOrder(idempotencyKey, order);
-    return reply.code(201).send(order);
+    return reply.code(200).send({ reconciled: false, message: "Order not found." });
   });
 
   /* ---- list orders (scoped to phone + validated session token) ---- */
@@ -2198,6 +2293,16 @@ export async function registerDeenRoutes(app: FastifyInstance) {
           });
         }
       }
+    }
+
+    const existingTicket = returns.find(
+      (r) =>
+        (b.id && r.id === b.id) ||
+        (b.ticketNumber && r.ticketNumber === b.ticketNumber) ||
+        (b.orderId && r.orderId === b.orderId && b.type === r.type && b.reason === r.reason)
+    );
+    if (existingTicket) {
+      return reply.code(200).send(existingTicket);
     }
 
     const ticket = {
