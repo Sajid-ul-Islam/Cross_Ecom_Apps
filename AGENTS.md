@@ -112,3 +112,19 @@ npm run typecheck:all
 # Run automated unit tests (Cashback, BOGO, Phone Validation)
 npm test
 ```
+
+---
+
+## 7. Mandatory Web & Mobile Parity Rules (`apps/web` ⇄ `apps/mobile`)
+
+1. **Strict Feature & UX Synchronization**:
+   - The web app mobile view (`apps/web` on mobile viewports `< 768px`) must **exactly replicate the mobile app front view, layout, hierarchy, and functionality**.
+   - **Any edit or feature added to the Mobile App must simultaneously be implemented on the Web App and its mobile view.**
+2. **Synchronized Navigation Semantics**:
+   - Both Web Mobile View and Native Mobile App declare the **5 standard navigation tabs**:
+     `[ 🏠 Home ]  [ 🗂️ Categories ]  [ 🛒 Cart (live badge) ]  [ 📦 Orders ]  [ 👤 Profile ]`
+3. **Synchronized Dynamic Campaigns**:
+   - Both apps fetch active promotional state from `GET /v1/deen/campaigns` and automatically trigger the active promo banner (e.g. `🔥 FLAT UP TO 50% OFF` or Cashback tier progress).
+4. **Synchronized Customer Profiles & Auth**:
+   - Both apps offer segmented **[ SIGN IN ]** vs **[ CREATE ACCOUNT ]** auth flows with inline Bangladeshi 11-digit phone validation (`01XXXXXXXXX`).
+   - Both apps feature the 64-district selector, sizing preferences, recent orders with live Pathao tracking, and direct WhatsApp Concierge hotline (`https://wa.me/8801952700500`).

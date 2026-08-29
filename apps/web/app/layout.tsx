@@ -3,6 +3,8 @@ import "./globals.css";
 import { CartProvider } from "@/lib/cart";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import DynamicCampaignBanner from "@/components/DynamicCampaignBanner";
+import MobileBottomNav from "@/components/MobileBottomNav";
 
 export const metadata: Metadata = {
   title: {
@@ -48,9 +50,11 @@ export default function RootLayout({
       </head>
       <body>
         <CartProvider>
+          <DynamicCampaignBanner />
           <Header />
           <main className="page-content">{children}</main>
           <Footer />
+          <MobileBottomNav />
         </CartProvider>
       </body>
     </html>

@@ -1,0 +1,608 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { BD_DISTRICTS, type BdDistrict } from "@/lib/districts";
+import { API_URL, fetchOrders, type OrderResult } from "@/lib/api";
+
+const PROFILE_STORAGE_KEY = "deen_web_user_profile";
+
+interface UserProfile {
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  city: string;
+  district: string;
+  jeansSize: string;
+  topSize: string;
+  isGuest: boolean;
+  role: "customer" | "admin";
+}
+
+const DEFAULT_PROFILE: UserProfile = {
+  name: "",
+  phone: "",
+  email: "",
+  address: "",
+  city: "Dhaka",
+  district: "BD-13",
+  jeansSize: "32",
+  topSize: "L",
+  isGuest: true,
+  role: "customer",
+};
+
+export default function ProfilePage() {
+  const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
+  const [orders, setOrders] = useState<OrderResult[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [savedMessage, setSavedMessage] = useState("");
+
+  // Auth modal
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+  const [loginIdent, setLoginIdent] = useState("");
+  const [loginPass, setLoginPass] = useState("");
+  const [signupName, setSignupName] = useState("");
+  const [signupPhone, setSignupPhone] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPass, setSignupPass] = useState("");
+  const [authNotice, setAuthNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [authSubmitting, setAuthSubmitting] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(PROFILE_STORAGE_KEY);
+      if (saved) {
+        setProfile(JSON.parse(saved));
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (profile.phone) {
+      setLoadingOrders(true);
+      fetchOrders(profile.phone)
+        .then((res) => setOrders(res))
+        .finally(() => setLoadingOrders(false));
+    }
+  }, [profile.phone]);
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+      setSavedMessage("✓ Profile and sizing preferences saved successfully!");
+      setTimeout(() => setSavedMessage(""), 3500);
+    } catch {}
+  };
+
+  const handleLogout = () => {
+    const guest: UserProfile = { ...DEFAULT_PROFILE, isGuest: true };
+    setProfile(guest);
+    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(guest));
+    setOrders([]);
+  };
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginIdent.trim() || !loginPass) {
+      setAuthNotice({ type: "error", text: "Please enter your username and password." });
+      return;
+    }
+    setAuthSubmitting(true);
+    try {
+      const res = await fetch(`${API_URL}/v1/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: loginIdent.trim(), password: loginPass }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const role = data.role === "admin" ? "admin" : "customer";
+        const updated: UserProfile = {
+          ...profile,
+          name: data.name || loginIdent.trim(),
+          email: data.email || "",
+          role,
+          isGuest: false,
+        };
+        setProfile(updated);
+        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+        setAuthNotice({ type: "success", text: `Welcome back, ${data.name || loginIdent}!` });
+        setTimeout(() => {
+          setAuthSubmitting(false);
+          setAuthModalOpen(false);
+        }, 600);
+      } else {
+        setAuthSubmitting(false);
+        setAuthNotice({ type: "error", text: data.message || "Invalid credentials. Please try again." });
+      }
+    } catch {
+      setAuthSubmitting(false);
+      setAuthNotice({ type: "error", text: "Network error during sign in." });
+    }
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanPhone = signupPhone.replace(/[^0-9]/g, "");
+    if (!signupName.trim()) {
+      setAuthNotice({ type: "error", text: "Please enter your full name." });
+      return;
+    }
+    if (cleanPhone.length !== 11 || !cleanPhone.startsWith("01")) {
+      setAuthNotice({ type: "error", text: "Valid 11-digit Bangladeshi mobile number required (01XXXXXXXXX)." });
+      return;
+    }
+    setAuthSubmitting(true);
+    try {
+      const res = await fetch(`${API_URL}/v1/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: signupName.trim(), phone: cleanPhone, email: signupEmail.trim() }),
+      });
+      const data = await res.json();
+      const updated: UserProfile = {
+        ...profile,
+        name: signupName.trim(),
+        phone: cleanPhone,
+        email: signupEmail.trim(),
+        isGuest: false,
+        role: "customer",
+      };
+      setProfile(updated);
+      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+      setAuthNotice({ type: "success", text: `Welcome to DEEN Club, ${signupName.trim()}!` });
+      setTimeout(() => {
+        setAuthSubmitting(false);
+        setAuthModalOpen(false);
+      }, 600);
+    } catch {
+      setAuthSubmitting(false);
+      setAuthNotice({ type: "error", text: "Network error during registration." });
+    }
+  };
+
+  const currentDistrict = BD_DISTRICTS.find((d) => d.code === profile.district) || BD_DISTRICTS[0];
+  const isPhoneValid = signupPhone.replace(/[^0-9]/g, "").length === 11 && signupPhone.startsWith("01");
+
+  return (
+    <div className="container" style={{ paddingBottom: 80 }}>
+      {savedMessage && <div className="alert alert--success">{savedMessage}</div>}
+
+      {/* 1. Account Hero Identity Card */}
+      <div className="profile-hero-card">
+        <div className="profile-hero-top">
+          <div className="profile-avatar">
+            {profile.role === "admin" ? "👑" : profile.isGuest ? "👤" : (profile.name ? profile.name.charAt(0).toUpperCase() : "D")}
+          </div>
+          <div className="profile-identity">
+            <div className="profile-badge-row">
+              <span className={`profile-role-badge ${profile.role === "admin" ? "profile-role-badge--admin" : profile.isGuest ? "profile-role-badge--guest" : "profile-role-badge--member"}`}>
+                {profile.role === "admin" ? "👑 STORE ADMINISTRATOR" : profile.isGuest ? "🛍️ GUEST SHOPPER" : "💎 DEEN CLUB MEMBER"}
+              </span>
+            </div>
+            <h2 className="profile-name">
+              {profile.role === "admin" ? (profile.name || "Store Administrator") : profile.isGuest ? "Guest User" : (profile.name || "DEEN Customer")}
+            </h2>
+            <p className="profile-sub">
+              {profile.phone ? `📞 ${profile.phone}` : profile.email ? `✉️ ${profile.email}` : "Fast Guest Checkout Active"}
+            </p>
+          </div>
+        </div>
+
+        {/* Quick Stats Bar */}
+        <div className="profile-stats-bar">
+          <Link href="/orders" className="profile-stat-item">
+            <span className="profile-stat-val">📦 {orders.length}</span>
+            <span className="profile-stat-lbl">Orders</span>
+          </Link>
+          <div className="profile-stat-divider" />
+          <div className="profile-stat-item">
+            <span className="profile-stat-val">📍 {profile.city || "Dhaka"}</span>
+            <span className="profile-stat-lbl">District</span>
+          </div>
+          <div className="profile-stat-divider" />
+          <Link href="/shop" className="profile-stat-item">
+            <span className="profile-stat-val">⚡ Fast</span>
+            <span className="profile-stat-lbl">1-Tap Checkout</span>
+          </Link>
+        </div>
+
+        {/* Auth CTA Buttons */}
+        <div className="profile-auth-actions">
+          {profile.isGuest ? (
+            <>
+              <button
+                type="button"
+                className="btn btn--primary"
+                style={{ flex: 1.2, padding: "10px 16px", fontSize: 12, fontWeight: 800 }}
+                onClick={() => {
+                  setAuthMode("signup");
+                  setAuthNotice(null);
+                  setAuthModalOpen(true);
+                }}
+              >
+                ✨ CREATE ACCOUNT
+              </button>
+              <button
+                type="button"
+                className="btn btn--outline"
+                style={{ flex: 1, padding: "10px 16px", fontSize: 12, fontWeight: 800 }}
+                onClick={() => {
+                  setAuthMode("signin");
+                  setAuthNotice(null);
+                  setAuthModalOpen(true);
+                }}
+              >
+                🔑 SIGN IN
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="btn btn--outline"
+              style={{ width: "100%", borderColor: "var(--crimson)", color: "var(--crimson)", fontSize: 12, fontWeight: 800 }}
+              onClick={handleLogout}
+            >
+              LOG OUT
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 2. Recent Orders & Live Pathao Tracking */}
+      <div className="profile-section-card">
+        <div className="profile-section-header">
+          <h3 className="profile-section-title">📦 RECENT ORDERS & LOGISTICS TRACKING</h3>
+          <Link href="/orders" className="profile-section-link">View All →</Link>
+        </div>
+
+        {loadingOrders ? (
+          <p style={{ color: "var(--sub)", fontSize: 13 }}>Checking orders…</p>
+        ) : orders.length === 0 ? (
+          <p style={{ color: "var(--sub)", fontSize: 13 }}>
+            No orders found yet for this phone number.
+          </p>
+        ) : (
+          <div className="orders-list" style={{ marginTop: 12 }}>
+            {orders.slice(0, 3).map((o) => (
+              <div key={o.id} className="order-item-card">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span style={{ fontWeight: 800, fontSize: 13 }}>Order #{o.number || o.id}</span>
+                  <span className={`status-pill status-pill--${o.status.toLowerCase()}`}>
+                    {o.status.toUpperCase()}
+                  </span>
+                </div>
+                <div style={{ fontSize: 12, color: "var(--sub)", marginBottom: 8 }}>
+                  Total: <strong>৳{o.total.toLocaleString()}</strong> · {o.paymentTitle || "Cash on Delivery"}
+                </div>
+                {o.pathaoConsignmentId ? (
+                  <a
+                    href={o.pathaoTrackingUrl || `https://merchant.pathao.com/tracking?consignment_id=${o.pathaoConsignmentId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="pathao-track-badge"
+                  >
+                    🚚 Track Pathao: {o.pathaoConsignmentId} ↗
+                  </a>
+                ) : (
+                  <span style={{ fontSize: 11, color: "var(--faint)" }}>Preparing Dispatch</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 3. Contact & Delivery Address Form */}
+      <form onSubmit={handleSave} className="profile-section-card">
+        <div className="profile-section-header">
+          <h3 className="profile-section-title">👤 CONTACT & DEFAULT DELIVERY ADDRESS</h3>
+        </div>
+
+        <div className="form-grid">
+          <div className="form-group">
+            <label className="form-label">Full Name *</label>
+            <input
+              type="text"
+              className="form-input"
+              value={profile.name}
+              onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+              placeholder="e.g. Tanvir Ahmed"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Bangladeshi Mobile Number *</label>
+            <input
+              type="tel"
+              className="form-input"
+              value={profile.phone}
+              onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+              placeholder="017XXXXXXXX"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Email Address (Optional)</label>
+            <input
+              type="email"
+              className="form-input"
+              value={profile.email}
+              onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+              placeholder="name@example.com"
+            />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">District (All 64 BD Districts) *</label>
+            <select
+              className="form-input"
+              value={profile.district}
+              onChange={(e) => {
+                const found = BD_DISTRICTS.find((d) => d.code === e.target.value);
+                setProfile({
+                  ...profile,
+                  district: e.target.value,
+                  city: found ? found.name : profile.city,
+                });
+              }}
+            >
+              {BD_DISTRICTS.map((d) => (
+                <option key={d.code} value={d.code}>
+                  {d.name} ({d.code})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">City / Thana / Area *</label>
+            <input
+              type="text"
+              className="form-input"
+              value={profile.city}
+              onChange={(e) => setProfile({ ...profile, city: e.target.value })}
+              placeholder="e.g. Mirpur, Banani, Agrabad"
+            />
+          </div>
+
+          <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+            <label className="form-label">Street Address *</label>
+            <textarea
+              className="form-input"
+              rows={3}
+              value={profile.address}
+              onChange={(e) => setProfile({ ...profile, address: e.target.value })}
+              placeholder="House #, Road #, Sector / Area details..."
+            />
+          </div>
+        </div>
+
+        {/* 4. Fit & Sizing Preferences */}
+        <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid var(--border-light)" }}>
+          <h4 style={{ fontSize: 13, fontWeight: 800, color: "var(--ink)", marginBottom: 12 }}>
+            📐 FIT & SIZING PREFERENCES
+          </h4>
+
+          <div style={{ marginBottom: 16 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, display: "block", marginBottom: 8 }}>
+              Jeans Waist Size (Inches):
+            </span>
+            <div className="size-chips-wrap">
+              {["28", "30", "32", "34", "36", "38"].map((sz) => (
+                <button
+                  key={sz}
+                  type="button"
+                  className={`size-chip-btn ${profile.jeansSize === sz ? "size-chip-btn--active" : ""}`}
+                  onClick={() => setProfile({ ...profile, jeansSize: sz })}
+                >
+                  {sz}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <span style={{ fontSize: 12, fontWeight: 700, display: "block", marginBottom: 8 }}>
+              Shirt / Panjabi / Tee Size:
+            </span>
+            <div className="size-chips-wrap">
+              {["S", "M", "L", "XL", "XXL"].map((sz) => (
+                <button
+                  key={sz}
+                  type="button"
+                  className={`size-chip-btn ${profile.topSize === sz ? "size-chip-btn--active" : ""}`}
+                  onClick={() => setProfile({ ...profile, topSize: sz })}
+                >
+                  {sz}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          className="btn btn--primary"
+          style={{ marginTop: 24, width: "100%", padding: "14px", fontWeight: 800 }}
+        >
+          SAVE PREFERENCES
+        </button>
+      </form>
+
+      {/* 5. DEEN Retail Outlets & WhatsApp Concierge */}
+      <div className="profile-section-card">
+        <div className="profile-section-header">
+          <h3 className="profile-section-title">🏬 DEEN RETAIL OUTLETS</h3>
+        </div>
+
+        <div className="outlets-grid">
+          <div className="outlet-box">
+            <strong>📍 Mirpur 12 (Flagship Outlet)</strong>
+            <p>2nd Floor, Ramzannesa Super Market, Mirpur 12, Dhaka-1216</p>
+          </div>
+          <div className="outlet-box">
+            <strong>📍 Wari Outlet (Dhaka South)</strong>
+            <p>Ground Floor, 41 A.K Famous Tower, Rankin St, Wari, Dhaka-1203</p>
+          </div>
+          <div className="outlet-box">
+            <strong>📍 Cumilla Outlet</strong>
+            <p>4th Floor, QR Tower, Badurtola, Cumilla</p>
+          </div>
+          <div className="outlet-box">
+            <strong>📍 Sylhet Outlet</strong>
+            <p>Block-A, House-54/2, Kumar Para, Sylhet</p>
+          </div>
+        </div>
+
+        <a
+          href="https://wa.me/8801952700500"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="whatsapp-hotline-card"
+        >
+          <div style={{ fontSize: 24 }}>💬</div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 13 }}>Customer Hotline & WhatsApp: +880 1952-700500</div>
+            <div style={{ fontSize: 11, color: "var(--sub)" }}>Open 10:00 AM – 10:00 PM Daily · Tap to Chat on WhatsApp</div>
+          </div>
+        </a>
+      </div>
+
+      {/* Auth Modal */}
+      {authModalOpen && (
+        <div className="modal-overlay" onClick={() => setAuthModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-tabs">
+                <button
+                  type="button"
+                  className={`modal-tab ${authMode === "signin" ? "modal-tab--active" : ""}`}
+                  onClick={() => {
+                    setAuthMode("signin");
+                    setAuthNotice(null);
+                  }}
+                >
+                  SIGN IN
+                </button>
+                <button
+                  type="button"
+                  className={`modal-tab ${authMode === "signup" ? "modal-tab--active" : ""}`}
+                  onClick={() => {
+                    setAuthMode("signup");
+                    setAuthNotice(null);
+                  }}
+                >
+                  CREATE ACCOUNT
+                </button>
+              </div>
+              <button type="button" className="modal-close" onClick={() => setAuthModalOpen(false)}>
+                ✕
+              </button>
+            </div>
+
+            {authNotice && (
+              <div className={`alert alert--${authNotice.type === "success" ? "success" : "error"}`}>
+                {authNotice.text}
+              </div>
+            )}
+
+            {authMode === "signin" ? (
+              <form onSubmit={handleSignIn} className="modal-form">
+                <div className="form-group">
+                  <label className="form-label">Username or Email</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={loginIdent}
+                    onChange={(e) => setLoginIdent(e.target.value)}
+                    placeholder="your username"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Password</label>
+                  <input
+                    type="password"
+                    className="form-input"
+                    value={loginPass}
+                    onChange={(e) => setLoginPass(e.target.value)}
+                    placeholder="your password"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="btn btn--primary"
+                  style={{ width: "100%", padding: 12, marginTop: 10, fontWeight: 800 }}
+                  disabled={authSubmitting}
+                >
+                  {authSubmitting ? "Signing in…" : "SIGN IN TO YOUR ACCOUNT"}
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleSignUp} className="modal-form">
+                <div className="form-group">
+                  <label className="form-label">Full Name *</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={signupName}
+                    onChange={(e) => setSignupName(e.target.value)}
+                    placeholder="e.g. Tanvir Ahmed"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <label className="form-label">Bangladeshi Mobile Number *</label>
+                    {signupPhone.length > 0 && (
+                      <span style={{ fontSize: 11, fontWeight: 700, color: isPhoneValid ? "var(--emerald)" : "var(--crimson)" }}>
+                        {isPhoneValid ? "✓ Valid 11-digit BD number" : "11 digits required"}
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    type="tel"
+                    className="form-input"
+                    value={signupPhone}
+                    onChange={(e) => setSignupPhone(e.target.value)}
+                    placeholder="01XXXXXXXXX"
+                    maxLength={11}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Email Address (Optional)</label>
+                  <input
+                    type="email"
+                    className="form-input"
+                    value={signupEmail}
+                    onChange={(e) => setSignupEmail(e.target.value)}
+                    placeholder="name@example.com"
+                  />
+                </div>
+                <div className="perks-banner">
+                  <strong>✨ MEMBERSHIP PRIVILEGES:</strong>
+                  <p>• 1-Tap checkout across all web & mobile devices<br />• Live Pathao parcel tracking<br />• Saved sizing preferences</p>
+                </div>
+                <button
+                  type="submit"
+                  className="btn btn--primary"
+                  style={{ width: "100%", padding: 12, marginTop: 10, fontWeight: 800 }}
+                  disabled={authSubmitting}
+                >
+                  {authSubmitting ? "Creating account…" : "CREATE DEEN ACCOUNT"}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
