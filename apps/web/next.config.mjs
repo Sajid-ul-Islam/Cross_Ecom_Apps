@@ -5,7 +5,17 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "deencommerce.com",
-        pathname: "/wp-content/**",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "secure.gravatar.com",
+        pathname: "/**",
       },
     ],
   },

@@ -50,7 +50,7 @@ export default async function HomePage() {
             <span>✦</span>
             <span>দেশের প্রথম ডেনিম ব্র্যান্ড · DEEN</span>
           </div>
-          <p className="hero__tagline">Empathetic Men's Lifestyle Fashion in Bangladesh</p>
+          <p className="hero__tagline">Empathetic Men&apos;s Lifestyle Fashion in Bangladesh</p>
           <h1 className="hero__title">
             Raw Washed.<br />Selvedge Heritage.
           </h1>

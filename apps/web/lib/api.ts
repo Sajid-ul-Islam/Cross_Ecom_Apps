@@ -222,7 +222,7 @@ export async function initiatePayment(
   orderId: string,
   paymentMethod: "bkash" | "nagad" | "card" | "online",
   amount?: number
-): Promise<{ success: boolean; transaction?: any; merchantNumber: string; instruction: string; verificationUrl: string }> {
+): Promise<{ success: boolean; transaction?: Record<string, unknown>; merchantNumber: string; instruction: string; verificationUrl: string }> {
   const res = await apiFetch(`${API_URL}/v1/deen/payments/initiate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

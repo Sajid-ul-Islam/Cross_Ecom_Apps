@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { BD_DISTRICTS, type BdDistrict } from "@/lib/districts";
+import { BD_DISTRICTS } from "@/lib/districts";
 import { API_URL, fetchOrders, type OrderResult } from "@/lib/api";
 
 const PROFILE_STORAGE_KEY = "deen_web_user_profile";
@@ -47,7 +47,6 @@ export default function ProfilePage() {
   const [signupName, setSignupName] = useState("");
   const [signupPhone, setSignupPhone] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
-  const [signupPass, setSignupPass] = useState("");
   const [authNotice, setAuthNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [authSubmitting, setAuthSubmitting] = useState(false);
 
@@ -143,7 +142,7 @@ export default function ProfilePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: signupName.trim(), phone: cleanPhone, email: signupEmail.trim() }),
       });
-      const data = await res.json();
+      await res.json();
       const updated: UserProfile = {
         ...profile,
         name: signupName.trim(),
@@ -165,7 +164,6 @@ export default function ProfilePage() {
     }
   };
 
-  const currentDistrict = BD_DISTRICTS.find((d) => d.code === profile.district) || BD_DISTRICTS[0];
   const isPhoneValid = signupPhone.replace(/[^0-9]/g, "").length === 11 && signupPhone.startsWith("01");
 
   return (
