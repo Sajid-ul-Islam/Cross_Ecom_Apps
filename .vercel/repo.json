@@ -1,0 +1,11 @@
+{
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_8qSEBgb47GzfEwtEZru0EhM88Kkq",
+      "name": "deen-commerce",
+      "directory": "apps/web",
+      "orgId": "team_XvSMzVJHRCbzjbtThmqdDquN"
+    }
+  ]
+}
