@@ -134,6 +134,11 @@ export interface OrderPayload {
   city?: string;
   district?: string;
   state?: string;
+  postcode?: string;
+  deliverySlot?: string;
+  deliveryNotes?: string;
+  coupon?: string;
+  isGuestOrder?: boolean;
   guestToken?: string;
   idempotencyKey?: string;
 }
@@ -338,13 +343,36 @@ export async function fetchCategoryCovers(): Promise<Record<string, string>> {
   return {};
 }
 
+export interface ActiveCampaignState {
+  success: boolean;
+  activeCampaign: {
+    type: "sale" | "cashback" | "none";
+    badge: string;
+    title: string;
+    subtitle: string;
+    discountRange?: string;
+    bannerText?: string;
+    actionUrl?: string;
+    actionLabel?: string;
+  } | null;
+  cashback: {
+    enabled: boolean;
+    tier1?: { minSpend: number; amount: number };
+    tier2?: { minSpend: number; amount: number };
+  };
+  sale: {
+    enabled: boolean;
+    title: string;
+    subtitle: string;
+    badge: string;
+    discountRange: string;
+  };
+}
+
 /**
  * Fetches live campaign status from REST API (/v1/deen/campaigns).
  */
-export async function fetchCampaigns(): Promise<{
-  cashback: { enabled: boolean; tiers: Record<string, { minSpend: number; cashback: number }> };
-  sale: { enabled: boolean; title: string; subtitle: string; badge: string; discountRange: string };
-} | null> {
+export async function fetchCampaigns(): Promise<ActiveCampaignState | null> {
   try {
     const res = await apiFetch(`${API_URL}/v1/deen/campaigns`, {
       cache: "no-store",
@@ -352,6 +380,23 @@ export async function fetchCampaigns(): Promise<{
     if (res.ok) return res.json();
   } catch {}
   return null;
+}
+
+/**
+ * Fetches calculated cashback from REST API (/v1/deen/cashback).
+ * Returns 0 if the offer is disabled on the gateway.
+ */
+export async function fetchCashback(subtotal: number): Promise<{ amount: number; nextTierAt: number | null }> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/cashback?subtotal=${Math.round(subtotal)}`, {
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { amount: data.cashback || 0, nextTierAt: data.nextTierAt ?? null };
+    }
+  } catch {}
+  return { amount: 0, nextTierAt: null };
 }
 
 /**

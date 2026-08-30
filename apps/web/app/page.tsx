@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { fetchProducts } from "@/lib/api";
+import { fetchProducts, fetchCampaigns, bdt } from "@/lib/api";
 import ProductCard from "@/components/ProductCard";
-import { bdt } from "@/lib/api";
 
 export const metadata = {
   title: "DEEN - দেশের প্রথম ডেনিম ব্র্যান্ড | Official Online Store",
@@ -31,10 +30,14 @@ const CATEGORY_IMAGES: Record<string, { img: string; label: string }> = {
 };
 
 export default async function HomePage() {
-  const [featured, newArrivals] = await Promise.all([
+  const [featured, newArrivals, campaign] = await Promise.all([
     fetchProducts({ per_page: 8, sort: "price-desc" }),
     fetchProducts({ per_page: 4, sort: "new" }),
+    fetchCampaigns(),
   ]);
+
+  const isCashback = campaign?.cashback?.enabled;
+  const activePromo = campaign?.activeCampaign;
 
   return (
     <>
@@ -70,36 +73,73 @@ export default async function HomePage() {
       </section>
 
       <div className="container">
-        {/* ── Instant Cashback Offer ─────────────────── */}
-        <div
-          style={{
-            background: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #172554 100%)",
-            borderRadius: "var(--radius)",
-            padding: "22px 30px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: 16,
-            marginBottom: 48,
-            border: "1px solid rgba(240, 185, 82, 0.3)",
-          }}
-        >
-          <div>
-            <p style={{ color: "#f0b952", fontSize: 11, fontWeight: 800, letterSpacing: 1.5, marginBottom: 4 }}>
-              🔥 LIMITED-TIME CASHBACK CAMPAIGN
-            </p>
-            <p style={{ color: "#fff", fontSize: 17, fontWeight: 900, marginBottom: 2 }}>
-              Get ৳500 Cashback on {bdt(2500)}+ · ৳700 Cashback on {bdt(3000)}+
-            </p>
-            <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 13 }}>
-              Applied automatically at checkout on all denim, shirts, and menswear.
-            </p>
+        {/* ── Dynamic Campaign Offer from REST API ─────────────────── */}
+        {isCashback ? (
+          <div
+            style={{
+              background: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #172554 100%)",
+              borderRadius: "var(--radius)",
+              padding: "22px 30px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 16,
+              marginBottom: 48,
+              border: "1px solid rgba(240, 185, 82, 0.3)",
+            }}
+          >
+            <div>
+              <p style={{ color: "#f0b952", fontSize: 11, fontWeight: 800, letterSpacing: 1.5, marginBottom: 4 }}>
+                🔥 LIMITED-TIME CASHBACK CAMPAIGN
+              </p>
+              <p style={{ color: "#fff", fontSize: 17, fontWeight: 900, marginBottom: 2 }}>
+                Get ৳{campaign.cashback.tier1?.amount ?? 500} Cashback on {bdt(campaign.cashback.tier1?.minSpend ?? 2500)}+ · ৳{campaign.cashback.tier2?.amount ?? 700} Cashback on {bdt(campaign.cashback.tier2?.minSpend ?? 3000)}+
+              </p>
+              <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 13 }}>
+                Applied automatically at checkout on all denim, shirts, and menswear.
+              </p>
+            </div>
+            <Link href="/shop" className="btn btn-sm" style={{ background: "#f0b952", color: "#000", fontWeight: 800, flexShrink: 0 }}>
+              Shop &amp; Save →
+            </Link>
           </div>
-          <Link href="/shop" className="btn btn-sm" style={{ background: "#f0b952", color: "#000", fontWeight: 800, flexShrink: 0 }}>
-            Shop &amp; Save →
-          </Link>
-        </div>
+        ) : activePromo ? (
+          <div
+            style={{
+              background: "linear-gradient(135deg, #181124 0%, #2a1b4e 50%, #3e1f47 100%)",
+              borderRadius: "var(--radius)",
+              padding: "22px 30px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 16,
+              marginBottom: 48,
+              border: "1px solid rgba(244, 95, 92, 0.4)",
+            }}
+          >
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <span style={{ background: "var(--crimson)", color: "#fff", padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 900, letterSpacing: 0.5 }}>
+                  {activePromo.badge}
+                </span>
+                <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 11, fontWeight: 800, letterSpacing: 1 }}>
+                  OFFICIAL STORE CAMPAIGN
+                </span>
+              </div>
+              <p style={{ color: "#fff", fontSize: 18, fontWeight: 900, marginBottom: 2 }}>
+                {activePromo.title}
+              </p>
+              <p style={{ color: "rgba(255,255,255,0.75)", fontSize: 13 }}>
+                {activePromo.subtitle}
+              </p>
+            </div>
+            <Link href={activePromo.actionUrl || "/shop"} className="btn btn-sm btn-primary" style={{ fontWeight: 800, flexShrink: 0, padding: "10px 18px" }}>
+              {activePromo.actionLabel || "Explore Sale"} →
+            </Link>
+          </div>
+        ) : null}
 
         {/* ── Categories ───────────────────────────────── */}
         <section className="section">
