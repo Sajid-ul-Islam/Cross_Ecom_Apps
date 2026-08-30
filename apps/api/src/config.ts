@@ -24,7 +24,17 @@ export const config = {
   /** Allowed CORS origins (comma-separated). Defaults to known app origins. */
   allowedOrigins: (process.env.ALLOWED_ORIGINS ?? "").length
     ? process.env.ALLOWED_ORIGINS!.split(",").map((s) => s.trim()).filter(Boolean)
-    : ["https://cross-ecom-apps.onrender.com", "http://localhost:3001", "http://localhost:8081", "exp://10.0.0.2:19000"],
+    : [
+        "https://cross-ecom-apps.onrender.com",
+        "https://cross-ecom-apps-4b4n.onrender.com",
+        "https://deencommerce.com",
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://localhost:3002",
+        "http://localhost:8081",
+        "http://localhost:8082",
+        "exp://10.0.0.2:19000",
+      ],
   /** Rate-limit thresholds (per IP per minute). */
   authRateLimit: Number(process.env.AUTH_RATE_LIMIT ?? 10),
   catalogRateLimit: Number(process.env.CATALOG_RATE_LIMIT ?? 120),

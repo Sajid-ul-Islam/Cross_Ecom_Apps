@@ -14,18 +14,37 @@ async function build() {
   app.server.keepAliveTimeout = 65_000;
   app.server.headersTimeout = 66_000;
 
-  // CORS: restrict to known origins (SEC-8). Avoids reflecting arbitrary
-  // origins which would let any website call the gateway with a user's cookies.
+  // CORS: restrict to known origins (SEC-8) and development environments.
   await app.register(cors, {
     origin: (origin, cb) => {
       // Browser same-origin / no-origin requests (curl) are allowed.
       if (!origin) return cb(null, true);
       const allowed = config.allowedOrigins || [];
-      if (allowed.includes(origin)) return cb(null, true);
-      return cb(new Error("Not allowed by CORS"), true); // reflect error
+      if (
+        allowed.includes(origin) ||
+        origin.startsWith("http://localhost:") ||
+        origin.startsWith("http://127.0.0.1:") ||
+        origin.endsWith(".vercel.app") ||
+        origin.endsWith(".onrender.com") ||
+        origin.includes("deencommerce.com")
+      ) {
+        return cb(null, true);
+      }
+      return cb(new Error("Not allowed by CORS"), true);
     },
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "x-api-key", "authorization"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "x-api-key",
+      "authorization",
+      "Authorization",
+      "idempotency-key",
+      "Idempotency-Key",
+      "x-idempotency-key",
+      "x-gateway-key",
+      "x-request-id",
+    ],
+    exposedHeaders: ["x-request-id", "idempotency-key", "Content-Type"],
   });
 
   // Optional client authentication: every request must carry x-api-key
