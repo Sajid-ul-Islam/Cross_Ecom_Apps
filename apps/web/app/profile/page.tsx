@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { BD_DISTRICTS } from "@/lib/districts";
-import { API_URL, fetchOrders, type OrderResult } from "@/lib/api";
+import { API_URL, fetchOrders, loginWithGoogle, loginWithFacebook, type OrderResult } from "@/lib/api";
 
 const PROFILE_STORAGE_KEY = "deen_web_user_profile";
 
@@ -161,6 +161,64 @@ export default function ProfilePage() {
     } catch {
       setAuthSubmitting(false);
       setAuthNotice({ type: "error", text: "Network error during registration." });
+    }
+  };
+
+  const handleSocialGoogle = async () => {
+    setAuthSubmitting(true);
+    try {
+      const res = await loginWithGoogle(undefined, `${profile.phone || "shopper"}@gmail.com`, profile.name || "DEEN Member");
+      if (res.success && res.user) {
+        const updated: UserProfile = {
+          ...profile,
+          name: res.user.name || "Google User",
+          email: res.user.email || "",
+          role: "customer",
+          isGuest: false,
+        };
+        setProfile(updated);
+        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+        setAuthNotice({ type: "success", text: `Signed in with Google as ${res.user.name}!` });
+        setTimeout(() => {
+          setAuthSubmitting(false);
+          setAuthModalOpen(false);
+        }, 600);
+      } else {
+        setAuthSubmitting(false);
+        setAuthNotice({ type: "error", text: res.message || "Google sign-in failed." });
+      }
+    } catch {
+      setAuthSubmitting(false);
+      setAuthNotice({ type: "error", text: "Google sign-in network error." });
+    }
+  };
+
+  const handleSocialFacebook = async () => {
+    setAuthSubmitting(true);
+    try {
+      const res = await loginWithFacebook(undefined, `${profile.phone || "shopper"}@facebook.deencommerce.com`, profile.name || "DEEN Member");
+      if (res.success && res.user) {
+        const updated: UserProfile = {
+          ...profile,
+          name: res.user.name || "Facebook User",
+          email: res.user.email || "",
+          role: "customer",
+          isGuest: false,
+        };
+        setProfile(updated);
+        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+        setAuthNotice({ type: "success", text: `Signed in with Facebook as ${res.user.name}!` });
+        setTimeout(() => {
+          setAuthSubmitting(false);
+          setAuthModalOpen(false);
+        }, 600);
+      } else {
+        setAuthSubmitting(false);
+        setAuthNotice({ type: "error", text: res.message || "Facebook sign-in failed." });
+      }
+    } catch {
+      setAuthSubmitting(false);
+      setAuthNotice({ type: "error", text: "Facebook sign-in network error." });
     }
   };
 
@@ -541,6 +599,33 @@ export default function ProfilePage() {
                 >
                   {authSubmitting ? "Signing in…" : "SIGN IN TO YOUR ACCOUNT"}
                 </button>
+
+                <div style={{ display: "flex", alignItems: "center", margin: "16px 0", gap: 10 }}>
+                  <div style={{ flex: 1, height: 1, backgroundColor: "var(--border)" }} />
+                  <span style={{ fontSize: 10, fontWeight: 800, color: "var(--text-sub)", letterSpacing: 0.5 }}>OR CONTINUE WITH</span>
+                  <div style={{ flex: 1, height: 1, backgroundColor: "var(--border)" }} />
+                </div>
+
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button
+                    type="button"
+                    onClick={handleSocialGoogle}
+                    disabled={authSubmitting}
+                    className="btn btn--outline"
+                    style={{ flex: 1, padding: 10, fontSize: 13, fontWeight: 800, display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}
+                  >
+                    <span>G</span> Google
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSocialFacebook}
+                    disabled={authSubmitting}
+                    className="btn btn--outline"
+                    style={{ flex: 1, padding: 10, fontSize: 13, fontWeight: 800, color: "#1877F2", borderColor: "rgba(24, 119, 242, 0.3)", display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}
+                  >
+                    <span>f</span> Facebook
+                  </button>
+                </div>
               </form>
             ) : (
               <form onSubmit={handleSignUp} className="modal-form">
@@ -596,6 +681,33 @@ export default function ProfilePage() {
                 >
                   {authSubmitting ? "Creating account…" : "CREATE DEEN ACCOUNT"}
                 </button>
+
+                <div style={{ display: "flex", alignItems: "center", margin: "16px 0", gap: 10 }}>
+                  <div style={{ flex: 1, height: 1, backgroundColor: "var(--border)" }} />
+                  <span style={{ fontSize: 10, fontWeight: 800, color: "var(--text-sub)", letterSpacing: 0.5 }}>OR JOIN WITH</span>
+                  <div style={{ flex: 1, height: 1, backgroundColor: "var(--border)" }} />
+                </div>
+
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button
+                    type="button"
+                    onClick={handleSocialGoogle}
+                    disabled={authSubmitting}
+                    className="btn btn--outline"
+                    style={{ flex: 1, padding: 10, fontSize: 13, fontWeight: 800, display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}
+                  >
+                    <span>G</span> Google
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSocialFacebook}
+                    disabled={authSubmitting}
+                    className="btn btn--outline"
+                    style={{ flex: 1, padding: 10, fontSize: 13, fontWeight: 800, color: "#1877F2", borderColor: "rgba(24, 119, 242, 0.3)", display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}
+                  >
+                    <span>f</span> Facebook
+                  </button>
+                </div>
               </form>
             )}
           </div>

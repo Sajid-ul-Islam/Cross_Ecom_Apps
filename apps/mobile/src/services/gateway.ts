@@ -631,6 +631,7 @@ export async function createOrder(
     id: `offline-${Date.now()}`,
     number: `DC-OFFLINE-${Math.floor(100000 + Math.random() * 900000)}`,
     status: "received",
+    idempotencyKey,
     createdAt: new Date().toISOString(),
   };
   const prev = await AsyncStorage.getItem("deen_gateway_orders_v1").catch(() => null);
@@ -1077,6 +1078,46 @@ export async function login(
     return res;
   } catch (e: any) {
     return { success: false, message: e?.message || "Login failed." };
+  }
+}
+
+export async function loginWithGoogle(
+  idToken?: string,
+  email?: string,
+  name?: string
+): Promise<AuthResult> {
+  try {
+    const res = await request<AuthResult>("/v1/auth/google", {
+      method: "POST",
+      body: JSON.stringify({ idToken, email, name }),
+    }, 12000);
+    if (res?.success && res.token && res.user) {
+      await AsyncStorage.setItem(AUTH_TOKEN_KEY, res.token).catch(() => {});
+      await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(res.user)).catch(() => {});
+    }
+    return res;
+  } catch (e: any) {
+    return { success: false, message: e?.message || "Google sign-in failed." };
+  }
+}
+
+export async function loginWithFacebook(
+  accessToken?: string,
+  email?: string,
+  name?: string
+): Promise<AuthResult> {
+  try {
+    const res = await request<AuthResult>("/v1/auth/facebook", {
+      method: "POST",
+      body: JSON.stringify({ accessToken, email, name }),
+    }, 12000);
+    if (res?.success && res.token && res.user) {
+      await AsyncStorage.setItem(AUTH_TOKEN_KEY, res.token).catch(() => {});
+      await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(res.user)).catch(() => {});
+    }
+    return res;
+  } catch (e: any) {
+    return { success: false, message: e?.message || "Facebook sign-in failed." };
   }
 }
 

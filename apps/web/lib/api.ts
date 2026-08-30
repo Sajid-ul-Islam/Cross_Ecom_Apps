@@ -131,6 +131,7 @@ export interface OrderPayload {
   district?: string;
   state?: string;
   guestToken?: string;
+  idempotencyKey?: string;
 }
 
 export interface OrderResult {
@@ -144,6 +145,7 @@ export interface OrderResult {
   payment: string;
   paymentTitle?: string;
   createdAt: string;
+  idempotencyKey?: string;
   name?: string;
   phone?: string;
   address?: string;
@@ -411,16 +413,48 @@ export interface PathaoTrackingResult {
  * Fetch live Pathao tracking info by consignment ID.
  * Calls GET /v1/deen/pathao/track/:consignmentId on the gateway.
  */
-export async function fetchPathaoTracking(consignmentId: string): Promise<PathaoTrackingResult | null> {
-  if (!consignmentId) return null;
-  try {
-    const res = await apiFetch(
-      `${API_URL}/v1/deen/pathao/track/${encodeURIComponent(consignmentId)}`,
-      { cache: "no-store" },
-    );
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
+export async function fetchPathaoTracking(consignmentId: string): Promise<PathaoTrackingResult> {
+  const cleanId = String(consignmentId || "").trim();
+  if (!cleanId) {
+    return {
+      success: false,
+      consignmentId: "",
+      summary: "Invalid consignment ID",
+      status: "unknown",
+      steps: [],
+      trackingUrl: "",
+      lastUpdated: new Date().toISOString(),
+      message: "Consignment ID cannot be empty",
+    };
   }
+  const res = await apiFetch(`${API_URL}/v1/deen/pathao/track/${encodeURIComponent(cleanId)}`);
+  return res.json();
+}
+
+/* --------------------------- Social Auth (Google / Facebook) ---------------------------- */
+
+export async function loginWithGoogle(
+  idToken?: string,
+  email?: string,
+  name?: string
+): Promise<{ success: boolean; token?: string; user?: any; message?: string; isNewCustomer?: boolean }> {
+  const res = await apiFetch(`${API_URL}/v1/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idToken, email, name }),
+  });
+  return res.json();
+}
+
+export async function loginWithFacebook(
+  accessToken?: string,
+  email?: string,
+  name?: string
+): Promise<{ success: boolean; token?: string; user?: any; message?: string; isNewCustomer?: boolean }> {
+  const res = await apiFetch(`${API_URL}/v1/auth/facebook`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ accessToken, email, name }),
+  });
+  return res.json();
 }

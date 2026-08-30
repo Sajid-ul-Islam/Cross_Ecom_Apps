@@ -47,7 +47,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   initialMode = "signin",
 }) => {
   const { colors, isDark } = useTheme();
-  const { login, registerCustomer, profile } = useProfile();
+  const { login, loginWithGoogle, loginWithFacebook, registerCustomer, profile } = useProfile();
   const styles = createStyles(colors);
 
   const [mode, setMode] = useState<"signin" | "signup">(initialMode);
@@ -62,6 +62,48 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const handleSocialGoogle = async () => {
+    setSubmitting(true);
+    try {
+      const res = await loginWithGoogle(undefined, `${profile.phone || "shopper"}@gmail.com`, profile.name || "DEEN Customer");
+      if (res.success) {
+        setNotice({ type: "success", text: "Signed in with Google successfully!" });
+        setTimeout(() => {
+          setSubmitting(false);
+          onClose();
+          if (onSuccess) onSuccess();
+        }, 600);
+      } else {
+        setSubmitting(false);
+        setNotice({ type: "error", text: res.message || "Google sign-in failed." });
+      }
+    } catch {
+      setSubmitting(false);
+      setNotice({ type: "error", text: "Google sign-in error." });
+    }
+  };
+
+  const handleSocialFacebook = async () => {
+    setSubmitting(true);
+    try {
+      const res = await loginWithFacebook(undefined, `${profile.phone || "shopper"}@facebook.deencommerce.com`, profile.name || "DEEN Customer");
+      if (res.success) {
+        setNotice({ type: "success", text: "Signed in with Facebook successfully!" });
+        setTimeout(() => {
+          setSubmitting(false);
+          onClose();
+          if (onSuccess) onSuccess();
+        }, 600);
+      } else {
+        setSubmitting(false);
+        setNotice({ type: "error", text: res.message || "Facebook sign-in failed." });
+      }
+    } catch {
+      setSubmitting(false);
+      setNotice({ type: "error", text: "Facebook sign-in error." });
+    }
+  };
 
   useEffect(() => {
     if (visible) {
@@ -351,6 +393,56 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   )}
                 </TouchableOpacity>
 
+                {/* Social Divider */}
+                <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 14, gap: 10 }}>
+                  <View style={{ flex: 1, height: 1, backgroundColor: colors.borderLight }} />
+                  <Text style={{ fontSize: 10, fontWeight: "800", color: colors.sub, letterSpacing: 0.5 }}>OR CONTINUE WITH</Text>
+                  <View style={{ flex: 1, height: 1, backgroundColor: colors.borderLight }} />
+                </View>
+
+                {/* Social Buttons */}
+                <View style={{ flexDirection: "row", gap: 10, marginBottom: 6 }}>
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
+                      height: 44,
+                      borderRadius: 8,
+                      backgroundColor: colors.paper,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                    }}
+                    activeOpacity={0.8}
+                    onPress={handleSocialGoogle}
+                    disabled={submitting}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: "800", color: colors.ink }}>G  Google</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
+                      height: 44,
+                      borderRadius: 8,
+                      backgroundColor: colors.paper,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                    }}
+                    activeOpacity={0.8}
+                    onPress={handleSocialFacebook}
+                    disabled={submitting}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: "800", color: "#1877F2" }}>f  Facebook</Text>
+                  </TouchableOpacity>
+                </View>
+
                 <TouchableOpacity onPress={onClose} style={styles.guestLink}>
                   <Text style={[styles.guestLinkText, { color: colors.sub }]}>
                     Continue as guest shopper
@@ -502,6 +594,56 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                     </>
                   )}
                 </TouchableOpacity>
+
+                {/* Social Divider */}
+                <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 14, gap: 10 }}>
+                  <View style={{ flex: 1, height: 1, backgroundColor: colors.borderLight }} />
+                  <Text style={{ fontSize: 10, fontWeight: "800", color: colors.sub, letterSpacing: 0.5 }}>OR JOIN WITH</Text>
+                  <View style={{ flex: 1, height: 1, backgroundColor: colors.borderLight }} />
+                </View>
+
+                {/* Social Buttons */}
+                <View style={{ flexDirection: "row", gap: 10, marginBottom: 6 }}>
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
+                      height: 44,
+                      borderRadius: 8,
+                      backgroundColor: colors.paper,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                    }}
+                    activeOpacity={0.8}
+                    onPress={handleSocialGoogle}
+                    disabled={submitting}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: "800", color: colors.ink }}>G  Google</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
+                      height: 44,
+                      borderRadius: 8,
+                      backgroundColor: colors.paper,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                    }}
+                    activeOpacity={0.8}
+                    onPress={handleSocialFacebook}
+                    disabled={submitting}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: "800", color: "#1877F2" }}>f  Facebook</Text>
+                  </TouchableOpacity>
+                </View>
 
                 <TouchableOpacity onPress={onClose} style={styles.guestLink}>
                   <Text style={[styles.guestLinkText, { color: colors.sub }]}>

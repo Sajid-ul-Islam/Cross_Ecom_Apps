@@ -47,6 +47,7 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           payment: o.payment,
           email: o.email,
           lines: o.lines,
+          idempotencyKey: o.idempotencyKey || `offline_${o.id}`,
         } as any);
         // Replace the local offline placeholder with the synced (Woo) order.
         if (!String(synced.id).startsWith("offline-")) {

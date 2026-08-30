@@ -156,6 +156,7 @@ export interface Order {
   isGuestOrder?: boolean;
   /** Gateway-issued anonymous guest session token (when placed as a guest). */
   guestToken?: string;
+  idempotencyKey?: string;
   createdAt: string;
 }
 
