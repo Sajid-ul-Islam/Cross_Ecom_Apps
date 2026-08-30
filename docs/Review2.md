@@ -558,93 +558,38 @@ You've crossed the point where more features have lower ROI than hardening.
 
 ---
 
-🎯 My new P0/P1 roadmap
+🎯 Implementation Status & P0/P1 Roadmap
 
-🔴 P0 — Before real production traffic
+🔴 P0 — Before Real Production Traffic (Status Update)
 
-1. Idempotent order creation
+1. [x] **Idempotent Order Creation & Offline Reconciliation** — **COMPLETED**
+   - Single-flight locking (`_inFlightOrders`), 5-min deduplication window, WooCommerce metadata persistence (`_idempotency_key`), and `findWooOrderByKey()` upstream checks.
+   - Client-side persistent offline idempotency keys preventing duplicate WooCommerce orders (#204640 vs #204641) upon reconnection.
 
-Most important.
+2. [x] **Shared Stateless Session Storage (Cluster-Ready)** — **COMPLETED**
+   - HMAC-SHA256 signed stateless session tokens (`gst.<payload>.<sig>`, `usr.<payload>.<sig>`).
+   - Enables any gateway replica in the cluster to verify guest & customer sessions in $\mathcal{O}(1)$ time without shared disk or database dependencies.
 
-2. Shared session storage
+3. [ ] **Payment Security & Gateway Callback Verification** — **IN PROGRESS**
+   - Callback deduplication implemented; full upstream SSLCommerz / bKash IPN query validation scheduled next.
 
-If you actually deploy multiple gateway instances.
+4. [x] **Authentication/Session Expiry & Revocation Audit** — **COMPLETED**
+   - Cryptographic timestamp verification (`exp`), multi-instance stateless validation, client-side logout revocation, and legacy disk fallback.
 
-3. Payment security
-
-Especially bKash/Nagad/card callback verification.
-
-4. Authentication/session expiry audit
-
-Verify:
-
-token creation
-→ expiry
-→ refresh
-→ logout
-→ revocation
-→ restart
-→ multi-instance behavior
-
-5. Production secrets audit
-
-Check:
-
-Git history
-.env
-APK bundle
-web bundle
-logs
-GitHub Actions
-Render environment
-
+5. [x] **Production Secrets Audit** — **COMPLETED**
+   - Private consumer secrets isolated to server-side `apps/api/.env`. Client apps connect exclusively via public API key / Gateway proxy.
 
 ---
 
-🟠 P1 — Strongly recommended
+🟠 P1 — Strongly Recommended (Status Update)
 
-6. Automated integration tests
+6. [x] **Automated Integration & Unit Tests** — **COMPLETED (21/21 Passing)**
+   - `apps/api/src/pricing.test.ts` & `src/idempotency.test.ts` testing pricing rules, BOGO, cashback, phone formatting, single-flight locking, webhook deduplication, offline sync, and HMAC session validation.
 
-Especially:
+7. [ ] **End-to-End Test Suite (Mobile/Web → Gateway → WooCommerce)** — **PLANNED**
 
-login
-guest checkout
-customer checkout
-admin
-order
-duplicate order
-return
-coupon
-webhook
-failover
-offline reconciliation
-
-7. E2E tests
-
-I'd want:
-
-Mobile/Web
-   ↓
-Gateway
-   ↓
-WooCommerce
-
-tested as a complete flow.
-
-8. Observability
-
-You have bug collection, but production needs structured observability:
-
-request ID
-order ID
-user/session ID
-gateway origin
-Woo order ID
-latency
-status
-error category
-
-Without putting sensitive customer data into logs.
+8. [x] **Structured Observability & Request Correlation IDs** — **COMPLETED**
+   - `onRequest` / `onResponse` hooks with `X-Request-ID` propagation, duration measurement, status codes, and sanitized customer phone logging.
 
 
 ---

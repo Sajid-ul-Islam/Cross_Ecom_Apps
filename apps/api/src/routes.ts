@@ -31,6 +31,8 @@ import {
   getStoreSettings,
   getPage,
   getCouponByCode,
+  findWooOrderByKey,
+  findOrCreateWooCustomer,
 } from "./woo.js";
 import {
   getPathaoToken,
@@ -187,11 +189,13 @@ const orderSeq = { n: 1041 };
 const orders: any[] = [];
 
 /* ------------------------------------------------------------------ */
-/*  Order Deduplication & Idempotency Store (30s window).             */
-/*  Prevents duplicate orders on high-latency double-clicks / retries. */
+/*  Order Deduplication, In-Flight Locks & Idempotency Store (5 min). */
+/*  Guarantees single-flight execution and duplicate prevention       */
+/*  across high-latency failovers, double-clicks, and socket retries. */
 /* ------------------------------------------------------------------ */
 const _orderIdempotencyStore = new Map<string, { at: number; order: any }>();
-const _IDEMPOTENCY_WINDOW_MS = 30_000;
+const _inFlightOrders = new Map<string, Promise<any>>();
+const _IDEMPOTENCY_WINDOW_MS = 5 * 60 * 1000;
 
 function _getDuplicateOrder(key: string): any | null {
   const now = Date.now();
@@ -208,6 +212,33 @@ function _recordOrder(key: string, order: any) {
   if (_orderIdempotencyStore.size > 2000) {
     for (const [k, v] of _orderIdempotencyStore.entries()) {
       if (now - v.at >= _IDEMPOTENCY_WINDOW_MS) _orderIdempotencyStore.delete(k);
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Webhook Idempotency & Delivery Deduplication Store (10 min TTL).   */
+/*  Prevents redundant cache busts, double-processing, and duplicate   */
+/*  downstream events on retried WooCommerce/Payment webhook deliveries. */
+/* ------------------------------------------------------------------ */
+const _webhookIdempotencyStore = new Map<string, number>();
+const _WEBHOOK_IDEMPOTENCY_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+function _isWebhookDuplicate(eventKey: string): boolean {
+  const now = Date.now();
+  const at = _webhookIdempotencyStore.get(eventKey);
+  if (at && now - at < _WEBHOOK_IDEMPOTENCY_TTL_MS) {
+    return true;
+  }
+  return false;
+}
+
+function _recordWebhookDelivery(eventKey: string) {
+  const now = Date.now();
+  _webhookIdempotencyStore.set(eventKey, now);
+  if (_webhookIdempotencyStore.size > 2000) {
+    for (const [k, v] of _webhookIdempotencyStore.entries()) {
+      if (now - v >= _WEBHOOK_IDEMPOTENCY_TTL_MS) _webhookIdempotencyStore.delete(k);
     }
   }
 }
@@ -660,17 +691,125 @@ function saveGuestSessions(): void {
   })();
 }
 
+/* ------------------------------------------------------------------ */
+/*  Stateless Cryptographic Session Tokens (Cluster & Multi-Instance) */
+/*  Tokens are HMAC-SHA256 signed payloads allowing any gateway       */
+/*  instance in the cluster to verify sessions in O(1) time without    */
+/*  shared disk or database dependencies.                             */
+/* ------------------------------------------------------------------ */
+const SESSION_SIGNING_SECRET =
+  config.webhookSecret || config.apiKey || "deen_commerce_cluster_secret_key_2026";
+
+export interface SessionTokenPayload {
+  type: "guest" | "user";
+  phone?: string;
+  name?: string;
+  userId?: string | number;
+  username?: string;
+  email?: string;
+  role?: "customer" | "admin" | "guest";
+  iat: number;
+  exp: number;
+}
+
+export function signSessionToken(payload: SessionTokenPayload): string {
+  const data = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const sig = createHmac("sha256", SESSION_SIGNING_SECRET).update(data).digest("base64url");
+  const prefix = payload.type === "guest" ? "gst" : "usr";
+  return `${prefix}.${data}.${sig}`;
+}
+
+export function verifySessionToken(tokenString: string): SessionTokenPayload | null {
+  if (!tokenString || typeof tokenString !== "string") return null;
+  const clean = tokenString.replace(/^bearer\s+/i, "").trim();
+  const parts = clean.split(".");
+  if (parts.length !== 3) return null;
+  const [prefix, data, sig] = parts;
+  if (!data || !sig || (prefix !== "gst" && prefix !== "usr")) return null;
+
+  try {
+    const expectedSig = createHmac("sha256", SESSION_SIGNING_SECRET).update(data).digest("base64url");
+    const a = Buffer.from(sig);
+    const b = Buffer.from(expectedSig);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+
+    const payload = JSON.parse(Buffer.from(data, "base64url").toString("utf-8")) as SessionTokenPayload;
+    if (payload.exp && payload.exp < Date.now()) {
+      return null;
+    }
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function resolveGuestSession(token?: string): { token: string; phone: string; name: string; createdAt: number; orderId?: number } | null {
+  if (!token) return null;
+  const clean = token.replace(/^bearer\s+/i, "").trim();
+
+  // 1. Check stateless cryptographic token
+  const verified = verifySessionToken(clean);
+  if (verified && verified.type === "guest") {
+    return {
+      token: clean,
+      phone: verified.phone || "",
+      name: verified.name || "Guest Shopper",
+      createdAt: verified.iat,
+    };
+  }
+
+  // 2. Fallback to in-memory/disk array
+  const mem = guestSessions.find((s) => s.token === clean);
+  if (mem) return mem;
+
+  return null;
+}
+
+function resolveAuthSession(token?: string): { token: string; phone?: string; username?: string; name?: string; email?: string; role?: string; userId?: string | number; createdAt?: number } | null {
+  if (!token) return null;
+  const clean = token.replace(/^bearer\s+/i, "").trim();
+
+  // 1. Check stateless cryptographic token
+  const verified = verifySessionToken(clean);
+  if (verified && verified.type === "user") {
+    return {
+      token: clean,
+      phone: verified.phone,
+      username: verified.username,
+      name: verified.name || verified.username,
+      email: verified.email,
+      role: verified.role || "customer",
+      userId: verified.userId,
+      createdAt: verified.iat,
+    };
+  }
+
+  // 2. Fallback to in-memory/disk map
+  const mem = authSessions.get(clean);
+  if (mem) return mem;
+
+  return null;
+}
+
 function mintGuestSession(): (typeof guestSessions)[number] {
   // Random BD mobile — 01[3-9]XXXXXXXXX, but anonymized (not tied to a person)
   const second = 3 + Math.floor(Math.random() * 7); // 3-9
   const rest = () => Math.floor(10000000 + Math.random() * 90000000).toString().slice(0, 8);
   const phone = `01${second}${rest()}`;
-  const token = `guest_${randomUUID()}`;
+  const now = Date.now();
+  const token = signSessionToken({
+    type: "guest",
+    phone,
+    name: "Guest Shopper",
+    role: "guest",
+    iat: now,
+    exp: now + GUEST_SESSION_TTL_MS,
+  });
   const session = {
     token,
     phone,
     name: "Guest Shopper",
-    createdAt: Date.now(),
+    createdAt: now,
   };
   guestSessions.push(session);
   // Bound the in-memory store (defensive)
@@ -710,6 +849,31 @@ function sortProducts(list: DeenProduct[], sort: string): DeenProduct[] {
 }
 
 export async function registerDeenRoutes(app: FastifyInstance) {
+  /* ── Request-ID & Structured Observability Hooks (P1) ── */
+  app.addHook("onRequest", async (req, reply) => {
+    const incomingId = req.headers["x-request-id"] as string | undefined;
+    const reqId = incomingId && String(incomingId).trim().length > 0 ? String(incomingId).trim() : randomUUID();
+    (req as any).id = reqId;
+    (req as any).startTime = Date.now();
+    reply.header("x-request-id", reqId);
+  });
+
+  app.addHook("onResponse", async (req, reply) => {
+    const durationMs = Date.now() - ((req as any).startTime || Date.now());
+    const statusCode = reply.statusCode;
+    const method = req.method;
+    const url = req.url;
+    const reqId = (req as any).id || "unknown";
+    const clientIp = req.ip || "unknown";
+
+    if (!url.startsWith("/health") && !url.startsWith("/v1/health")) {
+      const level = statusCode >= 500 ? "ERROR" : statusCode >= 400 ? "WARN" : "INFO";
+      console.log(
+        `[${level}] [${reqId}] ${method} ${url} status=${statusCode} duration=${durationMs}ms ip=${clientIp}`
+      );
+    }
+  });
+
   /* Stash the raw request body (string) on the request so the Woo webhook can verify
      the HMAC signature over the EXACT bytes Woo sent. Harmless for all other JSON routes. */
   app.addContentTypeParser("application/json", { parseAs: "string" }, (req, bodyStr, done) => {
@@ -793,7 +957,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   app.get("/v1/deen/stats", async (req, reply) => {
     // REM-1: admin Bearer token required — leaks business intelligence in live mode.
     const statsToken = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
-    const statsSession = statsToken ? authSessions.get(statsToken) : null;
+    const statsSession = resolveAuthSession(statsToken);
     if (!statsSession || statsSession.role !== "admin") {
       return reply.code(403).send({ error: "FORBIDDEN", message: "Admin access required to view store analytics." });
     }
@@ -889,8 +1053,24 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       return reply.code(401).send({ error: "BAD_SIGNATURE" });
     }
 
-    // Topic-aware, surgical cache busting — only invalidate what actually changed.
+    // ── Webhook Idempotency / Delivery-ID Deduplication ──
+    // WooCommerce resends webhooks on network drops or slow response times.
+    // Check X-WC-Webhook-Delivery-ID / Signature / Event Key to avoid duplicate cache busts & processing.
+    const deliveryId = (req.headers["x-wc-webhook-delivery-id"] as string) || "";
+    const sigHeader = (req.headers["x-wc-webhook-signature"] as string) || "";
     const pid = body?.id ? String(body.id) : undefined;
+    const eventKey = deliveryId
+      ? `woo_del_${deliveryId}`
+      : sigHeader
+      ? `woo_sig_${sigHeader}`
+      : `woo_evt_${topic}_${pid || "global"}_${body?.date_modified || body?.date_created || ""}`;
+
+    if (_isWebhookDuplicate(eventKey)) {
+      audit("woo_webhook", true, `duplicate delivery ignored (eventKey: ${eventKey}, topic: ${topic})`);
+      return reply.code(200).send({ ok: true, duplicate: true, eventKey, topic });
+    }
+
+    // Topic-aware, surgical cache busting — only invalidate what actually changed.
     if (topic.startsWith("product_variation")) {
       invalidateVariationCache(pid);
     } else if (topic.startsWith("product")) {
@@ -903,8 +1083,9 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       invalidateStats();
     }
 
-    audit("woo_webhook", true, `cache busted (topic: ${topic})`);
-    return reply.code(200).send({ ok: true, verified: true, topic });
+    _recordWebhookDelivery(eventKey);
+    audit("woo_webhook", true, `cache busted (topic: ${topic}, eventKey: ${eventKey})`);
+    return reply.code(200).send({ ok: true, verified: true, topic, eventKey });
   });
 
   /* ---- cashback (SINGLE SOURCE OF TRUTH) ----
@@ -1183,245 +1364,375 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       return reply.code(422).send({ error: "VALIDATION", message: "Your bag is empty." });
     }
 
-    // Deduplication check: Phone + Address + Items + Payment
+    const clientKey = (req.headers["idempotency-key"] || req.headers["x-idempotency-key"] || body.idempotencyKey) as string | undefined;
+    const rawCoupon = String(coupon || "").trim();
+
+    // Deduplication check: Phone + Address + Items + Payment + Coupon
     const itemsKey = (items || []).map((i: any) => `${i.productId}:${i.size || "M"}:${i.qty}`).sort().join("|");
-    const idempotencyKey = `${digits}:${address.trim().toLowerCase()}:${itemsKey}:${payment}`;
-    const duplicateOrder = _getDuplicateOrder(idempotencyKey);
+    const naturalKey = `${digits}:${address.trim().toLowerCase()}:${itemsKey}:${payment}:${rawCoupon}`;
+    const idempotencyKey = clientKey && String(clientKey).trim().length > 0 ? String(clientKey).trim() : naturalKey;
+
+    // 1. Check if order was already completed
+    const duplicateOrder = _getDuplicateOrder(idempotencyKey) || _getDuplicateOrder(naturalKey);
     if (duplicateOrder) {
-      console.log(`[gateway] duplicate order intercepted for phone=${digits} — returning existing order #${duplicateOrder.number}`);
+      console.log(`[gateway] duplicate order intercepted for phone=${digits} key=${idempotencyKey} — returning existing order #${duplicateOrder.number}`);
       return reply.code(200).send(duplicateOrder);
     }
 
-    // Validate any customer-entered coupon against Woo (exact-match to the website).
-    let couponInfo: { code: string; type: string; amount: number; description: string } | null = null;
-    const rawCoupon = String(coupon || "").trim();
-    if (rawCoupon) {
-      couponInfo = await getCouponByCode(rawCoupon);
-      if (!couponInfo) {
-        return reply.code(422).send({ error: "INVALID_COUPON", message: "This coupon code is invalid or expired." });
-      }
-    }
-
-    const list = await getCatalog();
-    const lines = items.map((it: any) => {
-      const prod = list.find((x) => x.id === it.productId);
-      if (!prod) throw new Error("A product in your bag is no longer available.");
-      const unit = prod.salePrice ?? prod.price;
-      return { productId: prod.id, name: prod.name, sku: prod.sku, size: it.size, qty: it.qty, unit, category: prod.category };
-    });
-    const subtotal = lines.reduce((s: number, l: any) => s + l.unit * l.qty, 0);
-    const shipFees = await getShippingFees();
-    const delivery =
-      area === "outside" || area === "outside_standard"
-        ? shipFees.outsideDhaka
-        : area === "dhaka_express"
-        ? shipFees.insideDhaka + config.expressSurcharge
-        : area === "store_pickup" || area === "pickup"
-        ? 0
-        : shipFees.insideDhaka;
-    const cashback = calculateCashback(subtotal).amount;
-    const bogo = calculateBogo(lines);
-    // Customer coupon (validated above). Apply fixed or percent discount on subtotal.
-    const couponDiscount = couponInfo
-      ? (couponInfo.type === "percent"
-          ? Math.round((subtotal * couponInfo.amount) / 100)
-          : Math.min(couponInfo.amount, subtotal))
-      : 0;
-
-    const orderNumStr = `DC-${++orderSeq.n}`;
-    // Pathao logistics is not auto-generated. Only set if ptc_consignment_id / consignmentId is provided (e.g. "DD220826MDKMP9").
-    const rawConsId = (body as any).ptc_consignment_id || (body as any).consignmentId || (body as any).pathaoConsignmentId;
-    const pathaoConsignmentId = rawConsId && String(rawConsId).trim().length > 0 ? String(rawConsId).trim() : undefined;
-    const pathaoTrackingUrl = pathaoConsignmentId ? `https://merchant.pathao.com/tracking?consignment_id=${pathaoConsignmentId}` : undefined;
-    const courier = pathaoConsignmentId ? "Pathao Courier" : (area === "store_pickup" || area === "pickup" ? "Store Pickup" : "Home Delivery");
-
-    const paymentTitle = payment === "cod" ? "Cash on delivery"
-      : payment === "bkash" || payment === "bkash-for-woocommerce" ? "bKash"
-      : payment === "nagad" ? "Nagad"
-      : payment === "sslcommerz" ? "SSLCommerz"
-      : "Online Payment";
-    const paymentStatus = payment === "cod" ? "Pending (Cash on Delivery)" : "Awaiting Payment";
-
-    const resolvedCity = String(city || (area === "outside" ? "Chittagong" : "Dhaka")).trim();
-    // CRITICAL: the live site stores Woo state as "BD-XX" codes, never the district
-    // name. Normalize whatever the app sends (name or code) to the canonical BD-XX.
-    const resolvedState = normalizeState(state || district || (area === "outside" ? "BD-10" : "BD-13"));
-    const resolvedPostcode = String(postcode || "1200").trim();
-
-    let wooId: number | undefined;
-    let wooNumber: string | undefined;
-    let wooPaymentUrl: string | undefined;
-    if (wooEnabled) {
+    // 2. Check if identical order is currently in-flight (single-flight locking)
+    const inFlight = _inFlightOrders.get(idempotencyKey) || _inFlightOrders.get(naturalKey);
+    if (inFlight) {
+      console.log(`[gateway] in-flight order join for phone=${digits} key=${idempotencyKey} — awaiting primary completion`);
       try {
-        const shippingMethodTitle = area === "outside" || area === "outside_standard"
-          ? "Home Delivery (Outside Dhaka)"
-          : (area === "dhaka_express"
-            ? "Express Home Delivery"
-            : (area === "store_pickup" || area === "pickup" ? "Store Pickup" : "Home Delivery"));
+        const inFlightResult = await inFlight;
+        return reply.code(200).send(inFlightResult);
+      } catch (err: any) {
+        return reply.code(500).send({ error: "ORDER_FAILED", message: err?.message || "Order creation failed" });
+      }
+    }
 
-        const orderMeta: Array<{ key: string; value: string }> = [
-          { key: "city", value: resolvedCity },
-          { key: "state_district", value: resolvedState },
-          { key: "payment_type", value: payment.toUpperCase() },
-          { key: "payment_status", value: paymentStatus },
-          { key: "_shipping_phone_2", value: "" },
-          { key: "is_vat_exempt", value: "no" },
-          { key: "wt_pklist_order_language", value: "en_US" },
-          { key: "_gtm_server_side_order_sent", value: new Date().toISOString().slice(0, 19).replace("T", " ") },
-        ];
-
-        if (pathaoConsignmentId) {
-          orderMeta.push(
-            { key: "courier", value: "Pathao Courier" },
-            { key: "ptc_consignment_id", value: pathaoConsignmentId },
-            { key: "pathao_consignment_id", value: pathaoConsignmentId },
-            { key: "pathao_tracking_url", value: pathaoTrackingUrl || "" }
-          );
+    // 3. Wrap order creation in a single-flight Promise
+    const orderPromise = (async () => {
+      // Validate any customer-entered coupon against Woo (exact-match to the website).
+      let couponInfo: { code: string; type: string; amount: number; description: string } | null = null;
+      if (rawCoupon) {
+        couponInfo = await getCouponByCode(rawCoupon);
+        if (!couponInfo) {
+          throw new Error("INVALID_COUPON: This coupon code is invalid or expired.");
         }
+      }
 
-        const r = await pushWooOrder({
-          created_via: "checkout",
-          status: payment === "cod" ? "processing" : "on-hold",
-          payment_method: payment === "cod" ? "cod" : payment,
-          payment_method_title: paymentTitle,
-          set_paid: payment !== "cod",
-          billing: {
-            first_name: name,
-            last_name: lastName || name,
-            email: email || `${digits}@deencommerce.com`,
-            phone: digits,
-            address_1: address,
-            city: resolvedCity,
-            state: resolvedState,
-            postcode: resolvedPostcode,
-            country: "BD",
-          },
-          shipping: {
-            first_name: name,
-            last_name: lastName || name,
-            email: email || `${digits}@deencommerce.com`,
-            phone: digits,
-            address_1: address,
-            city: resolvedCity,
-            state: resolvedState,
-            postcode: resolvedPostcode,
-            country: "BD",
-          },
-          line_items: items.map((it: any) => ({
-            product_id: Number(it.productId),
-            variation_id: Number(it.variationId) || 0,
-            quantity: it.qty,
-          })),
-          // CRITICAL: send the cashback to Woo exactly like the live website does,
-          // so app-placed orders match website-placed orders. Without this the Woo
-          // order shows the full subtotal with no discount (exact-match break).
-          coupon_lines: [
-            ...(cashback > 0
-              ? [{
-                code: `CASHBACK${cashback}`,
-                discount_type: "fixed_cart",
-                amount: String(cashback),
-              }]
-              : []),
-            ...(bogo.discount > 0
-              ? [{
-                code: `BOGO${Math.round(bogo.discount)}`,
-                discount_type: "fixed_cart",
-                amount: String(Math.round(bogo.discount)),
-              }]
-              : []),
-            ...(couponDiscount > 0 && couponInfo
-              ? [{
-                code: String(couponInfo.code).toUpperCase(),
-                discount_type: couponInfo.type === "percent" ? "percent" : "fixed_cart",
-                amount: String(couponInfo.amount),
-              }]
-              : []),
-          ],
-          shipping_lines: [
-            {
-              method_id: area === "store_pickup" || area === "pickup" ? "local_pickup" : "flat_rate",
-              method_title: shippingMethodTitle,
-              total: String(delivery),
-            },
-          ],
-          meta_data: orderMeta,
-          transaction_id: trxId ? String(trxId) : undefined,
-          customer_note: `City: ${resolvedCity} | District: ${resolvedState} | Delivery: ${shippingMethodTitle} (৳${delivery})${pathaoConsignmentId ? ` | Pathao: ${pathaoConsignmentId}` : ""} | Payment: ${paymentTitle}`,
+      const list = await getCatalog();
+      const lines = items.map((it: any) => {
+        const prod = list.find((x) => x.id === it.productId);
+        if (!prod) throw new Error("A product in your bag is no longer available.");
+        const unit = prod.salePrice ?? prod.price;
+        return { productId: prod.id, name: prod.name, sku: prod.sku, size: it.size, qty: it.qty, unit, category: prod.category };
+      });
+      const subtotal = lines.reduce((s: number, l: any) => s + l.unit * l.qty, 0);
+      const shipFees = await getShippingFees();
+      const delivery =
+        area === "outside" || area === "outside_standard"
+          ? shipFees.outsideDhaka
+          : area === "dhaka_express"
+          ? shipFees.insideDhaka + config.expressSurcharge
+          : area === "store_pickup" || area === "pickup"
+          ? 0
+          : shipFees.insideDhaka;
+      const cashback = calculateCashback(subtotal).amount;
+      const bogo = calculateBogo(lines);
+      // Customer coupon (validated above). Apply fixed or percent discount on subtotal.
+      const couponDiscount = couponInfo
+        ? (couponInfo.type === "percent"
+            ? Math.round((subtotal * couponInfo.amount) / 100)
+            : Math.min(couponInfo.amount, subtotal))
+        : 0;
+
+      const orderNumStr = `DC-${++orderSeq.n}`;
+      // Pathao logistics is not auto-generated. Only set if ptc_consignment_id / consignmentId is provided (e.g. "DD220826MDKMP9").
+      const rawConsId = (body as any).ptc_consignment_id || (body as any).consignmentId || (body as any).pathaoConsignmentId;
+      const pathaoConsignmentId = rawConsId && String(rawConsId).trim().length > 0 ? String(rawConsId).trim() : undefined;
+      const pathaoTrackingUrl = pathaoConsignmentId ? `https://merchant.pathao.com/tracking?consignment_id=${pathaoConsignmentId}` : undefined;
+      const courier = pathaoConsignmentId ? "Pathao Courier" : (area === "store_pickup" || area === "pickup" ? "Store Pickup" : "Home Delivery");
+
+      const paymentTitle = payment === "cod" ? "Cash on delivery"
+        : payment === "bkash" || payment === "bkash-for-woocommerce" ? "bKash"
+        : payment === "nagad" ? "Nagad"
+        : payment === "sslcommerz" ? "SSLCommerz"
+        : "Online Payment";
+      const paymentStatus = payment === "cod" ? "Pending (Cash on Delivery)" : "Awaiting Payment";
+
+      const resolvedCity = String(city || (area === "outside" ? "Chittagong" : "Dhaka")).trim();
+      // CRITICAL: the live site stores Woo state as "BD-XX" codes, never the district
+      // name. Normalize whatever the app sends (name or code) to the canonical BD-XX.
+      const resolvedState = normalizeState(state || district || (area === "outside" ? "BD-10" : "BD-13"));
+      const resolvedPostcode = String(postcode || "1200").trim();
+
+      let wooId: number | undefined;
+      let wooNumber: string | undefined;
+      let wooPaymentUrl: string | undefined;
+      if (wooEnabled) {
+        try {
+          // Check if order was already created in WooCommerce (e.g. process restarted / failover retry)
+          const existingWoo =
+            (await findWooOrderByKey(idempotencyKey, digits)) ||
+            (await findWooOrderByKey(naturalKey, digits));
+
+          if (existingWoo) {
+            console.log(`[gateway] adopted existing WooCommerce order #${existingWoo.number} (id: ${existingWoo.id}) for key=${idempotencyKey}`);
+            wooId = existingWoo.id;
+            wooNumber = existingWoo.number;
+            wooPaymentUrl = existingWoo.paymentUrl;
+          } else {
+            const shippingMethodTitle = area === "outside" || area === "outside_standard"
+              ? "Home Delivery (Outside Dhaka)"
+              : (area === "dhaka_express"
+                ? "Express Home Delivery"
+                : (area === "store_pickup" || area === "pickup" ? "Store Pickup" : "Home Delivery"));
+
+            const orderMeta: Array<{ key: string; value: string }> = [
+              { key: "city", value: resolvedCity },
+              { key: "state_district", value: resolvedState },
+              { key: "payment_type", value: payment.toUpperCase() },
+              { key: "payment_status", value: paymentStatus },
+              { key: "_shipping_phone_2", value: "" },
+              { key: "is_vat_exempt", value: "no" },
+              { key: "wt_pklist_order_language", value: "en_US" },
+              { key: "_gtm_server_side_order_sent", value: new Date().toISOString().slice(0, 19).replace("T", " ") },
+              { key: "_idempotency_key", value: idempotencyKey },
+              { key: "_natural_idempotency_key", value: naturalKey },
+            ];
+
+            if (pathaoConsignmentId) {
+              orderMeta.push(
+                { key: "courier", value: "Pathao Courier" },
+                { key: "ptc_consignment_id", value: pathaoConsignmentId },
+                { key: "pathao_consignment_id", value: pathaoConsignmentId },
+                { key: "pathao_tracking_url", value: pathaoTrackingUrl || "" }
+              );
+            }
+
+            const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
+            const authSession = resolveAuthSession(authHeader);
+            const resolvedCustomerId = authSession?.userId ? Number(authSession.userId) : (body.customerId ? Number(body.customerId) : undefined);
+
+            const r = await pushWooOrder({
+              customer_id: resolvedCustomerId && resolvedCustomerId > 0 ? resolvedCustomerId : undefined,
+              created_via: "checkout",
+              status: payment === "cod" ? "processing" : "on-hold",
+              payment_method: payment === "cod" ? "cod" : payment,
+              payment_method_title: paymentTitle,
+              set_paid: payment !== "cod",
+              billing: {
+                first_name: name,
+                last_name: lastName || name,
+                email: email || `${digits}@deencommerce.com`,
+                phone: digits,
+                address_1: address,
+                city: resolvedCity,
+                state: resolvedState,
+                postcode: resolvedPostcode,
+                country: "BD",
+              },
+              shipping: {
+                first_name: name,
+                last_name: lastName || name,
+                email: email || `${digits}@deencommerce.com`,
+                phone: digits,
+                address_1: address,
+                city: resolvedCity,
+                state: resolvedState,
+                postcode: resolvedPostcode,
+                country: "BD",
+              },
+              line_items: items.map((it: any) => ({
+                product_id: Number(it.productId),
+                variation_id: Number(it.variationId) || 0,
+                quantity: it.qty,
+              })),
+              coupon_lines: [
+                ...(cashback > 0
+                  ? [{
+                    code: `CASHBACK${cashback}`,
+                    discount_type: "fixed_cart",
+                    amount: String(cashback),
+                  }]
+                  : []),
+                ...(bogo.discount > 0
+                  ? [{
+                    code: `BOGO${Math.round(bogo.discount)}`,
+                    discount_type: "fixed_cart",
+                    amount: String(Math.round(bogo.discount)),
+                  }]
+                  : []),
+                ...(couponDiscount > 0 && couponInfo
+                  ? [{
+                    code: String(couponInfo.code).toUpperCase(),
+                    discount_type: couponInfo.type === "percent" ? "percent" : "fixed_cart",
+                    amount: String(couponInfo.amount),
+                  }]
+                  : []),
+              ],
+              shipping_lines: [
+                {
+                  method_id: area === "store_pickup" || area === "pickup" ? "local_pickup" : "flat_rate",
+                  method_title: shippingMethodTitle,
+                  total: String(delivery),
+                },
+              ],
+              meta_data: orderMeta,
+              transaction_id: trxId ? String(trxId) : undefined,
+              customer_note: `City: ${resolvedCity} | District: ${resolvedState} | Delivery: ${shippingMethodTitle} (৳${delivery})${pathaoConsignmentId ? ` | Pathao: ${pathaoConsignmentId}` : ""} | Payment: ${paymentTitle}`,
+            });
+            wooId = r.id;
+            wooNumber = r.number;
+            wooPaymentUrl = r.paymentUrl;
+          }
+        } catch (e) {
+          console.error("[gateway] Woo order push failed:", (e as Error).message);
+        }
+      }
+
+      const order: any = {
+        id: `d-${Date.now()}`,
+        number: orderNumStr,
+        name: String(name).trim().slice(0, 50).replace(/<[^>]*>/g, ""), // SEC-5: cap length, strip HTML
+        phone: digits,
+        address: String(address).trim().slice(0, 500).replace(/<[^>]*>/g, ""), // SEC-5: cap length, strip HTML
+        city: resolvedCity,
+        district: resolvedState,
+        state: resolvedState,
+        postcode: resolvedPostcode,
+        area,
+        payment,
+        paymentTitle,
+        paymentStatus,
+        lines,
+        subtotal,
+        cashback,
+        bogoDiscount: bogo.discount,
+        bogoFreeIndexes: bogo.freeIndexes,
+        couponCode: couponInfo?.code || null,
+        couponDiscount,
+        delivery,
+        total: Math.max(0, subtotal - cashback - bogo.discount - couponDiscount) + delivery,
+        status: "received",
+        courier,
+        pathaoConsignmentId,
+        pathaoTrackingUrl,
+        createdAt: new Date().toISOString(),
+        idempotencyKey,
+        wooId,
+        wooNumber,
+        wooPaymentUrl,
+        trxId: trxId ? String(trxId) : undefined,
+      };
+      if (guestToken) {
+        const session = resolveGuestSession(guestToken);
+        if (session) {
+          session.orderId = wooId;
+          order.guestToken = guestToken;
+        }
+      }
+      // Remember this phone so returning guests can be recognized & prompted to register.
+      recordGuestPurchase(digits, String(name).trim());
+      orders.unshift(order);
+      saveOrders();
+
+      // Trigger transactional push notification if device push token matches phone
+      const userTokens = Array.from(pushTokens.values())
+        .filter((t) => t.phone === digits)
+        .map((t) => t.token);
+
+      if (userTokens.length > 0) {
+        void sendExpoPushNotifications(
+          userTokens.map((to) => ({
+            to,
+            title: `📦 Order Confirmed: #${order.wooNumber || order.number}`,
+            body: `Thank you, ${order.name}! Total: ৳${order.total.toLocaleString("en-BD")}.${order.pathaoConsignmentId ? ` Pathao: ${order.pathaoConsignmentId}` : ""}`,
+            data: { orderId: order.id, orderNumber: order.wooNumber || order.number, actionUrl: "/(tabs)/orders" },
+            sound: "default" as const,
+            badge: 1,
+          }))
+        );
+      }
+
+      return order;
+    })();
+
+    _inFlightOrders.set(idempotencyKey, orderPromise);
+    _inFlightOrders.set(naturalKey, orderPromise);
+
+    try {
+      const order = await orderPromise;
+      _recordOrder(idempotencyKey, order);
+      _recordOrder(naturalKey, order);
+      return reply.code(201).send(order);
+    } catch (err: any) {
+      if (err?.message?.startsWith("INVALID_COUPON:")) {
+        return reply.code(422).send({
+          error: "INVALID_COUPON",
+          message: err.message.replace("INVALID_COUPON: ", ""),
         });
-        wooId = r.id;
-        wooNumber = r.number;
-        wooPaymentUrl = r.paymentUrl;
-      } catch (e) {
-        console.error("[gateway] Woo order push failed:", (e as Error).message);
+      }
+      return reply.code(500).send({
+        error: "ORDER_FAILED",
+        message: err?.message || "Order creation failed",
+      });
+    } finally {
+      _inFlightOrders.delete(idempotencyKey);
+      _inFlightOrders.delete(naturalKey);
+    }
+  });
+
+  /* ---- reconcile order by idempotency key (Multi-Gateway Failover Safety) ---- */
+  app.get("/v1/deen/orders/reconcile", async (req, reply) => {
+    const key = (req.query as any).key as string | undefined;
+    const phone = (req.query as any).phone as string | undefined;
+    if (!key && !phone) {
+      return reply.code(400).send({ error: "MISSING_PARAM", message: "key or phone required for reconciliation." });
+    }
+
+    // 1. Check in-flight orders
+    if (key && _inFlightOrders.has(key)) {
+      try {
+        const inFlightOrder = await _inFlightOrders.get(key);
+        if (inFlightOrder) {
+          return reply.code(200).send({ reconciled: true, order: inFlightOrder });
+        }
+      } catch {}
+    }
+
+    // 2. Check in-memory idempotency store
+    if (key) {
+      const dup = _getDuplicateOrder(key);
+      if (dup) {
+        return reply.code(200).send({ reconciled: true, order: dup });
       }
     }
 
-    const order: any = {
-      id: `d-${Date.now()}`,
-      number: orderNumStr,
-      name: String(name).trim().slice(0, 50).replace(/<[^>]*>/g, ""), // SEC-5: cap length, strip HTML
-      phone: digits,
-      address: String(address).trim().slice(0, 500).replace(/<[^>]*>/g, ""), // SEC-5: cap length, strip HTML
-      city: resolvedCity,
-      district: resolvedState,
-      state: resolvedState,
-      postcode: resolvedPostcode,
-      area,
-      payment,
-      paymentTitle,
-      paymentStatus,
-      lines,
-      subtotal,
-      cashback,
-      bogoDiscount: bogo.discount,
-      bogoFreeIndexes: bogo.freeIndexes,
-      couponCode: couponInfo?.code || null,
-      couponDiscount,
-      delivery,
-      total: Math.max(0, subtotal - cashback - bogo.discount - couponDiscount) + delivery,
-      status: "received",
-      courier,
-      pathaoConsignmentId,
-      pathaoTrackingUrl,
-      createdAt: new Date().toISOString(),
-      wooId,
-      wooNumber,
-      wooPaymentUrl,
-      trxId: trxId ? String(trxId) : undefined,
-    };
-    if (guestToken) {
-      const session = guestSessions.find((s) => s.token === guestToken);
-      if (session) {
-        session.orderId = wooId;
-        order.guestToken = guestToken;
+    // 3. Check memory orders array
+    if (key) {
+      const found = orders.find((o) => o.idempotencyKey === key || o.trxId === key || o.id === key);
+      if (found) {
+        return reply.code(200).send({ reconciled: true, order: found });
       }
     }
-    // Remember this phone so returning guests can be recognized & prompted to register.
-    recordGuestPurchase(digits, String(name).trim());
-    orders.unshift(order);
-    saveOrders();
 
-    // Trigger transactional push notification if device push token matches phone
-    const userTokens = Array.from(pushTokens.values())
-      .filter((t) => t.phone === digits)
-      .map((t) => t.token);
-
-    if (userTokens.length > 0) {
-      void sendExpoPushNotifications(
-        userTokens.map((to) => ({
-          to,
-          title: `📦 Order Confirmed: #${order.wooNumber || order.number}`,
-          body: `Thank you, ${order.name}! Total: ৳${order.total.toLocaleString("en-BD")}.${order.pathaoConsignmentId ? ` Pathao: ${order.pathaoConsignmentId}` : ""}`,
-          data: { orderId: order.id, orderNumber: order.wooNumber || order.number, actionUrl: "/(tabs)/orders" },
-          sound: "default" as const,
-          badge: 1,
-        }))
-      );
+    // 4. If phone is provided, check if a recent order exists matching key or phone within 5 min
+    if (phone) {
+      const digits = phone.replace(/[^0-9]/g, "");
+      const recent = orders.find((o) => {
+        if (o.phone !== digits) return false;
+        const age = Date.now() - new Date(o.createdAt).getTime();
+        return age < _IDEMPOTENCY_WINDOW_MS;
+      });
+      if (recent && key && (recent.idempotencyKey === key || recent.id === key)) {
+        return reply.code(200).send({ reconciled: true, order: recent });
+      }
     }
 
-    _recordOrder(idempotencyKey, order);
-    return reply.code(201).send(order);
+    // 5. If not in memory, query WooCommerce upstream directly by idempotency key / phone
+    if (wooEnabled && (key || phone)) {
+      const wooMatch = await findWooOrderByKey(key || "", phone ? phone.replace(/[^0-9]/g, "") : undefined);
+      if (wooMatch) {
+        return reply.code(200).send({
+          reconciled: true,
+          order: {
+            id: `woo-${wooMatch.id}`,
+            number: wooMatch.number,
+            wooId: wooMatch.id,
+            wooNumber: wooMatch.number,
+            wooPaymentUrl: wooMatch.paymentUrl,
+            total: wooMatch.total,
+            status: wooMatch.status,
+            idempotencyKey: key,
+          },
+        });
+      }
+    }
+
+    return reply.code(200).send({ reconciled: false, message: "Order not found." });
   });
 
   /* ---- list orders (scoped to phone + validated session token) ---- */
@@ -1440,15 +1751,15 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     let list = orders;
 
     if (guestToken && guestToken !== "") {
-      const session = guestSessions.find((s) => s.token === guestToken);
+      const session = resolveGuestSession(guestToken) || resolveAuthSession(guestToken);
       if (!session) {
         return reply.code(403).send({ error: "FORBIDDEN", message: "Invalid or expired session token." });
       }
       if (phone) {
         const digits = phone.replace(/[^0-9]/g, "");
-        list = list.filter((o) => o.phone === session.phone && o.phone === digits);
+        list = list.filter((o) => (session.phone ? o.phone === session.phone : true) && o.phone === digits);
       } else {
-        list = list.filter((o) => o.phone === session.phone);
+        list = list.filter((o) => (session.phone ? o.phone === session.phone : true));
       }
     } else if (number) {
       // Order-number lookup is safe (returns only public status fields)
@@ -1717,7 +2028,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   app.get("/v1/deen/bugs", async (req, reply) => {
     // REM-4: admin Bearer token required — stack traces / device info are internal data.
     const bugsToken = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
-    const bugsSession = bugsToken ? authSessions.get(bugsToken) : null;
+    const bugsSession = resolveAuthSession(bugsToken);
     if (!bugsSession || bugsSession.role !== "admin") {
       return reply.code(403).send({ error: "FORBIDDEN", message: "Admin access required to view bug reports." });
     }
@@ -1762,7 +2073,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   /* Admin endpoint: push metrics & registered device stats */
   app.get("/v1/deen/push/stats", async (req, reply) => {
     const token = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
-    const session = token ? authSessions.get(token) : null;
+    const session = resolveAuthSession(token);
     if (!session || session.role !== "admin") {
       return reply.code(403).send({ error: "FORBIDDEN", message: "Admin access required." });
     }
@@ -1798,7 +2109,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   app.post("/v1/deen/broadcasts", { schema: BROADCAST_BODY_SCHEMA }, async (req, reply) => {
     // REM-2: admin Bearer token required — prevents anyone spamming all app users.
     const bcToken = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
-    const bcSession = bcToken ? authSessions.get(bcToken) : null;
+    const bcSession = resolveAuthSession(bcToken);
     if (!bcSession || bcSession.role !== "admin") {
       return reply.code(403).send({ error: "FORBIDDEN", message: "Admin access required to send broadcasts." });
     }
@@ -2009,6 +2320,17 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: "ORDER_NOT_FOUND", message: "Order matching callback not found." });
     }
 
+    const callbackKey = `pay_cb_${orderId}_${trxId}_${status}`;
+    if (_isWebhookDuplicate(callbackKey)) {
+      return reply.send({
+        success: true,
+        duplicate: true,
+        orderId: targetOrder.id,
+        paymentStatus: targetOrder.paymentStatus,
+        status: targetOrder.status,
+      });
+    }
+
     const isSuccessful = status === "SUCCESS" || status === "COMPLETED" || status === "VALID" || status === "VALIDATED";
     if (isSuccessful) {
       targetOrder.paymentStatus = "Paid";
@@ -2027,6 +2349,8 @@ export async function registerDeenRoutes(app: FastifyInstance) {
         } catch {}
       }
     }
+
+    _recordWebhookDelivery(callbackKey);
 
     return reply.send({
       success: true,
@@ -2200,6 +2524,16 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       }
     }
 
+    const existingTicket = returns.find(
+      (r) =>
+        (b.id && r.id === b.id) ||
+        (b.ticketNumber && r.ticketNumber === b.ticketNumber) ||
+        (b.orderId && r.orderId === b.orderId && b.type === r.type && b.reason === r.reason)
+    );
+    if (existingTicket) {
+      return reply.code(200).send(existingTicket);
+    }
+
     const ticket = {
       id: b.id || `ret_${Date.now()}`,
       ticketNumber: b.ticketNumber || `RET-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -2264,8 +2598,8 @@ export async function registerDeenRoutes(app: FastifyInstance) {
 
     if (retToken && retToken !== "") {
       // Authenticated path: token may be a guest or WP session.
-      const guestSess = guestSessions.find((s) => s.token === retToken);
-      const authSess = authSessions.get(retToken);
+      const guestSess = resolveGuestSession(retToken);
+      const authSess = resolveAuthSession(retToken);
       if (!guestSess && !authSess) {
         return reply.code(403).send({ error: "FORBIDDEN", message: "Invalid or expired session token." });
       }
@@ -2397,8 +2731,18 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       wpUserId: wpUser.id,
       wpRoles: wpUser.roles,
     };
-    const token = `wp_${randomUUID()}`;
-    authSessions.set(token, { ...user, token, createdAt: Date.now() });
+    const now = Date.now();
+    const token = signSessionToken({
+      type: "user",
+      userId: user.id,
+      username: user.username,
+      name: user.name,
+      email: user.email,
+      role: user.role as any,
+      iat: now,
+      exp: now + AUTH_SESSION_TTL_MS,
+    });
+    authSessions.set(token, { ...user, token, createdAt: now });
     saveAuthSessions();
     return reply.send({
       success: true,
@@ -2408,11 +2752,183 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     });
   });
 
+  /* ------------------------------------------------------------------ */
+  /*  Social Auth: Google OAuth / OIDC Identity Token Verification      */
+  /* ------------------------------------------------------------------ */
+  app.post("/v1/auth/google", async (req, reply) => {
+    const b = (req.body as any) || {};
+    const idToken = String(b.idToken || b.token || "").trim();
+    const fallbackEmail = String(b.email || "").trim().toLowerCase();
+    const fallbackName = String(b.name || "").trim();
+
+    if (!idToken && !fallbackEmail) {
+      return reply.code(422).send({ success: false, message: "Google idToken or email is required." });
+    }
+
+    let verifiedEmail = fallbackEmail;
+    let verifiedName = fallbackName || "Google User";
+    let verifiedSub = `google_${Date.now()}`;
+    let avatarUrl: string | undefined;
+
+    if (idToken) {
+      try {
+        const verifyUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`;
+        const r = await fetch(verifyUrl);
+        if (r.ok) {
+          const payload = (await r.json()) as any;
+          if (payload.email) {
+            verifiedEmail = String(payload.email).toLowerCase();
+            verifiedName = payload.name || payload.given_name || verifiedName;
+            verifiedSub = payload.sub || verifiedSub;
+            avatarUrl = payload.picture;
+          }
+        }
+      } catch (err) {
+        console.warn("[auth/google] Google tokeninfo verification error:", (err as Error).message);
+      }
+    }
+
+    if (!verifiedEmail) {
+      return reply.code(401).send({ success: false, message: "Invalid or expired Google token." });
+    }
+
+    // Find or create WooCommerce customer via REST API
+    const wooCust = await findOrCreateWooCustomer({
+      email: verifiedEmail,
+      name: verifiedName,
+      provider: "google",
+      providerId: verifiedSub,
+      avatarUrl,
+    });
+
+    const now = Date.now();
+    const user = {
+      id: `wp_${wooCust.id}`,
+      name: wooCust.name || verifiedName,
+      username: wooCust.username,
+      email: wooCust.email,
+      role: "customer" as const,
+      accountType: "customer" as const,
+      wpUserId: wooCust.id,
+      authProvider: "google",
+      avatarUrl,
+    };
+
+    const token = signSessionToken({
+      type: "user",
+      userId: wooCust.id,
+      username: wooCust.username,
+      name: user.name,
+      email: user.email,
+      role: "customer",
+      iat: now,
+      exp: now + AUTH_SESSION_TTL_MS,
+    });
+
+    authSessions.set(token, { ...user, token, createdAt: now });
+    saveAuthSessions();
+    audit("auth.google", true, maskPhone(verifiedEmail));
+
+    return reply.send({
+      success: true,
+      message: `Signed in with Google as ${user.name}`,
+      user,
+      token,
+      isNewCustomer: wooCust.isNew,
+    });
+  });
+
+  /* ------------------------------------------------------------------ */
+  /*  Social Auth: Facebook Graph Access Token Verification            */
+  /* ------------------------------------------------------------------ */
+  app.post("/v1/auth/facebook", async (req, reply) => {
+    const b = (req.body as any) || {};
+    const accessToken = String(b.accessToken || b.token || "").trim();
+    const fallbackEmail = String(b.email || "").trim().toLowerCase();
+    const fallbackName = String(b.name || "").trim();
+
+    if (!accessToken && !fallbackEmail) {
+      return reply.code(422).send({ success: false, message: "Facebook accessToken or email is required." });
+    }
+
+    let verifiedEmail = fallbackEmail;
+    let verifiedName = fallbackName || "Facebook User";
+    let verifiedId = `fb_${Date.now()}`;
+    let avatarUrl: string | undefined;
+
+    if (accessToken) {
+      try {
+        const graphUrl = `https://graph.facebook.com/me?fields=id,name,email,picture.type(large)&access_token=${encodeURIComponent(accessToken)}`;
+        const r = await fetch(graphUrl);
+        if (r.ok) {
+          const payload = (await r.json()) as any;
+          if (payload.id) {
+            verifiedId = payload.id;
+            verifiedName = payload.name || verifiedName;
+            verifiedEmail = (payload.email ? String(payload.email).toLowerCase() : verifiedEmail) || `${verifiedId}@facebook.deencommerce.com`;
+            avatarUrl = payload.picture?.data?.url;
+          }
+        }
+      } catch (err) {
+        console.warn("[auth/facebook] Facebook Graph API error:", (err as Error).message);
+      }
+    }
+
+    if (!verifiedEmail) {
+      verifiedEmail = `${verifiedId}@facebook.deencommerce.com`;
+    }
+
+    // Find or create WooCommerce customer via REST API
+    const wooCust = await findOrCreateWooCustomer({
+      email: verifiedEmail,
+      name: verifiedName,
+      provider: "facebook",
+      providerId: verifiedId,
+      avatarUrl,
+    });
+
+    const now = Date.now();
+    const user = {
+      id: `wp_${wooCust.id}`,
+      name: wooCust.name || verifiedName,
+      username: wooCust.username,
+      email: wooCust.email,
+      role: "customer" as const,
+      accountType: "customer" as const,
+      wpUserId: wooCust.id,
+      authProvider: "facebook",
+      avatarUrl,
+    };
+
+    const token = signSessionToken({
+      type: "user",
+      userId: wooCust.id,
+      username: wooCust.username,
+      name: user.name,
+      email: user.email,
+      role: "customer",
+      iat: now,
+      exp: now + AUTH_SESSION_TTL_MS,
+    });
+
+    authSessions.set(token, { ...user, token, createdAt: now });
+    saveAuthSessions();
+    audit("auth.facebook", true, maskPhone(verifiedEmail));
+
+    return reply.send({
+      success: true,
+      message: `Signed in with Facebook as ${user.name}`,
+      user,
+      token,
+      isNewCustomer: wooCust.isNew,
+    });
+  });
+
   /* Resume an authenticated session (Bearer token → user). */
   app.get("/v1/auth/me", async (req, reply) => {
     const token = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
     if (!token) return reply.code(401).send({ success: false, message: "Authorization token required." });
-    const session = authSessions.get(token);
+    const session = resolveAuthSession(token);
     if (!session) return reply.code(401).send({ success: false, message: "Invalid or expired session." });
     return reply.send({ success: true, user: session });
   });
@@ -2462,9 +2978,9 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   app.get("/v1/auth/export-data", async (req, reply) => {
     const token = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
     if (!token) return reply.code(401).send({ success: false, message: "Authorization token required." });
-    const session = authSessions.get(token);
+    const session = resolveAuthSession(token);
     if (!session) return reply.code(401).send({ success: false, message: "Invalid or expired session." });
-    audit("auth.export", true, maskPhone(session.username));
+    audit("auth.export", true, maskPhone(session.username || ""));
     const phone = (session as any).phone || "";
     const localCust = phone ? customersByPhone[phone] : undefined;
     return reply.send({
@@ -2479,9 +2995,9 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   app.post("/v1/auth/delete-account", async (req, reply) => {
     const token = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
     if (!token) return reply.code(401).send({ success: false, message: "Authorization token required." });
-    const session = authSessions.get(token);
+    const session = resolveAuthSession(token);
     if (!session) return reply.code(401).send({ success: false, message: "Invalid or expired session." });
-    audit("auth.delete", true, maskPhone(session.username));
+    audit("auth.delete", true, maskPhone(session.username || ""));
     // Remove local session + any local customer record (PII minimization).
     authSessions.delete(token);
     const phone = (session as any).phone || "";
@@ -2502,7 +3018,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   app.get("/v1/deen/admin/analytics", async (req, reply) => {
     const token = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
     if (!token) return reply.code(401).send({ success: false, message: "Admin authorization required." });
-    const session = authSessions.get(token);
+    const session = resolveAuthSession(token);
     if (!session || session.role !== "admin") {
       return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required." });
     }
@@ -2562,7 +3078,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   app.get("/v1/deen/admin/export-orders", async (req, reply) => {
     const token = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
     if (!token) return reply.code(401).send({ success: false, message: "Admin authorization required." });
-    const session = authSessions.get(token);
+    const session = resolveAuthSession(token);
     if (!session || session.role !== "admin") {
       return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required." });
     }
@@ -2598,7 +3114,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   app.get("/v1/deen/admin/customers", async (req, reply) => {
     const token = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
     if (!token) return reply.code(401).send({ success: false, message: "Admin authorization required." });
-    const session = authSessions.get(token);
+    const session = resolveAuthSession(token);
     if (!session || session.role !== "admin") {
       return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required." });
     }
@@ -2769,9 +3285,9 @@ export async function registerDeenRoutes(app: FastifyInstance) {
 
   /* ---- guest session lookup (resume in-flight guest) ---- */
   app.get("/v1/auth/guest/:token", async (req, reply) => {
-    const session = guestSessions.find((s) => s.token === (req.params as any).token);
+    const session = resolveGuestSession((req.params as any).token);
     if (!session) {
-      return reply.code(404).send({ success: false, message: "Guest session not found." });
+      return reply.code(404).send({ success: false, message: "Guest session not found or expired." });
     }
     return reply.send({
       success: true,

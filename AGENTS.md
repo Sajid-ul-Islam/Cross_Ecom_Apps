@@ -84,8 +84,9 @@ Domain Context Boundaries:
 ### Multi-Agent Collision Prevention Rules:
 1. **Isolated File Editing:** Agents working on separate domains must NOT modify common core files (like `routes.ts` or `gateway.ts`) unless implementing shared cross-cutting contracts.
 2. **Deterministic Single-Source-of-Truth:**
-   - District codes: `apps/mobile/src/data/districts.ts`
-   - Currency & BDT formatting: `bdt()` in `gateway.ts`
+   - **Framework & Dependency Versions:** Always consult `docs/TECH_STACK.md`. Never infer versions from historical review logs.
+   - District codes: `apps/mobile/src/data/districts.ts` (Mobile) / `apps/web/lib/districts.ts` (Web)
+   - Currency & BDT formatting: `bdt()` in `gateway.ts` (Mobile) / `lib/api.ts` (Web)
    - Pricing & Cashback tiers: `apps/api/src/routes.ts` + `pricing.test.ts`
 3. **Continuous Type Safety:** Every agent modification must compile with `npm run typecheck:all` (0 errors) before declaring a task complete.
 

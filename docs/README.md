@@ -8,6 +8,7 @@ Welcome to the centralized documentation directory for the DEEN Commerce ecosyst
 
 | Document | Purpose & Scope |
 | :--- | :--- |
+| **[TECH_STACK.md](./TECH_STACK.md)** | **Single authoritative version matrix** for all frameworks (Expo SDK 57, Fastify 4.x, Next.js 14) and tooling. |
 | **[SYSTEM_ARCHITECTURE.md](./SYSTEM_ARCHITECTURE.md)** | Technical deep-dive: 3-tier architecture, request lifecycles, offline resilience, authentication, and image sizing. |
 | **[REVIEW.md](./REVIEW.md)** | Comprehensive 2026 system review, security vulnerability audit (SEC-1–8, REM-1–7), and scorecard. |
 | **[BLUEPRINT.md](./BLUEPRINT.md)** | SaaS production-grade blueprint, reliability goals, conversion features, and multi-tenant roadmap. |

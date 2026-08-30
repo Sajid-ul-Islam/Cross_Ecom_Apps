@@ -589,6 +589,115 @@ export async function updateWooOrderPayment(
   return (await r.json()) as { id: number; status: string };
 }
 
+/**
+ * Find an existing WooCommerce order matching an idempotency key or customer phone.
+ * Queries WooCommerce to reconcile orders across process restarts and gateway failovers.
+ */
+export async function findWooOrderByKey(
+  idempotencyKey: string,
+  phone?: string
+): Promise<{ id: number; number: string; paymentUrl?: string; total?: number; status?: string } | null> {
+  if (!wooHealthy() || (!idempotencyKey && !phone)) return null;
+  try {
+    const params: Record<string, string> = { per_page: "10" };
+    if (phone) params.search = phone;
+    const orders = (await wooFetch("orders", params)) as any[];
+    if (Array.isArray(orders)) {
+      for (const o of orders) {
+        const meta = Array.isArray(o.meta_data) ? o.meta_data : [];
+        const matchKey = meta.find(
+          (m: any) =>
+            (m.key === "_idempotency_key" && String(m.value) === String(idempotencyKey)) ||
+            (m.key === "_natural_idempotency_key" && String(m.value) === String(idempotencyKey))
+        );
+        if (matchKey) {
+          return {
+            id: o.id,
+            number: String(o.number || o.id),
+            paymentUrl: o.payment_url,
+            total: Number(o.total) || 0,
+            status: o.status,
+          };
+        }
+      }
+    }
+  } catch (e) {
+    console.error("[woo] findWooOrderByKey failed:", (e as Error).message);
+  }
+  return null;
+}
+
+/**
+ * Finds an existing WooCommerce customer by email or creates a new customer via WC REST API.
+ * Attaches social provider ID in customer meta_data without touching WordPress core files.
+ */
+export async function findOrCreateWooCustomer(params: {
+  email: string;
+  name: string;
+  provider: "google" | "facebook";
+  providerId: string;
+  avatarUrl?: string;
+}): Promise<{ id: number; email: string; name: string; username: string; isNew: boolean }> {
+  const { email, name, provider, providerId, avatarUrl } = params;
+  const cleanEmail = email.trim().toLowerCase();
+
+  if (wooHealthy()) {
+    try {
+      // 1. Search WooCommerce for existing customer by email
+      const existing = (await wooFetch("customers", { email: cleanEmail, per_page: "1" })) as any[];
+      if (Array.isArray(existing) && existing.length > 0) {
+        const c = existing[0];
+        return {
+          id: c.id,
+          email: c.email || cleanEmail,
+          name: `${c.first_name || ""} ${c.last_name || ""}`.trim() || name,
+          username: c.username || cleanEmail.split("@")[0],
+          isNew: false,
+        };
+      }
+
+      // 2. Create new WooCommerce customer via REST API
+      const parts = name.trim().split(" ");
+      const firstName = parts[0] || name.trim() || "Customer";
+      const lastName = parts.slice(1).join(" ") || "";
+      const baseUsername = cleanEmail.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "");
+      const username = `${baseUsername}_${Math.floor(1000 + Math.random() * 9000)}`;
+
+      const newCustomer = await wooPost("customers", {
+        email: cleanEmail,
+        first_name: firstName,
+        last_name: lastName,
+        username,
+        meta_data: [
+          { key: `_social_${provider}_id`, value: providerId },
+          { key: `_social_auth_provider`, value: provider },
+          ...(avatarUrl ? [{ key: "_social_avatar_url", value: avatarUrl }] : []),
+        ],
+      });
+
+      return {
+        id: newCustomer.id,
+        email: newCustomer.email || cleanEmail,
+        name: `${newCustomer.first_name || firstName} ${newCustomer.last_name || lastName}`.trim(),
+        username: newCustomer.username || username,
+        isNew: true,
+      };
+    } catch (err) {
+      console.error(`[woo] findOrCreateWooCustomer failed:`, (err as Error).message);
+    }
+  }
+
+  // Fallback if WooCommerce is in seed/offline mode
+  const fallbackId = Math.floor(5000 + Math.random() * 5000);
+  return {
+    id: fallbackId,
+    email: cleanEmail,
+    name,
+    username: cleanEmail.split("@")[0],
+    isNew: true,
+  };
+}
+
 /* -------------------- WordPress / store sourcing -------------------- */
 
 /** Store address + basic settings from Woo (WP source of truth).

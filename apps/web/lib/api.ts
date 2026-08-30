@@ -9,8 +9,9 @@ export const API_URL =
 const GATEWAY_API_KEY = process.env.NEXT_PUBLIC_GATEWAY_API_KEY || "";
 
 /**
- * Drop-in replacement for fetch() that always includes the gateway x-api-key
- * header and automatically falls back if the primary Render instance is spinning up.
+ * Safe fetch wrapper that includes x-api-key and automatically fails over
+ * to the backup gateway ONLY for idempotent GET requests.
+ * Mutating writes (POST/PUT/DELETE) use explicit two-phase reconciliation.
  */
 async function apiFetch(input: string, init?: RequestInit): Promise<Response> {
   const headers: Record<string, string> = {
@@ -18,17 +19,19 @@ async function apiFetch(input: string, init?: RequestInit): Promise<Response> {
   };
   if (GATEWAY_API_KEY) headers["x-api-key"] = GATEWAY_API_KEY;
 
+  const isGet = !init?.method || init.method.toUpperCase() === "GET";
+
   try {
     const res = await fetch(input, { ...init, headers });
-    if (!res.ok && input.startsWith(DEFAULT_GATEWAY_URL)) {
-      // If primary returned 502/503 (Render cold start), failover to backup gateway
+    if (!res.ok && isGet && input.startsWith(DEFAULT_GATEWAY_URL)) {
+      // If primary returned 502/503 (Render cold start) on a GET, failover to backup gateway
       const backupUrl = input.replace(DEFAULT_GATEWAY_URL, BACKUP_GATEWAY_URL);
       const backupRes = await fetch(backupUrl, { ...init, headers }).catch(() => null);
       if (backupRes && backupRes.ok) return backupRes;
     }
     return res;
   } catch (err) {
-    if (input.startsWith(DEFAULT_GATEWAY_URL)) {
+    if (isGet && input.startsWith(DEFAULT_GATEWAY_URL)) {
       const backupUrl = input.replace(DEFAULT_GATEWAY_URL, BACKUP_GATEWAY_URL);
       return fetch(backupUrl, { ...init, headers });
     }
@@ -128,6 +131,7 @@ export interface OrderPayload {
   district?: string;
   state?: string;
   guestToken?: string;
+  idempotencyKey?: string;
 }
 
 export interface OrderResult {
@@ -141,6 +145,7 @@ export interface OrderResult {
   payment: string;
   paymentTitle?: string;
   createdAt: string;
+  idempotencyKey?: string;
   name?: string;
   phone?: string;
   address?: string;
@@ -201,22 +206,132 @@ export async function fetchProduct(id: string): Promise<Product | null> {
   }
 }
 
-export async function placeOrder(payload: OrderPayload): Promise<OrderResult> {
+/**
+ * Reconcile order across gateway instances by idempotencyKey or phone (Two-Phase Reconciliation).
+ */
+export async function reconcileOrder(
+  idempotencyKey: string,
+  phone?: string
+): Promise<{ reconciled: boolean; order?: OrderResult }> {
+  if (!idempotencyKey && !phone) return { reconciled: false };
+  const qs = new URLSearchParams();
+  if (idempotencyKey) qs.set("key", idempotencyKey);
+  if (phone) qs.set("phone", phone);
+
+  const origins = Array.from(new Set([API_URL, DEFAULT_GATEWAY_URL, BACKUP_GATEWAY_URL]));
+
+  for (const base of origins) {
+    try {
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 4000);
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (GATEWAY_API_KEY) headers["x-api-key"] = GATEWAY_API_KEY;
+
+      const res = await fetch(`${base}/v1/deen/orders/reconcile?${qs.toString()}`, {
+        headers,
+        signal: controller.signal,
+      });
+      clearTimeout(t);
+      if (res.ok) {
+        const data = (await res.json()) as { reconciled: boolean; order?: OrderResult };
+        if (data && data.reconciled && data.order) {
+          return data;
+        }
+      }
+    } catch {
+      // Continue checking next gateway
+    }
+  }
+  return { reconciled: false };
+}
+
+export async function placeOrder(
+  payload: OrderPayload & { idempotencyKey?: string }
+): Promise<OrderResult> {
   const token = getGuestToken();
-  const res = await apiFetch(`${API_URL}/v1/deen/orders`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    const err = (await res.json().catch(() => ({}))) as { message?: string };
-    throw new Error(err.message || "Order failed");
+  const cleanPhone = String(payload.phone || "").replace(/[^0-9]/g, "");
+  const idempotencyKey =
+    payload.idempotencyKey ||
+    `w_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+
+  const orderPayload = {
+    ...payload,
+    phone: cleanPhone,
+    idempotencyKey,
+  };
+
+  const origins = Array.from(new Set([API_URL, BACKUP_GATEWAY_URL]));
+
+  let lastError: Error | null = null;
+
+  for (const base of origins) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "Idempotency-Key": idempotencyKey,
+        "x-idempotency-key": idempotencyKey,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+      if (GATEWAY_API_KEY) headers["x-api-key"] = GATEWAY_API_KEY;
+
+      const res = await fetch(`${base}/v1/deen/orders`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(orderPayload),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        return (await res.json()) as OrderResult;
+      }
+
+      // 4xx is definitive validation/client error: DO NOT fail over or retry
+      if (res.status >= 400 && res.status < 500) {
+        const body = await res.text().catch(() => "");
+        let cleanMsg = `HTTP ${res.status}`;
+        try {
+          const parsed = JSON.parse(body);
+          if (parsed.message) cleanMsg = parsed.message;
+          else if (parsed.error) cleanMsg = parsed.error;
+        } catch {
+          if (body) cleanMsg = body.slice(0, 150);
+        }
+        throw new Error(cleanMsg);
+      }
+
+      lastError = new Error(`Gateway returned ${res.status}`);
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      const isDefinitiveClientError =
+        err?.message &&
+        !err?.name?.includes("Abort") &&
+        !err?.message?.includes("failed") &&
+        !err?.message?.includes("timed out") &&
+        !err?.message?.includes("Network request") &&
+        !err?.message?.includes("Failed to fetch");
+
+      if (isDefinitiveClientError && !err?.message?.startsWith("HTTP 5")) {
+        throw err;
+      }
+      lastError = err instanceof Error ? err : new Error(String(err));
+    }
+
+    // ── TWO-PHASE RECONCILIATION ──
+    // The request timed out or returned 5xx. DO NOT blindly retry POST.
+    // Check if the order was created before trying the backup gateway!
+    try {
+      const reconciliation = await reconcileOrder(idempotencyKey, cleanPhone);
+      if (reconciliation.reconciled && reconciliation.order) {
+        return reconciliation.order;
+      }
+    } catch {}
   }
 
-  return res.json();
+  throw lastError || new Error("Order placement failed. Please check your connection and try again.");
 }
 
 export function bdt(n: number) {
@@ -298,16 +413,48 @@ export interface PathaoTrackingResult {
  * Fetch live Pathao tracking info by consignment ID.
  * Calls GET /v1/deen/pathao/track/:consignmentId on the gateway.
  */
-export async function fetchPathaoTracking(consignmentId: string): Promise<PathaoTrackingResult | null> {
-  if (!consignmentId) return null;
-  try {
-    const res = await apiFetch(
-      `${API_URL}/v1/deen/pathao/track/${encodeURIComponent(consignmentId)}`,
-      { cache: "no-store" },
-    );
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
+export async function fetchPathaoTracking(consignmentId: string): Promise<PathaoTrackingResult> {
+  const cleanId = String(consignmentId || "").trim();
+  if (!cleanId) {
+    return {
+      success: false,
+      consignmentId: "",
+      summary: "Invalid consignment ID",
+      status: "unknown",
+      steps: [],
+      trackingUrl: "",
+      lastUpdated: new Date().toISOString(),
+      message: "Consignment ID cannot be empty",
+    };
   }
+  const res = await apiFetch(`${API_URL}/v1/deen/pathao/track/${encodeURIComponent(cleanId)}`);
+  return res.json();
+}
+
+/* --------------------------- Social Auth (Google / Facebook) ---------------------------- */
+
+export async function loginWithGoogle(
+  idToken?: string,
+  email?: string,
+  name?: string
+): Promise<{ success: boolean; token?: string; user?: any; message?: string; isNewCustomer?: boolean }> {
+  const res = await apiFetch(`${API_URL}/v1/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ idToken, email, name }),
+  });
+  return res.json();
+}
+
+export async function loginWithFacebook(
+  accessToken?: string,
+  email?: string,
+  name?: string
+): Promise<{ success: boolean; token?: string; user?: any; message?: string; isNewCustomer?: boolean }> {
+  const res = await apiFetch(`${API_URL}/v1/auth/facebook`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ accessToken, email, name }),
+  });
+  return res.json();
 }

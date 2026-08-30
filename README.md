@@ -1,17 +1,17 @@
 # DEEN Commerce — Cross-Platform E-commerce Monorepo
 
-**Bangladesh's first denim brand — DEEN** — built as a modern omni-channel e-commerce suite: a **React Native (Expo SDK 55) mobile app**, a **Fastify WooCommerce-gateway API**, and a **Next.js 14 web storefront order desk**.
+**Bangladesh's first denim brand — DEEN** — built as a modern omni-channel e-commerce suite: a **React Native (Expo SDK 57) mobile app**, a **Fastify WooCommerce-gateway API**, and a **Next.js 14 web storefront order desk**.
 
-[![Fastify](https://img.shields.io/badge/Fastify-5.2-000000?style=for-the-badge&logo=fastify&logoColor=white)](https://www.fastify.io/)
-[![React Native](https://img.shields.io/badge/React_Native-Expo_SDK_55-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactnative.dev/)
+[![Fastify](https://img.shields.io/badge/Fastify-4.28-000000?style=for-the-badge&logo=fastify&logoColor=white)](https://www.fastify.io/)
+[![React Native](https://img.shields.io/badge/React_Native-Expo_SDK_57-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactnative.dev/)
 [![Next.js](https://img.shields.io/badge/Next.js-14-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 
 **Store Backend**: [https://deencommerce.com](https://deencommerce.com)  
-📱 **React Native (Expo)** mobile app · ⚡ **Fastify + WooCommerce** Gateway API · 🖥️ **Next.js 14** web order desk.
+📱 **React Native (Expo SDK 57)** mobile app · ⚡ **Fastify + WooCommerce** Gateway API · 🖥️ **Next.js 14** web order desk.
 
-> Built for handoff between autonomous coding agents. See [AGENTS.md](./AGENTS.md) for workspace rules and the [docs/](./docs/README.md) directory for full architectural documentation.
+> Built for handoff between autonomous coding agents. See [AGENTS.md](./AGENTS.md) for workspace rules, [docs/TECH_STACK.md](./docs/TECH_STACK.md) for the single authoritative version matrix, and the [docs/](./docs/README.md) directory for full architectural documentation.
 
 ---
 
@@ -34,6 +34,7 @@ All architectural specifications, security audits, and operations guides live in
 
 | Document | Purpose |
 | :--- | :--- |
+| **[Authoritative Tech Stack](./docs/TECH_STACK.md)** | **Single source of truth** for all framework, SDK, runtime, and dependency versions across the monorepo. |
 | **[System Architecture](./docs/SYSTEM_ARCHITECTURE.md)** | Technical deep-dive: 3-tier architecture, request lifecycles, offline resilience, and authentication. |
 | **[System Review & Audit](./docs/REVIEW.md)** | Comprehensive 2026 system review, security vulnerability audit (SEC-1–8, REM-1–7), and scorecard. |
 | **[SaaS Blueprint](./docs/BLUEPRINT.md)** | SaaS production-grade blueprint, reliability goals, conversion features, and multi-tenant roadmap. |

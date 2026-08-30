@@ -10,15 +10,15 @@
 
 <p align="center">
   <b>Artisanal Raw Selvedge Denim, Dobby Panjabis & Heavyweight Menswear Commerce Suite</b><br/>
-  Cross-platform React Native (Expo SDK 55) Mobile App + Fastify WooCommerce Gateway + Web Storefront.
+  Cross-platform React Native (Expo SDK 57) Mobile App + Fastify WooCommerce Gateway + Web Storefront.
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Expo-SDK_55-000020?style=for-the-badge&logo=expo&logoColor=white" alt="Expo SDK 55" />
-  <img src="https://img.shields.io/badge/React_Native-0.83-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React Native" />
+  <img src="https://img.shields.io/badge/Expo-SDK_57-000020?style=for-the-badge&logo=expo&logoColor=white" alt="Expo SDK 57" />
+  <img src="https://img.shields.io/badge/React_Native-0.86.3-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React Native" />
   <img src="https://img.shields.io/badge/React-19.2-149ECA?style=for-the-badge&logo=react&logoColor=white" alt="React 19" />
-  <img src="https://img.shields.io/badge/Fastify-5.2-000000?style=for-the-badge&logo=fastify&logoColor=white" alt="Fastify" />
-  <img src="https://img.shields.io/badge/TypeScript-5.7-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Fastify-4.28-000000?style=for-the-badge&logo=fastify&logoColor=white" alt="Fastify" />
+  <img src="https://img.shields.io/badge/TypeScript-6.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/WooCommerce-Proxy_Gateway-96588A?style=for-the-badge&logo=woocommerce&logoColor=white" alt="WooCommerce" />
   <img src="https://img.shields.io/badge/Render-Deployed_API-46E3B7?style=for-the-badge&logo=render&logoColor=black" alt="Render" />
 </p>

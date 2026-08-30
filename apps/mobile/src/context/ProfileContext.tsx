@@ -5,6 +5,8 @@ import {
   getProfile,
   saveProfile as apiSaveProfile,
   login as gatewayLogin,
+  loginWithGoogle as gatewayLoginWithGoogle,
+  loginWithFacebook as gatewayLoginWithFacebook,
   authMe,
   logout as gatewayLogout,
   createGuestSession,
@@ -55,6 +57,8 @@ interface ProfileContextType {
   addSavedAddress: (addr: Omit<SavedAddress, "id">) => Promise<void>;
   removeSavedAddress: (id: string) => Promise<void>;
   login: (username: string, password: string) => Promise<{ success: boolean; message?: string }>;
+  loginWithGoogle: (idToken?: string, email?: string, name?: string) => Promise<{ success: boolean; message?: string }>;
+  loginWithFacebook: (accessToken?: string, email?: string, name?: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
 }
 
@@ -170,6 +174,40 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return { success: res.success, message: res.message };
   };
 
+  const loginWithGoogle = async (idToken?: string, email?: string, name?: string) => {
+    const res = await gatewayLoginWithGoogle(idToken, email, name);
+    if (res.success && res.user) {
+      const me = res.user;
+      persist({
+        ...DEFAULT_PROFILE,
+        username: me.username,
+        name: me.name,
+        email: me.email,
+        role: me.role,
+        accountType: me.accountType,
+        isGuest: false,
+      });
+    }
+    return { success: res.success, message: res.message };
+  };
+
+  const loginWithFacebook = async (accessToken?: string, email?: string, name?: string) => {
+    const res = await gatewayLoginWithFacebook(accessToken, email, name);
+    if (res.success && res.user) {
+      const me = res.user;
+      persist({
+        ...DEFAULT_PROFILE,
+        username: me.username,
+        name: me.name,
+        email: me.email,
+        role: me.role,
+        accountType: me.accountType,
+        isGuest: false,
+      });
+    }
+    return { success: res.success, message: res.message };
+  };
+
   const logout = async () => {
     await gatewayLogout().catch(() => {});
     persist(normalizeProfile(DEFAULT_PROFILE));
@@ -193,6 +231,8 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addSavedAddress,
         removeSavedAddress,
         login,
+        loginWithGoogle,
+        loginWithFacebook,
         logout,
       }}
     >
