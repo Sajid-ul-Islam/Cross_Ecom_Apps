@@ -109,6 +109,9 @@ export interface Product {
   rating: number;
   ratingCount: number;
   blurb?: string;
+  description?: string;
+  slug?: string;
+  tags?: string[];
   isNew?: boolean;
 }
 
@@ -170,6 +173,63 @@ export interface OrderResult {
   lines?: { name: string; size: string; qty: number; unit: number; gift?: boolean }[];
 }
 
+import catalogSnapshot from "./catalog.snapshot.json";
+
+export function getBundledProducts(): Product[] {
+  const data = catalogSnapshot as unknown as { products?: Product[] } | Product[];
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.products)) return data.products;
+  return [];
+}
+
+function applyLocalFilters(
+  products: Product[],
+  category?: string,
+  search?: string,
+  sort?: string
+): Product[] {
+  let list = [...products];
+
+  if (category && category !== "ALL") {
+    const cat = category.toUpperCase();
+    list = list.filter((p) => {
+      const pCat = (p.category || "").toUpperCase();
+      if (cat === "JEANS") return pCat.includes("JEAN") || pCat.includes("DENIM");
+      if (cat === "SHIRT") return pCat.includes("SHIRT") && !pCat.includes("T-SHIRT");
+      if (cat === "T-SHIRT") return pCat.includes("T-SHIRT") || pCat.includes("TEE");
+      if (cat === "PANJABI") return pCat.includes("PANJABI") || pCat.includes("PUNJABI");
+      if (cat === "POLO") return pCat.includes("POLO");
+      if (cat === "TROUSERS") return pCat.includes("TROUSER") || pCat.includes("PANT") || pCat.includes("CHINO");
+      if (cat === "COMBO") return pCat.includes("COMBO") || (p.tags && p.tags.some((t) => t.toUpperCase().includes("COMBO")));
+      return pCat.includes(cat);
+    });
+  }
+
+  if (search && search.trim()) {
+    const q = search.trim().toLowerCase();
+    list = list.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        (p.sku && p.sku.toLowerCase().includes(q)) ||
+        (p.category && p.category.toLowerCase().includes(q)) ||
+        (p.description && p.description.toLowerCase().includes(q))
+    );
+  }
+
+  if (sort) {
+    if (sort === "price-asc") list.sort((a, b) => (a.salePrice || a.price) - (b.salePrice || b.price));
+    else if (sort === "price-desc") list.sort((a, b) => (b.salePrice || b.price) - (a.salePrice || a.price));
+    else if (sort === "name-asc") list.sort((a, b) => a.name.localeCompare(b.name));
+    else if (sort === "new") list.sort((a, b) => Number(b.isNew ?? false) - Number(a.isNew ?? false));
+  }
+
+  return list;
+}
+
+/**
+ * Fetches products from live Fastify Gateway REST API with automatic failover
+ * and offline-first bundled catalog fallback.
+ */
 export async function fetchProducts(params?: {
   category?: string;
   search?: string;
@@ -180,30 +240,138 @@ export async function fetchProducts(params?: {
     const qs = new URLSearchParams();
     if (params?.category && params.category !== "ALL")
       qs.set("category", params.category);
-    if (params?.search) qs.set("search", params.search);
+    if (params?.search) {
+      qs.set("search", params.search);
+      qs.set("q", params.search);
+    }
     if (params?.sort) qs.set("sort", params.sort);
     if (params?.per_page) qs.set("per_page", String(params.per_page));
+
     const res = await apiFetch(
       `${API_URL}/v1/deen/products${qs.toString() ? "?" + qs.toString() : ""}`,
       { next: { revalidate: 60 } }
     );
-    if (!res.ok) return [];
-    return res.json();
+    if (res.ok) {
+      const data: Product[] = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        return data;
+      }
+    }
   } catch {
-    return [];
+    // Network or timeout failure — fallback gracefully to bundled snapshot
   }
+
+  // Graceful fallback to bundled catalog snapshot
+  const fallback = applyLocalFilters(
+    getBundledProducts(),
+    params?.category,
+    params?.search,
+    params?.sort
+  );
+  if (params?.per_page && params.per_page > 0) {
+    return fallback.slice(0, params.per_page);
+  }
+  return fallback;
 }
 
+/**
+ * Fetches single product details with real variations from the REST API gateway,
+ * with fallback to bundled snapshot.
+ */
 export async function fetchProduct(id: string): Promise<Product | null> {
   try {
-    const res = await apiFetch(`${API_URL}/v1/deen/products/${id}`, {
+    const res = await apiFetch(`${API_URL}/v1/deen/products/${encodeURIComponent(id)}`, {
       next: { revalidate: 60 },
     });
-    if (!res.ok) return null;
-    return res.json();
+    if (res.ok) {
+      const product = await res.json();
+      if (product && product.id) return product;
+    }
   } catch {
-    return null;
+    // Network or timeout failure — fallback
   }
+
+  // Fallback to snapshot search by ID or slug
+  const all = getBundledProducts();
+  const found = all.find((p) => String(p.id) === String(id) || p.slug === id);
+  return found || null;
+}
+
+/**
+ * Fetches live category counts from the REST API gateway, with fallback.
+ */
+export async function fetchCategories(): Promise<{ category: string; count: number }[]> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/categories`, {
+      next: { revalidate: 300 },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) return data;
+    }
+  } catch {}
+
+  // Fallback: derive categories from bundled snapshot
+  const bundled = getBundledProducts();
+  const counts: Record<string, number> = {};
+  bundled.forEach((p) => {
+    const cat = p.category || "OTHER";
+    counts[cat] = (counts[cat] || 0) + 1;
+  });
+  return Object.entries(counts).map(([category, count]) => ({ category, count }));
+}
+
+/**
+ * Fetches live category cover image URLs from WooCommerce REST API.
+ */
+export async function fetchCategoryCovers(): Promise<Record<string, string>> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/category-covers`, {
+      next: { revalidate: 300 },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data === "object") return data;
+    }
+  } catch {}
+  return {};
+}
+
+/**
+ * Fetches live campaign status from REST API (/v1/deen/campaigns).
+ */
+export async function fetchCampaigns(): Promise<{
+  cashback: { enabled: boolean; tiers: Record<string, { minSpend: number; cashback: number }> };
+  sale: { enabled: boolean; title: string; subtitle: string; badge: string; discountRange: string };
+} | null> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/campaigns`, {
+      cache: "no-store",
+    });
+    if (res.ok) return res.json();
+  } catch {}
+  return null;
+}
+
+/**
+ * Fetches live store metadata from REST API (/v1/deen/store-info).
+ */
+export async function fetchStoreInfo(): Promise<{
+  name: string;
+  description: string;
+  currency: string;
+  phone: string;
+  email: string;
+  hotline: string;
+  whatsapp: string;
+} | null> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/store-info`, {
+      next: { revalidate: 300 },
+    });
+    if (res.ok) return res.json();
+  } catch {}
+  return null;
 }
 
 /**
