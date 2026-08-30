@@ -25,6 +25,12 @@ const nextConfig = {
     ],
   },
   webpack: (config) => {
+    // Ensure this sub-app's node_modules take precedence over the monorepo root.
+    // Prevents the root workspace react@18.2 from shadowing apps/web react@18.3
+    config.resolve.modules = [
+      path.resolve(__dirname, "node_modules"),
+      "node_modules",
+    ];
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
       "@": path.resolve(__dirname),

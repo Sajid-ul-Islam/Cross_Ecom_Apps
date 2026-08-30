@@ -11,43 +11,63 @@ export interface CategoryInfo {
 export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
   JEANS: {
     slug: "JEANS",
-    title: "Artisanal Denim & Jeans",
-    subtitle: "Selvedge & Stretch Denim Crafted with Precision",
+    title: "Artisanal Selvedge Denim & Jeans",
+    subtitle: "Woven on Vintage Shuttle Looms with Deep Rope-Dyed Indigo",
     description:
-      "Engineered from ring-spun Japanese & Turkish indigo fabrics with reinforced chain-stitched hems, custom oxidized rivets, and tailored ergonomic tapers.",
-    coverImage: "https://images.unsplash.com/photo-1542272604-780c96856592?w=800&q=80",
-    metaBadge: "Signature Collection",
+      "Engineered from ring-spun Japanese & Turkish indigo fabrics with reinforced chain-stitched hems, custom oxidized copper rivets, and tailored ergonomic tapers.",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2026/05/jeans-1.jpg",
+    metaBadge: "13.5 OZ SELVEDGE",
     highlights: ["12.5oz–14.5oz Raw & Washed Denim", "YKK Solid Brass Zippers", "Comfort Stretch & Raw Rigid Fits"],
   },
   PANJABI: {
     slug: "PANJABI",
-    title: "Heritage Festive Panjabi",
+    title: "Heritage Dobby & Festive Panjabi",
     subtitle: "Luxurious Hand-Loom Cotton, Silk & Jacquard Weaves",
     description:
       "Crafted for Friday prayers, weddings, and Eid festivals. Tailored with modern minimalist plackets, mother-of-pearl buttons, and structured band collars.",
-    coverImage: "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=800&q=80",
-    metaBadge: "Festive & Classic",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2026/05/Section-Image-4.jpg",
+    metaBadge: "EID & FESTIVE",
     highlights: ["100% Egyptian Giza & Organic Cotton", "Artisanal Thread Embroidery", "Slim & Traditional Relaxed Cuts"],
   },
   SHIRT: {
     slug: "SHIRT",
-    title: "Tailored Oxford & Casual Shirts",
+    title: "Artisanal Casual & Oxford Shirts",
     subtitle: "Breathable Linens, Indigo Chambrays & Formal Twills",
     description:
-      "Versatile shirting from boardroom presentations to weekend getaways. Featuring french seams, collar stays, and curved hem cuts.",
-    coverImage: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=800&q=80",
-    metaBadge: "Modern Tailoring",
+      "Versatile shirting from boardroom presentations to weekend getaways. Cut with single-needle tailoring, reinforced side gussets, and pre-washed soft textures.",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2026/06/Half-sleeve-Section-iomage.webp",
+    metaBadge: "100% COTTON",
     highlights: ["High-Count 80s & 100s 2-Ply Cotton", "Wrinkle-Resistant Weaves", "Mother-of-Pearl Buttons"],
+  },
+  "T-SHIRT": {
+    slug: "T-SHIRT",
+    title: "Heavyweight 240 GSM Core T-Shirts",
+    subtitle: "Zero-Torque Combed Cotton with Structured Boxy Drapes",
+    description:
+      "Zero-shrink, drop-shoulder and classic tailored crew necks crafted from dense combed cotton with bound double-ribbed necklines.",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2026/07/1x1-2.png",
+    metaBadge: "240 GSM ZERO-TORQUE",
+    highlights: ["220–240 GSM Heavy Cotton", "Pre-Shrunk Bio-Washed", "Durable Ribbed Collar"],
   },
   POLO: {
     slug: "POLO",
-    title: "Piqué & Mercerized Polos",
-    subtitle: "Subtle Luxury for Effortless Everyday Elegance",
+    title: "Knitted Indigo & Honeycomb Polos",
+    subtitle: "Piqué & Jacquard Knits with Mother of Pearl Accents",
     description:
-      "Heavyweight cotton piqué knitted with micro-vent side seams and ribbed anti-curl collars. Designed to retain sharp structure through countless washes.",
-    coverImage: "https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99?w=800&q=80",
-    metaBadge: "Elevated Casual",
+      "Heavyweight cotton piqué knitted with micro-vent side seams and tipped flat-knit anti-curl collars. Designed to retain sharp structure through countless washes.",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2026/07/Desktop-Hero-Banner.jpg",
+    metaBadge: "HONEYCOMB PIQUE",
     highlights: ["100% Combed Compact Cotton", "Mercerized Anti-Pilling Finish", "Laser-Etched Minimalist Branding"],
+  },
+  TROUSERS: {
+    slug: "TROUSERS",
+    title: "Utility & Chino Trousers",
+    subtitle: "Articulated Knee Pleats, Heavy Ripstop & High-Density Twills",
+    description:
+      "Ergonomic utility bottoms designed for city mobility. Featuring deep slant cargo pockets, reinforced knees, and tailored ankle cinches.",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
+    metaBadge: "COTTON RIPSTOP",
+    highlights: ["High-Density Military Weave", "Articulated Knees", "Reinforced Stress Points"],
   },
   COMBO: {
     slug: "COMBO",
@@ -55,33 +75,35 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     subtitle: "Complete Looks with Integrated Multi-Buy Savings",
     description:
       "Stylist-curated wardrobe bundles pairing premium selvedge jeans with matching oxford shirts and accessories at exclusive package discounts.",
-    coverImage: "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=800&q=80",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
     metaBadge: "Best Value Packs",
     highlights: ["Bundled Discount Tier", "Pre-Matched Palette Pairings", "Gift Ready Packaging"],
   },
-  "T-SHIRT": {
-    slug: "T-SHIRT",
-    title: "Heavyweight Core T-Shirts",
-    subtitle: "220+ GSM Combed Cotton Everyday Essentials",
-    description:
-      "Zero-shrink, drop-shoulder and classic tailored crew necks crafted from dense combed cotton with bound ribbed necklines.",
-    coverImage: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&q=80",
-    metaBadge: "Core Essentials",
-    highlights: ["220–240 GSM Heavy Cotton", "Pre-Shrunk Bio-Washed", "Durable Ribbed Collar"],
-  },
 };
 
-export function getCategoryInfo(category: string): CategoryInfo {
-  const normalized = category.toUpperCase().trim();
-  return (
-    CATEGORY_DETAILS[normalized] || {
-      slug: normalized,
-      title: `${category} Collection`,
-      subtitle: "DEEN Artisanal Apparel",
-      description: "Explore handcrafted premium fashion from DEEN Bangladesh.",
-      coverImage: "https://images.unsplash.com/photo-1542272604-780c96856592?w=800&q=80",
-      metaBadge: "Apparel",
-      highlights: ["Premium Fabrics", "Fast Nationwide Delivery", "100% Authenticity Guarantee"],
-    }
-  );
+export function getCategoryInfo(category: string, remoteCovers?: Record<string, string>): CategoryInfo {
+  const normalized = category.toUpperCase().trim().replace(/-/g, "_");
+  const key =
+    normalized === "TSHIRT" || normalized === "TEES" || normalized === "TEE"
+      ? "T-SHIRT"
+      : normalized;
+
+  const base = CATEGORY_DETAILS[key] || {
+    slug: category,
+    title: `${category} Collection`,
+    subtitle: "DEEN Artisanal Apparel",
+    description: "Explore handcrafted premium fashion from DEEN Bangladesh.",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
+    metaBadge: "Apparel",
+    highlights: ["Premium Fabrics", "Fast Nationwide Delivery", "100% Authenticity Guarantee"],
+  };
+
+  if (remoteCovers && remoteCovers[category]) {
+    return { ...base, coverImage: remoteCovers[category] };
+  }
+  if (remoteCovers && remoteCovers[key]) {
+    return { ...base, coverImage: remoteCovers[key] };
+  }
+
+  return base;
 }

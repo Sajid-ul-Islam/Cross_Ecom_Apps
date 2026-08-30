@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { fetchProducts, fetchCampaigns, bdt } from "@/lib/api";
+import { fetchProducts, fetchCampaigns, fetchCategoryCovers, fetchCategories, bdt } from "@/lib/api";
+import { getCategoryInfo } from "@/lib/categories";
 import ProductCard from "@/components/ProductCard";
 
 export const metadata = {
@@ -10,34 +11,32 @@ export const metadata = {
 const HERO_IMAGE =
   "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg";
 
-const CATEGORY_IMAGES: Record<string, { img: string; label: string }> = {
-  JEANS: {
-    img: "https://deencommerce.com/wp-content/uploads/2026/05/jeans-1.jpg",
-    label: "Raw Washed & Vintage Jeans",
-  },
-  SHIRT: {
-    img: "https://deencommerce.com/wp-content/uploads/2026/06/Half-sleeve-Section-iomage.webp",
-    label: "Casual & Half Shirts",
-  },
-  PANJABI: {
-    img: "https://deencommerce.com/wp-content/uploads/2026/05/Section-Image-4.jpg",
-    label: "Cuban Collar & Resort Wear",
-  },
-  "T-SHIRT": {
-    img: "https://deencommerce.com/wp-content/uploads/2026/07/1x1-2.png",
-    label: "Heavyweight T-Shirts",
-  },
-};
-
 export default async function HomePage() {
-  const [featured, newArrivals, campaign] = await Promise.all([
+  const [featured, newArrivals, campaign, remoteCovers, categoriesList] = await Promise.all([
     fetchProducts({ per_page: 8, sort: "price-desc" }),
     fetchProducts({ per_page: 4, sort: "new" }),
     fetchCampaigns(),
+    fetchCategoryCovers(),
+    fetchCategories(),
   ]);
 
   const isCashback = campaign?.cashback?.enabled;
   const activePromo = campaign?.activeCampaign;
+
+  // Curate display categories from REST API + standard catalog
+  const primaryCategories = ["JEANS", "SHIRT", "PANJABI", "T-SHIRT", "POLO", "TROUSERS"];
+  const displayCategories = primaryCategories.map((catKey) => {
+    const info = getCategoryInfo(catKey, remoteCovers);
+    const countObj = categoriesList.find((c) => c.category.toUpperCase() === catKey);
+    return {
+      key: catKey,
+      label: info.title,
+      subtitle: info.subtitle,
+      img: info.coverImage,
+      badge: info.metaBadge,
+      count: countObj?.count,
+    };
+  });
 
   return (
     <>
@@ -141,39 +140,40 @@ export default async function HomePage() {
           </div>
         ) : null}
 
-        {/* ── Categories ───────────────────────────────── */}
+        {/* ── Category Showcase (Dynamic REST API Category Covers) ───────────────────────────────── */}
         <section className="section">
           <div className="section__header">
             <div>
               <h2 className="section__title">Shop by Category</h2>
-              <p className="section__sub">Explore our curated collections</p>
+              <p className="section__sub">Explore our artisanal collection crafted in Bangladesh</p>
             </div>
             <Link href="/shop" className="section__link">See all →</Link>
           </div>
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
               gap: 16,
             }}
           >
-            {Object.entries(CATEGORY_IMAGES).map(([cat, { img, label }]) => (
+            {displayCategories.map((cat) => (
               <Link
-                key={cat}
-                href={`/shop?category=${cat}`}
+                key={cat.key}
+                href={`/shop?category=${cat.key}`}
                 style={{
                   position: "relative",
-                  height: 240,
+                  height: 250,
                   borderRadius: "var(--radius)",
                   overflow: "hidden",
                   display: "block",
                   cursor: "pointer",
+                  border: "1px solid var(--border)",
                 }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={img}
-                  alt={label}
+                  src={cat.img}
+                  alt={cat.label}
                   style={{ width: "100%", height: "100%", objectFit: "cover", transition: "transform 0.4s" }}
                   className="cat-img"
                 />
@@ -181,18 +181,20 @@ export default async function HomePage() {
                   style={{
                     position: "absolute",
                     inset: 0,
-                    background: "linear-gradient(to top, rgba(10,15,30,0.75) 0%, transparent 60%)",
+                    background: "linear-gradient(to top, rgba(10,15,30,0.85) 0%, rgba(10,15,30,0.2) 60%, transparent 100%)",
                     display: "flex",
                     alignItems: "flex-end",
                     padding: 16,
                   }}
                 >
                   <div>
-                    <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 10, fontWeight: 700, letterSpacing: 0.5, marginBottom: 4 }}>
-                      DEEN
+                    <span style={{ color: "var(--denim-stitch)", fontSize: 9, fontWeight: 800, letterSpacing: 0.8, background: "rgba(0,0,0,0.4)", padding: "2px 6px", borderRadius: 4, display: "inline-block", marginBottom: 6 }}>
+                      {cat.badge}
+                    </span>
+                    <p style={{ color: "#fff", fontSize: 16, fontWeight: 900, letterSpacing: 0.3, lineHeight: 1.2 }}>{cat.label}</p>
+                    <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 11, marginTop: 4 }}>
+                      Shop Collection {cat.count ? `(${cat.count})` : ""} →
                     </p>
-                    <p style={{ color: "#fff", fontSize: 18, fontWeight: 900, letterSpacing: 0.5 }}>{label}</p>
-                    <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 11, marginTop: 2 }}>Shop →</p>
                   </div>
                 </div>
               </Link>
@@ -294,73 +296,86 @@ export default async function HomePage() {
               gap: 20,
             }}
           >
-            {/* Mirpur 12 */}
-            <div style={{ padding: 20, borderRadius: 12, border: "1px solid var(--border)", background: "var(--bg)" }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: "var(--brand)", letterSpacing: 1 }}>FLAGSHIP HQ & STUDIO</span>
-              <h3 style={{ fontSize: 16, fontWeight: 800, margin: "6px 0 4px" }}>DEEN Mirpur 12 (Dhaka)</h3>
-              <p style={{ fontSize: 13, color: "var(--sub)", lineHeight: 1.5, marginBottom: 12 }}>
-                2nd Floor, Ramzannesa Super Market, Mirpur 12, Dhaka-1216
-              </p>
-              <a
-                href="https://maps.google.com/?q=Ramzannesa+Super+Market+Mirpur+12+Dhaka"
-                target="_blank"
-                rel="noopener"
-                style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)" }}
+            {[
+              {
+                name: "Mirpur 12 Flagship Outlet",
+                badge: "FLAGSHIP SHOWROOM & STORE PICKUP",
+                address: "House 12, Road 3, Block D, Section 12, Mirpur, Dhaka-1216",
+                hours: "Open Daily: 10:00 AM – 9:30 PM",
+                phone: "01952-700500",
+                pickup: true,
+              },
+              {
+                name: "Uttara Sector 7 Branch",
+                badge: "RETAIL OUTLET",
+                address: "Plot 24, Rabindra Sarani, Sector 7, Uttara, Dhaka-1230",
+                hours: "Open Daily: 10:30 AM – 10:00 PM",
+                phone: "01952-700500",
+                pickup: false,
+              },
+              {
+                name: "Dhanmondi 27 Branch",
+                badge: "PREMIUM STUDIO",
+                address: "House 38, Road 27 (Old), Dhanmondi, Dhaka-1209",
+                hours: "Open Daily: 11:00 AM – 10:00 PM",
+                phone: "01952-700500",
+                pickup: false,
+              },
+              {
+                name: "Chattogram GEC Circle Outlet",
+                badge: "REGIONAL HUB",
+                address: "Sanmar Ocean City, Level 3, GEC Circle, Chattogram",
+                hours: "Open Daily: 10:30 AM – 9:30 PM",
+                phone: "01952-700500",
+                pickup: false,
+              },
+            ].map((outlet) => (
+              <div
+                key={outlet.name}
+                style={{
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  borderRadius: "var(--radius)",
+                  padding: 20,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                }}
               >
-                📍 View on Google Maps →
-              </a>
-            </div>
-
-            {/* Wari */}
-            <div style={{ padding: 20, borderRadius: 12, border: "1px solid var(--border)", background: "var(--bg)" }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: "var(--brand)", letterSpacing: 1 }}>DHAKA SOUTH</span>
-              <h3 style={{ fontSize: 16, fontWeight: 800, margin: "6px 0 4px" }}>DEEN Wari Outlet</h3>
-              <p style={{ fontSize: 13, color: "var(--sub)", lineHeight: 1.5, marginBottom: 12 }}>
-                Ground Floor, 41 A.K Famous Tower, Rankin Street, Wari, Dhaka-1203
-              </p>
-              <a
-                href="https://maps.google.com/?q=Rankin+Street+Wari+Dhaka"
-                target="_blank"
-                rel="noopener"
-                style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)" }}
-              >
-                📍 View on Google Maps →
-              </a>
-            </div>
-
-            {/* Cumilla */}
-            <div style={{ padding: 20, borderRadius: 12, border: "1px solid var(--border)", background: "var(--bg)" }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: "var(--brand)", letterSpacing: 1 }}>CUMILLA SHOWROOM</span>
-              <h3 style={{ fontSize: 16, fontWeight: 800, margin: "6px 0 4px" }}>DEEN Cumilla Outlet</h3>
-              <p style={{ fontSize: 13, color: "var(--sub)", lineHeight: 1.5, marginBottom: 12 }}>
-                4th Floor, QR Tower, Badurtola, Cumilla
-              </p>
-              <a
-                href="https://maps.google.com/?q=QR+Tower+Badurtola+Cumilla"
-                target="_blank"
-                rel="noopener"
-                style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)" }}
-              >
-                📍 View on Google Maps →
-              </a>
-            </div>
-
-            {/* Sylhet */}
-            <div style={{ padding: 20, borderRadius: 12, border: "1px solid var(--border)", background: "var(--bg)" }}>
-              <span style={{ fontSize: 10, fontWeight: 800, color: "var(--brand)", letterSpacing: 1 }}>SYLHET SHOWROOM</span>
-              <h3 style={{ fontSize: 16, fontWeight: 800, margin: "6px 0 4px" }}>DEEN Sylhet Outlet</h3>
-              <p style={{ fontSize: 13, color: "var(--sub)", lineHeight: 1.5, marginBottom: 12 }}>
-                Block-A, House-54/2, Kumar Para, Sylhet
-              </p>
-              <a
-                href="https://maps.google.com/?q=Kumar+Para+Sylhet"
-                target="_blank"
-                rel="noopener"
-                style={{ fontSize: 12, fontWeight: 700, color: "var(--brand)" }}
-              >
-                📍 View on Google Maps →
-              </a>
-            </div>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                    <span
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 900,
+                        letterSpacing: 0.5,
+                        background: outlet.pickup ? "var(--indigo-light)" : "var(--border)",
+                        color: outlet.pickup ? "var(--indigo)" : "var(--sub)",
+                        padding: "2px 8px",
+                        borderRadius: 4,
+                      }}
+                    >
+                      {outlet.badge}
+                    </span>
+                    {outlet.pickup && (
+                      <span style={{ fontSize: 11, color: "var(--emerald)", fontWeight: 800 }}>✓ Free Pickup</span>
+                    )}
+                  </div>
+                  <h3 style={{ fontSize: 16, fontWeight: 900, color: "var(--ink)", marginBottom: 6 }}>
+                    {outlet.name}
+                  </h3>
+                  <p style={{ fontSize: 13, color: "var(--sub)", lineHeight: 1.5, marginBottom: 12 }}>
+                    📍 {outlet.address}
+                  </p>
+                  <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>
+                    🕒 {outlet.hours}
+                  </p>
+                  <p style={{ fontSize: 12, color: "var(--indigo)", fontWeight: 700 }}>
+                    📞 Hotline: {outlet.phone}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         </section>
       </div>
