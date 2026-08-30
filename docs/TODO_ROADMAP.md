@@ -67,6 +67,14 @@
 - [x] **Pricing & Discount Tests**: Fixed/percentage cashback tiers, Selvedge Denim BOGO rules, coupon validation (`apps/api/src/pricing.test.ts`).
 - [x] **Idempotency & Failover Tests**: Concurrent double-clicks, secondary gateway reconciliation, offline sync deduplication (`apps/api/src/idempotency.test.ts`).
 - [x] **Session Token Tests**: Multi-instance token verification, tampering rejection, expiration handling.
+- [x] **Social Auth Tests**: Google & Facebook customer linking, WooCommerce `customer_id` order attachment.
+
+### 7. Web & Mobile App Strict Feature & UX Parity
+- [x] **5-Tab Navigation**: Unified `[ 🏠 Home ] [ 🗂️ Categories ] [ 🛒 Cart (live badge) ] [ 📦 Orders ] [ 👤 Profile ]` with active states on both native mobile app and Next.js mobile view.
+- [x] **Product Detail Page (PDP)**: Full parity with `SizeGuideModal`, `DenimCareGuideModal`, `StoreStockModal`, `WhatsAppButton`, `CompleteTheLook` carousels, and image zoom lightbox.
+- [x] **Shopping Bag (Cart)**: Live coupon validation (`/v1/deen/coupon/:code`), BOGO Jeans 50% discount calculator, dynamic cashback progress bar, and 4-tier shipping area picker.
+- [x] **Orders & Logistics**: Phone lookup, live multi-step Pathao tracking timeline (`PathaoTrackingModal`), doorstep size exchange/return submission (`ReturnExchangeModal`), and 1-tap WhatsApp support.
+- [x] **Profile & Admin BI**: Role-based access to `AdminAnalyticsModal` (KPIs, revenue, top products, CSV order export), 64 BD district sizing preferences, and social login buttons.
 
 ---
 

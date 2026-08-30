@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { BD_DISTRICTS } from "@/lib/districts";
 import { API_URL, fetchOrders, loginWithGoogle, loginWithFacebook, type OrderResult } from "@/lib/api";
+import AdminAnalyticsModal from "@/components/AdminAnalyticsModal";
 
 const PROFILE_STORAGE_KEY = "deen_web_user_profile";
 
@@ -49,6 +50,7 @@ export default function ProfilePage() {
   const [signupEmail, setSignupEmail] = useState("");
   const [authNotice, setAuthNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [authSubmitting, setAuthSubmitting] = useState(false);
+  const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -166,59 +168,65 @@ export default function ProfilePage() {
 
   const handleSocialGoogle = async () => {
     setAuthSubmitting(true);
+    setAuthNotice(null);
     try {
-      const res = await loginWithGoogle(undefined, `${profile.phone || "shopper"}@gmail.com`, profile.name || "DEEN Member");
+      const email = signupEmail.trim() || profile.email || (signupPhone ? `${signupPhone.replace(/[^0-9]/g, "")}@gmail.com` : (profile.phone ? `${profile.phone}@gmail.com` : "customer@gmail.com"));
+      const name = signupName.trim() || profile.name || "Google User";
+      const res = await loginWithGoogle(undefined, email, name);
       if (res.success && res.user) {
         const updated: UserProfile = {
           ...profile,
-          name: res.user.name || "Google User",
-          email: res.user.email || "",
+          name: res.user.name || name,
+          email: res.user.email || email,
           role: "customer",
           isGuest: false,
         };
         setProfile(updated);
         localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
-        setAuthNotice({ type: "success", text: `Signed in with Google as ${res.user.name}!` });
+        setAuthNotice({ type: "success", text: `Signed in with Google as ${res.user.name || name}!` });
         setTimeout(() => {
           setAuthSubmitting(false);
           setAuthModalOpen(false);
         }, 600);
       } else {
         setAuthSubmitting(false);
-        setAuthNotice({ type: "error", text: res.message || "Google sign-in failed." });
+        setAuthNotice({ type: "error", text: res.message || "Google sign-in failed. Please check network." });
       }
-    } catch {
+    } catch (err: any) {
       setAuthSubmitting(false);
-      setAuthNotice({ type: "error", text: "Google sign-in network error." });
+      setAuthNotice({ type: "error", text: err?.message || "Google sign-in network error." });
     }
   };
 
   const handleSocialFacebook = async () => {
     setAuthSubmitting(true);
+    setAuthNotice(null);
     try {
-      const res = await loginWithFacebook(undefined, `${profile.phone || "shopper"}@facebook.deencommerce.com`, profile.name || "DEEN Member");
+      const email = signupEmail.trim() || profile.email || (signupPhone ? `${signupPhone.replace(/[^0-9]/g, "")}@facebook.deencommerce.com` : (profile.phone ? `${profile.phone}@facebook.deencommerce.com` : "customer@facebook.deencommerce.com"));
+      const name = signupName.trim() || profile.name || "Facebook User";
+      const res = await loginWithFacebook(undefined, email, name);
       if (res.success && res.user) {
         const updated: UserProfile = {
           ...profile,
-          name: res.user.name || "Facebook User",
-          email: res.user.email || "",
+          name: res.user.name || name,
+          email: res.user.email || email,
           role: "customer",
           isGuest: false,
         };
         setProfile(updated);
         localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
-        setAuthNotice({ type: "success", text: `Signed in with Facebook as ${res.user.name}!` });
+        setAuthNotice({ type: "success", text: `Signed in with Facebook as ${res.user.name || name}!` });
         setTimeout(() => {
           setAuthSubmitting(false);
           setAuthModalOpen(false);
         }, 600);
       } else {
         setAuthSubmitting(false);
-        setAuthNotice({ type: "error", text: res.message || "Facebook sign-in failed." });
+        setAuthNotice({ type: "error", text: res.message || "Facebook sign-in failed. Please check network." });
       }
-    } catch {
+    } catch (err: any) {
       setAuthSubmitting(false);
-      setAuthNotice({ type: "error", text: "Facebook sign-in network error." });
+      setAuthNotice({ type: "error", text: err?.message || "Facebook sign-in network error." });
     }
   };
 
@@ -297,14 +305,26 @@ export default function ProfilePage() {
               </button>
             </>
           ) : (
-            <button
-              type="button"
-              className="btn btn--outline"
-              style={{ width: "100%", borderColor: "var(--crimson)", color: "var(--crimson)", fontSize: 12, fontWeight: 800 }}
-              onClick={handleLogout}
-            >
-              LOG OUT
-            </button>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
+              {profile.role === "admin" && (
+                <button
+                  type="button"
+                  className="btn btn--primary"
+                  style={{ width: "100%", fontSize: 12, fontWeight: 900, background: "linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)" }}
+                  onClick={() => setAnalyticsModalOpen(true)}
+                >
+                  📊 VIEW STORE BI & REVENUE DASHBOARD
+                </button>
+              )}
+              <button
+                type="button"
+                className="btn btn--outline"
+                style={{ width: "100%", borderColor: "var(--crimson)", color: "var(--crimson)", fontSize: 12, fontWeight: 800 }}
+                onClick={handleLogout}
+              >
+                LOG OUT
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -713,6 +733,12 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+
+      {/* Admin Analytics Modal */}
+      <AdminAnalyticsModal
+        isOpen={analyticsModalOpen}
+        onClose={() => setAnalyticsModalOpen(false)}
+      />
     </div>
   );
 }

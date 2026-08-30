@@ -83,7 +83,7 @@ export const GATEWAY_URLS: string[] = Array.from(
 let preferredGatewayIdx = 0;
 export const GATEWAY_URL = GATEWAY_URLS[preferredGatewayIdx];
 
-const API_KEY = extra.gatewayApiKey || "";
+const API_KEY = extra.gatewayApiKey || "fa002b126085801f23d9375d94409752503639919e39690c42877fc58c624973";
 
 export const isGatewayConfigured = Boolean(GATEWAY_URLS[0]);
 

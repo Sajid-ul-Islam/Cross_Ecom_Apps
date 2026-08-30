@@ -35,7 +35,7 @@ export default function ReturnExchangeModal({
         body: JSON.stringify({
           orderId: order.id,
           orderNumber: order.number,
-          phone: order.billing?.phone || order.phone || "",
+          phone: order.phone || "",
           reason,
           details: details.trim(),
           items: order.lines || [],

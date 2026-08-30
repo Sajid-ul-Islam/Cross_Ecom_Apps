@@ -1,14 +1,40 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { fetchOrders, bdt, type OrderResult } from "@/lib/api";
+import PathaoTrackingModal from "@/components/PathaoTrackingModal";
+import ReturnExchangeModal from "@/components/ReturnExchangeModal";
+
+const PROFILE_STORAGE_KEY = "deen_web_user_profile";
 
 export default function OrdersLookupPage() {
   const [phone, setPhone] = useState("");
   const [orders, setOrders] = useState<OrderResult[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+
+  // Modals
+  const [trackingConsignment, setTrackingConsignment] = useState<string | null>(null);
+  const [returnOrder, setReturnOrder] = useState<OrderResult | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(PROFILE_STORAGE_KEY);
+      if (saved) {
+        const p = JSON.parse(saved);
+        if (p?.phone) {
+          setPhone(p.phone);
+          setLoading(true);
+          setSearched(true);
+          fetchOrders(p.phone)
+            .then((list) => setOrders(list))
+            .catch(() => setOrders([]))
+            .finally(() => setLoading(false));
+        }
+      }
+    } catch {}
+  }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,8 +74,8 @@ export default function OrdersLookupPage() {
             onChange={(e) => setPhone(e.target.value)}
             style={{ flex: 1 }}
           />
-          <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? "Searching…" : "Track"}
+          <button type="submit" className="btn btn--primary" disabled={loading} style={{ fontWeight: 800 }}>
+            {loading ? "Searching…" : "Track Orders"}
           </button>
         </div>
       </form>
@@ -67,16 +93,13 @@ export default function OrdersLookupPage() {
           <p className="empty-state__sub">
             No active or past orders found for phone <strong>{phone}</strong>.
           </p>
-          <Link href="/shop" className="btn btn-primary">Start Shopping</Link>
+          <Link href="/shop" className="btn btn--primary">Start Shopping</Link>
         </div>
       ) : orders && orders.length > 0 ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 720 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 760 }}>
           {orders.map((order) => {
             const hasPathao = Boolean(order.pathaoConsignmentId);
             const pathaoId = order.pathaoConsignmentId || "";
-            const trackingUrl =
-              order.pathaoTrackingUrl ||
-              (hasPathao ? `https://merchant.pathao.com/tracking?consignment_id=${pathaoId}` : "");
 
             return (
               <div
@@ -141,106 +164,50 @@ export default function OrdersLookupPage() {
                   </span>
                 </div>
 
-                {/* Pathao Consignment Tracker — only when real consignment exists */}
+                {/* Pathao Consignment Tracker */}
                 {hasPathao ? (
                   <div
                     style={{
                       background: "var(--surface-2)",
                       border: "1px solid var(--border)",
                       borderRadius: 8,
-                      padding: "12px 16px",
+                      padding: "14px 18px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: 10,
                       marginBottom: 16,
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 12 }}>
-                      <div>
-                        <p style={{ fontSize: 11, fontWeight: 800, color: "var(--indigo)", letterSpacing: 0.5 }}>
-                          🚚 PATHAO EXPRESS COURIER
-                        </p>
-                        <p style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", marginTop: 2 }}>
-                          Consignment ID: {pathaoId}
-                        </p>
-                      </div>
-                      <a
-                        href={trackingUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn btn-sm btn-primary"
-                      >
-                        Track on Pathao →
-                      </a>
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 800, color: "var(--indigo)", letterSpacing: 0.5, textTransform: "uppercase", margin: 0 }}>
+                        🚚 Pathao Consignment ID
+                      </p>
+                      <p style={{ fontSize: 15, fontWeight: 900, color: "var(--ink)", marginTop: 2, margin: 0 }}>
+                        {pathaoId}
+                      </p>
                     </div>
 
-                    {/* Live Tracking Milestones — when tracking info is embedded by gateway */}
-                    {order.pathaoTrackingInfo ? (
-                      <div>
-                        <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 8 }}>
-                          <span style={{ fontSize: 12, color: "var(--sub)" }}>Live Status:</span>
-                          <strong style={{ fontSize: 12, color: "var(--indigo)" }}>{order.pathaoTrackingInfo.summary}</strong>
-                          <span style={{ fontSize: 10, color: "var(--faint)", marginLeft: "auto" }}>
-                            Updated: {new Date(order.pathaoTrackingInfo.lastUpdated).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
-                          </span>
-                        </div>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                          {order.pathaoTrackingInfo.steps.map((step) => (
-                            <div
-                              key={step.status}
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                                padding: "2px 0",
-                              }}
-                            >
-                              <div style={{
-                                width: 8,
-                                height: 8,
-                                borderRadius: 4,
-                                backgroundColor: step.completed
-                                  ? "var(--emerald)"
-                                  : step.current
-                                  ? "var(--indigo)"
-                                  : "var(--border)",
-                                flexShrink: 0,
-                              }} />
-                              <span style={{
-                                fontSize: 11,
-                                fontWeight: step.current || step.completed ? 700 : 400,
-                                color: step.completed
-                                  ? "var(--emerald)"
-                                  : step.current
-                                  ? "var(--indigo)"
-                                  : "var(--sub)",
-                              }}>
-                                {step.label}
-                              </span>
-                              {step.location && (
-                                <span style={{ fontSize: 10, color: "var(--sub)", marginLeft: 4 }}>
-                                  • {step.location}
-                                </span>
-                              )}
-                              {step.timestamp && (
-                                <span style={{ fontSize: 10, color: "var(--faint)", marginLeft: "auto" }}>
-                                  {new Date(step.timestamp).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0" }}>
-                        <span style={{ fontSize: 14 }}>📦</span>
-                        <div>
-                          <p style={{ fontSize: 11, fontWeight: 800, color: "var(--indigo)", letterSpacing: 0.5 }}>
-                            Delivery Status
-                          </p>
-                          <p style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", marginTop: 2 }}>
-                            Preparing Dispatch
-                          </p>
-                        </div>
-                      </div>
-                    )}
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={() => setTrackingConsignment(pathaoId)}
+                        className="btn btn--primary"
+                        style={{ fontSize: 12, padding: "8px 14px", fontWeight: 800 }}
+                      >
+                        ⚡ Live Timeline
+                      </button>
+                      <a
+                        href={order.pathaoTrackingUrl || `https://merchant.pathao.com/tracking?consignment_id=${pathaoId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn btn--outline"
+                        style={{ fontSize: 12, padding: "8px 14px", fontWeight: 800 }}
+                      >
+                        Pathao ↗
+                      </a>
+                    </div>
                   </div>
                 ) : (
                   <div
@@ -255,19 +222,19 @@ export default function OrdersLookupPage() {
                       marginBottom: 16,
                     }}
                   >
-                    <span style={{ fontSize: 14 }}>📦</span>
+                    <span style={{ fontSize: 16 }}>📦</span>
                     <div>
-                      <p style={{ fontSize: 11, fontWeight: 800, color: "var(--indigo)", letterSpacing: 0.5 }}>
-                        Delivery Status
+                      <p style={{ fontSize: 11, fontWeight: 800, color: "var(--indigo)", letterSpacing: 0.5, margin: 0 }}>
+                        DELIVERY STATUS
                       </p>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", marginTop: 2 }}>
-                        Preparing Dispatch
+                      <p style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", marginTop: 2, margin: 0 }}>
+                        Preparing Dispatch at Central Studio
                       </p>
                     </div>
                   </div>
                 )}
 
-                {/* Lines */}
+                {/* Items Breakdown */}
                 {order.lines && order.lines.length > 0 && (
                   <div style={{ marginBottom: 14 }}>
                     {order.lines.map((l, idx) => (
@@ -277,12 +244,13 @@ export default function OrdersLookupPage() {
                           display: "flex",
                           justifyContent: "space-between",
                           fontSize: 13,
-                          padding: "4px 0",
+                          padding: "6px 0",
+                          borderBottom: "1px solid var(--border-light)",
                           color: "var(--ink)",
                         }}
                       >
                         <span>{l.qty}x {l.name} {l.size ? `(${l.size})` : ""}</span>
-                        <span style={{ fontWeight: 600 }}>{l.gift ? "FREE" : bdt(l.unit * l.qty)}</span>
+                        <span style={{ fontWeight: 700 }}>{l.gift ? "FREE" : bdt(l.unit * l.qty)}</span>
                       </div>
                     ))}
                   </div>
@@ -312,29 +280,73 @@ export default function OrdersLookupPage() {
                     style={{
                       display: "flex",
                       justifyContent: "space-between",
-                      fontSize: 14,
-                      fontWeight: 800,
+                      fontSize: 15,
+                      fontWeight: 900,
                       color: "var(--ink)",
                       borderTop: "1px dashed var(--border)",
-                      paddingTop: 6,
-                      marginTop: 2,
+                      paddingTop: 8,
+                      marginTop: 4,
                     }}
                   >
-                    <span>Total Amount</span>
-                    <span style={{ color: "var(--indigo)", fontWeight: 900 }}>{bdt(order.total)}</span>
+                    <span>Total Paid / Payable</span>
+                    <span style={{ color: "var(--indigo)" }}>{bdt(order.total)}</span>
                   </div>
                   <div style={{ marginTop: 4, fontSize: 12, color: "var(--sub)" }}>
-                    Payment:{" "}
+                    Payment Mode:{" "}
                     <strong style={{ color: order.payment === "cod" ? "var(--amber)" : "var(--emerald)" }}>
-                      {order.paymentTitle || (order.payment === "cod" ? "Cash on Delivery (Pay at doorstep)" : order.payment.toUpperCase())}
+                      {order.paymentTitle || (order.payment === "cod" ? "Cash on Delivery (Pay at Doorstep)" : order.payment.toUpperCase())}
                     </strong>
                   </div>
+                </div>
+
+                {/* Order Action Footer */}
+                <div style={{ display: "flex", gap: 10, marginTop: 16, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+                  <button
+                    type="button"
+                    onClick={() => setReturnOrder(order)}
+                    className="btn btn--outline"
+                    style={{ flex: 1, fontSize: 12, padding: "8px 12px", fontWeight: 800 }}
+                  >
+                    🔄 Size Exchange / Return
+                  </button>
+                  <a
+                    href={`https://wa.me/8801952700500?text=${encodeURIComponent(`Salam DEEN team, I need help with my Order #${order.number} (Phone: ${order.phone || phone}).`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn--outline"
+                    style={{ flex: 1, fontSize: 12, padding: "8px 12px", fontWeight: 800, color: "#25D366", borderColor: "rgba(37, 211, 102, 0.3)", textAlign: "center" }}
+                  >
+                    💬 WhatsApp Help
+                  </a>
                 </div>
               </div>
             );
           })}
         </div>
       ) : null}
+
+      {/* Tracking Modal */}
+      {trackingConsignment && (
+        <PathaoTrackingModal
+          isOpen={Boolean(trackingConsignment)}
+          onClose={() => setTrackingConsignment(null)}
+          consignmentId={trackingConsignment}
+        />
+      )}
+
+      {/* Return & Exchange Modal */}
+      {returnOrder && (
+        <ReturnExchangeModal
+          isOpen={Boolean(returnOrder)}
+          onClose={() => setReturnOrder(null)}
+          order={returnOrder}
+          onSuccess={() => {
+            if (phone) {
+              fetchOrders(phone.replace(/[^0-9]/g, "")).then((list) => setOrders(list));
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

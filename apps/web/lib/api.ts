@@ -6,7 +6,8 @@ export const API_URL =
   process.env.NEXT_PUBLIC_API_URL || DEFAULT_GATEWAY_URL;
 
 /** Shared gateway key — sent as x-api-key on every request. */
-const GATEWAY_API_KEY = process.env.NEXT_PUBLIC_GATEWAY_API_KEY || "";
+const DEFAULT_GATEWAY_API_KEY = "fa002b126085801f23d9375d94409752503639919e39690c42877fc58c624973";
+const GATEWAY_API_KEY = process.env.NEXT_PUBLIC_GATEWAY_API_KEY || DEFAULT_GATEWAY_API_KEY;
 
 /**
  * Safe fetch wrapper that includes x-api-key and automatically fails over
@@ -606,12 +607,20 @@ export async function loginWithGoogle(
   email?: string,
   name?: string
 ): Promise<{ success: boolean; token?: string; user?: any; message?: string; isNewCustomer?: boolean }> {
-  const res = await apiFetch(`${API_URL}/v1/auth/google`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ idToken, email, name }),
-  });
-  return res.json();
+  try {
+    const res = await apiFetch(`${API_URL}/v1/auth/google`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken, email, name }),
+    });
+    const data = await res.json();
+    if (!res.ok && !data.message) {
+      return { success: false, message: data.error || `Authentication failed (HTTP ${res.status})` };
+    }
+    return data;
+  } catch (err: any) {
+    return { success: false, message: err?.message || "Google sign-in network error." };
+  }
 }
 
 export async function loginWithFacebook(
@@ -619,10 +628,18 @@ export async function loginWithFacebook(
   email?: string,
   name?: string
 ): Promise<{ success: boolean; token?: string; user?: any; message?: string; isNewCustomer?: boolean }> {
-  const res = await apiFetch(`${API_URL}/v1/auth/facebook`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ accessToken, email, name }),
-  });
-  return res.json();
+  try {
+    const res = await apiFetch(`${API_URL}/v1/auth/facebook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accessToken, email, name }),
+    });
+    const data = await res.json();
+    if (!res.ok && !data.message) {
+      return { success: false, message: data.error || `Authentication failed (HTTP ${res.status})` };
+    }
+    return data;
+  } catch (err: any) {
+    return { success: false, message: err?.message || "Facebook sign-in network error." };
+  }
 }
