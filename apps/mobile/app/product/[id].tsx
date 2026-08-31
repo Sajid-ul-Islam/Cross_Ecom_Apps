@@ -522,8 +522,30 @@ export default function ProductDetailScreen() {
             >
               <BookOpen size={15} color={colors.indigoDark} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.featurePillTitle}>DENIM CARE GUIDE</Text>
-                <Text style={styles.featurePillSub}>First soak & fading handbook</Text>
+                <Text style={styles.featurePillTitle}>
+                  {(() => {
+                    const cat = (product.category || "").toUpperCase();
+                    if (cat.includes("JEAN") || cat.includes("DENIM")) return "DENIM CARE GUIDE";
+                    if (cat.includes("PANJABI") || cat.includes("PUNJABI")) return "PANJABI CARE GUIDE";
+                    if (cat.includes("SHIRT") && !cat.includes("T-SHIRT")) return "SHIRT CARE GUIDE";
+                    if (cat.includes("T-SHIRT") || cat.includes("TEE") || cat.includes("TANK")) return "TEE CARE GUIDE";
+                    if (cat.includes("POLO")) return "POLO CARE GUIDE";
+                    if (cat.includes("TROUSER") || cat.includes("PANT") || cat.includes("CHINO")) return "CHINO CARE GUIDE";
+                    return "GARMENT CARE GUIDE";
+                  })()}
+                </Text>
+                <Text style={styles.featurePillSub}>
+                  {(() => {
+                    const cat = (product.category || "").toUpperCase();
+                    if (cat.includes("JEAN") || cat.includes("DENIM")) return "First soak & fading handbook";
+                    if (cat.includes("PANJABI") || cat.includes("PUNJABI")) return "Embroidery & placket handbook";
+                    if (cat.includes("SHIRT") && !cat.includes("T-SHIRT")) return "Camp collar & linen handbook";
+                    if (cat.includes("T-SHIRT") || cat.includes("TEE") || cat.includes("TANK")) return "Zero-torque cotton handbook";
+                    if (cat.includes("POLO")) return "Anti-curl collar & piqué handbook";
+                    if (cat.includes("TROUSER") || cat.includes("PANT") || cat.includes("CHINO")) return "Twill & ripstop handbook";
+                    return "Care & preservation handbook";
+                  })()}
+                </Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -545,11 +567,31 @@ export default function ProductDetailScreen() {
             {expandedSection === "fabric" && (
               <View style={styles.accordionBody}>
                 <Text style={styles.accordionBodyText}>
-                  • Composition: {product.fabric}{"\n"}
-                  • Dye Process: Traditional deep rope-dyed pure indigo{"\n"}
-                  • Hardware: Solid embossed copper rivets & YKK brass zipper{"\n"}
-                  • Stitching: High-tensile poly-core tobacco stitch thread{"\n"}
-                  • Origin: Proudly woven & crafted in Bangladesh
+                  {(() => {
+                    if (product.fabric && product.fabric.trim().length > 10) {
+                      return `• Composition: ${product.fabric}\n• Origin: Proudly woven & crafted in Bangladesh\n• Stitching: High-tensile poly-core thread\n• Hardware: Premium rust-resistant trims`;
+                    }
+                    const cat = (product.category || "").toUpperCase();
+                    if (cat.includes("JEAN") || cat.includes("DENIM")) {
+                      return `• Composition: 13.5 oz Raw Selvedge Denim\n• Dye Process: Traditional deep rope-dyed pure indigo\n• Hardware: Solid embossed copper rivets & YKK brass zipper\n• Stitching: High-tensile poly-core tobacco stitch thread\n• Origin: Proudly woven & crafted in Bangladesh`;
+                    }
+                    if (cat.includes("PANJABI") || cat.includes("PUNJABI")) {
+                      return `• Composition: 100% Egyptian Giza Combed Cotton & Dobby Jacquard\n• Motif: Dense artisanal thread embroidery\n• Trims: Natural coconut & mother-of-pearl buttons\n• Collar: Structured tailored band collar\n• Origin: Master crafted in Bangladesh`;
+                    }
+                    if (cat.includes("SHIRT") && !cat.includes("T-SHIRT")) {
+                      return `• Composition: High-count breathable cotton poplin & linen blend\n• Collar: Contoured relaxed camp collar\n• Construction: Reinforced side seam gussets\n• Buttons: Laser-engraved tonal buttons\n• Origin: Tailored in Bangladesh`;
+                    }
+                    if (cat.includes("T-SHIRT") || cat.includes("TEE") || cat.includes("TANK")) {
+                      return `• Composition: 220–240 GSM heavy compact combed jersey\n• Knit: Zero-torque anti-twist construction\n• Neckline: 1x1 double-needle bound ribbed collar\n• Pre-Treatment: Bio-washed & pre-shrunk\n• Origin: Knitted in Bangladesh`;
+                    }
+                    if (cat.includes("POLO")) {
+                      return `• Composition: Premium compact combed cotton honeycomb piqué\n• Collar: Anti-curl flat-knit tipped collar\n• Vents: Micro-vent reinforced side slits\n• Placket: Two-button fused placket\n• Origin: Knitted & dyed in Bangladesh`;
+                    }
+                    if (cat.includes("TROUSER") || cat.includes("PANT") || cat.includes("CHINO")) {
+                      return `• Composition: High-density stretch cotton twill & military ripstop\n• Knees: Articulated mobility darts\n• Pockets: Heavyweight pocket bags & secure flap closures\n• Hardware: YKK heavy-gauge zipper\n• Origin: Engineered in Bangladesh`;
+                    }
+                    return `• Composition: Premium natural cotton blend\n• Construction: Reinforced stress bar-tacks\n• Origin: Crafted in Bangladesh`;
+                  })()}
                 </Text>
               </View>
             )}
@@ -569,10 +611,28 @@ export default function ProductDetailScreen() {
             {expandedSection === "care" && (
               <View style={styles.accordionBody}>
                 <Text style={styles.accordionBodyText}>
-                  • Wash inside-out in cold water (below 30°C){"\n"}
-                  • Use mild color-safe liquid detergent{"\n"}
-                  • Do not bleach or tumble dry; line dry in shade{"\n"}
-                  • Authentic indigo will develop unique personal fades over time
+                  {(() => {
+                    const cat = (product.category || "").toUpperCase();
+                    if (cat.includes("JEAN") || cat.includes("DENIM")) {
+                      return `• Wash inside-out in cold water (below 30°C)\n• Use mild color-safe liquid detergent\n• Do not bleach or tumble dry; line dry in shade\n• Authentic indigo will develop unique personal fades over time`;
+                    }
+                    if (cat.includes("PANJABI") || cat.includes("PUNJABI")) {
+                      return `• Gentle hand wash in cold water (below 30°C)\n• Do not wring or twist; roll in a towel to remove water\n• Line dry flat in shade on a structured hanger\n• Iron on reverse side of embroidery with medium steam`;
+                    }
+                    if (cat.includes("SHIRT") && !cat.includes("T-SHIRT")) {
+                      return `• Cold gentle machine wash with like colors\n• Unbutton placket and cuffs before washing\n• Reshape camp collar points while damp and line dry\n• Iron on medium heat while slightly damp`;
+                    }
+                    if (cat.includes("T-SHIRT") || cat.includes("TEE") || cat.includes("TANK")) {
+                      return `• Machine wash cold inside out\n• Do not stretch ribbed neck collar while wet\n• Line dry in shade; avoid high-heat machine drying\n• Iron inside out on low heat; avoid direct print contact`;
+                    }
+                    if (cat.includes("POLO")) {
+                      return `• Fasten placket buttons and turn collar up before wash\n• Cold gentle machine wash with mild detergent\n• Reshape collar tips flat while damp; line dry in shade\n• Steam refresh on low-to-medium heat`;
+                    }
+                    if (cat.includes("TROUSER") || cat.includes("PANT") || cat.includes("CHINO")) {
+                      return `• Empty pockets and zip fly before cold water wash\n• Wash inside out to preserve twill color depth\n• Hang upside down by leg cuffs for natural crease release\n• Medium iron along natural leg line`;
+                    }
+                    return `• Machine wash cold with similar colors\n• Use mild liquid detergent\n• Line dry in shade; iron on low heat`;
+                  })()}
                 </Text>
               </View>
             )}
@@ -680,10 +740,12 @@ export default function ProductDetailScreen() {
         />
       )}
 
-      {/* Denim Care Guide Modal */}
+      {/* Care Guide Modal */}
       <DenimCareGuideModal
         visible={careGuideVisible}
         onClose={() => setCareGuideVisible(false)}
+        category={product.category}
+        productName={product.name}
       />
     </ScreenShell>
   );

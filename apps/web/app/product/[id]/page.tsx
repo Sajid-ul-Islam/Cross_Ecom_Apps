@@ -364,7 +364,16 @@ export default function ProductDetailPage() {
               className="btn btn--outline"
               style={{ flex: 1, fontSize: 12, padding: "8px 12px", fontWeight: 700 }}
             >
-              📖 Denim Care Guide
+              {(() => {
+                const cat = (product.category || "").toUpperCase();
+                if (cat.includes("JEAN") || cat.includes("DENIM")) return "📖 Denim Care Guide";
+                if (cat.includes("PANJABI") || cat.includes("PUNJABI")) return "📖 Panjabi Care Guide";
+                if (cat.includes("SHIRT") && !cat.includes("T-SHIRT")) return "📖 Shirt Care Guide";
+                if (cat.includes("T-SHIRT") || cat.includes("TEE") || cat.includes("TANK")) return "📖 T-Shirt Care Guide";
+                if (cat.includes("POLO")) return "📖 Polo Care Guide";
+                if (cat.includes("TROUSER") || cat.includes("PANT") || cat.includes("CHINO")) return "📖 Trousers Care Guide";
+                return "📖 Garment Care Guide";
+              })()}
             </button>
             <WhatsAppButton
               productName={product.name}
@@ -388,7 +397,29 @@ export default function ProductDetailPage() {
               </button>
               {activeAccordion === "fabric" && (
                 <div style={{ padding: "0 16px 14px", fontSize: 13, color: "var(--sub)", lineHeight: 1.6 }}>
-                  Crafted from 13.5 oz artisanal raw selvedge denim woven on vintage shuttle looms. Features genuine redline selvedge ID, antique brass donut buttons, and copper rivets.
+                  {(() => {
+                    if (product.fabric && product.fabric.trim().length > 10) return product.fabric;
+                    const cat = (product.category || "").toUpperCase();
+                    if (cat.includes("JEAN") || cat.includes("DENIM")) {
+                      return "Crafted from 13.5 oz artisanal raw selvedge denim woven on vintage shuttle looms. Features genuine redline selvedge ID, antique brass donut buttons, and copper rivets.";
+                    }
+                    if (cat.includes("PANJABI") || cat.includes("PUNJABI")) {
+                      return "Crafted from 100% Egyptian Giza combed cotton & dobby jacquard weaves. Features high-density artisanal embroidery, tailored band collar, and natural coconut buttons.";
+                    }
+                    if (cat.includes("SHIRT") && !cat.includes("T-SHIRT")) {
+                      return "Tailored from breathable high-count cotton poplin and linen blends. Engineered with reinforced side gussets, contoured camp collar, and mother-of-pearl buttons.";
+                    }
+                    if (cat.includes("T-SHIRT") || cat.includes("TEE") || cat.includes("TANK")) {
+                      return "Cut from 220–240 GSM heavyweight pre-shrunk compact combed cotton. Zero-torque knit prevents seam twisting; double-needle bound ribbed neck retains shape.";
+                    }
+                    if (cat.includes("POLO")) {
+                      return "Knitted from premium combed compact cotton honeycomb piqué. Features anti-curl tipped flat-knit collar, micro-vent side seams, and reinforced two-button placket.";
+                    }
+                    if (cat.includes("TROUSER") || cat.includes("PANT") || cat.includes("CHINO")) {
+                      return "Constructed from heavy stretch cotton twill and high-tensile ripstop. Features articulated mobility knee darts, deep utility slant pockets, and reinforced stress bar-tacks.";
+                    }
+                    return "Engineered with premium natural cotton fibers and reinforced stitching for supreme endurance and everyday comfort.";
+                  })()}
                 </div>
               )}
             </div>
@@ -484,6 +515,8 @@ export default function ProductDetailPage() {
       <DenimCareGuideModal
         isOpen={careGuideOpen}
         onClose={() => setCareGuideOpen(false)}
+        category={product.category}
+        productName={product.name}
       />
 
       <StoreStockModal
