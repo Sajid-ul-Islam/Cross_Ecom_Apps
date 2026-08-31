@@ -624,7 +624,7 @@ body:has(.campaign-banner:not(.campaign-banner--hidden)) .nav {
 @media (max-width: 768px) {
   body { padding-bottom: 70px; }
   .mobile-bottom-nav { display: flex; }
-  .page-content { padding-bottom: 16px; }
+  .page-content { padding-bottom: 80px; }
 }
 
 @media (min-width: 769px) {
@@ -633,7 +633,10 @@ body:has(.campaign-banner:not(.campaign-banner--hidden)) .nav {
 
 @media (max-width: 600px) {
   .container { padding: 0 16px; }
-  .hero { height: 70vh; }
+  .hero { height: 70vh; min-height: 400px; margin: 0 0 32px; }
+  .hero__content { padding: 24px 20px; }
+  .hero__title { font-size: 1.8rem; }
+  .hero__sub { font-size: 13px; margin-bottom: 20px; }
   .product-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .footer__grid { grid-template-columns: 1fr; }
   .trust-bar { grid-template-columns: 1fr; }
@@ -641,6 +644,10 @@ body:has(.campaign-banner:not(.campaign-banner--hidden)) .nav {
   .campaign-banner { padding: 6px 0; }
   .campaign-banner__inner { gap: 6px; }
   .campaign-text { font-size: 11px; }
+  .cart-layout { grid-template-columns: 1fr; gap: 20px; }
+  .checkout-layout-grid { grid-template-columns: 1fr; gap: 20px; }
+  .checkout-summary-column { position: static; }
+  .section { margin-bottom: 40px; }
 }
 
 /* ── Dynamic Campaign Banner ──────────────────────── */
@@ -976,6 +983,41 @@ body:has(.campaign-banner:not(.campaign-banner--hidden)) .nav {
   color: var(--ink);
   text-decoration: none;
   border: 1px solid rgba(91,110,225,0.2);
+}
+
+/* ── Scroll to Top Button ─────────────────────────── */
+.scroll-to-top-btn {
+  display: none;
+  position: fixed;
+  bottom: 76px;
+  right: 16px;
+  z-index: 998;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--indigo);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transition: all 0.2s ease;
+  animation: fadeInUp 0.2s ease;
+}
+.scroll-to-top-btn:hover {
+  background: var(--indigo);
+  color: #fff;
+  border-color: var(--indigo);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(42, 54, 128, 0.3);
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 768px) {
+  .scroll-to-top-btn { display: flex; }
 }
 
 /* ── Modal ────────────────────────────────────────── */
@@ -1774,9 +1816,10 @@ body:has(.campaign-banner:not(.campaign-banner--hidden)) .nav {
 .mobile-sticky-checkout-bar {
   display: none;
   position: fixed;
-  bottom: 0;
+  bottom: 60px;
   left: 0;
   right: 0;
+  z-index: 999;
   background: var(--surface);
   border-top: 1px solid var(--border);
   padding: 12px 16px;

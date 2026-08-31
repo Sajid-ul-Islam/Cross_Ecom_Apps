@@ -380,7 +380,7 @@ function CheckoutContent() {
   }
 
   return (
-    <div className="container checkout-page-container" style={{ paddingBottom: 100 }}>
+    <div className="container checkout-page-container" style={{ paddingBottom: 140 }}>
       {/* Top Breadcrumb */}
       <nav className="breadcrumb">
         <Link href="/">Home</Link>

@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import DynamicCampaignBanner from "@/components/DynamicCampaignBanner";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import ScrollToTop from "@/components/ScrollToTop";
 
 export const metadata: Metadata = {
   title: {
@@ -55,6 +56,7 @@ export default function RootLayout({
           <main className="page-content">{children}</main>
           <Footer />
           <MobileBottomNav />
+          <ScrollToTop />
         </CartProvider>
       </body>
     </html>
