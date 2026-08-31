@@ -85,6 +85,15 @@ function getFit(p: WooProduct): string | undefined {
   return m ? m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase() : undefined;
 }
 
+function normalizeImageUrl(src: string): string {
+  if (!src || typeof src !== "string") return "";
+  let clean = src.trim();
+  if (clean.startsWith("//")) clean = `https:${clean}`;
+  else if (clean.startsWith("/")) clean = `https://deencommerce.com${clean}`;
+  else if (clean.startsWith("http://")) clean = clean.replace("http://", "https://");
+  return clean;
+}
+
 function mapWooToDeen(p: WooProduct): DeenProduct | null {
   // Skip draft/pending products — customers should never see them
   if (p.status && p.status !== "publish" && p.status !== "private") return null;
@@ -99,11 +108,11 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
   // `thumbnail` = WP-generated small (grid), `woocommerce_single` = medium (PDP).
   // All three are Woo-sourced — we never host or generate images.
   const pickImg = (i: (typeof p.images)[number]) => ({
-    full: i.src,
-    single: i.woocommerce_single || i.src,
-    thumb: i.thumbnail || i.woocommerce_single || i.src,
+    full: normalizeImageUrl(i.src),
+    single: normalizeImageUrl(i.woocommerce_single || i.src),
+    thumb: normalizeImageUrl(i.thumbnail || i.woocommerce_single || i.src),
   });
-  const picks = (p.images || []).map(pickImg).filter((x) => x.full);
+  const picks = (p.images || []).map(pickImg).filter((x) => Boolean(x.full));
   const imgs = [picks[0]?.full ?? "", picks[1]?.full ?? picks[0]?.full ?? ""] as [string, string];
   const fabric = p.meta_data?.find((m) => m.key.toLowerCase() === "fabric")?.value ?? "";
   return {

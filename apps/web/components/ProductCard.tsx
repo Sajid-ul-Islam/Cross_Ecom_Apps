@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
 import type { Product } from "@/lib/api";
-import { bdt } from "@/lib/api";
+import { bdt, resolveProductImage } from "@/lib/api";
 
 interface Props {
   product: Product;
@@ -13,7 +13,12 @@ interface Props {
 export default function ProductCard({ product }: Props) {
   const { addItem } = useCart();
   const [added, setAdded] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const price = product.salePrice ?? product.price;
+
+  const primaryImg = resolveProductImage(product.images[0]);
+  const secondaryImg = resolveProductImage(product.images[1] || product.images[0]);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -25,12 +30,26 @@ export default function ProductCard({ product }: Props) {
   };
 
   return (
-    <Link href={`/product/${product.id}`} className="product-card" id={`product-${product.id}`}>
+    <Link
+      href={`/product/${product.id}`}
+      className="product-card"
+      id={`product-${product.id}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       {/* Image */}
       <div className="product-card__image-wrap">
-        {product.images[0] ? (
+        {!imgError ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={product.images[0]} alt={product.name} loading="lazy" />
+          <img
+            src={isHovered && secondaryImg !== primaryImg ? secondaryImg : primaryImg}
+            alt={product.name}
+            loading="lazy"
+            onError={() => setImgError(true)}
+            style={{
+              transition: "transform 0.3s ease, opacity 0.2s ease",
+            }}
+          />
         ) : (
           <div
             style={{
@@ -39,11 +58,12 @@ export default function ProductCard({ product }: Props) {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "var(--faint)",
-              fontSize: 32,
+              background: "var(--surface-2)",
+              color: "var(--indigo)",
+              fontSize: 36,
             }}
           >
-            👕
+            👖
           </div>
         )}
 

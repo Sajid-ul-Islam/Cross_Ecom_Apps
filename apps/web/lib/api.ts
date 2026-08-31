@@ -185,6 +185,40 @@ export interface OrderResult {
 
 import catalogSnapshot from "./catalog.snapshot.json";
 
+/**
+ * Canonical product image resolver:
+ * Converts relative paths, HTTP urls, and protocol-relative URLs into high-speed HTTPS CDN urls.
+ */
+export function resolveProductImage(src?: string, fallback?: string): string {
+  if (!src || typeof src !== "string" || src.trim().length === 0) {
+    return fallback || "https://deencommerce.com/wp-content/uploads/2026/05/jeans-1.jpg";
+  }
+  let clean = src.trim();
+  if (clean.startsWith("//")) return `https:${clean}`;
+  if (clean.startsWith("/")) return `https://deencommerce.com${clean}`;
+  if (clean.startsWith("http://")) return clean.replace("http://", "https://");
+  return clean;
+}
+
+/**
+ * Fetches real-time updated images and gallery for a product directly from REST API.
+ */
+export async function fetchProductImages(id: string): Promise<{
+  images: [string, string];
+  gallery: string[];
+  thumb: string;
+  single: string;
+  full: string;
+} | null> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/images/product/${encodeURIComponent(id)}`, {
+      next: { revalidate: 60 },
+    });
+    if (res.ok) return res.json();
+  } catch {}
+  return null;
+}
+
 export function getBundledProducts(): Product[] {
   const data = catalogSnapshot as unknown as { products?: Product[] } | Product[];
   if (Array.isArray(data)) return data;

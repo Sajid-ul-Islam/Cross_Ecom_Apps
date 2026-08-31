@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { fetchProduct, fetchProducts, fetchDeliveryFees, bdt, type Product, type DeliveryFees } from "@/lib/api";
+import { fetchProduct, fetchProducts, fetchDeliveryFees, bdt, resolveProductImage, type Product, type DeliveryFees } from "@/lib/api";
 import { useCart } from "@/lib/cart";
 import SizeGuideModal from "@/components/SizeGuideModal";
 import DenimCareGuideModal from "@/components/DenimCareGuideModal";
@@ -86,7 +86,8 @@ export default function ProductDetailPage() {
   }
 
   const price = product.salePrice ?? product.price;
-  const gallery = product.gallery?.length ? product.gallery : [product.images[0], product.images[1]].filter(Boolean);
+  const rawGallery = product.gallery?.length ? product.gallery : [product.images[0], product.images[1]].filter(Boolean);
+  const gallery = rawGallery.map((src) => resolveProductImage(src));
 
   return (
     <div className="container" style={{ paddingBottom: 80 }}>

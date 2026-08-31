@@ -1002,6 +1002,22 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     }
   });
 
+  /* ---- dynamic product & category image endpoints ---- */
+  app.get("/v1/deen/images/product/:id", async (req, reply) => {
+    const list = await getCatalog();
+    const prod = list.find((p) => p.id === (req.params as any).id);
+    if (!prod) return reply.code(404).send({ error: "NOT_FOUND", message: "Product not found" });
+    return reply.send({
+      id: prod.id,
+      name: prod.name,
+      images: prod.images,
+      gallery: prod.gallery || prod.images,
+      thumb: prod.thumb || prod.images[0],
+      single: prod.single || prod.images[0],
+      full: prod.full || prod.images[0],
+    });
+  });
+
   /* ---- centralized error model (R4) ---- */
   /* Every endpoint should return this shape so the app can decide:
      retry (retryable) vs contact-support vs offline. */
