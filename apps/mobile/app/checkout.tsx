@@ -27,9 +27,9 @@ import { useCart } from "../src/context/CartContext";
 import { useOrders } from "../src/context/OrderContext";
 import { useProfile } from "../src/context/ProfileContext";
 import { useRewards } from "../src/context/RewardsContext";
-import { bdt, DELIVERY_OPTIONS, createGuestSession, getGuestSession, fetchPaymentMethods, fetchCoupon, getCashbackAmount } from "../src/services/gateway";
+import { bdt, DELIVERY_OPTIONS, createGuestSession, getGuestSession, fetchPaymentMethods, fetchCoupon, getCashbackAmount, fetchDistricts, type BdDistrict } from "../src/services/gateway";
 
-import { BD_DISTRICTS, BdDistrict } from "../src/data/districts";
+import { BD_DISTRICTS } from "../src/data/districts";
 import {
   DeliveryOptionKey,
   DeliverySlot,
@@ -56,6 +56,7 @@ export default function CheckoutScreen() {
   const [name, setName] = useState(profile.name || "");
   const [phone, setPhone] = useState(profile.phone || "");
   const [email, setEmail] = useState(profile.email || "");
+  const [districts, setDistricts] = useState<BdDistrict[]>(BD_DISTRICTS);
   const [district, setDistrict] = useState<BdDistrict>(
     BD_DISTRICTS.find((d) => d.code === "BD-13") || BD_DISTRICTS[0]
   );
@@ -86,6 +87,10 @@ export default function CheckoutScreen() {
   // Eagerly load any persisted guest session.
   useEffect(() => {
     getGuestSession().then(setGuestSession);
+    // Fetch districts from API (single source of truth)
+    fetchDistricts().then((data) => {
+      if (data.length > 0) setDistricts(data);
+    });
   }, []);
 
   useEffect(() => {
@@ -807,7 +812,7 @@ export default function CheckoutScreen() {
             />
 
             <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 400 }}>
-              {BD_DISTRICTS.filter((d) =>
+              {districts.filter((d) =>
                 d.name.toLowerCase().includes(districtSearch.toLowerCase()) ||
                 d.code.toLowerCase().includes(districtSearch.toLowerCase())
               ).map((d) => {
@@ -839,16 +844,9 @@ export default function CheckoutScreen() {
                       setDistrictSearch("");
                     }}
                   >
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                      <Text style={{ fontSize: 14, fontWeight: isSelected ? "800" : "600", color: isSelected ? colors.indigo : colors.ink }}>
-                        {d.name}
-                      </Text>
-                      {d.code === "BD-13" && (
-                        <View style={{ backgroundColor: colors.indigo, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3 }}>
-                          <Text style={{ fontSize: 9, fontWeight: "800", color: "#FFFFFF" }}>DHAKA ৳80</Text>
-                        </View>
-                      )}
-                    </View>
+                    <Text style={{ fontSize: 14, fontWeight: isSelected ? "800" : "600", color: isSelected ? colors.indigo : colors.ink }}>
+                      {d.name}
+                    </Text>
                     <Text style={{ fontSize: 12, fontWeight: "700", color: isSelected ? colors.indigo : colors.sub }}>
                       {d.code} {isSelected ? "✓" : ""}
                     </Text>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { BD_DISTRICTS } from "@/lib/districts";
-import { API_URL, fetchOrders, loginWithGoogle, loginWithFacebook, type OrderResult } from "@/lib/api";
+import { API_URL, fetchOrders, fetchDistricts, loginWithGoogle, loginWithFacebook, type OrderResult, type BdDistrict } from "@/lib/api";
 import AdminAnalyticsModal from "@/components/AdminAnalyticsModal";
 
 const PROFILE_STORAGE_KEY = "deen_web_user_profile";
@@ -39,6 +39,7 @@ export default function ProfilePage() {
   const [orders, setOrders] = useState<OrderResult[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [savedMessage, setSavedMessage] = useState("");
+  const [districts, setDistricts] = useState<BdDistrict[]>(BD_DISTRICTS);
 
   // Auth modal
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -59,6 +60,10 @@ export default function ProfilePage() {
         setProfile(JSON.parse(saved));
       }
     } catch {}
+    // Fetch districts from API (single source of truth)
+    fetchDistricts().then((data) => {
+      if (data.length > 0) setDistricts(data);
+    });
   }, []);
 
   useEffect(() => {
@@ -419,7 +424,7 @@ export default function ProfilePage() {
               className="form-input"
               value={profile.district}
               onChange={(e) => {
-                const found = BD_DISTRICTS.find((d) => d.code === e.target.value);
+                const found = districts.find((d) => d.code === e.target.value);
                 setProfile({
                   ...profile,
                   district: e.target.value,
@@ -427,7 +432,7 @@ export default function ProfilePage() {
                 });
               }}
             >
-              {BD_DISTRICTS.map((d) => (
+              {districts.map((d) => (
                 <option key={d.code} value={d.code}>
                   {d.name} ({d.code})
                 </option>

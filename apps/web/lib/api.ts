@@ -369,6 +369,57 @@ export interface ActiveCampaignState {
   };
 }
 
+export interface BdDistrict {
+  code: string;
+  name: string;
+}
+
+/**
+ * Fetches 64 Bangladesh districts from REST API (/v1/deen/districts).
+ * Single source of truth — matches WooCommerce BD-XX state codes.
+ */
+export async function fetchDistricts(): Promise<BdDistrict[]> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/districts`, {
+      next: { revalidate: 300 },
+    });
+    if (res.ok) {
+      const data: BdDistrict[] = await res.json();
+      if (Array.isArray(data) && data.length > 0) return data;
+    }
+  } catch {}
+  // Fallback to local copy if API unreachable
+  const { BD_DISTRICTS } = await import("@/lib/districts");
+  return BD_DISTRICTS;
+}
+
+export interface DeliveryFees {
+  insideDhaka: number;
+  outsideDhaka: number;
+  express: number;
+  storePickup: number;
+}
+
+/**
+ * Fetches live delivery fees from REST API (/v1/deen/pricing).
+ * Single source of truth — mirrors WooCommerce shipping zones.
+ */
+export async function fetchDeliveryFees(): Promise<DeliveryFees> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/pricing`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [], area: "dhaka_standard" }),
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.deliveryFees) return data.deliveryFees;
+    }
+  } catch {}
+  return { insideDhaka: 50, outsideDhaka: 90, express: 120, storePickup: 0 };
+}
+
 /**
  * Fetches live campaign status from REST API (/v1/deen/campaigns).
  */

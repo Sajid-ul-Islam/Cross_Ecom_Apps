@@ -21,6 +21,7 @@ import {
   DELIVERY_FEES,
   DELIVERY_OPTIONS,
   getDeliveryFee,
+  updateDeliveryFees,
   DEFAULT_PROFILE,
   GUEST_PROFILE,
   bdt,
@@ -33,6 +34,7 @@ export {
   DELIVERY_FEES,
   DELIVERY_OPTIONS,
   getDeliveryFee,
+  updateDeliveryFees,
   DEFAULT_PROFILE,
   GUEST_PROFILE,
   bdt,
@@ -1311,6 +1313,51 @@ export async function fetchActiveCampaigns(): Promise<ActiveCampaignState | null
   } catch {
     return null;
   }
+}
+
+export interface BdDistrict {
+  code: string;
+  name: string;
+}
+
+/**
+ * Fetches 64 Bangladesh districts from REST API (/v1/deen/districts).
+ * Single source of truth — matches WooCommerce BD-XX state codes.
+ */
+export async function fetchDistricts(): Promise<BdDistrict[]> {
+  try {
+    const data = await request<BdDistrict[]>("/v1/deen/districts", undefined, 5000, true);
+    if (Array.isArray(data) && data.length > 0) return data;
+  } catch {}
+  // Fallback to local copy if API unreachable
+  const { BD_DISTRICTS } = await import("../data/districts");
+  return BD_DISTRICTS;
+}
+
+export interface DeliveryFees {
+  insideDhaka: number;
+  outsideDhaka: number;
+  express: number;
+  storePickup: number;
+}
+
+/**
+ * Fetches live delivery fees from REST API (/v1/deen/pricing).
+ * Single source of truth — mirrors WooCommerce shipping zones.
+ */
+export async function fetchDeliveryFees(): Promise<DeliveryFees> {
+  try {
+    const res = await request<{ deliveryFees: DeliveryFees }>("/v1/deen/pricing", {
+      method: "POST",
+      body: JSON.stringify({ items: [], area: "dhaka_standard" }),
+    }, 5000, true);
+    if (res?.deliveryFees) {
+      // Update the static DELIVERY_FEES constant (single source of truth sync)
+      updateDeliveryFees(res.deliveryFees);
+      return res.deliveryFees;
+    }
+  } catch {}
+  return { insideDhaka: 50, outsideDhaka: 90, express: 120, storePickup: 0 };
 }
 
 /* ----------------------------- payments ---------------------------- */

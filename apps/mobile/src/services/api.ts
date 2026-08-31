@@ -65,6 +65,16 @@ export const DELIVERY_FEES: Record<string, number> = {
   store_pickup: 0,
 };
 
+/** Update DELIVERY_FEES from API response (single source of truth). */
+export function updateDeliveryFees(fees: { insideDhaka: number; outsideDhaka: number; express: number; storePickup: number }): void {
+  DELIVERY_FEES.dhaka = fees.insideDhaka;
+  DELIVERY_FEES.dhaka_standard = fees.insideDhaka;
+  DELIVERY_FEES.outside = fees.outsideDhaka;
+  DELIVERY_FEES.outside_standard = fees.outsideDhaka;
+  DELIVERY_FEES.dhaka_express = fees.express;
+  DELIVERY_FEES.store_pickup = fees.storePickup;
+}
+
 export const getDeliveryFee = (area: string | DeliveryArea): number => {
   return DELIVERY_FEES[area] ?? 50;
 };

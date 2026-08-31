@@ -9,8 +9,8 @@ import { DeliveryOptionKey } from "../../src/types";
 import { useProfile } from "../../src/context/ProfileContext";
 import { useTheme } from "../../src/context/ThemeContext";
 
-import { reportBug } from "../../src/services/gateway";
-import { BD_DISTRICTS, BdDistrict } from "../../src/data/districts";
+import { reportBug, fetchDistricts, type BdDistrict } from "../../src/services/gateway";
+import { BD_DISTRICTS } from "../../src/data/districts";
 
 // Extracted sub-components
 import { AccountHeader } from "../../src/components/profile/AccountHeader";
@@ -49,6 +49,7 @@ export default function ProfileScreen() {
   const [email, setEmail] = useState(profile.email || "");
   const [address, setAddress] = useState(profile.address);
   const [city, setCity] = useState(profile.city || "Dhaka");
+  const [districts, setDistricts] = useState<BdDistrict[]>(BD_DISTRICTS);
   const [district, setDistrict] = useState<BdDistrict>(
     BD_DISTRICTS.find((d) => d.code === profile.district) ||
       BD_DISTRICTS.find((d) => d.code === "BD-13") ||
@@ -72,12 +73,19 @@ export default function ProfileScreen() {
   const [selectedOrderForTracking, setSelectedOrderForTracking] = useState<any>(null);
 
   useEffect(() => {
+    // Fetch districts from API (single source of truth)
+    fetchDistricts().then((data) => {
+      if (data.length > 0) setDistricts(data);
+    });
+  }, []);
+
+  useEffect(() => {
     setName(profile.name);
     setPhone(profile.phone);
     setEmail(profile.email || "");
     setAddress(profile.address);
     setCity(profile.city || "Dhaka");
-    const dMatch = BD_DISTRICTS.find((d) => d.code === profile.district);
+    const dMatch = districts.find((d) => d.code === profile.district);
     if (dMatch) setDistrict(dMatch);
     setSelectedArea(profile.area || "dhaka_standard");
     setJeansSize(profile.jeansSize || "32");

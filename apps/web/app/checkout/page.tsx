@@ -5,8 +5,8 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
 import { useCart } from "@/lib/cart";
-import { placeOrder, bdt, API_URL, fetchCampaigns, type ActiveCampaignState } from "@/lib/api";
-import { BD_DISTRICTS, BdDistrict } from "@/lib/districts";
+import { placeOrder, bdt, API_URL, fetchCampaigns, fetchDistricts, type ActiveCampaignState, type BdDistrict } from "@/lib/api";
+import { BD_DISTRICTS } from "@/lib/districts";
 
 interface DeliveryOption {
   id: string;
@@ -104,6 +104,7 @@ function CheckoutContent() {
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("Dhaka");
+  const [districts, setDistricts] = useState<BdDistrict[]>(BD_DISTRICTS);
   const [district, setDistrict] = useState<BdDistrict>(
     BD_DISTRICTS.find((d) => d.code === "BD-13") || BD_DISTRICTS[0]
   );
@@ -132,6 +133,10 @@ function CheckoutContent() {
     fetchCampaigns().then((data) => {
       if (data) setCampaign(data);
     });
+    // Fetch districts from API (single source of truth)
+    fetchDistricts().then((data) => {
+      if (data.length > 0) setDistricts(data);
+    });
   }, []);
 
   // Coupon State
@@ -156,7 +161,7 @@ function CheckoutContent() {
           if (p.address) setAddress(p.address);
           if (p.city) setCity(p.city);
           if (p.district) {
-            const found = BD_DISTRICTS.find((d) => d.code === p.district);
+            const found = districts.find((d) => d.code === p.district);
             if (found) {
               setDistrict(found);
               if (found.code !== "BD-13") setSelectedArea("outside");
@@ -443,7 +448,7 @@ function CheckoutContent() {
                       setAddress(profileData.address);
                       if (profileData.city) setCity(profileData.city);
                       if (profileData.district) {
-                        const found = BD_DISTRICTS.find((d) => d.code === profileData.district);
+                        const found = districts.find((d) => d.code === profileData.district);
                         if (found) handleSelectDistrict(found);
                       }
                     }}
@@ -936,7 +941,7 @@ function CheckoutContent() {
 
             {/* District List Scrollable */}
             <div className="district-list-scroll">
-              {BD_DISTRICTS.filter(
+              {districts.filter(
                 (d) =>
                   d.name.toLowerCase().includes(districtSearch.toLowerCase()) ||
                   d.code.toLowerCase().includes(districtSearch.toLowerCase())
@@ -947,12 +952,8 @@ function CheckoutContent() {
                     key={d.code}
                     className={`district-list-item ${isSelected ? "district-list-item--selected" : ""}`}
                     onClick={() => handleSelectDistrict(d)}
-                  >
-                    <div className="district-item-left">
+                  >                      <div className="district-item-left">
                       <span className="district-name-text">{d.name}</span>
-                      {d.code === "BD-13" && (
-                        <span className="district-dhaka-pill">DHAKA ৳50</span>
-                      )}
                     </div>
                     <span className="district-code-text">
                       {d.code} {isSelected ? "✓" : ""}

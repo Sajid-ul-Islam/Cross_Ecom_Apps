@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { fetchProduct, fetchProducts, bdt, type Product } from "@/lib/api";
+import { fetchProduct, fetchProducts, fetchDeliveryFees, bdt, type Product, type DeliveryFees } from "@/lib/api";
 import { useCart } from "@/lib/cart";
 import SizeGuideModal from "@/components/SizeGuideModal";
 import DenimCareGuideModal from "@/components/DenimCareGuideModal";
@@ -22,6 +22,7 @@ export default function ProductDetailPage() {
   const [added, setAdded] = useState(false);
   const [activeAccordion, setActiveAccordion] = useState<string | null>("fabric");
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [deliveryFees, setDeliveryFees] = useState<DeliveryFees>({ insideDhaka: 50, outsideDhaka: 90, express: 120, storePickup: 0 });
 
   // Modals
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
@@ -41,6 +42,10 @@ export default function ProductDetailPage() {
           setRelated(res.filter((item: Product) => String(item.id) !== String(id)).slice(0, 4));
         });
       }
+    });
+    // Fetch delivery fees from API (single source of truth)
+    fetchDeliveryFees().then((fees) => {
+      setDeliveryFees(fees);
     });
   }, [id]);
 
@@ -390,8 +395,8 @@ export default function ProductDetailPage() {
               </button>
               {activeAccordion === "shipping" && (
                 <div style={{ padding: "0 16px 14px", fontSize: 13, color: "var(--sub)", lineHeight: 1.6 }}>
-                  • <strong>Dhaka Metro:</strong> ৳50 delivery fee (24–48h Pathao Express).<br />
-                  • <strong>Outside Dhaka:</strong> ৳90 delivery charge across all 64 districts.<br />
+                  • <strong>Dhaka Metro:</strong> {bdt(deliveryFees.insideDhaka)} delivery fee (24–48h Pathao Express).<br />
+                  • <strong>Outside Dhaka:</strong> {bdt(deliveryFees.outsideDhaka)} delivery charge across all 64 districts.<br />
                   • <strong>7-Day Doorstep Guarantee:</strong> Size swap delivered directly to your doorstep.
                 </div>
               )}

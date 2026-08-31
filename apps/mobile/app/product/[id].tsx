@@ -38,7 +38,7 @@ import {
 import { ThemeColors } from "../../src/theme/colors";
 import { sharedStyles } from "../../src/theme/sharedStyles";
 import { useTheme } from "../../src/context/ThemeContext";
-import { fetchProductById, fetchProducts, bdt } from "../../src/services/gateway";
+import { fetchProductById, fetchProducts, fetchDeliveryFees, bdt, type DeliveryFees } from "../../src/services/gateway";
 import { Product, Variation } from "../../src/types";
 import { useCart } from "../../src/context/CartContext";
 import { useProfile } from "../../src/context/ProfileContext";
@@ -73,6 +73,7 @@ export default function ProductDetailScreen() {
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [selectedVariationId, setSelectedVariationId] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
+  const [deliveryFees, setDeliveryFees] = useState<DeliveryFees>({ insideDhaka: 50, outsideDhaka: 90, express: 120, storePickup: 0 });
   const [addedNotice, setAddedNotice] = useState(false);
   const [qty, setQty] = useState(1);
   const [expandedSection, setExpandedSection] = useState<string | null>("fabric");
@@ -121,6 +122,11 @@ export default function ProductDetailScreen() {
       .finally(() => {
         if (isMounted) setLoading(false);
       });
+
+    // Fetch delivery fees from API (single source of truth)
+    fetchDeliveryFees().then((fees) => {
+      setDeliveryFees(fees);
+    });
 
     return () => {
       isMounted = false;
@@ -586,9 +592,9 @@ export default function ProductDetailScreen() {
             {expandedSection === "shipping" && (
               <View style={styles.accordionBody}>
                 <Text style={styles.accordionBodyText}>
-                  • Home Delivery: ৳50 (2-3 Days){"\n"}
-                  • Express Home Delivery: ৳120 (Within 24 Hours){"\n"}
-                  • Outside Dhaka (Home Delivery): ৳90 (Nationwide Courier · 3-5 Days){"\n"}
+                  • Home Delivery: {bdt(deliveryFees.insideDhaka)} (2-3 Days){"\n"}
+                  • Express Home Delivery: {bdt(deliveryFees.express)} (Within 24 Hours){"\n"}
+                  • Outside Dhaka (Home Delivery): {bdt(deliveryFees.outsideDhaka)} (Nationwide Courier · 3-5 Days){"\n"}
                   • Store Pickup: FREE (Mirpur 12 Flagship Outlet){"\n"}
                   • 7-Day Hassle-Free Size Exchange Guaranteed
                 </Text>
