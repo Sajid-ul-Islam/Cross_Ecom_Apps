@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
-import { type Product } from "@/lib/api";
+import React, { useState, useEffect } from "react";
+import { type Product, fetchOutlets, type Outlet } from "@/lib/api";
 
-const OUTLETS = [
+const FALLBACK_OUTLETS: Outlet[] = [
   {
     id: "mirpur",
     name: "DEEN Mirpur 12 (Flagship Outlet)",
@@ -63,6 +63,15 @@ export default function StoreStockModal({
   product,
   selectedSize,
 }: StoreStockModalProps) {
+  const [outlets, setOutlets] = useState<Outlet[]>(FALLBACK_OUTLETS);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    fetchOutlets().then((apiOutlets) => {
+      if (apiOutlets.length > 0) setOutlets(apiOutlets);
+    });
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -83,7 +92,7 @@ export default function StoreStockModal({
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {OUTLETS.map((o) => (
+          {outlets.map((o) => (
             <div
               key={o.id}
               style={{
@@ -113,7 +122,7 @@ export default function StoreStockModal({
 
               <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
                 <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.mapQuery)}`}
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(o.mapQuery || o.address)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn--outline"

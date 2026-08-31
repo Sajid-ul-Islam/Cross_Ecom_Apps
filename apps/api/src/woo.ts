@@ -86,6 +86,8 @@ function getFit(p: WooProduct): string | undefined {
 }
 
 function mapWooToDeen(p: WooProduct): DeenProduct | null {
+  // Skip draft/pending products — customers should never see them
+  if (p.status && p.status !== "publish" && p.status !== "private") return null;
   const catNames = p.categories.map((c) => c.name);
   const category = mapCategory(catNames);
   const sizes = getSizes(p);
@@ -326,15 +328,17 @@ export function invalidateStats(): void {
   // (No separate stats cache today; left as a hook for future memoization.)
 }
 
-export async function fetchWooProducts(): Promise<DeenProduct[]> {
-  if (catalogCache && Date.now() - catalogCache.at < CACHE_TTL_MS) return catalogCache.data;
-  if (catalogWarming) return catalogWarming;
+export async function fetchWooProducts(opts?: { status?: string }): Promise<DeenProduct[]> {
+  // When fetching a specific status (e.g. admin wants drafts), bypass cache
+  const statusFilter = opts?.status || "publish";
+  if (!opts?.status && catalogCache && Date.now() - catalogCache.at < CACHE_TTL_MS) return catalogCache.data;
+  if (!opts?.status && catalogWarming) return catalogWarming;
 
-  catalogWarming = (async () => {
+  const loader = async () => {
     const out: DeenProduct[] = [];
     const perPage = 100;
     for (let page = 1; page <= 10; page++) {
-      const batch = (await wooFetch("products", { per_page: String(perPage), page: String(page) })) as WooProduct[];
+      const batch = (await wooFetch("products", { status: statusFilter, per_page: String(perPage), page: String(page) })) as WooProduct[];
       if (!Array.isArray(batch) || batch.length === 0) break;
       for (const p of batch) {
         const d = mapWooToDeen(p);
@@ -342,17 +346,25 @@ export async function fetchWooProducts(): Promise<DeenProduct[]> {
       }
       if (batch.length < perPage) break;
     }
-    catalogCache = { at: Date.now(), data: out };
-    catalogWarming = null;
     return out;
-  })();
+  };
 
-  try {
-    return await catalogWarming;
-  } catch (e) {
-    catalogWarming = null;
-    throw e;
+  // For default (publish-only) calls, use shared cache
+  if (!opts?.status) {
+    catalogWarming = loader();
+    try {
+      const result = await catalogWarming;
+      catalogCache = { at: Date.now(), data: result };
+      catalogWarming = null;
+      return result;
+    } catch (e) {
+      catalogWarming = null;
+      throw e;
+    }
   }
+
+  // Admin requested a specific status (draft, etc.) — no caching
+  return loader();
 }
 
 /** Per-product variations (real size → stock + price) for the detail screen. */

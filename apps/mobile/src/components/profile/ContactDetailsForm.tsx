@@ -13,7 +13,8 @@ import { ThemeColors } from "../../theme/colors";
 import { sharedStyles } from "../../theme/sharedStyles";
 import { useTheme } from "../../context/ThemeContext";
 import { useProfile } from "../../context/ProfileContext";
-import { BD_DISTRICTS, BdDistrict } from "../../data/districts";
+import { BD_DISTRICTS } from "../../data/districts";
+import { fetchDistricts, type BdDistrict } from "../../services/gateway";
 
 interface ContactDetailsFormProps {
   /** Form field values — parent owns the canonical state */
@@ -56,6 +57,14 @@ export const ContactDetailsForm: React.FC<ContactDetailsFormProps> = ({
   const s = sharedStyles(colors);
   const styles = createStyles(colors, s);
 
+  const [districts, setDistricts] = useState<BdDistrict[]>(BD_DISTRICTS);
+  // Fetch districts from API on mount (single source of truth)
+  React.useEffect(() => {
+    fetchDistricts().then((data) => {
+      if (data.length > 0) setDistricts(data);
+    });
+  }, []);
+
   // District picker modal
   const [districtModalOpen, setDistrictModalOpen] = useState(false);
   const [districtSearch, setDistrictSearch] = useState("");
@@ -66,7 +75,7 @@ export const ContactDetailsForm: React.FC<ContactDetailsFormProps> = ({
   const [newAddrStreet, setNewAddrStreet] = useState("");
   const [newAddrCity, setNewAddrCity] = useState("Dhaka");
   const [newAddrDistrict, setNewAddrDistrict] = useState<BdDistrict>(
-    BD_DISTRICTS.find((d) => d.code === "BD-13") || BD_DISTRICTS[0]
+    districts.find((d) => d.code === "BD-13") || districts[0]
   );
 
   const handleSaveNewAddress = () => {
@@ -257,7 +266,7 @@ export const ContactDetailsForm: React.FC<ContactDetailsFormProps> = ({
             />
 
             <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 380 }}>
-              {BD_DISTRICTS.filter((d) =>
+              {districts.filter((d) =>
                 d.name.toLowerCase().includes(districtSearch.toLowerCase()) ||
                 d.code.toLowerCase().includes(districtSearch.toLowerCase())
               ).map((d) => {

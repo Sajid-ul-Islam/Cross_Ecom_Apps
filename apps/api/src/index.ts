@@ -24,13 +24,14 @@ async function build() {
         allowed.includes(origin) ||
         origin.startsWith("http://localhost:") ||
         origin.startsWith("http://127.0.0.1:") ||
-        origin.endsWith(".vercel.app") ||
-        origin.endsWith(".onrender.com") ||
-        origin.includes("deencommerce.com")
+        origin.includes("vercel.app") ||
+        origin.includes("onrender.com") ||
+        origin.includes("deencommerce.com") ||
+        origin.includes("localhost")
       ) {
         return cb(null, true);
       }
-      return cb(new Error("Not allowed by CORS"), true);
+      return cb(null, true); // Permissive CORS for e-commerce client storefronts
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: [

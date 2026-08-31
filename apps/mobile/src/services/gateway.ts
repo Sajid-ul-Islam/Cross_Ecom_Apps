@@ -21,6 +21,7 @@ import {
   DELIVERY_FEES,
   DELIVERY_OPTIONS,
   getDeliveryFee,
+  updateDeliveryFees,
   DEFAULT_PROFILE,
   GUEST_PROFILE,
   bdt,
@@ -33,6 +34,7 @@ export {
   DELIVERY_FEES,
   DELIVERY_OPTIONS,
   getDeliveryFee,
+  updateDeliveryFees,
   DEFAULT_PROFILE,
   GUEST_PROFILE,
   bdt,
@@ -42,6 +44,7 @@ export {
   getCashbackAmount,
 };
 import { getBundledProducts } from "./catalog";
+import { fetchOrCache, checkCacheVersion, loadCacheVersion, TTL } from "./cache";
 import type {
   Product,
   Order,
@@ -296,38 +299,35 @@ export async function fetchProducts(
   query?: string,
   sort?: "price-asc" | "price-desc" | "name-asc" | "new"
 ): Promise<Product[]> {
-  try {
-    const params = new URLSearchParams();
-    if (category && category !== "ALL") params.set("category", category);
-    if (query && query.trim()) params.set("q", query.trim());
-    if (sort) params.set("sort", sort);
-    const qs = params.toString();
+  const params = new URLSearchParams();
+  if (category && category !== "ALL") params.set("category", category);
+  if (query && query.trim()) params.set("q", query.trim());
+  if (sort) params.set("sort", sort);
+  const qs = params.toString();
+  const cacheKey = `products_${category || "ALL"}_${query || ""}_${sort || "default"}`;
 
-    // 1) Fetch live from gateway
-    const list = await request<Product[]>(`/v1/deen/products${qs ? `?${qs}` : ""}`, undefined, 6000);
-    if (Array.isArray(list) && list.length > 0) {
-      if (!category && !query && !sort) {
-        AsyncStorage.setItem("deen_gateway_products_v1", JSON.stringify(list)).catch(() => {});
+  try {
+    // Use fetch-or-cache: returns cached data if fresh, otherwise fetches from API
+    const list = await fetchOrCache<Product[]>(
+      "catalog",
+      cacheKey,
+      TTL.CATALOG,
+      async () => {
+        const fresh = await request<Product[]>(`/v1/deen/products${qs ? `?${qs}` : ""}`, undefined, 6000);
+        if (Array.isArray(fresh) && fresh.length > 0) return fresh;
+        // If API returned empty, fall back to bundled
+        return applyFilters(getBundledProducts(), category, query);
       }
-      return list;
+    );
+    if (Array.isArray(list) && list.length > 0) {
+      const filtered = applyFilters(list, category, query);
+      return sort ? sortProductsLocal(filtered, sort) : filtered;
     }
-  } catch (e) {
-    // Network or timeout failure — fallback gracefully
+  } catch {
+    // Network failure — fallback
   }
 
-  // 2) Fallback to cached products in AsyncStorage
-  try {
-    const cached = await AsyncStorage.getItem("deen_gateway_products_v1");
-    if (cached) {
-      const parsed = JSON.parse(cached) as Product[];
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        const filtered = applyFilters(parsed, category, query);
-        return sort ? sortProductsLocal(filtered, sort) : filtered;
-      }
-    }
-  } catch {}
-
-  // 3) Fallback to bundled snapshot
+  // Fallback to bundled snapshot
   const bundled = applyFilters(getBundledProducts(), category, query);
   return sort ? sortProductsLocal(bundled, sort) : bundled;
 }
@@ -512,6 +512,16 @@ export async function createOrder(
     orderData.idempotencyKey ||
     `m_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
+  // Map delivery option keys to API-accepted area values
+  const areaMap: Record<string, string> = {
+    dhaka_standard: "dhaka",
+    dhaka_express: "dhaka_express",
+    outside_standard: "outside_standard",
+    outside: "outside",
+    store_pickup: "store_pickup",
+    pickup: "pickup",
+  };
+
   const orderPayload = {
     name: orderData.name.trim(),
     phone: cleanPhone,
@@ -520,7 +530,7 @@ export async function createOrder(
     district: (orderData as any).district || (orderData as any).state || "BD-13",
     state: (orderData as any).state || (orderData as any).district || "BD-13",
     postcode: (orderData as any).postcode || "1200",
-    area: orderData.area,
+    area: areaMap[String(orderData.area)] || orderData.area || "dhaka",
     payment: orderData.payment,
     trxId: (orderData as any).trxId || undefined,
     coupon: (orderData as any).coupon || undefined,
@@ -1313,6 +1323,51 @@ export async function fetchActiveCampaigns(): Promise<ActiveCampaignState | null
   }
 }
 
+export interface BdDistrict {
+  code: string;
+  name: string;
+}
+
+/**
+ * Fetches 64 Bangladesh districts from REST API (/v1/deen/districts).
+ * Single source of truth — matches WooCommerce BD-XX state codes.
+ */
+export async function fetchDistricts(): Promise<BdDistrict[]> {
+  try {
+    const data = await request<BdDistrict[]>("/v1/deen/districts", undefined, 5000, true);
+    if (Array.isArray(data) && data.length > 0) return data;
+  } catch {}
+  // Fallback to local copy if API unreachable
+  const { BD_DISTRICTS } = await import("../data/districts");
+  return BD_DISTRICTS;
+}
+
+export interface DeliveryFees {
+  insideDhaka: number;
+  outsideDhaka: number;
+  express: number;
+  storePickup: number;
+}
+
+/**
+ * Fetches live delivery fees from REST API (/v1/deen/pricing).
+ * Single source of truth — mirrors WooCommerce shipping zones.
+ */
+export async function fetchDeliveryFees(): Promise<DeliveryFees> {
+  try {
+    const res = await request<{ deliveryFees: DeliveryFees }>("/v1/deen/pricing", {
+      method: "POST",
+      body: JSON.stringify({ items: [], area: "dhaka_standard" }),
+    }, 5000, true);
+    if (res?.deliveryFees) {
+      // Update the static DELIVERY_FEES constant (single source of truth sync)
+      updateDeliveryFees(res.deliveryFees);
+      return res.deliveryFees;
+    }
+  } catch {}
+  return { insideDhaka: 50, outsideDhaka: 90, express: 120, storePickup: 0 };
+}
+
 /* ----------------------------- payments ---------------------------- */
 
 export interface PaymentInitiationResult {
@@ -1350,4 +1405,54 @@ export async function checkPaymentStatusAPI(
   orderId: string
 ): Promise<{ success: boolean; paymentStatus: string; transactionId?: string; status: string }> {
   return request<any>(`/v1/deen/payments/${orderId}`, undefined, 5000);
+}
+
+/* ------------------------- outlets (source of truth = gateway env) ---- */
+
+export interface Outlet {
+  id: string;
+  name: string;
+  tag?: string;
+  address: string;
+  hours: string;
+  phone: string;
+  mapQuery?: string;
+  pickup?: boolean;
+  stockText?: string;
+  units?: number;
+}
+
+/** Fetch physical retail outlets from the gateway. Replaces every
+    hardcoded outlet list in the app. */
+export async function fetchOutlets(): Promise<Outlet[]> {
+  try {
+    const res = await request<{ outlets: Outlet[] }>('/v1/deen/outlets', undefined, 8000, true);
+    return res.outlets || [];
+  } catch {
+    return [];
+  }
+}
+
+/* ------------------------- app settings (business rules) ------------ */
+
+export interface AppSettings {
+  cashbackTiers: {
+    enabled: boolean;
+    tier1: { minSpend: number; cashback: number };
+    tier2: { minSpend: number; cashback: number };
+  };
+  exchangeFees: { insideDhaka: number; outsideDhaka: number };
+  freeTeeThreshold: number;
+  bogo: { rule: string; minItems: number };
+  contact: { hotline: string; whatsapp: string; bkash: string; email: string };
+}
+
+/** Fetch app-wide business settings from the gateway.
+    Replaces hardcoded cashback tiers, exchange fees, contact numbers. */
+export async function fetchAppSettings(): Promise<AppSettings | null> {
+  try {
+    return await request<AppSettings>('/v1/deen/settings', undefined, 8000, true);
+  } catch {
+    return null;
+  }
 }

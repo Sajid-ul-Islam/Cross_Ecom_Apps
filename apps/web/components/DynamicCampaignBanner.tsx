@@ -2,30 +2,14 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { API_URL } from "@/lib/api";
-
-interface CampaignState {
-  type: "cashback" | "sale";
-  badge: string;
-  title: string;
-  subtitle: string;
-  actionUrl: string;
-  cashback: {
-    enabled: boolean;
-    tier1Threshold: number;
-    tier1Amount: number;
-    tier2Threshold: number;
-    tier2Amount: number;
-  };
-}
+import { fetchCampaigns, type ActiveCampaignState } from "@/lib/api";
 
 export default function DynamicCampaignBanner() {
-  const [campaign, setCampaign] = useState<CampaignState | null>(null);
+  const [campaign, setCampaign] = useState<ActiveCampaignState | null>(null);
 
   useEffect(() => {
     let mounted = true;
-    fetch(`${API_URL}/v1/deen/campaigns`, { cache: "no-store" })
-      .then((res) => (res.ok ? res.json() : null))
+    fetchCampaigns()
       .then((data) => {
         if (mounted && data) setCampaign(data);
       })
@@ -35,31 +19,56 @@ export default function DynamicCampaignBanner() {
     };
   }, []);
 
-  if (!campaign) {
+  const active = campaign?.activeCampaign;
+  const isCashback = campaign?.cashback?.enabled;
+
+  if (isCashback && campaign?.cashback) {
+    const tier1Min = campaign.cashback.tier1?.minSpend ?? 2500;
+    const tier1Amt = campaign.cashback.tier1?.amount ?? 500;
+    const tier2Min = campaign.cashback.tier2?.minSpend ?? 3000;
+    const tier2Amt = campaign.cashback.tier2?.amount ?? 700;
+
     return (
       <div className="campaign-banner">
         <div className="container campaign-banner__inner">
-          <span className="campaign-badge">🔥 FLAT UP TO 50% OFF</span>
+          <span className="campaign-badge">🎁 INSTANT CASHBACK</span>
           <span className="campaign-text">
-            <strong>Season Clearance:</strong> 40%–50% discount on selected artisanal denim & menswear.
+            <strong>Unlock Cashback:</strong> ৳{tier1Amt} on ৳{tier1Min.toLocaleString()}+ · ৳{tier2Amt} on ৳{tier2Min.toLocaleString()}+
           </span>
           <Link href="/shop" className="campaign-link">
-            Shop Sale →
+            Shop Now →
           </Link>
         </div>
       </div>
     );
   }
 
+  if (active) {
+    return (
+      <div className="campaign-banner">
+        <div className="container campaign-banner__inner">
+          <span className="campaign-badge">{active.badge || "SPECIAL OFFER"}</span>
+          <span className="campaign-text">
+            <strong>{active.title}:</strong> {active.subtitle}
+          </span>
+          <Link href={active.actionUrl || "/shop"} className="campaign-link">
+            {active.actionLabel || "Explore Sale"} →
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback default sale banner from REST API default
   return (
     <div className="campaign-banner">
       <div className="container campaign-banner__inner">
-        <span className="campaign-badge">{campaign.badge}</span>
+        <span className="campaign-badge">🔥 FLAT UP TO 50% OFF</span>
         <span className="campaign-text">
-          <strong>{campaign.title}:</strong> {campaign.subtitle}
+          <strong>Season Clearance:</strong> 40%–50% discount on selected artisanal denim & menswear.
         </span>
-        <Link href={campaign.actionUrl || "/shop"} className="campaign-link">
-          Explore Collection →
+        <Link href="/shop" className="campaign-link">
+          Shop Sale →
         </Link>
       </div>
     </div>

@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, Linking, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import { Store, HelpCircle, Sparkles, Users, Shield, Trash2, CheckCircle2 } from "../Icons";
 import { ThemeColors } from "../../theme/colors";
 import { sharedStyles } from "../../theme/sharedStyles";
 import { useTheme } from "../../context/ThemeContext";
 import { useProfile } from "../../context/ProfileContext";
-import { exportUserData, deleteUserAccount } from "../../services/gateway";
+import { exportUserData, deleteUserAccount, fetchOutlets, fetchAppSettings, type Outlet } from "../../services/gateway";
 
 interface StoreSectionProps {
   onAboutPress: () => void;
@@ -14,6 +14,13 @@ interface StoreSectionProps {
   onAnalyticsPress: () => void;
   onCustomersPress: () => void;
 }
+
+const FALLBACK_OUTLETS: Outlet[] = [
+  { id: "mirpur", name: "DEEN Mirpur 12 (Flagship Outlet)", tag: "CENTRAL STUDIO & STORE", address: "2nd Floor, Ramzannesa Super Market, Mirpur 12, Dhaka-1216", hours: "Open Daily: 10:00 AM - 09:30 PM", phone: "+8801952700500" },
+  { id: "wari", name: "DEEN Wari Outlet", tag: "DHAKA SOUTH OUTLET", address: "Ground Floor, 41 A.K Famous Tower, Rankin Street, Wari, Dhaka-1203", hours: "Open Daily: 10:30 AM - 09:30 PM", phone: "+8801952700500" },
+  { id: "cumilla", name: "DEEN Cumilla Outlet", tag: "CUMILLA SHOWROOM", address: "4th Floor, QR Tower, Badurtola, Cumilla", hours: "Open Daily: 10:30 AM - 09:00 PM", phone: "+8801952700500" },
+  { id: "sylhet", name: "DEEN Sylhet Outlet", tag: "SYLHET SHOWROOM", address: "Block-A, House-54/2, Kumar Para, Sylhet", hours: "Open Daily: 10:30 AM - 09:30 PM", phone: "+8801952700500" },
+];
 
 export const StoreSection: React.FC<StoreSectionProps> = ({
   onAboutPress,
@@ -26,6 +33,15 @@ export const StoreSection: React.FC<StoreSectionProps> = ({
   const { profile } = useProfile();
   const s = sharedStyles(colors);
   const styles = createStyles(colors, s);
+  const [outlets, setOutlets] = useState<Outlet[]>(FALLBACK_OUTLETS);
+  const [whatsapp, setWhatsapp] = useState("01952-700500");
+
+  useEffect(() => {
+    fetchOutlets().then((o) => { if (o.length > 0) setOutlets(o); });
+    fetchAppSettings().then((s) => { if (s?.contact?.whatsapp) setWhatsapp(s.contact.whatsapp); });
+  }, []);
+
+  const waNumber = whatsapp.replace(/[^0-9]/g, "");
 
   return (
     <>
@@ -36,46 +52,25 @@ export const StoreSection: React.FC<StoreSectionProps> = ({
           <Text style={[styles.cardTitle, { color: colors.ink }]}>DEEN RETAIL OUTLETS</Text>
         </View>
 
-        <View style={styles.storeLocation}>
-          <Text style={[styles.storeName, { color: colors.ink }]}>📍 Mirpur 12 (Flagship Outlet)</Text>
-          <Text style={[styles.storeAddr, { color: colors.sub }]}>
-            2nd Floor, Ramzannesa Super Market, Mirpur 12, Dhaka-1216
-          </Text>
-        </View>
-
-        <View style={styles.storeLocation}>
-          <Text style={[styles.storeName, { color: colors.ink }]}>📍 Wari Outlet (Dhaka South)</Text>
-          <Text style={[styles.storeAddr, { color: colors.sub }]}>
-            Ground Floor, 41 A.K Famous Tower, Rankin St, Wari, Dhaka-1203
-          </Text>
-        </View>
-
-        <View style={styles.storeLocation}>
-          <Text style={[styles.storeName, { color: colors.ink }]}>📍 Cumilla Outlet</Text>
-          <Text style={[styles.storeAddr, { color: colors.sub }]}>
-            4th Floor, QR Tower, Badurtola, Cumilla
-          </Text>
-        </View>
-
-        <View style={styles.storeLocation}>
-          <Text style={[styles.storeName, { color: colors.ink }]}>📍 Sylhet Outlet</Text>
-          <Text style={[styles.storeAddr, { color: colors.sub }]}>
-            Block-A, House-54/2, Kumar Para, Sylhet
-          </Text>
-        </View>
+        {outlets.map((outlet) => (
+          <View key={outlet.id} style={styles.storeLocation}>
+            <Text style={[styles.storeName, { color: colors.ink }]}>📍 {outlet.name}</Text>
+            <Text style={[styles.storeAddr, { color: colors.sub }]}>{outlet.address}</Text>
+          </View>
+        ))}
 
         <TouchableOpacity
           style={[styles.supportBox, { backgroundColor: colors.indigoLight }]}
           activeOpacity={0.8}
-          onPress={() => Linking.openURL("https://wa.me/8801952700500")}
+          onPress={() => Linking.openURL(`https://wa.me/88${waNumber}`)}
         >
           <HelpCircle size={18} color={colors.indigo} />
           <View style={{ flex: 1 }}>
             <Text style={[styles.supportText, { color: colors.indigoDark }]}>
-              Customer Hotline & WhatsApp: <Text style={styles.bold}>+880 1952-700500</Text>
+              Customer Hotline & WhatsApp: <Text style={styles.bold}>+880 {whatsapp}</Text>
             </Text>
             <Text style={{ fontSize: 10, color: colors.sub, marginTop: 1 }}>
-              Open 10:00 AM – 10:00 PM Daily · Tap to Chat on WhatsApp
+              Tap to Chat on WhatsApp
             </Text>
           </View>
         </TouchableOpacity>

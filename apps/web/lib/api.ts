@@ -134,6 +134,15 @@ export interface OrderPayload {
   city?: string;
   district?: string;
   state?: string;
+  postcode?: string;
+  deliverySlot?: string;
+  deliveryNotes?: string;
+  customerNote?: string;
+  coupon?: string;
+  isGuestOrder?: boolean;
+  isGiftOrder?: boolean;
+  giftRecipientName?: string;
+  giftRecipientPhone?: string;
   guestToken?: string;
   idempotencyKey?: string;
 }
@@ -189,7 +198,10 @@ function applyLocalFilters(
   search?: string,
   sort?: string
 ): Product[] {
-  let list = [...products];
+  // Always filter out out-of-stock and draft products for customers
+  let list = [...products].filter(
+    (p) => (p.stockStatus || "instock") !== "outofstock"
+  );
 
   if (category && category !== "ALL") {
     const cat = category.toUpperCase();
@@ -255,7 +267,8 @@ export async function fetchProducts(params?: {
     if (res.ok) {
       const data: Product[] = await res.json();
       if (Array.isArray(data) && data.length > 0) {
-        return data;
+        // Defense-in-depth: filter out OOS products even if API missed them
+        return data.filter((p) => (p.stockStatus || "instock") !== "outofstock");
       }
     }
   } catch {
@@ -338,13 +351,87 @@ export async function fetchCategoryCovers(): Promise<Record<string, string>> {
   return {};
 }
 
+export interface ActiveCampaignState {
+  success: boolean;
+  activeCampaign: {
+    type: "sale" | "cashback" | "none";
+    badge: string;
+    title: string;
+    subtitle: string;
+    discountRange?: string;
+    bannerText?: string;
+    actionUrl?: string;
+    actionLabel?: string;
+  } | null;
+  cashback: {
+    enabled: boolean;
+    tier1?: { minSpend: number; amount: number };
+    tier2?: { minSpend: number; amount: number };
+  };
+  sale: {
+    enabled: boolean;
+    title: string;
+    subtitle: string;
+    badge: string;
+    discountRange: string;
+  };
+}
+
+export interface BdDistrict {
+  code: string;
+  name: string;
+}
+
+/**
+ * Fetches 64 Bangladesh districts from REST API (/v1/deen/districts).
+ * Single source of truth — matches WooCommerce BD-XX state codes.
+ */
+export async function fetchDistricts(): Promise<BdDistrict[]> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/districts`, {
+      next: { revalidate: 300 },
+    });
+    if (res.ok) {
+      const data: BdDistrict[] = await res.json();
+      if (Array.isArray(data) && data.length > 0) return data;
+    }
+  } catch {}
+  // Fallback to local copy if API unreachable
+  const { BD_DISTRICTS } = await import("@/lib/districts");
+  return BD_DISTRICTS;
+}
+
+export interface DeliveryFees {
+  insideDhaka: number;
+  outsideDhaka: number;
+  express: number;
+  storePickup: number;
+}
+
+/**
+ * Fetches live delivery fees from REST API (/v1/deen/pricing).
+ * Single source of truth — mirrors WooCommerce shipping zones.
+ */
+export async function fetchDeliveryFees(): Promise<DeliveryFees> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/pricing`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: [], area: "dhaka_standard" }),
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.deliveryFees) return data.deliveryFees;
+    }
+  } catch {}
+  return { insideDhaka: 50, outsideDhaka: 90, express: 120, storePickup: 0 };
+}
+
 /**
  * Fetches live campaign status from REST API (/v1/deen/campaigns).
  */
-export async function fetchCampaigns(): Promise<{
-  cashback: { enabled: boolean; tiers: Record<string, { minSpend: number; cashback: number }> };
-  sale: { enabled: boolean; title: string; subtitle: string; badge: string; discountRange: string };
-} | null> {
+export async function fetchCampaigns(): Promise<ActiveCampaignState | null> {
   try {
     const res = await apiFetch(`${API_URL}/v1/deen/campaigns`, {
       cache: "no-store",
@@ -352,6 +439,23 @@ export async function fetchCampaigns(): Promise<{
     if (res.ok) return res.json();
   } catch {}
   return null;
+}
+
+/**
+ * Fetches calculated cashback from REST API (/v1/deen/cashback).
+ * Returns 0 if the offer is disabled on the gateway.
+ */
+export async function fetchCashback(subtotal: number): Promise<{ amount: number; nextTierAt: number | null }> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/cashback?subtotal=${Math.round(subtotal)}`, {
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { amount: data.cashback || 0, nextTierAt: data.nextTierAt ?? null };
+    }
+  } catch {}
+  return { amount: 0, nextTierAt: null };
 }
 
 /**
@@ -423,9 +527,20 @@ export async function placeOrder(
     payload.idempotencyKey ||
     `w_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
+  // Map delivery option keys to API-accepted area values
+  const areaMap: Record<string, string> = {
+    dhaka_standard: "dhaka",
+    dhaka_express: "dhaka_express",
+    outside: "outside",
+    outside_standard: "outside_standard",
+    store_pickup: "store_pickup",
+    pickup: "pickup",
+  };
+
   const orderPayload = {
     ...payload,
     phone: cleanPhone,
+    area: areaMap[payload.area || "dhaka_standard"] || payload.area || "dhaka",
     idempotencyKey,
   };
 
@@ -642,4 +757,58 @@ export async function loginWithFacebook(
   } catch (err: any) {
     return { success: false, message: err?.message || "Facebook sign-in network error." };
   }
+}
+
+/* ------------------------- outlets (source of truth = gateway env) ---- */
+
+export interface Outlet {
+  id: string;
+  name: string;
+  tag?: string;
+  address: string;
+  hours: string;
+  phone: string;
+  mapQuery?: string;
+  pickup?: boolean;
+  stockText?: string;
+  units?: number;
+}
+
+/** Fetch physical retail outlets from the gateway. */
+export async function fetchOutlets(): Promise<Outlet[]> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/outlets`, {
+      next: { revalidate: 300 },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.outlets || [];
+    }
+  } catch {}
+  return [];
+}
+
+/* ------------------------- app settings (business rules) ------------ */
+
+export interface AppSettings {
+  cashbackTiers: {
+    enabled: boolean;
+    tier1: { minSpend: number; cashback: number };
+    tier2: { minSpend: number; cashback: number };
+  };
+  exchangeFees: { insideDhaka: number; outsideDhaka: number };
+  freeTeeThreshold: number;
+  bogo: { rule: string; minItems: number };
+  contact: { hotline: string; whatsapp: string; bkash: string; email: string };
+}
+
+/** Fetch app-wide business settings from the gateway. */
+export async function fetchAppSettings(): Promise<AppSettings | null> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/settings`, {
+      next: { revalidate: 300 },
+    });
+    if (res.ok) return res.json();
+  } catch {}
+  return null;
 }

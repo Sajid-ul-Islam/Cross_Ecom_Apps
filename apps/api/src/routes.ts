@@ -1024,6 +1024,17 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   app.get("/health", async (_req, reply) => reply.send(await healthPayload()));
   app.get("/v1/health", async (_req, reply) => reply.send(await healthPayload()));
 
+  /* ---- cache version (client-side cache invalidation signal)
+     Clients poll this endpoint; when the version changes they know to
+     re-fetch catalog/districts/delivery-fees. The version is bumped
+     by WooCommerce webhooks (product/order changes) so clients only
+     refetch when data actually changed. */
+  let cacheVersion = Math.floor(Date.now() / 1000);
+  function bumpCacheVersion() { cacheVersion = Math.floor(Date.now() / 1000); }
+  app.get("/v1/deen/cache-version", async (_req, reply) => {
+    return reply.send({ version: cacheVersion, updatedAt: new Date(cacheVersion * 1000).toISOString() });
+  });
+
   /* ---- WooCommerce webhook: real-time catalog cache bust ----
      Configure in WP Admin → WooCommerce → Settings → Advanced → Webhooks:
        Topic: Product created / updated / deleted / restored
@@ -1084,6 +1095,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     }
 
     _recordWebhookDelivery(eventKey);
+    bumpCacheVersion(); // Signal clients to re-fetch changed data
     audit("woo_webhook", true, `cache busted (topic: ${topic}, eventKey: ${eventKey})`);
     return reply.code(200).send({ ok: true, verified: true, topic, eventKey });
   });
@@ -1304,6 +1316,43 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       whatsapp: config.contact?.whatsapp || "01952-700500",
       bkash: config.contact?.bkash || "01952700500",
       email: config.contact?.email || "support@deencommerce.com",
+    });
+  });
+
+  /* ---- physical retail outlets (source of truth = STORE_OUTLETS env) ----
+     Replaces every hardcoded outlet list in the app. Admin edits the env;
+     the app reflects it with no rebuild. */
+  app.get("/v1/deen/outlets", async (_req, reply) => {
+    const outlets = config.outlets || [];
+    return reply.send({ outlets });
+  });
+
+  /* ---- app-wide settings (single source of truth for business constants) ----
+     Replaces hardcoded cashback tiers, exchange fees, free-tee threshold,
+     and other business rules scattered across clients. */
+  app.get("/v1/deen/settings", async (_req, reply) => {
+    return reply.send({
+      cashbackTiers: {
+        enabled: Boolean(config.campaigns?.cashbackEnabled),
+        tier1: { minSpend: 2500, cashback: 500 },
+        tier2: { minSpend: 3000, cashback: 700 },
+      },
+      exchangeFees: {
+        insideDhaka: config.exchangeFees?.insideDhaka ?? 50,
+        outsideDhaka: config.exchangeFees?.outsideDhaka ?? 90,
+      },
+      freeTeeThreshold: Number(process.env.FREE_TEE_THRESHOLD ?? "3500"),
+      bogo: {
+        /** Buy 2+ same category → cheapest is free. */
+        rule: "cheapest_free",
+        minItems: 2,
+      },
+      contact: {
+        hotline: config.contact?.hotline || "09617-700500",
+        whatsapp: config.contact?.whatsapp || "01952-700500",
+        bkash: config.contact?.bkash || "01952700500",
+        email: config.contact?.email || "support@deencommerce.com",
+      },
     });
   });
 
@@ -1560,9 +1609,18 @@ export async function registerDeenRoutes(app: FastifyInstance) {
                   total: String(delivery),
                 },
               ],
-              meta_data: orderMeta,
+              meta_data: [
+                ...orderMeta,
+                ...(body.customerNote || body.customer_note || body.deliveryNotes || body.delivery_notes
+                  ? [{ key: "customer_note", value: String(body.customerNote || body.customer_note || body.deliveryNotes || body.delivery_notes).trim() }]
+                  : []),
+              ],
               transaction_id: trxId ? String(trxId) : undefined,
-              customer_note: `City: ${resolvedCity} | District: ${resolvedState} | Delivery: ${shippingMethodTitle} (৳${delivery})${pathaoConsignmentId ? ` | Pathao: ${pathaoConsignmentId}` : ""} | Payment: ${paymentTitle}`,
+              customer_note: (() => {
+                const userNote = String(body.customerNote || body.customer_note || body.deliveryNotes || body.delivery_notes || "").trim();
+                const logNote = `City: ${resolvedCity} | District: ${resolvedState} | Delivery: ${shippingMethodTitle} (৳${delivery})${pathaoConsignmentId ? ` | Pathao: ${pathaoConsignmentId}` : ""} | Payment: ${paymentTitle}`;
+                return userNote ? `Customer Instructions: ${userNote}\n\n${logNote}` : logNote;
+              })(),
             });
             wooId = r.id;
             wooNumber = r.number;

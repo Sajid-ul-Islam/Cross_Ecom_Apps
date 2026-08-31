@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useCart } from "@/lib/cart";
-import { bdt, API_URL } from "@/lib/api";
-import { useState } from "react";
+import { bdt, API_URL, fetchCampaigns, type ActiveCampaignState } from "@/lib/api";
+import { useState, useEffect } from "react";
 
 const DELIVERY_OPTIONS = [
   {
@@ -41,30 +41,55 @@ export default function CartPage() {
   const [deliveryArea, setDeliveryArea] = useState("dhaka_standard");
   const delivery = DELIVERY_OPTIONS.find((d) => d.id === deliveryArea) || DELIVERY_OPTIONS[0];
 
+  // Campaign State from REST API
+  const [campaign, setCampaign] = useState<ActiveCampaignState | null>(null);
+
+  useEffect(() => {
+    fetchCampaigns().then((data) => {
+      if (data) setCampaign(data);
+    });
+  }, []);
+
   // Coupon state
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; amount: number; type: string } | null>(null);
   const [couponError, setCouponError] = useState("");
   const [validatingCoupon, setValidatingCoupon] = useState(false);
 
-  // BOGO Jeans discount (Buy 1 Get 2nd Jean 50% Off)
-  const jeansItems: number[] = [];
+  // BOGO: buy 2+ same category → cheapest is free (matches API calculateBogo)
+  const bogoByCat = new Map<string, { unit: number; qty: number }[]>();
   items.forEach((it) => {
-    const cat = (it.product.category || "").toUpperCase();
-    if (cat === "JEANS" || cat === "DENIM") {
-      const unit = it.product.salePrice ?? it.product.price;
-      for (let i = 0; i < it.qty; i++) jeansItems.push(unit);
-    }
+    const cat = (it.product.category || "OTHER").toUpperCase();
+    const unit = it.product.salePrice ?? it.product.price;
+    const existing = bogoByCat.get(cat) || [];
+    existing.push({ unit, qty: it.qty });
+    bogoByCat.set(cat, existing);
   });
-  jeansItems.sort((a, b) => a - b);
-  const bogoPairs = Math.floor(jeansItems.length / 2);
   let bogoDiscount = 0;
-  for (let i = 0; i < bogoPairs; i++) {
-    bogoDiscount += Math.round(jeansItems[i] * 0.5);
-  }
+  Array.from(bogoByCat.values()).forEach((catItems) => {
+    if (catItems.length < 2) return;
+    let cheapestIdx = 0;
+    for (let i = 1; i < catItems.length; i++) {
+      if (catItems[i].unit < catItems[cheapestIdx].unit) cheapestIdx = i;
+    }
+    bogoDiscount += catItems[cheapestIdx].unit * catItems[cheapestIdx].qty;
+  });
 
-  // Instant Cashback Tiers
-  const cashback = subtotal >= 3000 ? 700 : subtotal >= 2500 ? 500 : 0;
+  // Instant Cashback Tiers — ONLY if enabled in the REST API
+  const isCashbackActive = campaign?.cashback?.enabled ?? false;
+  const tier1Min = campaign?.cashback?.tier1?.minSpend ?? 2500;
+  const tier1Amt = campaign?.cashback?.tier1?.amount ?? 500;
+  const tier2Min = campaign?.cashback?.tier2?.minSpend ?? 3000;
+  const tier2Amt = campaign?.cashback?.tier2?.amount ?? 700;
+
+  const cashback = isCashbackActive
+    ? subtotal >= tier2Min
+      ? tier2Amt
+      : subtotal >= tier1Min
+      ? tier1Amt
+      : 0
+    : 0;
+
   const couponDiscount = appliedCoupon
     ? appliedCoupon.type === "percent"
       ? Math.round((subtotal * appliedCoupon.amount) / 100)
@@ -73,7 +98,7 @@ export default function CartPage() {
 
   const totalDiscount = cashback + bogoDiscount + couponDiscount;
   const total = Math.max(0, subtotal - totalDiscount) + delivery.fee;
-  const progress = Math.min(100, (subtotal / 3000) * 100);
+  const progress = Math.min(100, (subtotal / tier2Min) * 100);
 
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,24 +147,24 @@ export default function CartPage() {
         {totalItems} item{totalItems !== 1 ? "s" : ""} in your bag
       </p>
 
-      {/* Instant Cashback Progress Bar */}
-      {subtotal > 0 && (
+      {/* Dynamic Campaign Banner from REST API */}
+      {isCashbackActive ? (
         <div className="free-tee-banner" style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 18, marginBottom: 28 }}>
           <span style={{ fontSize: 28 }}>🎁</span>
           <div style={{ flex: 1 }}>
-            {subtotal >= 3000 ? (
+            {subtotal >= tier2Min ? (
               <p style={{ color: "var(--emerald)", fontWeight: 900, margin: 0 }}>
-                Maximum ৳700 Instant Cashback Unlocked! 🎉 Applied automatically.
+                Maximum ৳{tier2Amt} Instant Cashback Unlocked! 🎉 Applied automatically.
               </p>
-            ) : subtotal >= 2500 ? (
+            ) : subtotal >= tier1Min ? (
               <p style={{ margin: 0 }}>
-                <strong style={{ color: "var(--emerald)" }}>✨ ৳500 Cashback Unlocked!</strong> Add{" "}
-                <strong style={{ color: "var(--indigo)" }}>{bdt(3000 - subtotal)}</strong> more to reach <strong>৳700 Tier</strong>.
+                <strong style={{ color: "var(--emerald)" }}>✨ ৳{tier1Amt} Cashback Unlocked!</strong> Add{" "}
+                <strong style={{ color: "var(--indigo)" }}>{bdt(tier2Min - subtotal)}</strong> more to reach <strong>৳{tier2Amt} Tier</strong>.
               </p>
             ) : (
               <p style={{ margin: 0 }}>
-                Add <strong style={{ color: "var(--indigo)" }}>{bdt(2500 - subtotal)}</strong> more to unlock{" "}
-                <strong style={{ color: "var(--emerald)" }}>৳500 Instant Cashback</strong>
+                Add <strong style={{ color: "var(--indigo)" }}>{bdt(tier1Min - subtotal)}</strong> more to unlock{" "}
+                <strong style={{ color: "var(--emerald)" }}>৳{tier1Amt} Instant Cashback</strong>
               </p>
             )}
             <div
@@ -156,7 +181,7 @@ export default function CartPage() {
                 style={{
                   height: "100%",
                   width: `${progress}%`,
-                  background: subtotal >= 3000 ? "var(--emerald)" : "var(--indigo)",
+                  background: subtotal >= tier2Min ? "var(--emerald)" : "var(--indigo)",
                   borderRadius: 4,
                   transition: "width 0.3s ease",
                 }}
@@ -164,7 +189,42 @@ export default function CartPage() {
             </div>
           </div>
         </div>
-      )}
+      ) : campaign?.activeCampaign ? (
+        <div
+          style={{
+            background: "var(--surface)",
+            border: "1.5px solid var(--crimson)",
+            borderRadius: "var(--radius)",
+            padding: "14px 20px",
+            marginBottom: 28,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 24 }}>🔥</span>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ background: "var(--crimson)", color: "#fff", padding: "2px 6px", borderRadius: 4, fontSize: 9, fontWeight: 900 }}>
+                  {campaign.activeCampaign.badge}
+                </span>
+                <span style={{ fontWeight: 900, color: "var(--crimson)", fontSize: 13 }}>
+                  {campaign.activeCampaign.title}
+                </span>
+              </div>
+              <p style={{ fontSize: 12, color: "var(--sub)", margin: "2px 0 0" }}>
+                {campaign.activeCampaign.subtitle}
+              </p>
+            </div>
+          </div>
+          <Link href="/shop" className="btn btn-sm btn-primary">
+            Explore Sale →
+          </Link>
+        </div>
+      ) : null}
 
       <div className="cart-layout">
         {/* Items List */}
@@ -195,9 +255,9 @@ export default function CartPage() {
                 <div className="cart-item__info">
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <p className="cart-item__name">{item.product.name}</p>
-                    {isJean && bogoPairs > 0 && (
+                    {bogoDiscount > 0 && (
                       <span style={{ fontSize: 10, fontWeight: 800, color: "var(--indigo)", background: "var(--indigo-light)", padding: "2px 6px", borderRadius: 4 }}>
-                        BOGO 50%
+                        BOGO FREE
                       </span>
                     )}
                   </div>
@@ -347,7 +407,7 @@ export default function CartPage() {
 
           <Link
             href={`/checkout?area=${deliveryArea}${appliedCoupon ? `&coupon=${appliedCoupon.code}` : ""}`}
-            className="btn btn--primary btn-full"
+            className="btn btn-primary btn-full"
             style={{ marginTop: 16, padding: 14, fontWeight: 900, fontSize: 14, textAlign: "center" }}
           >
             PROCEED TO CHECKOUT · {bdt(total)} →

@@ -1,6 +1,11 @@
 import Link from "next/link";
+import { fetchOutlets, fetchAppSettings } from "@/lib/api";
 
-export default function Footer() {
+export default async function Footer() {
+  const [outlets, settings] = await Promise.all([fetchOutlets(), fetchAppSettings()]);
+  const whatsapp = settings?.contact?.whatsapp || "01952-700500";
+  const waDigits = whatsapp.replace(/[^0-9]/g, "");
+  const hotline = settings?.contact?.hotline || "09617-700500";
   return (
     <footer className="footer">
       <div className="container">
@@ -98,17 +103,17 @@ export default function Footer() {
             <p className="footer__col-title">Contact</p>
             <ul className="footer__links">
               <li style={{ color: "var(--sub)", fontSize: 13 }}>
-                📍 Ramzannesa Super Market, Mirpur 12, Dhaka 1216<br />
-                <span style={{ fontSize: 11, color: "var(--brand)" }}>Outlets: Mirpur 12 · Wari · Cumilla · Sylhet</span>
+                📍 {outlets.length > 0 ? outlets[0].address : 'Ramzannesa Super Market, Mirpur 12, Dhaka 1216'}<br />
+                <span style={{ fontSize: 11, color: "var(--brand)" }}>Outlets: {outlets.map(o => o.name.replace('DEEN ', '').replace(' Outlet', '').replace(' (Flagship Outlet)', '')).join(' · ') || 'Mirpur 12 · Wari · Cumilla · Sylhet'}</span>
               </li>
               <li style={{ marginTop: 8 }}>
-                <a href="tel:+8801952700500" style={{ fontSize: 13 }}>
-                  📞 +880 1952-700500
+                <a href={`tel:+88${waDigits}`} style={{ fontSize: 13 }}>
+                  📞 +880 {whatsapp}
                 </a>
               </li>
               <li>
-                <a href="mailto:support@deencommerce.com" style={{ fontSize: 13 }}>
-                  ✉️ support@deencommerce.com
+                <a href={`mailto:${settings?.contact?.email || 'support@deencommerce.com'}`} style={{ fontSize: 13 }}>
+                  ✉️ {settings?.contact?.email || 'support@deencommerce.com'}
                 </a>
               </li>
             </ul>

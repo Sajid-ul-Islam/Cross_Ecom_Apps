@@ -93,6 +93,17 @@ export const config = {
     password: process.env.PATHAO_PASSWORD ?? "",
     storeId: process.env.PATHAO_STORE_ID ?? "",
   },
+  /** Exchange fees — admin-editable via env without app rebuild. */
+  exchangeFees: {
+    insideDhaka: Number(process.env.EXCHANGE_FEE_INSIDE ?? "50"),
+    outsideDhaka: Number(process.env.EXCHANGE_FEE_OUTSIDE ?? "90"),
+  },
+  /** Physical retail outlets (source of truth = STORE_OUTLETS env JSON).
+      Admin edits this to add/remove/rename outlets without an app rebuild.
+      Shape: [{ id, name, tag?, address, hours, phone, mapQuery?, pickup? }] */
+  outlets: (() => {
+    try { return JSON.parse(process.env.STORE_OUTLETS ?? "[]"); } catch { return []; }
+  })(),
 };
 
 function parseStores(raw?: string): StoreConfig[] {

@@ -1,13 +1,8 @@
 "use client";
 
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  useCallback,
-} from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import type { Product } from "./api";
+import { cacheGet, cacheSet, cacheClearAll, TTL } from "./cache";
 
 export interface CartItem {
   product: Product;
@@ -26,7 +21,10 @@ interface CartCtx {
 }
 
 const CartContext = createContext<CartCtx | undefined>(undefined);
-const STORAGE_KEY = "@deen_web_cart_v1";
+const CART_NAMESPACE = "cart";
+const CART_KEY = "items";
+const CART_TTL = 24 * 60 * 60 * 1000; // 24 hours — cart persists for a day
+
 export const CASHBACK_TIERS = {
   tier1: { minSpend: 2500, cashback: 500 },
   tier2: { minSpend: 3000, cashback: 700 },
@@ -40,24 +38,27 @@ export function getCashbackAmount(subtotal: number): number {
 
 export const FREE_TEE_THRESHOLD = 2500; // backward compat
 
-
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
-  // Load from localStorage on mount
+  // Load from multi-layer cache on mount
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setItems(JSON.parse(saved));
+      const saved = cacheGet<CartItem[]>(CART_NAMESPACE, CART_KEY, CART_TTL);
+      if (saved && Array.isArray(saved)) {
+        setItems(saved);
+      }
     } catch {}
+    setLoaded(true);
   }, []);
 
-  // Persist to localStorage on change
+  // Persist to multi-layer cache on change
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    } catch {}
-  }, [items]);
+    if (loaded) {
+      cacheSet(CART_NAMESPACE, CART_KEY, items);
+    }
+  }, [items, loaded]);
 
   const addItem = useCallback((product: Product, size: string) => {
     setItems((prev) => {
