@@ -197,7 +197,10 @@ function applyLocalFilters(
   search?: string,
   sort?: string
 ): Product[] {
-  let list = [...products];
+  // Always filter out out-of-stock and draft products for customers
+  let list = [...products].filter(
+    (p) => (p.stockStatus || "instock") !== "outofstock"
+  );
 
   if (category && category !== "ALL") {
     const cat = category.toUpperCase();
@@ -263,7 +266,8 @@ export async function fetchProducts(params?: {
     if (res.ok) {
       const data: Product[] = await res.json();
       if (Array.isArray(data) && data.length > 0) {
-        return data;
+        // Defense-in-depth: filter out OOS products even if API missed them
+        return data.filter((p) => (p.stockStatus || "instock") !== "outofstock");
       }
     }
   } catch {
