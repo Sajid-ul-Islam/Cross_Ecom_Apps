@@ -20,7 +20,7 @@ interface AdminAnalyticsModalProps {
   onClose: () => void;
 }
 
-type MobileTabType = "sales" | "logistics" | "stock" | "customers";
+type MobileTabType = "sales" | "pairs" | "logistics" | "stock" | "customers";
 
 export const AdminAnalyticsModal: React.FC<AdminAnalyticsModalProps> = ({ visible, onClose }) => {
   const { colors } = useTheme();
@@ -28,13 +28,17 @@ export const AdminAnalyticsModal: React.FC<AdminAnalyticsModalProps> = ({ visibl
 
   const [activeTab, setActiveTab] = useState<MobileTabType>("sales");
   const [timeframe, setTimeframe] = useState<"today" | "7d" | "30d">("30d");
+  const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<AdminAnalyticsResult | null>(null);
 
-  const loadAnalytics = async (tf: "today" | "7d" | "30d") => {
+  const loadAnalytics = async () => {
     setLoading(true);
     try {
-      const res = await fetchAdminAnalytics(tf);
+      const res = await fetchAdminAnalytics({
+        timeframe,
+        category: selectedCategory,
+      });
       if (res) setData(res);
     } catch {
       Alert.alert("Error", "Could not load BI analytics data.");
@@ -45,9 +49,9 @@ export const AdminAnalyticsModal: React.FC<AdminAnalyticsModalProps> = ({ visibl
 
   useEffect(() => {
     if (visible) {
-      loadAnalytics(timeframe);
+      loadAnalytics();
     }
-  }, [visible, timeframe]);
+  }, [visible, timeframe, selectedCategory]);
 
   const sales = data?.sales;
   const logistics = data?.logistics;
@@ -68,7 +72,7 @@ export const AdminAnalyticsModal: React.FC<AdminAnalyticsModalProps> = ({ visibl
               <View>
                 <Text style={[styles.title, { color: colors.ink }]}>EXECUTIVE STORE BI</Text>
                 <Text style={[styles.subTitle, { color: colors.sub }]}>
-                  Pathao Logistics, Realized Sales & Stock Valuation
+                  Cohort Intelligence, Product Pairs & Stock Valuation
                 </Text>
               </View>
             </View>
@@ -80,10 +84,11 @@ export const AdminAnalyticsModal: React.FC<AdminAnalyticsModalProps> = ({ visibl
           {/* Tab Bar */}
           <View style={[styles.tabBar, { borderBottomColor: colors.borderLight }]}>
             {[
-              { id: "sales", label: "📊 Sales & Forecast" },
-              { id: "logistics", label: "🚚 Logistics & Pathao" },
+              { id: "sales", label: "📊 Sales" },
+              { id: "pairs", label: "🔗 Pairs" },
+              { id: "logistics", label: "🚚 Logistics" },
               { id: "stock", label: "📦 Inventory" },
-              { id: "customers", label: "👥 VIPs & 64 Districts" },
+              { id: "customers", label: "👥 VIPs" },
             ].map((tab) => (
               <TouchableOpacity
                 key={tab.id}
@@ -107,30 +112,63 @@ export const AdminAnalyticsModal: React.FC<AdminAnalyticsModalProps> = ({ visibl
             ))}
           </View>
 
-          {/* Timeframe Selector (Only for sales & logistics) */}
-          {(activeTab === "sales" || activeTab === "logistics") && (
-            <View style={[styles.timeframeRow, { borderBottomColor: colors.borderLight }]}>
-              {(["today", "7d", "30d"] as const).map((tf) => (
-                <TouchableOpacity
-                  key={tf}
-                  style={[
-                    styles.timeframeBtn,
-                    timeframe === tf
-                      ? { backgroundColor: colors.indigo, borderColor: colors.indigo }
-                      : { backgroundColor: colors.card, borderColor: colors.border },
-                  ]}
-                  onPress={() => setTimeframe(tf)}
-                >
-                  <Text
+          {/* Dynamic Filter Controls (Category & Timeframe) */}
+          {(activeTab === "sales" || activeTab === "pairs" || activeTab === "logistics") && (
+            <View style={{ borderBottomWidth: 1, borderBottomColor: colors.borderLight, paddingBottom: 6 }}>
+              {/* Timeframe selector */}
+              <View style={styles.timeframeRow}>
+                {(["today", "7d", "30d"] as const).map((tf) => (
+                  <TouchableOpacity
+                    key={tf}
                     style={[
-                      styles.timeframeBtnText,
-                      timeframe === tf ? { color: "#FFFFFF" } : { color: colors.ink },
+                      styles.timeframeBtn,
+                      timeframe === tf
+                        ? { backgroundColor: colors.indigo, borderColor: colors.indigo }
+                        : { backgroundColor: colors.card, borderColor: colors.border },
                     ]}
+                    onPress={() => setTimeframe(tf)}
                   >
-                    {tf === "today" ? "TODAY" : tf === "7d" ? "LAST 7 DAYS" : "LAST 30 DAYS"}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text
+                      style={[
+                        styles.timeframeBtnText,
+                        timeframe === tf ? { color: "#FFFFFF" } : { color: colors.ink },
+                      ]}
+                    >
+                      {tf === "today" ? "TODAY" : tf === "7d" ? "LAST 7 DAYS" : "LAST 30 DAYS"}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Garment Category Chips */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12, gap: 6, paddingTop: 4 }}>
+                {[
+                  { id: "ALL", label: "All Items" },
+                  { id: "JEANS", label: "Denim & Jeans" },
+                  { id: "PANJABI", label: "Panjabi" },
+                  { id: "SHIRT", label: "Shirts" },
+                  { id: "POLO", label: "Polos" },
+                  { id: "TSHIRT", label: "T-Shirts" },
+                  { id: "TROUSERS", label: "Trousers" },
+                ].map((cat) => (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={{
+                      paddingHorizontal: 10,
+                      paddingVertical: 5,
+                      borderRadius: 14,
+                      borderWidth: 1,
+                      borderColor: selectedCategory === cat.id ? colors.indigo : colors.border,
+                      backgroundColor: selectedCategory === cat.id ? "rgba(99, 102, 241, 0.15)" : colors.card,
+                    }}
+                    onPress={() => setSelectedCategory(cat.id)}
+                  >
+                    <Text style={{ fontSize: 10, fontWeight: "800", color: selectedCategory === cat.id ? colors.indigo : colors.sub }}>
+                      {cat.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
           )}
 
@@ -139,7 +177,7 @@ export const AdminAnalyticsModal: React.FC<AdminAnalyticsModalProps> = ({ visibl
             {loading ? (
               <View style={styles.loadingWrap}>
                 <ActivityIndicator size="large" color={colors.indigo} />
-                <Text style={[styles.loadingText, { color: colors.sub }]}>Computing store intelligence...</Text>
+                <Text style={[styles.loadingText, { color: colors.sub }]}>Computing cohort intelligence...</Text>
               </View>
             ) : (
               <>
@@ -150,7 +188,7 @@ export const AdminAnalyticsModal: React.FC<AdminAnalyticsModalProps> = ({ visibl
                     <View style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                       <View style={styles.cardTop}>
                         <TrendingUp size={16} color={colors.indigo} />
-                        <Text style={[styles.cardTag, { color: colors.indigo }]}>GROSS REVENUE</Text>
+                        <Text style={[styles.cardTag, { color: colors.indigo }]}>GROSS REVENUE (FILTERED)</Text>
                       </View>
                       <Text style={[styles.largeValue, { color: colors.ink }]}>
                         {bdt(sales?.grossRevenue ?? m?.grossRevenue ?? 184500)}
@@ -188,21 +226,51 @@ export const AdminAnalyticsModal: React.FC<AdminAnalyticsModalProps> = ({ visibl
                       </Text>
                     </View>
 
-                    {/* Category Matrix */}
-                    {sales?.categoryMatrix && sales.categoryMatrix.length > 0 && (
+                    {/* Top Converting Products in Timeline */}
+                    {sales?.productPerformance && sales.productPerformance.length > 0 && (
                       <View style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                        <Text style={[styles.sectionTitle, { color: colors.ink }]}>CATEGORY REVENUE SHARE</Text>
-                        {sales.categoryMatrix.map((cat, idx) => (
+                        <Text style={[styles.sectionTitle, { color: colors.ink }]}>🏆 TOP CONVERTING PRODUCTS</Text>
+                        {sales.productPerformance.slice(0, 5).map((p, idx) => (
                           <View key={idx} style={[styles.categoryRow, { borderTopColor: colors.borderLight }]}>
-                            <Text style={[styles.categoryName, { color: colors.ink }]}>{cat.category}</Text>
-                            <Text style={[styles.categoryRevenue, { color: colors.indigo }]}>
-                              {bdt(cat.revenue)} ({cat.sharePct}%)
-                            </Text>
+                            <View style={{ flex: 1 }}>
+                              <Text style={[styles.categoryName, { color: colors.ink }]}>#{idx + 1} {p.name}</Text>
+                              <Text style={{ fontSize: 9, color: colors.sub }}>
+                                Sold: {p.units} units · Return: {p.returnRatePct}%
+                              </Text>
+                            </View>
+                            <Text style={[styles.categoryRevenue, { color: colors.indigo }]}>{bdt(p.revenue)}</Text>
                           </View>
                         ))}
                       </View>
                     )}
                   </>
+                )}
+
+                {/* 2. PRODUCT PAIRS & BUNDLES TAB */}
+                {activeTab === "pairs" && (
+                  <View style={{ gap: 10 }}>
+                    <View style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                      <Text style={[styles.sectionTitle, { color: colors.indigo }]}>🔗 FREQUENT ITEMSET PRODUCT PAIRS</Text>
+                      <Text style={{ fontSize: 10, color: colors.sub, marginBottom: 8 }}>
+                        Top product combinations purchased together in selected timeline:
+                      </Text>
+                      {sales?.topProductPairs?.map((pair, idx) => (
+                        <View key={idx} style={[styles.categoryRow, { borderTopColor: colors.borderLight, flexDirection: "column", gap: 4 }]}>
+                          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                            <Text style={{ fontSize: 11, fontWeight: "800", color: colors.ink, flex: 1 }}>
+                              #{idx + 1} {pair.pairTitle}
+                            </Text>
+                            <Text style={{ fontSize: 11, fontWeight: "900", color: colors.indigo }}>
+                              {pair.count} Pairs
+                            </Text>
+                          </View>
+                          <Text style={{ fontSize: 10, color: colors.sub }}>
+                            Total Bundle Sales: <Text style={{ color: colors.emerald, fontWeight: "800" }}>{bdt(pair.totalRevenue)}</Text>
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
                 )}
 
                 {/* 2. LOGISTICS & PATHAO TAB */}

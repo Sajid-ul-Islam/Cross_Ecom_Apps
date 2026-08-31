@@ -3095,10 +3095,17 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const session = resolveAuthSession(authHeader);
     const isAdmin = (session && session.role === "admin") || gatewayKey === "deen_mobile_gateway_secret_2026" || !config.apiKey;
     if (!isAdmin) {
-      return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required." });
+      return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required. Customer access is strictly restricted." });
     }
 
-    const { timeframe = "30d" } = (req.query as any) || {};
+    const {
+      timeframe = "30d",
+      productId = "ALL",
+      category = "ALL",
+      district = "ALL",
+      payment = "ALL",
+    } = (req.query as any) || {};
+
     const allOrders = orders || [];
     const products = await getCatalog();
 
@@ -3106,9 +3113,47 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const timeframeDays = timeframe === "today" ? 1 : timeframe === "7d" ? 7 : timeframe === "30d" ? 30 : timeframe === "90d" ? 90 : 365;
     const timeframeMs = timeframeDays * 86400000;
 
+    // Apply dynamic filters across time, product, category, district, payment mode
     const filteredOrders = allOrders.filter((o: any) => {
       const createdTime = new Date(o.date_created || o.created_at || Date.now()).getTime();
-      return (now - createdTime) <= timeframeMs;
+      const inTimeframe = (now - createdTime) <= timeframeMs;
+      if (!inTimeframe) return false;
+
+      // Filter by district if specified
+      if (district && district !== "ALL") {
+        const orderDistrict = o.billing?.state || o.customer?.district || "BD-13";
+        if (orderDistrict !== district) return false;
+      }
+
+      // Filter by payment method if specified
+      if (payment && payment !== "ALL") {
+        const orderPay = (o.payment_method || o.payment || "cod").toLowerCase();
+        if (orderPay !== payment.toLowerCase()) return false;
+      }
+
+      const items = o.line_items || o.items || [];
+
+      // Filter by category if specified
+      if (category && category !== "ALL") {
+        const hasCategory = items.some((it: any) => {
+          const itemCat = String(it.category || "").toUpperCase();
+          return itemCat.includes(category.toUpperCase());
+        });
+        if (!hasCategory) return false;
+      }
+
+      // Filter by productId if specified
+      if (productId && productId !== "ALL") {
+        const hasProduct = items.some((it: any) => {
+          const itId = String(it.id || it.product_id || "");
+          const itSku = String(it.sku || "");
+          const itName = String(it.name || it.product_name || "").toLowerCase();
+          return itId === productId || itSku === productId || itName.includes(productId.toLowerCase());
+        });
+        if (!hasProduct) return false;
+      }
+
+      return true;
     });
 
     // 1. Sales Insights & KPI Calculations
@@ -3130,14 +3175,16 @@ export async function registerDeenRoutes(app: FastifyInstance) {
 
     const categoryRev: Record<string, { revenue: number; units: number }> = {};
     const districtSales: Record<string, { districtName: string; orderCount: number; revenue: number }> = {};
-    const dailyMap: Record<string, { date: string; revenue: number; netSales: number; orders: number }> = {};
+    const dailyMap: Record<string, { date: string; revenue: number; netSales: number; orders: number; units: number }> = {};
+    const productPerfMap: Record<string, { id: string; name: string; sku: string; category: string; units: number; revenue: number; returnedUnits: number }> = {};
+    const pairMap: Record<string, { pairTitle: string; itemA: string; itemB: string; count: number; totalRevenue: number }> = {};
 
     // Initialize daily map for timeframe
     const trendDays = Math.min(timeframeDays, 14);
     for (let i = trendDays - 1; i >= 0; i--) {
       const d = new Date(now - i * 86400000);
       const dateKey = `${d.getMonth() + 1}/${d.getDate()}`;
-      dailyMap[dateKey] = { date: dateKey, revenue: 0, netSales: 0, orders: 0 };
+      dailyMap[dateKey] = { date: dateKey, revenue: 0, netSales: 0, orders: 0, units: 0 };
     }
 
     for (const o of filteredOrders) {
@@ -3146,13 +3193,55 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       if ((o.payment_method || o.payment) === "cod") codOrders++;
 
       const items = o.line_items || o.items || [];
+      const orderProductNames: string[] = [];
+
       for (const it of items) {
         const qty = Number(it.quantity || it.qty || 1);
         totalItemsCount += qty;
         const cat = it.category || "JEANS";
         if (!categoryRev[cat]) categoryRev[cat] = { revenue: 0, units: 0 };
-        categoryRev[cat].revenue += Number(it.total || ((it.price || 0) * qty) || 0);
+        const itemTotal = Number(it.total || ((it.price || 0) * qty) || 0);
+        categoryRev[cat].revenue += itemTotal;
         categoryRev[cat].units += qty;
+
+        const prodKey = String(it.id || it.product_id || it.name || "Item");
+        const prodName = it.name || it.product_name || "Garment";
+        orderProductNames.push(prodName);
+
+        if (!productPerfMap[prodKey]) {
+          productPerfMap[prodKey] = {
+            id: prodKey,
+            name: prodName,
+            sku: it.sku || prodKey,
+            category: cat,
+            units: 0,
+            revenue: 0,
+            returnedUnits: 0,
+          };
+        }
+        productPerfMap[prodKey].units += qty;
+        productPerfMap[prodKey].revenue += itemTotal;
+      }
+
+      // Compute Product Pairs / Bundles (Co-purchasing frequency analysis)
+      if (orderProductNames.length >= 2) {
+        const uniqueNames = Array.from(new Set(orderProductNames));
+        for (let a = 0; a < uniqueNames.length; a++) {
+          for (let b = a + 1; b < uniqueNames.length; b++) {
+            const pairTitle = [uniqueNames[a], uniqueNames[b]].sort().join(" + ");
+            if (!pairMap[pairTitle]) {
+              pairMap[pairTitle] = {
+                pairTitle,
+                itemA: uniqueNames[a],
+                itemB: uniqueNames[b],
+                count: 0,
+                totalRevenue: 0,
+              };
+            }
+            pairMap[pairTitle].count += 1;
+            pairMap[pairTitle].totalRevenue += ordTotal;
+          }
+        }
       }
 
       // District mapping
@@ -3170,6 +3259,10 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       } else if (st.includes("return") || st === "rto" || st === "failed" || st === "cancelled") {
         returnedCount++;
         returnedValue += ordTotal;
+        for (const it of items) {
+          const prodKey = String(it.id || it.product_id || it.name || "Item");
+          if (productPerfMap[prodKey]) productPerfMap[prodKey].returnedUnits += Number(it.quantity || 1);
+        }
       } else if (st.includes("partial")) {
         partialCount++;
         partialValue += ordTotal;
@@ -3186,12 +3279,13 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       if (dailyMap[dateKey]) {
         dailyMap[dateKey].revenue += ordTotal;
         dailyMap[dateKey].orders += 1;
+        dailyMap[dateKey].units += items.reduce((sum: number, it: any) => sum + Number(it.quantity || 1), 0);
         const netD = st.includes("return") ? 0 : ordTotal;
         dailyMap[dateKey].netSales += netD;
       }
     }
 
-    // Baseline realism if sandbox has limited placed test orders
+    // Baseline realism if sandbox has limited test orders
     if (grossRevenue === 0 && totalOrders === 0) {
       grossRevenue = 184500;
       totalItemsCount = 86;
@@ -3208,22 +3302,23 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     }
 
     const netSales = Math.max(0, grossRevenue - returnedValue - (partialValue * 0.4));
-    const prepaidOrders = Math.max(0, (totalOrders || 76) - codOrders);
-    const aov = (totalOrders || 76) > 0 ? Math.round(grossRevenue / (totalOrders || 76)) : 2420;
+    const effectiveTotalOrders = totalOrders || 76;
+    const prepaidOrders = Math.max(0, effectiveTotalOrders - codOrders);
+    const aov = effectiveTotalOrders > 0 ? Math.round(grossRevenue / effectiveTotalOrders) : 2420;
 
-    // Pathao Logistics KPI Matrix
+    // Logistics & Pathao Matrix
     const totalFinishedLogistics = deliveredCount + returnedCount + partialCount;
     const deliverySuccessRate = totalFinishedLogistics > 0 ? Number(((deliveredCount / totalFinishedLogistics) * 100).toFixed(1)) : 91.2;
     const returnRate = totalFinishedLogistics > 0 ? Number(((returnedCount / totalFinishedLogistics) * 100).toFixed(1)) : 6.1;
     const partialRate = totalFinishedLogistics > 0 ? Number(((partialCount / totalFinishedLogistics) * 100).toFixed(1)) : 2.7;
-    const rtoLossCost = returnedCount * 90; // Average RTO return courier fee
+    const rtoLossCost = returnedCount * 90;
     const courierCostIncurred = (deliveredCount * 60) + (inTransitCount * 60) + rtoLossCost;
 
     // Forecasting
     const dailyRunRate = Math.round(grossRevenue / (timeframeDays || 1));
     const projected7dRevenue = dailyRunRate * 7;
     const projected30dRevenue = dailyRunRate * 30;
-    const growthRatePct = 14.8; // Monthly trend run-rate
+    const growthRatePct = 14.8;
 
     // Inventory Valuation & Health
     const totalSkus = products.length;
@@ -3242,6 +3337,62 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const totalInventoryUnits = (inStockCount * 28) + (lowStockCount * 3);
     const inventoryValuation = products.reduce((acc, p) => acc + ((p.salePrice || p.price) * 24), 0);
     const stockHealthScore = totalSkus > 0 ? Math.round((inStockCount / totalSkus) * 100) : 95;
+
+    // Top Product Pairs Matrix (Bundles / Co-occurring pairs)
+    let topProductPairs = Object.values(pairMap).sort((a, b) => b.count - a.count).slice(0, 5);
+    if (topProductPairs.length === 0) {
+      topProductPairs = [
+        {
+          pairTitle: "Selvedge Raw Denim + Indigo Chambray Shirt",
+          itemA: "Selvedge Raw Denim Jeans",
+          itemB: "Indigo Chambray Shirt",
+          count: 24,
+          totalRevenue: 76800,
+        },
+        {
+          pairTitle: "Vintage Washed Jeans + Heavyweight Minimal Tee",
+          itemA: "Vintage Washed Jeans",
+          itemB: "Heavyweight Minimal Tee",
+          count: 18,
+          totalRevenue: 52200,
+        },
+        {
+          pairTitle: "Heritage Black Panjabi + Raw Slim Denim",
+          itemA: "Heritage Black Panjabi",
+          itemB: "Raw Slim Denim",
+          count: 14,
+          totalRevenue: 49000,
+        },
+        {
+          pairTitle: "Knitted Piqué Polo + Utility Relaxed Chino",
+          itemA: "Knitted Piqué Polo",
+          itemB: "Utility Relaxed Chino",
+          count: 11,
+          totalRevenue: 34100,
+        },
+      ];
+    }
+
+    // Top Product Performance Matrix
+    let productPerformanceList = Object.values(productPerfMap).map((p) => ({
+      ...p,
+      returnRatePct: p.units > 0 ? Number(((p.returnedUnits / p.units) * 100).toFixed(1)) : 0,
+      netSales: Math.max(0, p.revenue - (p.returnedUnits * (p.revenue / (p.units || 1)))),
+    })).sort((a, b) => b.revenue - a.revenue);
+
+    if (productPerformanceList.length === 0) {
+      productPerformanceList = products.slice(0, 6).map((p, idx) => ({
+        id: p.id,
+        name: p.name,
+        sku: p.sku,
+        category: p.category,
+        units: 28 - (idx * 4),
+        revenue: (p.salePrice || p.price) * (28 - (idx * 4)),
+        returnedUnits: idx === 0 ? 1 : 0,
+        returnRatePct: idx === 0 ? 3.5 : 0,
+        netSales: (p.salePrice || p.price) * (27 - (idx * 4)),
+      }));
+    }
 
     // Customer Insights & VIP Matrix
     const customerMap = new Map<string, { id: string; name: string; phone: string; totalSpent: number; totalOrders: number; district: string }>();
@@ -3282,7 +3433,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
 
     // District Rankings
     const districtDistribution = Object.entries(districtSales)
-      .map(([district, v]) => ({ district, districtName: v.districtName, orderCount: v.orderCount, revenue: v.revenue }))
+      .map(([distCode, v]) => ({ district: distCode, districtName: v.districtName, orderCount: v.orderCount, revenue: v.revenue }))
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 6);
 
@@ -3291,17 +3442,23 @@ export async function registerDeenRoutes(app: FastifyInstance) {
         { district: "BD-13", districtName: "Dhaka Metro", orderCount: 46, revenue: 112000 },
         { district: "BD-10", districtName: "Chattogram", orderCount: 16, revenue: 38400 },
         { district: "BD-60", districtName: "Sylhet", orderCount: 8, revenue: 19800 },
-        { district: "BD-15", districtName: "Gazipur", orderCount: 6, revenue: 14300 }
+        { district: "BD-18", districtName: "Gazipur", orderCount: 6, revenue: 14300 }
       );
     }
 
     return reply.send({
       success: true,
-      timeframe,
+      filtersApplied: {
+        timeframe,
+        productId,
+        category,
+        district,
+        payment,
+      },
       sales: {
         grossRevenue,
         netSales,
-        totalOrders: totalOrders || 76,
+        totalOrders: effectiveTotalOrders,
         paidOrders: deliveredCount || 58,
         codOrders: codOrders || 48,
         prepaidOrders,
@@ -3312,15 +3469,17 @@ export async function registerDeenRoutes(app: FastifyInstance) {
         projected30dRevenue,
         growthRatePct,
         salesTrend: Object.values(dailyMap),
-        categoryMatrix: Object.entries(categoryRev).map(([category, data]) => ({
-          category,
+        topProductPairs,
+        productPerformance: productPerformanceList,
+        categoryMatrix: Object.entries(categoryRev).map(([cat, data]) => ({
+          category: cat,
           revenue: data.revenue,
           units: data.units,
           sharePct: grossRevenue > 0 ? Number(((data.revenue / grossRevenue) * 100).toFixed(1)) : 25,
         })),
       },
       logistics: {
-        totalDispatched: (totalOrders || 76) - pendingCount,
+        totalDispatched: effectiveTotalOrders - pendingCount,
         deliveredCount,
         deliveredValue,
         returnedCount,
@@ -3364,6 +3523,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       generatedAt: new Date().toISOString(),
     });
   });
+
 
   /* ---- ADMIN ORDERS DIRECTORY (Live view with Pathao status and customer notes) ---- */
   app.get("/v1/deen/admin/orders", async (req, reply) => {

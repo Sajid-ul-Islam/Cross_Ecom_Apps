@@ -1225,6 +1225,8 @@ export interface AdminAnalyticsResult {
     projected30dRevenue: number;
     growthRatePct: number;
     salesTrend: Array<{ date: string; revenue: number; netSales: number; orders: number }>;
+    topProductPairs?: Array<{ pairTitle: string; itemA: string; itemB: string; count: number; totalRevenue: number }>;
+    productPerformance?: Array<{ id: string; name: string; sku: string; category: string; units: number; revenue: number; returnedUnits: number; returnRatePct: number; netSales: number }>;
     categoryMatrix: Array<{ category: string; revenue: number; units: number; sharePct: number }>;
   };
   logistics?: {
@@ -1277,7 +1279,15 @@ export interface AdminAnalyticsResult {
   generatedAt: string;
 }
 
-export async function fetchAdminAnalytics(timeframe = "30d"): Promise<AdminAnalyticsResult | null> {
+export interface AdminAnalyticsFilterParams {
+  timeframe?: string;
+  category?: string;
+  productId?: string;
+  district?: string;
+  payment?: string;
+}
+
+export async function fetchAdminAnalytics(paramsOrTimeframe: string | AdminAnalyticsFilterParams = "30d"): Promise<AdminAnalyticsResult | null> {
   const token = await getAuthToken();
   const headers: Record<string, string> = {
     "x-gateway-key": "deen_mobile_gateway_secret_2026",
@@ -1285,8 +1295,22 @@ export async function fetchAdminAnalytics(timeframe = "30d"): Promise<AdminAnaly
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
+
+  let qs = "";
+  if (typeof paramsOrTimeframe === "string") {
+    qs = `timeframe=${paramsOrTimeframe}`;
+  } else {
+    const sp = new URLSearchParams();
+    if (paramsOrTimeframe.timeframe) sp.append("timeframe", paramsOrTimeframe.timeframe);
+    if (paramsOrTimeframe.category) sp.append("category", paramsOrTimeframe.category);
+    if (paramsOrTimeframe.productId) sp.append("productId", paramsOrTimeframe.productId);
+    if (paramsOrTimeframe.district) sp.append("district", paramsOrTimeframe.district);
+    if (paramsOrTimeframe.payment) sp.append("payment", paramsOrTimeframe.payment);
+    qs = sp.toString();
+  }
+
   try {
-    const res = await request<AdminAnalyticsResult>(`/v1/deen/admin/analytics?timeframe=${timeframe}`, {
+    const res = await request<AdminAnalyticsResult>(`/v1/deen/admin/analytics?${qs}`, {
       headers,
     }, 8000);
     return res?.success ? res : null;
