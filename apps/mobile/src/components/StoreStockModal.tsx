@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,10 +13,11 @@ import { X, Store, MapPin, PhoneCall, CheckCircle2, Navigation } from "./Icons";
 import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { Product } from "../types";
+import { fetchOutlets, type Outlet } from "../services/gateway";
 
 const { width, height } = Dimensions.get("window");
 
-const OUTLETS = [
+const FALLBACK_OUTLETS: Outlet[] = [
   {
     id: "mirpur",
     name: "DEEN Mirpur 12 (Flagship Outlet)",
@@ -78,6 +79,15 @@ export const StoreStockModal: React.FC<StoreStockModalProps> = ({
 }) => {
   const { colors, isDark } = useTheme();
   const styles = createStyles(colors);
+  const [outlets, setOutlets] = useState<Outlet[]>(FALLBACK_OUTLETS);
+
+  useEffect(() => {
+    if (!visible) return;
+    fetchOutlets().then((apiOutlets) => {
+      if (apiOutlets.length > 0) setOutlets(apiOutlets);
+    });
+  }, [visible]);
+
   const handleOpenMap = (query: string) => {
     Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`);
   };
@@ -119,7 +129,7 @@ export const StoreStockModal: React.FC<StoreStockModalProps> = ({
 
             {/* Outlets List */}
             <View style={styles.outletsList}>
-              {OUTLETS.map((outlet) => (
+              {outlets.map((outlet) => (
                 <View key={outlet.id} style={styles.outletCard}>
                   <View style={styles.outletHeader}>
                     <View>
@@ -146,7 +156,7 @@ export const StoreStockModal: React.FC<StoreStockModalProps> = ({
                   <View style={styles.outletActions}>
                     <TouchableOpacity
                       style={styles.dirBtn}
-                      onPress={() => handleOpenMap(outlet.mapQuery)}
+                      onPress={() => handleOpenMap(outlet.mapQuery || outlet.address)}
                     >
                       <Navigation size={13} color={colors.indigoDark} />
                       <Text style={styles.dirBtnText}>DIRECTIONS</Text>

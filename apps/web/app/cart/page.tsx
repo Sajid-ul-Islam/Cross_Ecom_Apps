@@ -56,21 +56,24 @@ export default function CartPage() {
   const [couponError, setCouponError] = useState("");
   const [validatingCoupon, setValidatingCoupon] = useState(false);
 
-  // BOGO Jeans discount (Buy 1 Get 2nd Jean 50% Off)
-  const jeansItems: number[] = [];
+  // BOGO: buy 2+ same category → cheapest is free (matches API calculateBogo)
+  const bogoByCat = new Map<string, { unit: number; qty: number }[]>();
   items.forEach((it) => {
-    const cat = (it.product.category || "").toUpperCase();
-    if (cat === "JEANS" || cat === "DENIM") {
-      const unit = it.product.salePrice ?? it.product.price;
-      for (let i = 0; i < it.qty; i++) jeansItems.push(unit);
-    }
+    const cat = (it.product.category || "OTHER").toUpperCase();
+    const unit = it.product.salePrice ?? it.product.price;
+    const existing = bogoByCat.get(cat) || [];
+    existing.push({ unit, qty: it.qty });
+    bogoByCat.set(cat, existing);
   });
-  jeansItems.sort((a, b) => a - b);
-  const bogoPairs = Math.floor(jeansItems.length / 2);
   let bogoDiscount = 0;
-  for (let i = 0; i < bogoPairs; i++) {
-    bogoDiscount += Math.round(jeansItems[i] * 0.5);
-  }
+  Array.from(bogoByCat.values()).forEach((catItems) => {
+    if (catItems.length < 2) return;
+    let cheapestIdx = 0;
+    for (let i = 1; i < catItems.length; i++) {
+      if (catItems[i].unit < catItems[cheapestIdx].unit) cheapestIdx = i;
+    }
+    bogoDiscount += catItems[cheapestIdx].unit * catItems[cheapestIdx].qty;
+  });
 
   // Instant Cashback Tiers — ONLY if enabled in the REST API
   const isCashbackActive = campaign?.cashback?.enabled ?? false;
@@ -252,9 +255,9 @@ export default function CartPage() {
                 <div className="cart-item__info">
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                     <p className="cart-item__name">{item.product.name}</p>
-                    {isJean && bogoPairs > 0 && (
+                    {bogoDiscount > 0 && (
                       <span style={{ fontSize: 10, fontWeight: 800, color: "var(--indigo)", background: "var(--indigo-light)", padding: "2px 6px", borderRadius: 4 }}>
-                        BOGO 50%
+                        BOGO FREE
                       </span>
                     )}
                   </div>

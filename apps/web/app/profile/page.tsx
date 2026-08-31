@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { BD_DISTRICTS } from "@/lib/districts";
-import { API_URL, fetchOrders, fetchDistricts, loginWithGoogle, loginWithFacebook, type OrderResult, type BdDistrict } from "@/lib/api";
+import { API_URL, fetchOrders, fetchDistricts, loginWithGoogle, loginWithFacebook, fetchOutlets, fetchAppSettings, type OrderResult, type BdDistrict, type Outlet } from "@/lib/api";
 import AdminAnalyticsModal from "@/components/AdminAnalyticsModal";
 
 const PROFILE_STORAGE_KEY = "deen_web_user_profile";
@@ -516,43 +516,7 @@ export default function ProfilePage() {
       </form>
 
       {/* 5. DEEN Retail Outlets & WhatsApp Concierge */}
-      <div className="profile-section-card">
-        <div className="profile-section-header">
-          <h3 className="profile-section-title">🏬 DEEN RETAIL OUTLETS</h3>
-        </div>
-
-        <div className="outlets-grid">
-          <div className="outlet-box">
-            <strong>📍 Mirpur 12 (Flagship Outlet)</strong>
-            <p>2nd Floor, Ramzannesa Super Market, Mirpur 12, Dhaka-1216</p>
-          </div>
-          <div className="outlet-box">
-            <strong>📍 Wari Outlet (Dhaka South)</strong>
-            <p>Ground Floor, 41 A.K Famous Tower, Rankin St, Wari, Dhaka-1203</p>
-          </div>
-          <div className="outlet-box">
-            <strong>📍 Cumilla Outlet</strong>
-            <p>4th Floor, QR Tower, Badurtola, Cumilla</p>
-          </div>
-          <div className="outlet-box">
-            <strong>📍 Sylhet Outlet</strong>
-            <p>Block-A, House-54/2, Kumar Para, Sylhet</p>
-          </div>
-        </div>
-
-        <a
-          href="https://wa.me/8801952700500"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="whatsapp-hotline-card"
-        >
-          <div style={{ fontSize: 24 }}>💬</div>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 13 }}>Customer Hotline & WhatsApp: +880 1952-700500</div>
-            <div style={{ fontSize: 11, color: "var(--sub)" }}>Open 10:00 AM – 10:00 PM Daily · Tap to Chat on WhatsApp</div>
-          </div>
-        </a>
-      </div>
+      <ProfileOutletsSection />
 
       {/* Auth Modal */}
       {authModalOpen && (
@@ -744,6 +708,48 @@ export default function ProfilePage() {
         isOpen={analyticsModalOpen}
         onClose={() => setAnalyticsModalOpen(false)}
       />
+    </div>
+  );
+}
+
+function ProfileOutletsSection() {
+  const [outlets, setOutlets] = useState<Outlet[]>([]);
+  const [whatsapp, setWhatsapp] = useState("01952-700500");
+
+  useEffect(() => {
+    fetchOutlets().then((o) => { if (o.length > 0) setOutlets(o); });
+    fetchAppSettings().then((s) => { if (s?.contact?.whatsapp) setWhatsapp(s.contact.whatsapp); });
+  }, []);
+
+  const waDigits = whatsapp.replace(/[^0-9]/g, "");
+
+  return (
+    <div className="profile-section-card">
+      <div className="profile-section-header">
+        <h3 className="profile-section-title">🏬 DEEN RETAIL OUTLETS</h3>
+      </div>
+
+      <div className="outlets-grid">
+        {outlets.map((outlet) => (
+          <div key={outlet.id} className="outlet-box">
+            <strong>📍 {outlet.name}</strong>
+            <p>{outlet.address}</p>
+          </div>
+        ))}
+      </div>
+
+      <a
+        href={`https://wa.me/88${waDigits}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="whatsapp-hotline-card"
+      >
+        <div style={{ fontSize: 24 }}>💬</div>
+        <div>
+          <div style={{ fontWeight: 800, fontSize: 13 }}>Customer Hotline & WhatsApp: +880 {whatsapp}</div>
+          <div style={{ fontSize: 11, color: "var(--sub)" }}>Tap to Chat on WhatsApp</div>
+        </div>
+      </a>
     </div>
   );
 }

@@ -1406,3 +1406,53 @@ export async function checkPaymentStatusAPI(
 ): Promise<{ success: boolean; paymentStatus: string; transactionId?: string; status: string }> {
   return request<any>(`/v1/deen/payments/${orderId}`, undefined, 5000);
 }
+
+/* ------------------------- outlets (source of truth = gateway env) ---- */
+
+export interface Outlet {
+  id: string;
+  name: string;
+  tag?: string;
+  address: string;
+  hours: string;
+  phone: string;
+  mapQuery?: string;
+  pickup?: boolean;
+  stockText?: string;
+  units?: number;
+}
+
+/** Fetch physical retail outlets from the gateway. Replaces every
+    hardcoded outlet list in the app. */
+export async function fetchOutlets(): Promise<Outlet[]> {
+  try {
+    const res = await request<{ outlets: Outlet[] }>('/v1/deen/outlets', undefined, 8000, true);
+    return res.outlets || [];
+  } catch {
+    return [];
+  }
+}
+
+/* ------------------------- app settings (business rules) ------------ */
+
+export interface AppSettings {
+  cashbackTiers: {
+    enabled: boolean;
+    tier1: { minSpend: number; cashback: number };
+    tier2: { minSpend: number; cashback: number };
+  };
+  exchangeFees: { insideDhaka: number; outsideDhaka: number };
+  freeTeeThreshold: number;
+  bogo: { rule: string; minItems: number };
+  contact: { hotline: string; whatsapp: string; bkash: string; email: string };
+}
+
+/** Fetch app-wide business settings from the gateway.
+    Replaces hardcoded cashback tiers, exchange fees, contact numbers. */
+export async function fetchAppSettings(): Promise<AppSettings | null> {
+  try {
+    return await request<AppSettings>('/v1/deen/settings', undefined, 8000, true);
+  } catch {
+    return null;
+  }
+}

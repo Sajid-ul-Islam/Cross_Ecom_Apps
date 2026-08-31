@@ -1319,6 +1319,43 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     });
   });
 
+  /* ---- physical retail outlets (source of truth = STORE_OUTLETS env) ----
+     Replaces every hardcoded outlet list in the app. Admin edits the env;
+     the app reflects it with no rebuild. */
+  app.get("/v1/deen/outlets", async (_req, reply) => {
+    const outlets = config.outlets || [];
+    return reply.send({ outlets });
+  });
+
+  /* ---- app-wide settings (single source of truth for business constants) ----
+     Replaces hardcoded cashback tiers, exchange fees, free-tee threshold,
+     and other business rules scattered across clients. */
+  app.get("/v1/deen/settings", async (_req, reply) => {
+    return reply.send({
+      cashbackTiers: {
+        enabled: Boolean(config.campaigns?.cashbackEnabled),
+        tier1: { minSpend: 2500, cashback: 500 },
+        tier2: { minSpend: 3000, cashback: 700 },
+      },
+      exchangeFees: {
+        insideDhaka: config.exchangeFees?.insideDhaka ?? 50,
+        outsideDhaka: config.exchangeFees?.outsideDhaka ?? 90,
+      },
+      freeTeeThreshold: Number(process.env.FREE_TEE_THRESHOLD ?? "3500"),
+      bogo: {
+        /** Buy 2+ same category → cheapest is free. */
+        rule: "cheapest_free",
+        minItems: 2,
+      },
+      contact: {
+        hotline: config.contact?.hotline || "09617-700500",
+        whatsapp: config.contact?.whatsapp || "01952-700500",
+        bkash: config.contact?.bkash || "01952700500",
+        email: config.contact?.email || "support@deencommerce.com",
+      },
+    });
+  });
+
   /* ---- WordPress page content (About / Return / Terms / Contact) ----
      Source of truth = the WP page. Admin edits it; the app shows it with no rebuild. */
   app.get("/v1/deen/page", async (req, reply) => {

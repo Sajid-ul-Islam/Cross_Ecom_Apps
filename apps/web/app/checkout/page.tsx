@@ -193,21 +193,24 @@ function CheckoutContent() {
   const deliveryOpt = DELIVERY_OPTIONS[selectedArea] || DELIVERY_OPTIONS.dhaka_standard;
   const deliveryFee = deliveryOpt.fee;
 
-  // BOGO calculation on Jeans
-  const jeansItems: number[] = [];
+  // BOGO: buy 2+ same category → cheapest is free (matches API calculateBogo)
+  const bogoByCat = new Map<string, { unit: number; qty: number }[]>();
   items.forEach((it) => {
-    const cat = (it.product.category || "").toUpperCase();
-    if (cat === "JEANS" || cat === "DENIM") {
-      const unit = it.product.salePrice ?? it.product.price;
-      for (let i = 0; i < it.qty; i++) jeansItems.push(unit);
-    }
+    const cat = (it.product.category || "OTHER").toUpperCase();
+    const unit = it.product.salePrice ?? it.product.price;
+    const existing = bogoByCat.get(cat) || [];
+    existing.push({ unit, qty: it.qty });
+    bogoByCat.set(cat, existing);
   });
-  jeansItems.sort((a, b) => a - b);
-  const bogoPairs = Math.floor(jeansItems.length / 2);
   let bogoDiscount = 0;
-  for (let i = 0; i < bogoPairs; i++) {
-    bogoDiscount += Math.round(jeansItems[i] * 0.5);
-  }
+  Array.from(bogoByCat.values()).forEach((catItems) => {
+    if (catItems.length < 2) return;
+    let cheapestIdx = 0;
+    for (let i = 1; i < catItems.length; i++) {
+      if (catItems[i].unit < catItems[cheapestIdx].unit) cheapestIdx = i;
+    }
+    bogoDiscount += catItems[cheapestIdx].unit * catItems[cheapestIdx].qty;
+  });
 
   // Instant Cashback Tiers — ONLY if enabled in the REST API
   const isCashbackActive = campaign?.cashback?.enabled ?? false;
@@ -289,14 +292,7 @@ function CheckoutContent() {
         setCouponError(data.message || "This coupon code is invalid or expired.");
       }
     } catch {
-      // Fallback local coupon check for mock/offline resilience
-      if (code === "DEEN20") {
-        setCouponInfo({ code: "DEEN20", type: "percent", amount: 20, description: "20% OFF Selvedge Drop" });
-      } else if (code === "DEEN100") {
-        setCouponInfo({ code: "DEEN100", type: "fixed", amount: 100, description: "৳100 Welcome Discount" });
-      } else {
-        setCouponError("Could not verify coupon. Please check your network and try again.");
-      }
+      setCouponError("Could not verify coupon. Please check your network and try again.");
     } finally {
       setCouponBusy(false);
     }

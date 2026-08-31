@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { bdt } from "@/lib/api";
+import { bdt, fetchAppSettings } from "@/lib/api";
 
 const PROFILE_STORAGE_KEY = "deen_web_user_profile";
 
@@ -17,6 +17,8 @@ function OrderSuccessContent() {
   const payment = params.get("payment") || "Cash on Delivery (COD)";
   const consignment = params.get("consignment");
   const hasConsignment = Boolean(consignment && consignment.trim().length > 0);
+  const [whatsapp, setWhatsapp] = useState("01952700500");
+  useEffect(() => { fetchAppSettings().then(s => { if (s?.contact?.whatsapp) setWhatsapp(s.contact.whatsapp.replace(/[^0-9]/g, '')); }); }, []);
   const trackingUrl =
     params.get("tracking") ||
     (hasConsignment ? `https://merchant.pathao.com/tracking?consignment_id=${consignment}` : "");
@@ -209,7 +211,7 @@ function OrderSuccessContent() {
             📋 Track My Orders & History
           </Link>
           <a
-            href={`https://wa.me/8801952700500?text=${encodeURIComponent(`Salam DEEN team, I just placed Order #${number} (Total: ৳${total}). Can you please confirm?`)}`}
+            href={`https://wa.me/88${whatsapp}?text=${encodeURIComponent(`Salam DEEN team, I just placed Order #${number} (Total: ৳${total}). Can you please confirm?`)}`}
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-outline btn-full"

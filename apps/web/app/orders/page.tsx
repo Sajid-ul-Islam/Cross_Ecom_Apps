@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { fetchOrders, bdt, type OrderResult } from "@/lib/api";
+import { fetchOrders, bdt, fetchAppSettings, type OrderResult } from "@/lib/api";
 import PathaoTrackingModal from "@/components/PathaoTrackingModal";
 import ReturnExchangeModal from "@/components/ReturnExchangeModal";
 
@@ -13,10 +13,13 @@ export default function OrdersLookupPage() {
   const [orders, setOrders] = useState<OrderResult[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [whatsapp, setWhatsapp] = useState("01952700500");
 
   // Modals
   const [trackingConsignment, setTrackingConsignment] = useState<string | null>(null);
   const [returnOrder, setReturnOrder] = useState<OrderResult | null>(null);
+
+  useEffect(() => { fetchAppSettings().then(s => { if (s?.contact?.whatsapp) setWhatsapp(s.contact.whatsapp.replace(/[^0-9]/g, '')); }); }, []);
 
   useEffect(() => {
     try {
@@ -310,7 +313,7 @@ export default function OrdersLookupPage() {
                     🔄 Size Exchange / Return
                   </button>
                   <a
-                    href={`https://wa.me/8801952700500?text=${encodeURIComponent(`Salam DEEN team, I need help with my Order #${order.number} (Phone: ${order.phone || phone}).`)}`}
+                    href={`https://wa.me/88${whatsapp}?text=${encodeURIComponent(`Salam DEEN team, I need help with my Order #${order.number} (Phone: ${order.phone || phone}).`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn btn--outline"
