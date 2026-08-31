@@ -83,6 +83,16 @@ export default function CheckoutScreen() {
   const [couponBusy, setCouponBusy] = useState(false);
   const [couponError, setCouponError] = useState("");
 
+  // Gift / Separate Shipping
+  const [isGift, setIsGift] = useState(false);
+  const [giftName, setGiftName] = useState("");
+  const [giftPhone, setGiftPhone] = useState("");
+  const [giftAddress, setGiftAddress] = useState("");
+  const [giftCity, setGiftCity] = useState("Dhaka");
+  const [giftDistrict, setGiftDistrict] = useState<BdDistrict>(
+    BD_DISTRICTS.find((d) => d.code === "BD-13") || BD_DISTRICTS[0]
+  );
+
 
   // Eagerly load any persisted guest session.
   useEffect(() => {
@@ -178,13 +188,13 @@ export default function CheckoutScreen() {
       }));
 
       const created = await placeOrder({
-        name: name.trim(),
-        phone: digits,
+        name: isGift ? (giftName.trim() || name.trim()) : name.trim(),
+        phone: isGift ? (giftPhone.replace(/[^0-9]/g, "").slice(-11) || digits) : digits,
         email: email.trim() || undefined,
-        address: selectedArea === "store_pickup" ? "DEEN Flagship Outlet, Ramzannesa Super Market, Mirpur 12, Dhaka (Store Pickup)" : address.trim(),
-        city: selectedArea === "store_pickup" ? "Dhaka" : (city.trim() || district.name),
-        district: district.code,
-        state: district.code,
+        address: selectedArea === "store_pickup" ? "DEEN Flagship Outlet, Ramzannesa Super Market, Mirpur 12, Dhaka (Store Pickup)" : isGift ? giftAddress.trim() : address.trim(),
+        city: selectedArea === "store_pickup" ? "Dhaka" : isGift ? (giftCity.trim() || giftDistrict.name) : (city.trim() || district.name),
+        district: isGift ? giftDistrict.code : district.code,
+        state: isGift ? giftDistrict.code : district.code,
         postcode: "1200",
         area: selectedArea,
         deliveryOption: selectedArea,
@@ -193,6 +203,9 @@ export default function CheckoutScreen() {
         payment,
         trxId: trxId.trim() || undefined,
         coupon: couponInfo ? couponInfo.code : undefined,
+        isGiftOrder: isGift,
+        giftRecipientName: isGift ? giftName.trim() : undefined,
+        giftRecipientPhone: isGift ? giftPhone.replace(/[^0-9]/g, "").slice(-11) : undefined,
         lines,
         subtotal,
         delivery: deliveryFee,
@@ -397,6 +410,105 @@ export default function CheckoutScreen() {
               placeholderTextColor={colors.faint}
             />
           </View>
+        </View>
+
+        {/* Send as a Gift Toggle */}
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity
+            style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+            activeOpacity={0.88}
+            onPress={() => {
+              setIsGift(!isGift);
+              if (isGift) {
+                setGiftName("");
+                setGiftPhone("");
+                setGiftAddress("");
+                setGiftCity("Dhaka");
+                setGiftDistrict(BD_DISTRICTS.find((d) => d.code === "BD-13") || BD_DISTRICTS[0]);
+              }
+            }}
+          >
+            <View style={[styles.coinsCheckbox, { borderColor: isGift ? colors.emerald : colors.indigo, backgroundColor: isGift ? colors.emeraldLight : colors.paper }]}>
+              {isGift && <Check size={12} color={colors.emerald} />}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: colors.ink }}>🎁 Send as a Gift</Text>
+              <Text style={{ fontSize: 11, color: colors.sub, marginTop: 2 }}>
+                Different shipping name & address for the recipient?
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          {isGift && (
+            <View style={{ marginTop: 14, padding: 14, backgroundColor: colors.cardSecondary, borderRadius: 10, borderWidth: 1.5, borderColor: colors.denimStitch }}>
+              <Text style={{ fontSize: 12, fontWeight: "800", color: colors.denimStitch, marginBottom: 12, letterSpacing: 0.5 }}>
+                🎁 GIFT RECIPIENT DETAILS
+              </Text>
+
+              <View style={styles.field}>
+                <Text style={[styles.label, { color: colors.ink }]}>Recipient Full Name *</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.ink }]}
+                  value={giftName}
+                  onChangeText={setGiftName}
+                  placeholder="e.g. Rahim Ahmed"
+                  placeholderTextColor={colors.faint}
+                />
+              </View>
+
+              <View style={styles.field}>
+                <Text style={[styles.label, { color: colors.ink }]}>Recipient Phone *</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.ink }]}
+                  value={giftPhone}
+                  onChangeText={setGiftPhone}
+                  keyboardType="phone-pad"
+                  placeholder="01XXXXXXXXX"
+                  placeholderTextColor={colors.faint}
+                />
+              </View>
+
+              <View style={styles.field}>
+                <Text style={[styles.label, { color: colors.ink }]}>Gift Shipping Address *</Text>
+                <TextInput
+                  style={[styles.input, styles.multilineInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.ink }]}
+                  value={giftAddress}
+                  onChangeText={setGiftAddress}
+                  multiline
+                  numberOfLines={3}
+                  placeholder="House / Flat #, Road #, Sector / Area details for the recipient…"
+                  placeholderTextColor={colors.faint}
+                />
+              </View>
+
+              <View style={styles.field}>
+                <Text style={[styles.label, { color: colors.ink }]}>City / Thana *</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.ink }]}
+                  value={giftCity}
+                  onChangeText={setGiftCity}
+                  placeholder="e.g. Banani / Mirpur"
+                  placeholderTextColor={colors.faint}
+                />
+              </View>
+
+              <View style={styles.field}>
+                <Text style={[styles.label, { color: colors.ink }]}>District *</Text>
+                <TouchableOpacity
+                  style={[styles.input, { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.card, borderColor: colors.border }]}
+                  onPress={() => {}}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: colors.ink }}>
+                    📍 {giftDistrict.name} ({giftDistrict.code})
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={{ fontSize: 11, color: colors.sub, marginTop: 8 }}>
+                💡 The billing address above is used for payment. This shipping address is for the gift parcel delivery.
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* 2. Advanced Delivery Options */}

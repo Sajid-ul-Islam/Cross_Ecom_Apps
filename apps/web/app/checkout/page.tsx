@@ -115,6 +115,16 @@ function CheckoutContent() {
   const [deliveryNotes, setDeliveryNotes] = useState("");
   const [payment, setPayment] = useState<string>("cod");
 
+  // Gift / Separate Shipping
+  const [isGift, setIsGift] = useState(false);
+  const [giftName, setGiftName] = useState("");
+  const [giftPhone, setGiftPhone] = useState("");
+  const [giftAddress, setGiftAddress] = useState("");
+  const [giftCity, setGiftCity] = useState("Dhaka");
+  const [giftDistrict, setGiftDistrict] = useState<BdDistrict>(
+    BD_DISTRICTS.find((d) => d.code === "BD-13") || BD_DISTRICTS[0]
+  );
+
   // Modals & UI States
   const [districtModalOpen, setDistrictModalOpen] = useState(false);
   const [districtSearch, setDistrictSearch] = useState("");
@@ -318,16 +328,16 @@ function CheckoutContent() {
 
     try {
       const orderResult = await placeOrder({
-        name: name.trim(),
-        phone: cleanPhoneDigits,
+        name: isGift ? (giftName.trim() || name.trim()) : name.trim(),
+        phone: isGift ? (giftPhone.replace(/[^0-9]/g, "").slice(-11) || cleanPhoneDigits) : cleanPhoneDigits,
         email: email.trim() || undefined,
         address:
           selectedArea === "store_pickup"
             ? "DEEN Flagship Outlet, Ramzannesa Super Market, Mirpur 12, Dhaka (Store Pickup)"
-            : address.trim(),
-        city: selectedArea === "store_pickup" ? "Dhaka" : (city.trim() || district.name),
-        district: district.code,
-        state: district.code,
+            : isGift ? giftAddress.trim() : address.trim(),
+        city: selectedArea === "store_pickup" ? "Dhaka" : isGift ? (giftCity.trim() || giftDistrict.name) : (city.trim() || district.name),
+        district: isGift ? giftDistrict.code : district.code,
+        state: isGift ? giftDistrict.code : district.code,
         postcode: "1200",
         area: selectedArea,
         payment,
@@ -335,6 +345,9 @@ function CheckoutContent() {
         deliveryNotes: deliveryNotes.trim() || undefined,
         coupon: couponInfo ? couponInfo.code : undefined,
         isGuestOrder: isGuestMode,
+        isGiftOrder: isGift,
+        giftRecipientName: isGift ? giftName.trim() : undefined,
+        giftRecipientPhone: isGift ? giftPhone.replace(/[^0-9]/g, "").slice(-11) : undefined,
         items: items.map((i) => ({
           productId: i.product.id,
           size: i.size,
@@ -516,6 +529,103 @@ function CheckoutContent() {
                   />
                 </div>
               </div>
+
+              {/* Send as a Gift Toggle */}
+              <div style={{ marginTop: 16, padding: "14px 16px", background: "var(--surface-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={isGift}
+                    onChange={(e) => {
+                      setIsGift(e.target.checked);
+                      if (!e.target.checked) {
+                        setGiftName("");
+                        setGiftPhone("");
+                        setGiftAddress("");
+                        setGiftCity("Dhaka");
+                        setGiftDistrict(BD_DISTRICTS.find((d) => d.code === "BD-13") || BD_DISTRICTS[0]);
+                      }
+                    }}
+                    style={{ width: 18, height: 18, accentColor: "var(--indigo)" }}
+                  />
+                  <div>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>🎁 Send as a Gift</span>
+                    <p style={{ fontSize: 11, color: "var(--sub)", marginTop: 2 }}>
+                      Different shipping name & address for the recipient?
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              {/* Gift Shipping Fields (shown when Send as Gift is checked) */}
+              {isGift && (
+                <div style={{ marginTop: 16, padding: 16, background: "var(--surface-2)", borderRadius: "var(--radius)", border: "1.5px solid var(--denim-stitch)" }}>
+                  <h3 style={{ fontSize: 13, fontWeight: 800, color: "var(--denim-stitch)", marginBottom: 14, letterSpacing: 0.5 }}>
+                    🎁 GIFT RECIPIENT DETAILS
+                  </h3>
+                  <div className="step-fields-grid">
+                    <div className="form-group">
+                      <label className="form-label">Recipient Full Name *</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="e.g. Rahim Ahmed"
+                        value={giftName}
+                        onChange={(e) => setGiftName(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Recipient Phone *</label>
+                      <input
+                        type="tel"
+                        className="form-input"
+                        placeholder="01XXXXXXXXX"
+                        value={giftPhone}
+                        onChange={(e) => setGiftPhone(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+                      <label className="form-label">Gift Shipping Address *</label>
+                      <textarea
+                        className="form-textarea"
+                        placeholder="House / Flat #, Road #, Sector / Area details for the recipient…"
+                        value={giftAddress}
+                        onChange={(e) => setGiftAddress(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">City / Thana *</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="e.g. Banani, Mirpur"
+                        value={giftCity}
+                        onChange={(e) => setGiftCity(e.target.value)}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">District *</label>
+                      <select
+                        className="form-select"
+                        value={giftDistrict.code}
+                        onChange={(e) => {
+                          const found = districts.find((d) => d.code === e.target.value);
+                          if (found) setGiftDistrict(found);
+                        }}
+                      >
+                        {districts.map((d) => (
+                          <option key={d.code} value={d.code}>
+                            {d.name} ({d.code})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <p style={{ fontSize: 11, color: "var(--sub)", marginTop: 10 }}>
+                    💡 The billing address above is used for payment. This shipping address is for the gift parcel delivery.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Step 2: Delivery Method & Speed */}

@@ -139,6 +139,9 @@ export interface OrderPayload {
   deliveryNotes?: string;
   coupon?: string;
   isGuestOrder?: boolean;
+  isGiftOrder?: boolean;
+  giftRecipientName?: string;
+  giftRecipientPhone?: string;
   guestToken?: string;
   idempotencyKey?: string;
 }
@@ -519,9 +522,20 @@ export async function placeOrder(
     payload.idempotencyKey ||
     `w_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
+  // Map delivery option keys to API-accepted area values
+  const areaMap: Record<string, string> = {
+    dhaka_standard: "dhaka",
+    dhaka_express: "dhaka_express",
+    outside: "outside",
+    outside_standard: "outside_standard",
+    store_pickup: "store_pickup",
+    pickup: "pickup",
+  };
+
   const orderPayload = {
     ...payload,
     phone: cleanPhone,
+    area: areaMap[payload.area || "dhaka_standard"] || payload.area || "dhaka",
     idempotencyKey,
   };
 

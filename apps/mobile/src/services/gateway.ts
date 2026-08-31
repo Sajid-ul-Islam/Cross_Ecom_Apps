@@ -512,6 +512,16 @@ export async function createOrder(
     orderData.idempotencyKey ||
     `m_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
+  // Map delivery option keys to API-accepted area values
+  const areaMap: Record<string, string> = {
+    dhaka_standard: "dhaka",
+    dhaka_express: "dhaka_express",
+    outside_standard: "outside_standard",
+    outside: "outside",
+    store_pickup: "store_pickup",
+    pickup: "pickup",
+  };
+
   const orderPayload = {
     name: orderData.name.trim(),
     phone: cleanPhone,
@@ -520,7 +530,7 @@ export async function createOrder(
     district: (orderData as any).district || (orderData as any).state || "BD-13",
     state: (orderData as any).state || (orderData as any).district || "BD-13",
     postcode: (orderData as any).postcode || "1200",
-    area: orderData.area,
+    area: areaMap[String(orderData.area)] || orderData.area || "dhaka",
     payment: orderData.payment,
     trxId: (orderData as any).trxId || undefined,
     coupon: (orderData as any).coupon || undefined,
