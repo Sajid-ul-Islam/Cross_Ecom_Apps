@@ -44,6 +44,7 @@ export {
   getCashbackAmount,
 };
 import { getBundledProducts } from "./catalog";
+import { fetchOrCache, checkCacheVersion, loadCacheVersion, TTL } from "./cache";
 import type {
   Product,
   Order,
@@ -298,38 +299,35 @@ export async function fetchProducts(
   query?: string,
   sort?: "price-asc" | "price-desc" | "name-asc" | "new"
 ): Promise<Product[]> {
-  try {
-    const params = new URLSearchParams();
-    if (category && category !== "ALL") params.set("category", category);
-    if (query && query.trim()) params.set("q", query.trim());
-    if (sort) params.set("sort", sort);
-    const qs = params.toString();
+  const params = new URLSearchParams();
+  if (category && category !== "ALL") params.set("category", category);
+  if (query && query.trim()) params.set("q", query.trim());
+  if (sort) params.set("sort", sort);
+  const qs = params.toString();
+  const cacheKey = `products_${category || "ALL"}_${query || ""}_${sort || "default"}`;
 
-    // 1) Fetch live from gateway
-    const list = await request<Product[]>(`/v1/deen/products${qs ? `?${qs}` : ""}`, undefined, 6000);
-    if (Array.isArray(list) && list.length > 0) {
-      if (!category && !query && !sort) {
-        AsyncStorage.setItem("deen_gateway_products_v1", JSON.stringify(list)).catch(() => {});
+  try {
+    // Use fetch-or-cache: returns cached data if fresh, otherwise fetches from API
+    const list = await fetchOrCache<Product[]>(
+      "catalog",
+      cacheKey,
+      TTL.CATALOG,
+      async () => {
+        const fresh = await request<Product[]>(`/v1/deen/products${qs ? `?${qs}` : ""}`, undefined, 6000);
+        if (Array.isArray(fresh) && fresh.length > 0) return fresh;
+        // If API returned empty, fall back to bundled
+        return applyFilters(getBundledProducts(), category, query);
       }
-      return list;
+    );
+    if (Array.isArray(list) && list.length > 0) {
+      const filtered = applyFilters(list, category, query);
+      return sort ? sortProductsLocal(filtered, sort) : filtered;
     }
-  } catch (e) {
-    // Network or timeout failure — fallback gracefully
+  } catch {
+    // Network failure — fallback
   }
 
-  // 2) Fallback to cached products in AsyncStorage
-  try {
-    const cached = await AsyncStorage.getItem("deen_gateway_products_v1");
-    if (cached) {
-      const parsed = JSON.parse(cached) as Product[];
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        const filtered = applyFilters(parsed, category, query);
-        return sort ? sortProductsLocal(filtered, sort) : filtered;
-      }
-    }
-  } catch {}
-
-  // 3) Fallback to bundled snapshot
+  // Fallback to bundled snapshot
   const bundled = applyFilters(getBundledProducts(), category, query);
   return sort ? sortProductsLocal(bundled, sort) : bundled;
 }

@@ -1024,6 +1024,17 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   app.get("/health", async (_req, reply) => reply.send(await healthPayload()));
   app.get("/v1/health", async (_req, reply) => reply.send(await healthPayload()));
 
+  /* ---- cache version (client-side cache invalidation signal)
+     Clients poll this endpoint; when the version changes they know to
+     re-fetch catalog/districts/delivery-fees. The version is bumped
+     by WooCommerce webhooks (product/order changes) so clients only
+     refetch when data actually changed. */
+  let cacheVersion = Math.floor(Date.now() / 1000);
+  function bumpCacheVersion() { cacheVersion = Math.floor(Date.now() / 1000); }
+  app.get("/v1/deen/cache-version", async (_req, reply) => {
+    return reply.send({ version: cacheVersion, updatedAt: new Date(cacheVersion * 1000).toISOString() });
+  });
+
   /* ---- WooCommerce webhook: real-time catalog cache bust ----
      Configure in WP Admin → WooCommerce → Settings → Advanced → Webhooks:
        Topic: Product created / updated / deleted / restored
@@ -1084,6 +1095,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     }
 
     _recordWebhookDelivery(eventKey);
+    bumpCacheVersion(); // Signal clients to re-fetch changed data
     audit("woo_webhook", true, `cache busted (topic: ${topic}, eventKey: ${eventKey})`);
     return reply.code(200).send({ ok: true, verified: true, topic, eventKey });
   });
