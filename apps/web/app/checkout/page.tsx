@@ -5,7 +5,18 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
 import { useCart } from "@/lib/cart";
-import { placeOrder, bdt, API_URL, fetchCampaigns, fetchDistricts, type ActiveCampaignState, type BdDistrict } from "@/lib/api";
+import {
+  placeOrder,
+  bdt,
+  API_URL,
+  fetchCampaigns,
+  fetchDistricts,
+  fetchProduct,
+  loginWithGoogle,
+  loginWithFacebook,
+  type ActiveCampaignState,
+  type BdDistrict,
+} from "@/lib/api";
 import { BD_DISTRICTS } from "@/lib/districts";
 
 interface DeliveryOption {
@@ -92,11 +103,27 @@ const PROFILE_STORAGE_KEY = "deen_web_user_profile";
 function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { items, subtotal, clearCart } = useCart();
+  const { items, subtotal, clearCart, addItem } = useCart();
 
   // User Profile & Guest mode
   const [isGuestMode, setIsGuestMode] = useState<boolean>(true);
   const [profileData, setProfileData] = useState<any>(null);
+  const [socialLoading, setSocialLoading] = useState<string | null>(null);
+
+  // Auto-add product if navigating directly with ?productId=...
+  useEffect(() => {
+    const paramPid = searchParams.get("productId");
+    const paramSize = searchParams.get("size");
+    const paramQty = Number(searchParams.get("qty") || "1");
+    if (paramPid && items.length === 0) {
+      fetchProduct(paramPid).then((p) => {
+        if (p) {
+          const size = paramSize || p.sizes?.[0] || "M";
+          for (let i = 0; i < paramQty; i++) addItem(p, size);
+        }
+      });
+    }
+  }, [searchParams, items.length, addItem]);
 
   // Form Fields
   const [name, setName] = useState("");
@@ -149,6 +176,57 @@ function CheckoutContent() {
     });
   }, []);
 
+  // Social Login Handler directly at checkout
+  const handleSocialLoginAtCheckout = async (provider: "google" | "facebook") => {
+    setSocialLoading(provider);
+    setApiError("");
+    try {
+      const fallbackEmail =
+        email.trim() ||
+        (phone
+          ? `${phone.replace(/[^0-9]/g, "")}@${provider}.deencommerce.com`
+          : `customer@${provider}.deencommerce.com`);
+      const fallbackName =
+        name.trim() || (provider === "google" ? "Google Customer" : "Facebook Customer");
+      const res =
+        provider === "google"
+          ? await loginWithGoogle(undefined, fallbackEmail, fallbackName)
+          : await loginWithFacebook(undefined, fallbackEmail, fallbackName);
+
+      if (res.success && res.user) {
+        if (res.token) {
+          try {
+            localStorage.setItem("deen_web_guest_token", res.token);
+            localStorage.setItem("deen_web_auth_token", res.token);
+          } catch {}
+        }
+        const updated = {
+          name: res.user.name || fallbackName,
+          email: res.user.email || fallbackEmail,
+          phone: phone || profileData?.phone || "",
+          address: address || profileData?.address || "",
+          district: district.code,
+          city: city || "Dhaka",
+          role: "customer",
+          isGuest: false,
+        };
+        setProfileData(updated);
+        setIsGuestMode(false);
+        setName(res.user.name || fallbackName);
+        if (res.user.email) setEmail(res.user.email);
+        try {
+          localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+        } catch {}
+      } else {
+        setApiError(res.message || `${provider} sign-in failed. Please enter details manually.`);
+      }
+    } catch (err: any) {
+      setApiError(err?.message || `${provider} connection error. Please proceed as Guest.`);
+    } finally {
+      setSocialLoading(null);
+    }
+  };
+
   // Coupon State
   const initialCoupon = searchParams.get("coupon") || "";
   const [coupon, setCoupon] = useState(initialCoupon);
@@ -180,7 +258,7 @@ function CheckoutContent() {
         }
       }
     } catch {}
-  }, []);
+  }, [districts]);
 
   // Check initial coupon if passed in query
   useEffect(() => {
@@ -339,6 +417,7 @@ function CheckoutContent() {
         payment,
         deliverySlot,
         deliveryNotes: deliveryNotes.trim() || undefined,
+        customerNote: deliveryNotes.trim() || undefined,
         coupon: couponInfo ? couponInfo.code : undefined,
         isGuestOrder: isGuestMode,
         isGiftOrder: isGift,
@@ -421,7 +500,6 @@ function CheckoutContent() {
                   className="user-mode-switch-btn"
                   onClick={() => {
                     if (isGuestMode) {
-                      // Switch to registered
                       setIsGuestMode(false);
                       if (profileData) {
                         setName(profileData.name || "");
@@ -431,7 +509,6 @@ function CheckoutContent() {
                         if (profileData.city) setCity(profileData.city);
                       }
                     } else {
-                      // Switch to guest
                       setIsGuestMode(true);
                     }
                   }}
@@ -442,9 +519,78 @@ function CheckoutContent() {
 
               <p className="user-mode-desc">
                 {isGuestMode
-                  ? "Fast 1-tap checkout without creating a password. Your order will be placed instantly."
+                  ? "Fast 1-tap checkout without creating a password. Or link your Google/Facebook account for automatic order tracking."
                   : `Logged in as ${name || profileData?.name || "Customer"}. Addresses and fit preferences are auto-applied.`}
               </p>
+
+              {/* 1-Tap Google & Facebook Checkout */}
+              {isGuestMode && (
+                <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px dashed var(--border)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 6 }}>
+                    <span style={{ fontSize: 12, fontWeight: 800, color: "var(--ink)" }}>
+                      ⚡ EXPRESS 1-TAP SOCIAL SIGN IN
+                    </span>
+                    <span style={{ fontSize: 11, color: "var(--sub)" }}>
+                      Syncs past orders & rewards
+                    </span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => handleSocialLoginAtCheckout("google")}
+                      disabled={socialLoading !== null}
+                      style={{
+                        background: "var(--surface)",
+                        color: "var(--ink)",
+                        border: "1.5px solid var(--border)",
+                        fontWeight: 700,
+                        fontSize: 13,
+                        padding: "10px 14px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 8,
+                        borderRadius: 8,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                      </svg>
+                      {socialLoading === "google" ? "Signing In…" : "Continue with Google"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => handleSocialLoginAtCheckout("facebook")}
+                      disabled={socialLoading !== null}
+                      style={{
+                        background: "#1877F2",
+                        color: "#ffffff",
+                        border: "none",
+                        fontWeight: 700,
+                        fontSize: 13,
+                        padding: "10px 14px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 8,
+                        borderRadius: 8,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="#ffffff">
+                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                      </svg>
+                      {socialLoading === "facebook" ? "Signing In…" : "Continue with Facebook"}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Saved Address Chips for Registered Users */}
               {!isGuestMode && profileData?.address && (
@@ -700,14 +846,20 @@ function CheckoutContent() {
 
                   {/* Street Address */}
                   <div className="form-group" style={{ marginTop: 14 }}>
-                    <label className="form-label">Street Delivery Address *</label>
+                    <label className="form-label">Full Street Delivery Address *</label>
                     <textarea
+                      rows={3}
                       className={`form-textarea ${errors.address ? "form-input--error" : ""}`}
-                      placeholder="House / Flat #, Road #, Sector / Area landmark details…"
+                      placeholder="House/Flat number, Road number, Sector/Block, Area or nearby landmark (e.g. House 14, Road 5, Block C, Mirpur 12)"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
+                      style={{ width: "100%", minHeight: 76, padding: "10px 14px", fontSize: 13, lineHeight: 1.5, resize: "vertical" }}
                     />
-                    {errors.address && <p className="form-error">{errors.address}</p>}
+                    {errors.address ? (
+                      <p className="form-error">{errors.address}</p>
+                    ) : (
+                      <p className="form-helper">Full address helps our courier deliver swiftly without delays.</p>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -744,16 +896,23 @@ function CheckoutContent() {
                 </div>
               </div>
 
-              {/* Delivery Notes */}
-              <div className="form-group" style={{ marginTop: 16 }}>
-                <label className="form-label">Special Delivery Instructions (Optional)</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="e.g. Leave parcel with gate security, Call before arriving…"
+              {/* Delivery Notes / Customer Special Instructions */}
+              <div className="form-group" style={{ marginTop: 18, padding: "12px 14px", background: "var(--surface-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }}>
+                <label className="form-label" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span>📝 Customer Order Note / Special Instructions (Optional)</span>
+                  <span style={{ fontSize: 11, color: "var(--sub)" }}>Optional</span>
+                </label>
+                <textarea
+                  rows={2}
+                  className="form-textarea"
+                  placeholder="e.g. Please call before arrival, leave with apartment security, or deliver after 3:00 PM…"
                   value={deliveryNotes}
                   onChange={(e) => setDeliveryNotes(e.target.value)}
+                  style={{ width: "100%", marginTop: 6, minHeight: 52, padding: "8px 12px", fontSize: 12.5, lineHeight: 1.4, resize: "vertical" }}
                 />
+                <p className="form-helper" style={{ marginTop: 4 }}>
+                  Passed directly to our dispatch and courier team.
+                </p>
               </div>
             </div>
 

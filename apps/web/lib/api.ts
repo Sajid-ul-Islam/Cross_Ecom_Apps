@@ -137,6 +137,7 @@ export interface OrderPayload {
   postcode?: string;
   deliverySlot?: string;
   deliveryNotes?: string;
+  customerNote?: string;
   coupon?: string;
   isGuestOrder?: boolean;
   isGiftOrder?: boolean;

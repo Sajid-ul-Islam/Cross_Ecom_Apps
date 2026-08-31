@@ -51,8 +51,10 @@ export default function RootLayout({
       </head>
       <body>
         <CartProvider>
-          <DynamicCampaignBanner />
-          <Header />
+          <div className="site-header-wrapper">
+            <DynamicCampaignBanner />
+            <Header />
+          </div>
           <main className="page-content">{children}</main>
           <Footer />
           <MobileBottomNav />

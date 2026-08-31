@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { fetchProduct, fetchProducts, fetchDeliveryFees, bdt, type Product, type DeliveryFees } from "@/lib/api";
 import { useCart } from "@/lib/cart";
@@ -12,6 +12,7 @@ import WhatsAppButton from "@/components/WhatsAppButton";
 import ProductCard from "@/components/ProductCard";
 
 export default function ProductDetailPage() {
+  const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [related, setRelated] = useState<Product[]>([]);
@@ -54,6 +55,12 @@ export default function ProductDetailPage() {
     for (let i = 0; i < qty; i++) addItem(product, selectedSize);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
+  };
+
+  const handleBuyNow = () => {
+    if (!product || !selectedSize) return;
+    for (let i = 0; i < qty; i++) addItem(product, selectedSize);
+    router.push(`/checkout?productId=${product.id}&size=${encodeURIComponent(selectedSize)}&qty=${qty}`);
   };
 
   if (loading) {
@@ -329,13 +336,15 @@ export default function ProductDetailPage() {
                 ? "✓ Added to Bag!"
                 : "🛍 ADD TO BAG"}
             </button>
-            <Link
-              href={`/checkout?productId=${product.id}&size=${selectedSize}&qty=${qty}`}
+            <button
+              type="button"
               className="btn btn--outline"
-              style={{ flex: 1, padding: "14px 20px", fontSize: 14, fontWeight: 900, textAlign: "center" }}
+              style={{ flex: 1, padding: "14px 20px", fontSize: 14, fontWeight: 900, textAlign: "center", cursor: "pointer", background: "var(--surface-2)" }}
+              onClick={handleBuyNow}
+              disabled={product.stockStatus === "outofstock"}
             >
-              ⚡ BUY NOW
-            </Link>
+              ⚡ এখনই কিনুন (BUY NOW)
+            </button>
           </div>
 
           {/* Quick Interactive Aux Actions */}

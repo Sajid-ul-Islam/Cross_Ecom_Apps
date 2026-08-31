@@ -1609,9 +1609,18 @@ export async function registerDeenRoutes(app: FastifyInstance) {
                   total: String(delivery),
                 },
               ],
-              meta_data: orderMeta,
+              meta_data: [
+                ...orderMeta,
+                ...(body.customerNote || body.customer_note || body.deliveryNotes || body.delivery_notes
+                  ? [{ key: "customer_note", value: String(body.customerNote || body.customer_note || body.deliveryNotes || body.delivery_notes).trim() }]
+                  : []),
+              ],
               transaction_id: trxId ? String(trxId) : undefined,
-              customer_note: `City: ${resolvedCity} | District: ${resolvedState} | Delivery: ${shippingMethodTitle} (৳${delivery})${pathaoConsignmentId ? ` | Pathao: ${pathaoConsignmentId}` : ""} | Payment: ${paymentTitle}`,
+              customer_note: (() => {
+                const userNote = String(body.customerNote || body.customer_note || body.deliveryNotes || body.delivery_notes || "").trim();
+                const logNote = `City: ${resolvedCity} | District: ${resolvedState} | Delivery: ${shippingMethodTitle} (৳${delivery})${pathaoConsignmentId ? ` | Pathao: ${pathaoConsignmentId}` : ""} | Payment: ${paymentTitle}`;
+                return userNote ? `Customer Instructions: ${userNote}\n\n${logNote}` : logNote;
+              })(),
             });
             wooId = r.id;
             wooNumber = r.number;
