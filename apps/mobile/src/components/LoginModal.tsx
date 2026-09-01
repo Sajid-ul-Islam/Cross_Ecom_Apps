@@ -30,6 +30,7 @@ import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useProfile } from "../context/ProfileContext";
 import { forgotPassword, registerCustomer as registerCustomerAPI } from "../services/gateway";
+import { SocialAuthModal } from "./SocialAuthModal";
 
 const { width, height } = Dimensions.get("window");
 
@@ -62,46 +63,40 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [socialModalProvider, setSocialModalProvider] = useState<"google" | "facebook" | null>(null);
 
-  const handleSocialGoogle = async () => {
-    setSubmitting(true);
-    try {
-      const res = await loginWithGoogle(undefined, `${profile.phone || "shopper"}@gmail.com`, profile.name || "DEEN Customer");
-      if (res.success) {
-        setNotice({ type: "success", text: "Signed in with Google successfully!" });
-        setTimeout(() => {
-          setSubmitting(false);
-          onClose();
-          if (onSuccess) onSuccess();
-        }, 600);
-      } else {
-        setSubmitting(false);
-        setNotice({ type: "error", text: res.message || "Google sign-in failed." });
-      }
-    } catch {
-      setSubmitting(false);
-      setNotice({ type: "error", text: "Google sign-in error." });
-    }
+  const handleSocialGoogle = () => {
+    setSocialModalProvider("google");
   };
 
-  const handleSocialFacebook = async () => {
+  const handleSocialFacebook = () => {
+    setSocialModalProvider("facebook");
+  };
+
+  const handleSocialAccountPicked = async (email: string, name: string) => {
     setSubmitting(true);
     try {
-      const res = await loginWithFacebook(undefined, `${profile.phone || "shopper"}@facebook.deencommerce.com`, profile.name || "DEEN Customer");
+      const isG = socialModalProvider === "google";
+      const token = `mobile_${isG ? "google" : "facebook"}_token_${Date.now()}`;
+      const res = isG
+        ? await loginWithGoogle(token, email, name)
+        : await loginWithFacebook(token, email, name);
+
       if (res.success) {
-        setNotice({ type: "success", text: "Signed in with Facebook successfully!" });
+        setNotice({ type: "success", text: `Signed in as ${name}!` });
         setTimeout(() => {
           setSubmitting(false);
+          setSocialModalProvider(null);
           onClose();
           if (onSuccess) onSuccess();
-        }, 600);
+        }, 500);
       } else {
         setSubmitting(false);
-        setNotice({ type: "error", text: res.message || "Facebook sign-in failed." });
+        setNotice({ type: "error", text: res.message || "Social sign-in failed." });
       }
     } catch {
       setSubmitting(false);
-      setNotice({ type: "error", text: "Facebook sign-in error." });
+      setNotice({ type: "error", text: "Social sign-in error." });
     }
   };
 
@@ -655,6 +650,16 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Social Account Chooser Modal Sheet */}
+      <SocialAuthModal
+        visible={Boolean(socialModalProvider)}
+        provider={socialModalProvider || "google"}
+        onClose={() => setSocialModalProvider(null)}
+        onSelectAccount={handleSocialAccountPicked}
+        currentEmailHint={signupEmail || profile.email}
+        currentNameHint={signupName || profile.name}
+      />
     </Modal>
   );
 };

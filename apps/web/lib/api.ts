@@ -794,11 +794,31 @@ export async function fetchPathaoTracking(consignmentId: string): Promise<Pathao
 
 /* --------------------------- Social Auth (Google / Facebook) ---------------------------- */
 
+export interface AuthUser {
+  id: string;
+  name: string;
+  username: string;
+  email: string;
+  role: "customer" | "admin";
+  accountType?: "customer" | "admin" | "guest";
+  phone?: string;
+  wpUserId?: number;
+  avatarUrl?: string;
+}
+
+export interface AuthResult {
+  success: boolean;
+  message?: string;
+  user?: AuthUser;
+  token?: string;
+  isNewCustomer?: boolean;
+}
+
 export async function loginWithGoogle(
   idToken?: string,
   email?: string,
   name?: string
-): Promise<{ success: boolean; token?: string; user?: any; message?: string; isNewCustomer?: boolean }> {
+): Promise<AuthResult> {
   try {
     const res = await apiFetch(`${API_URL}/v1/auth/google`, {
       method: "POST",
@@ -819,7 +839,7 @@ export async function loginWithFacebook(
   accessToken?: string,
   email?: string,
   name?: string
-): Promise<{ success: boolean; token?: string; user?: any; message?: string; isNewCustomer?: boolean }> {
+): Promise<AuthResult> {
   try {
     const res = await apiFetch(`${API_URL}/v1/auth/facebook`, {
       method: "POST",

@@ -17,9 +17,11 @@ import {
   validateCoupon,
   type ActiveCampaignState,
   type BdDistrict,
+  type AuthResult,
 } from "@/lib/api";
 import { BD_DISTRICTS } from "@/lib/districts";
 import BankOffersModal from "@/components/BankOffersModal";
+import SocialAuthModal from "@/components/SocialAuthModal";
 
 interface DeliveryOption {
   id: string;
@@ -167,6 +169,7 @@ function CheckoutContent() {
 
   // Campaign state from REST API
   const [campaign, setCampaign] = useState<ActiveCampaignState | null>(null);
+  const [checkoutSocialProvider, setCheckoutSocialProvider] = useState<"google" | "facebook" | null>(null);
 
   useEffect(() => {
     fetchCampaigns().then((data) => {
@@ -178,54 +181,37 @@ function CheckoutContent() {
     });
   }, []);
 
-  // Social Login Handler directly at checkout
-  const handleSocialLoginAtCheckout = async (provider: "google" | "facebook") => {
-    setSocialLoading(provider);
-    setApiError("");
-    try {
-      const fallbackEmail =
-        email.trim() ||
-        (phone
-          ? `${phone.replace(/[^0-9]/g, "")}@${provider}.deencommerce.com`
-          : `customer@${provider}.deencommerce.com`);
-      const fallbackName =
-        name.trim() || (provider === "google" ? "Google Customer" : "Facebook Customer");
-      const res =
-        provider === "google"
-          ? await loginWithGoogle(undefined, fallbackEmail, fallbackName)
-          : await loginWithFacebook(undefined, fallbackEmail, fallbackName);
+  // Social Login Handler directly at checkout - opens account chooser modal
+  const handleSocialLoginAtCheckout = (provider: "google" | "facebook") => {
+    setCheckoutSocialProvider(provider);
+  };
 
-      if (res.success && res.user) {
-        if (res.token) {
-          try {
-            localStorage.setItem("deen_web_guest_token", res.token);
-            localStorage.setItem("deen_web_auth_token", res.token);
-          } catch {}
-        }
-        const updated = {
-          name: res.user.name || fallbackName,
-          email: res.user.email || fallbackEmail,
-          phone: phone || profileData?.phone || "",
-          address: address || profileData?.address || "",
-          district: district.code,
-          city: city || "Dhaka",
-          role: "customer",
-          isGuest: false,
-        };
-        setProfileData(updated);
-        setIsGuestMode(false);
-        setName(res.user.name || fallbackName);
-        if (res.user.email) setEmail(res.user.email);
+  const handleSocialSuccessAtCheckout = (res: AuthResult) => {
+    if (res.success && res.user) {
+      if (res.token) {
         try {
-          localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+          localStorage.setItem("deen_web_guest_token", res.token);
+          localStorage.setItem("deen_web_auth_token", res.token);
         } catch {}
-      } else {
-        setApiError(res.message || `${provider} sign-in failed. Please enter details manually.`);
       }
-    } catch (err: any) {
-      setApiError(err?.message || `${provider} connection error. Please proceed as Guest.`);
-    } finally {
-      setSocialLoading(null);
+      const updated = {
+        name: res.user.name || name || "Customer",
+        email: res.user.email || email,
+        phone: phone || profileData?.phone || "",
+        address: address || profileData?.address || "",
+        district: district.code,
+        city: city || "Dhaka",
+        role: "customer" as const,
+        isGuest: false,
+      };
+      setProfileData(updated);
+      setIsGuestMode(false);
+      setName(res.user.name || name);
+      if (res.user.email) setEmail(res.user.email);
+      try {
+        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+      } catch {}
+      setCheckoutSocialProvider(null);
     }
   };
 
@@ -1283,6 +1269,16 @@ function CheckoutContent() {
       <BankOffersModal
         isOpen={bankOffersOpen}
         onClose={() => setBankOffersOpen(false)}
+      />
+
+      {/* Social Auth Pop-Up Modal */}
+      <SocialAuthModal
+        isOpen={Boolean(checkoutSocialProvider)}
+        provider={checkoutSocialProvider || "google"}
+        onClose={() => setCheckoutSocialProvider(null)}
+        onSuccess={handleSocialSuccessAtCheckout}
+        currentEmailHint={email || profileData?.email}
+        currentNameHint={name || profileData?.name}
       />
     </div>
   );

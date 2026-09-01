@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { BD_DISTRICTS } from "@/lib/districts";
-import { API_URL, fetchOrders, fetchDistricts, loginCustomer, registerCustomer, loginWithGoogle, loginWithFacebook, fetchOutlets, fetchAppSettings, type OrderResult, type BdDistrict, type Outlet } from "@/lib/api";
+import { API_URL, fetchOrders, fetchDistricts, loginCustomer, registerCustomer, loginWithGoogle, loginWithFacebook, fetchOutlets, fetchAppSettings, type OrderResult, type BdDistrict, type Outlet, type AuthResult } from "@/lib/api";
 import AdminAnalyticsModal from "@/components/AdminAnalyticsModal";
+import SocialAuthModal from "@/components/SocialAuthModal";
 
 const PROFILE_STORAGE_KEY = "deen_web_user_profile";
 
@@ -52,6 +53,7 @@ export default function ProfilePage() {
   const [authNotice, setAuthNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false);
+  const [socialModalProvider, setSocialModalProvider] = useState<"google" | "facebook" | null>(null);
 
   useEffect(() => {
     try {
@@ -161,67 +163,30 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSocialGoogle = async () => {
-    setAuthSubmitting(true);
-    setAuthNotice(null);
-    try {
-      const email = signupEmail.trim() || profile.email || (signupPhone ? `${signupPhone.replace(/[^0-9]/g, "")}@gmail.com` : (profile.phone ? `${profile.phone}@gmail.com` : "customer@gmail.com"));
-      const name = signupName.trim() || profile.name || "Google User";
-      const res = await loginWithGoogle(undefined, email, name);
-      if (res.success && res.user) {
-        const updated: UserProfile = {
-          ...profile,
-          name: res.user.name || name,
-          email: res.user.email || email,
-          role: "customer",
-          isGuest: false,
-        };
-        setProfile(updated);
-        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
-        setAuthNotice({ type: "success", text: `Signed in with Google as ${res.user.name || name}!` });
-        setTimeout(() => {
-          setAuthSubmitting(false);
-          setAuthModalOpen(false);
-        }, 600);
-      } else {
-        setAuthSubmitting(false);
-        setAuthNotice({ type: "error", text: res.message || "Google sign-in failed. Please check network." });
-      }
-    } catch (err: any) {
-      setAuthSubmitting(false);
-      setAuthNotice({ type: "error", text: err?.message || "Google sign-in network error." });
-    }
+  const handleSocialGoogle = () => {
+    setSocialModalProvider("google");
   };
 
-  const handleSocialFacebook = async () => {
-    setAuthSubmitting(true);
-    setAuthNotice(null);
-    try {
-      const email = signupEmail.trim() || profile.email || (signupPhone ? `${signupPhone.replace(/[^0-9]/g, "")}@facebook.deencommerce.com` : (profile.phone ? `${profile.phone}@facebook.deencommerce.com` : "customer@facebook.deencommerce.com"));
-      const name = signupName.trim() || profile.name || "Facebook User";
-      const res = await loginWithFacebook(undefined, email, name);
-      if (res.success && res.user) {
-        const updated: UserProfile = {
-          ...profile,
-          name: res.user.name || name,
-          email: res.user.email || email,
-          role: "customer",
-          isGuest: false,
-        };
-        setProfile(updated);
-        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
-        setAuthNotice({ type: "success", text: `Signed in with Facebook as ${res.user.name || name}!` });
-        setTimeout(() => {
-          setAuthSubmitting(false);
-          setAuthModalOpen(false);
-        }, 600);
-      } else {
-        setAuthSubmitting(false);
-        setAuthNotice({ type: "error", text: res.message || "Facebook sign-in failed. Please check network." });
-      }
-    } catch (err: any) {
-      setAuthSubmitting(false);
-      setAuthNotice({ type: "error", text: err?.message || "Facebook sign-in network error." });
+  const handleSocialFacebook = () => {
+    setSocialModalProvider("facebook");
+  };
+
+  const handleSocialSuccess = (res: AuthResult) => {
+    if (res.success && res.user) {
+      const updated: UserProfile = {
+        ...profile,
+        name: res.user.name || profile.name || "Customer",
+        email: res.user.email || profile.email,
+        role: "customer",
+        isGuest: false,
+      };
+      setProfile(updated);
+      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+      setAuthNotice({ type: "success", text: `✓ Signed in successfully as ${res.user.name}!` });
+      setTimeout(() => {
+        setAuthModalOpen(false);
+        setSocialModalProvider(null);
+      }, 500);
     }
   };
 
@@ -697,6 +662,16 @@ export default function ProfilePage() {
       <AdminAnalyticsModal
         isOpen={analyticsModalOpen}
         onClose={() => setAnalyticsModalOpen(false)}
+      />
+
+      {/* Social Auth Pop-Up Modal */}
+      <SocialAuthModal
+        isOpen={Boolean(socialModalProvider)}
+        provider={socialModalProvider || "google"}
+        onClose={() => setSocialModalProvider(null)}
+        onSuccess={handleSocialSuccess}
+        currentEmailHint={signupEmail || profile.email}
+        currentNameHint={signupName || profile.name}
       />
     </div>
   );
