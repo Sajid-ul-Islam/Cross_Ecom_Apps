@@ -5,6 +5,7 @@ import Link from "next/link";
 import { fetchOrders, bdt, fetchAppSettings, type OrderResult } from "@/lib/api";
 import PathaoTrackingModal from "@/components/PathaoTrackingModal";
 import ReturnExchangeModal from "@/components/ReturnExchangeModal";
+import OrderStatusStepper from "@/components/OrderStatusStepper";
 
 const PROFILE_STORAGE_KEY = "deen_web_user_profile";
 
@@ -166,6 +167,12 @@ export default function OrdersLookupPage() {
                     {order.status}
                   </span>
                 </div>
+
+                {/* Graphical Order Status Stepper & Pathao Milestones */}
+                <OrderStatusStepper
+                  order={order}
+                  onTrackPathao={(id) => setTrackingConsignment(id)}
+                />
 
                 {/* Pathao Consignment Tracker */}
                 {hasPathao ? (

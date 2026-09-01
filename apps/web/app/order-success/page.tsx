@@ -3,7 +3,8 @@
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { bdt, fetchAppSettings } from "@/lib/api";
+import { bdt, fetchAppSettings, type OrderResult } from "@/lib/api";
+import OrderStatusStepper from "@/components/OrderStatusStepper";
 
 const PROFILE_STORAGE_KEY = "deen_web_user_profile";
 
@@ -115,6 +116,28 @@ function OrderSuccessContent() {
             <span className="success-status-pill">✅ RECEIVED & QUEUED</span>
           </div>
         </div>
+
+        {/* Graphical 5-Step Order Status Stepper */}
+        <OrderStatusStepper
+          order={{
+            id: orderId || number,
+            number: number,
+            wooId: wooId ? Number(wooId) : undefined,
+            status: "processing",
+            total: total,
+            subtotal: Math.max(0, total - delivery),
+            delivery: delivery,
+            payment: payment,
+            paymentTitle: payment,
+            pathaoConsignmentId: consignment || undefined,
+            pathaoTrackingUrl: trackingUrl || undefined,
+            createdAt: new Date().toISOString(),
+            lines: [],
+            name: guestName,
+            phone: guestPhone,
+            address: "",
+          }}
+        />
 
         {/* Pathao Logistics Live Tracking Section */}
         {hasConsignment ? (

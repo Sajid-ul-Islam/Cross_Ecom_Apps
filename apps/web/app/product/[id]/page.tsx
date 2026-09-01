@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { fetchProduct, fetchProducts, fetchDeliveryFees, bdt, resolveProductImage, type Product, type DeliveryFees } from "@/lib/api";
 import { useCart } from "@/lib/cart";
+import { useWishlist } from "@/lib/wishlist";
 import SizeGuideModal from "@/components/SizeGuideModal";
 import DenimCareGuideModal from "@/components/DenimCareGuideModal";
 import StoreStockModal from "@/components/StoreStockModal";
@@ -33,6 +34,7 @@ export default function ProductDetailPage() {
   const [bankOffersOpen, setBankOffersOpen] = useState(false);
 
   const { addItem } = useCart();
+  const { isInWishlist, toggleWishlist } = useWishlist();
 
   useEffect(() => {
     fetchProduct(id).then((p) => {
@@ -358,11 +360,11 @@ export default function ProductDetailPage() {
           </div>
 
           {/* Main Action Buttons */}
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20, alignItems: "stretch" }}>
             <button
               type="button"
               className="btn btn--primary"
-              style={{ flex: 1.2, padding: "14px 20px", fontSize: 14, fontWeight: 900 }}
+              style={{ flex: 1.2, padding: "14px 18px", fontSize: 14, fontWeight: 900 }}
               onClick={handleAdd}
               disabled={product.stockStatus === "outofstock"}
             >
@@ -375,11 +377,41 @@ export default function ProductDetailPage() {
             <button
               type="button"
               className="btn btn--outline"
-              style={{ flex: 1, padding: "14px 20px", fontSize: 14, fontWeight: 900, textAlign: "center", cursor: "pointer", background: "var(--surface-2)" }}
+              style={{ flex: 1, padding: "14px 18px", fontSize: 14, fontWeight: 900, textAlign: "center", cursor: "pointer", background: "var(--surface-2)" }}
               onClick={handleBuyNow}
               disabled={product.stockStatus === "outofstock"}
             >
               ⚡ এখনই কিনুন (BUY NOW)
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleWishlist(product)}
+              aria-label={isInWishlist(product.id) ? "Remove from wishlist" : "Add to wishlist"}
+              title={isInWishlist(product.id) ? "Remove from Wishlist" : "Save to Wishlist"}
+              style={{
+                width: 50,
+                borderRadius: "var(--radius)",
+                border: "1px solid var(--border)",
+                background: isInWishlist(product.id) ? "rgba(225, 41, 62, 0.1)" : "var(--surface-2)",
+                color: isInWishlist(product.id) ? "var(--crimson)" : "var(--ink)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                padding: 0,
+                transition: "all 0.2s ease",
+              }}
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill={isInWishlist(product.id) ? "var(--crimson)" : "none"}
+                stroke={isInWishlist(product.id) ? "var(--crimson)" : "currentColor"}
+                strokeWidth="2.2"
+              >
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
             </button>
           </div>
 

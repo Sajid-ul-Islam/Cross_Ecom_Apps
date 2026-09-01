@@ -3,18 +3,22 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCart } from "@/lib/cart";
+import { useWishlist } from "@/lib/wishlist";
 import { useEffect, useState } from "react";
 import SearchModal from "@/components/SearchModal";
 import NotificationModal from "@/components/NotificationModal";
 import BankOffersModal from "@/components/BankOffersModal";
+import WishlistModal from "@/components/WishlistModal";
 
 export default function Header() {
   const pathname = usePathname();
   const { totalItems } = useCart();
+  const { totalWishlist } = useWishlist();
   const [isDark, setIsDark] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [bankOffersOpen, setBankOffersOpen] = useState(false);
+  const [wishlistOpen, setWishlistOpen] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("deen_theme");
@@ -183,6 +187,54 @@ export default function Header() {
               )}
             </button>
 
+            {/* Wishlist Heart Button */}
+            <button
+              type="button"
+              className="nav__icon-btn"
+              onClick={() => setWishlistOpen(true)}
+              aria-label={`Wishlist, ${totalWishlist} items`}
+              title="Saved Wishlist Items"
+              style={{
+                position: "relative",
+                width: 38,
+                height: 38,
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "var(--surface-2)",
+                border: "1px solid var(--border)",
+                color: "var(--ink)",
+                cursor: "pointer",
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill={totalWishlist > 0 ? "rgba(225, 41, 62, 0.15)" : "none"} stroke={totalWishlist > 0 ? "var(--crimson)" : "currentColor"} strokeWidth="2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
+              {totalWishlist > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: 4,
+                    right: 4,
+                    minWidth: 16,
+                    height: 16,
+                    borderRadius: 8,
+                    background: "var(--crimson)",
+                    color: "#fff",
+                    fontSize: 9,
+                    fontWeight: 900,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "0 4px",
+                  }}
+                >
+                  {totalWishlist > 99 ? "99+" : totalWishlist}
+                </span>
+              )}
+            </button>
+
             {/* Cart Button */}
             <Link
               href="/cart"
@@ -254,6 +306,12 @@ export default function Header() {
       <BankOffersModal
         isOpen={bankOffersOpen}
         onClose={() => setBankOffersOpen(false)}
+      />
+
+      {/* Wishlist Drawer Modal */}
+      <WishlistModal
+        isOpen={wishlistOpen}
+        onClose={() => setWishlistOpen(false)}
       />
     </>
   );

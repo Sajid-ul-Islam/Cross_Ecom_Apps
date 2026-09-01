@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
+import { useWishlist } from "@/lib/wishlist";
 import type { Product } from "@/lib/api";
 import { bdt, resolveProductImage } from "@/lib/api";
 
@@ -12,10 +13,13 @@ interface Props {
 
 export default function ProductCard({ product }: Props) {
   const { addItem } = useCart();
+  const { isInWishlist, toggleWishlist } = useWishlist();
   const [added, setAdded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [imgError, setImgError] = useState(false);
   const price = product.salePrice ?? product.price;
+
+  const isSaved = isInWishlist(product.id);
 
   const primaryImg = resolveProductImage(product.images[0]);
   const secondaryImg = resolveProductImage(product.images[1] || product.images[0]);
@@ -29,6 +33,12 @@ export default function ProductCard({ product }: Props) {
     setTimeout(() => setAdded(false), 1500);
   };
 
+  const handleToggleWishlist = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleWishlist(product);
+  };
+
   return (
     <Link
       href={`/product/${product.id}`}
@@ -38,7 +48,7 @@ export default function ProductCard({ product }: Props) {
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Image */}
-      <div className="product-card__image-wrap">
+      <div className="product-card__image-wrap" style={{ position: "relative" }}>
         {!imgError ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -78,6 +88,42 @@ export default function ProductCard({ product }: Props) {
         {product.stockStatus === "outofstock" && (
           <span className="product-card__badge product-card__badge--oos">OUT OF STOCK</span>
         )}
+
+        {/* Wishlist Heart Button */}
+        <button
+          type="button"
+          onClick={handleToggleWishlist}
+          aria-label={isSaved ? "Remove from wishlist" : "Add to wishlist"}
+          title={isSaved ? "Saved in Wishlist" : "Save to Wishlist"}
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            width: 32,
+            height: 32,
+            borderRadius: "50%",
+            background: "rgba(255, 255, 255, 0.9)",
+            border: "none",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            zIndex: 4,
+            boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+            transition: "transform 0.15s ease",
+          }}
+        >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill={isSaved ? "var(--crimson)" : "none"}
+            stroke={isSaved ? "var(--crimson)" : "#334155"}
+            strokeWidth="2.2"
+          >
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+        </button>
 
         {/* Quick add overlay */}
         {product.stockStatus !== "outofstock" && (
