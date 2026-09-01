@@ -35,16 +35,21 @@
 ### 3. Bangladeshi Fulfillment & Logistics
 - **Full 64 Bangladesh Districts**: Dropdown selection with official WooCommerce state codes (`BD-13` Dhaka, `BD-10` Chattogram, `BD-58` Sylhet, etc.).
 - **Dynamic Delivery Charges**: ৳50 Dhaka Standard, ৳110 Dhaka Express, ৳90 Outside Dhaka, ৳0 Store Pickup.
-- **Real-Time Pathao Courier Tracking**: Live multi-step delivery status timeline (`PathaoTrackingModal`) resolved directly from `ptc_consignment_id`.
+- **5-Step Graphical Order Status Timeline (`OrderStatusStepper`)**: Visual milestone stepper (`[ 1. Placed ] ➔ [ 2. Confirmed ] ➔ [ 3. Packed ] ➔ [ 4. In Transit ] ➔ [ 5. Delivered ]`) with estimated delivery calculations (24–48h Dhaka / 3–5 days outside Dhaka).
+- **Real-Time Pathao Courier Tracking**: Live multi-step delivery status timeline resolved directly from `ptc_consignment_id` with 1-click in-app tracking and live courier tracking link.
 - **7-Day Doorstep Guarantee**: In-app Return & Size Exchange submission flow (`POST /v1/deen/returns`).
 
 ### 4. 100% Web & Mobile Feature Parity (`apps/web` ⇄ `apps/mobile`)
 - **5-Tab Navigation**: Unified `[ 🏠 Home ] [ 🗂️ Categories ] [ 🛒 Cart (live badge) ] [ 📦 Orders ] [ 👤 Profile ]`.
+- **Customer Wishlist & Saved Items Suite**: Save-for-later favorites with heart toggles on cards, PDP, header count badge, and slide-out `WishlistModal` with 1-click "Move to Bag".
+- **In-App Notification Center & Bell Icon**: Categorized announcements (Promos, Bank Offers, Order Updates) with 1-click coupon code copying.
+- **Bank & MFS Card Discounts Suite**: Dedicated deals modal for City Bank Amex, BRAC Bank, EBL, SCB, MTB, bKash, and Nagad (`GET /v1/deen/offers`).
+- **Instant Search Modal Drawer**: Fast debounced catalog discovery with category quick-chips and instant PDP routing.
 - **Garment Measurement Specs**: Interactive Size Guide modal (Inches & CM) for Jeans, Trousers, Shirts, Polos, and Panjabis.
 - **Denim Care Handbook**: Artisanal Japanese raw selvedge 3-step care guide (Initial Cold Soak, Break-In & Honeycomb Fading, Wool Wash Preservation).
 - **Physical Outlet Stock Finder**: Live inventory availability for Mirpur 12 Flagship, Wari, Cumilla, and Sylhet with Google Maps links.
 - **Direct WhatsApp Concierge**: Instant 1-tap chat (`https://wa.me/8801952700500`) with prefilled product inquiry.
-- **Promotional Campaigns & BOGO**: Instant Cashback tiers (৳500 / ৳700) and BOGO 50% discount on lowest-priced denim.
+- **Promotional Campaigns & BOGO**: Dynamic top banner with auto-rotation, Instant Cashback tiers (৳500 / ৳700), and BOGO 50% discount on lowest-priced denim.
 
 ---
 

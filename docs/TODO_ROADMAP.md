@@ -71,6 +71,11 @@
 
 ### 7. Web & Mobile App Strict Feature & UX Parity
 - [x] **5-Tab Navigation**: Unified `[ 🏠 Home ] [ 🗂️ Categories ] [ 🛒 Cart (live badge) ] [ 📦 Orders ] [ 👤 Profile ]` with active states on both native mobile app and Next.js mobile view.
+- [x] **Graphical Order Status Timeline (`OrderStatusStepper`)**: 5-step milestone tracking (`[ 1. Placed ] ➔ [ 2. Confirmed ] ➔ [ 3. Packed ] ➔ [ 4. In Transit ] ➔ [ 5. Delivered ]`) with live Pathao courier tracking on Web (`/orders`, `/order-success`) and Mobile (`orders.tsx`, `order-success.tsx`).
+- [x] **Customer Wishlist & Saved Items Suite**: Offline-persistent favorites, heart toggles on cards & PDP, `WishlistModal` drawer with 1-click "Move to Bag", and dedicated `/wishlist` view.
+- [x] **Instant Search Modal Drawer**: Fast debounced catalog discovery with category quick-chips and instant PDP routing on both Web and Mobile.
+- [x] **In-App Store Notification Center & Bell Icon**: Categorized announcements (Promos, Bank Offers, Order Updates) with 1-click coupon copying.
+- [x] **Bank & MFS Card Discounts Suite**: Dedicated modal for City Bank Amex, BRAC Bank, EBL, SCB, MTB, bKash, and Nagad offers (`GET /v1/deen/offers`).
 - [x] **Product Detail Page (PDP)**: Full parity with `SizeGuideModal`, `DenimCareGuideModal`, `StoreStockModal`, `WhatsAppButton`, `CompleteTheLook` carousels, and image zoom lightbox.
 - [x] **Shopping Bag (Cart)**: Live coupon validation (`/v1/deen/coupon/:code`), BOGO Jeans 50% discount calculator, dynamic cashback progress bar, and 4-tier shipping area picker.
 - [x] **Orders & Logistics**: Phone lookup, live multi-step Pathao tracking timeline (`PathaoTrackingModal`), doorstep size exchange/return submission (`ReturnExchangeModal`), and 1-tap WhatsApp support.
