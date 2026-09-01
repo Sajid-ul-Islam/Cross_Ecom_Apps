@@ -8,6 +8,7 @@ import { useCart } from "@/lib/cart";
 import SizeGuideModal from "@/components/SizeGuideModal";
 import DenimCareGuideModal from "@/components/DenimCareGuideModal";
 import StoreStockModal from "@/components/StoreStockModal";
+import BankOffersModal from "@/components/BankOffersModal";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ProductCard from "@/components/ProductCard";
 
@@ -29,6 +30,7 @@ export default function ProductDetailPage() {
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [careGuideOpen, setCareGuideOpen] = useState(false);
   const [stockModalOpen, setStockModalOpen] = useState(false);
+  const [bankOffersOpen, setBankOffersOpen] = useState(false);
 
   const { addItem } = useCart();
 
@@ -239,10 +241,43 @@ export default function ProductDetailPage() {
 
           {/* Blurb */}
           {product.blurb && (
-            <p style={{ fontSize: 14, color: "var(--sub)", lineHeight: 1.7, marginBottom: 20 }}>
+            <p style={{ fontSize: 14, color: "var(--sub)", lineHeight: 1.7, marginBottom: 16 }}>
               {product.blurb}
             </p>
           )}
+
+          {/* Bank & Card Discounts Trigger Banner */}
+          <div
+            onClick={() => setBankOffersOpen(true)}
+            style={{
+              background: "rgba(99,102,241,0.06)",
+              border: "1px dashed var(--indigo)",
+              borderRadius: "var(--radius)",
+              padding: "10px 14px",
+              marginBottom: 20,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+              transition: "background 0.2s",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 18 }}>💳</span>
+              <div>
+                <strong style={{ fontSize: 12, color: "var(--ink)", display: "block" }}>
+                  Bank &amp; Card Offers Available
+                </strong>
+                <span style={{ fontSize: 11, color: "var(--sub)" }}>
+                  10%–15% instant savings with City Amex, BRAC Bank &amp; EBL
+                </span>
+              </div>
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "var(--indigo)", whiteSpace: "nowrap" }}>
+              View Offers →
+            </span>
+          </div>
 
           {/* Size Selector Header with Size Guide CTA */}
           {product.sizes && product.sizes.length > 0 && (
@@ -524,6 +559,11 @@ export default function ProductDetailPage() {
         onClose={() => setStockModalOpen(false)}
         product={product}
         selectedSize={selectedSize}
+      />
+
+      <BankOffersModal
+        isOpen={bankOffersOpen}
+        onClose={() => setBankOffersOpen(false)}
       />
 
       <style>{`

@@ -1369,6 +1369,31 @@ export async function fetchAdminCustomersAPI(query = ""): Promise<{ success: boo
   }
 }
 
+export interface BankOffer {
+  id: string;
+  bankName: string;
+  cardType: string;
+  discount: string;
+  discountPct: number;
+  maxDiscount: number;
+  minSpend: number;
+  couponCode: string;
+  badge: string;
+  validTill: string;
+  description: string;
+  logoText: string;
+  color: string;
+}
+
+export interface RotatingCampaignItem {
+  id: string;
+  badge: string;
+  title: string;
+  subtitle: string;
+  actionUrl: string;
+  actionLabel: string;
+}
+
 export interface ActiveCampaignState {
   success: boolean;
   activeCampaign: {
@@ -1393,6 +1418,8 @@ export interface ActiveCampaignState {
     badge: string;
     discountRange: string;
   };
+  bankOffers?: BankOffer[];
+  rotatingCampaigns?: RotatingCampaignItem[];
 }
 
 export async function fetchActiveCampaigns(): Promise<ActiveCampaignState | null> {
@@ -1401,6 +1428,15 @@ export async function fetchActiveCampaigns(): Promise<ActiveCampaignState | null
     return res?.success ? res : null;
   } catch {
     return null;
+  }
+}
+
+export async function fetchBankOffers(): Promise<BankOffer[]> {
+  try {
+    const res = await request<{ success: boolean; bankOffers: BankOffer[] }>("/v1/deen/offers", {}, 5000, true);
+    return res?.bankOffers || [];
+  } catch {
+    return [];
   }
 }
 

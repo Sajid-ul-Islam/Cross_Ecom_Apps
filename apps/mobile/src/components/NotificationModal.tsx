@@ -27,6 +27,7 @@ import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useNotifications } from "../context/NotificationContext";
 import { NotificationItem, NotificationType } from "../types";
+import { BankOffersModal } from "./BankOffersModal";
 
 const { width, height } = Dimensions.get("window");
 
@@ -44,6 +45,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ visible, o
 
   const [activeTab, setActiveTab] = useState<"ALL" | NotificationType>("ALL");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [bankModalOpen, setBankModalOpen] = useState(false);
 
   const filtered = notifications.filter((n) => {
     if (activeTab === "ALL") return true;
@@ -241,6 +243,12 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ visible, o
           </ScrollView>
         </View>
       </View>
+
+      {/* Bank & Card Offers Modal */}
+      <BankOffersModal
+        visible={bankModalOpen}
+        onClose={() => setBankModalOpen(false)}
+      />
     </Modal>
   );
 };

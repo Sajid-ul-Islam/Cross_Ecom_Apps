@@ -18,6 +18,7 @@ import {
   type BdDistrict,
 } from "@/lib/api";
 import { BD_DISTRICTS } from "@/lib/districts";
+import BankOffersModal from "@/components/BankOffersModal";
 
 interface DeliveryOption {
   id: string;
@@ -233,6 +234,7 @@ function CheckoutContent() {
   const [couponInfo, setCouponInfo] = useState<{ code: string; type: string; amount: number; description?: string } | null>(null);
   const [couponBusy, setCouponBusy] = useState(false);
   const [couponError, setCouponError] = useState("");
+  const [bankOffersOpen, setBankOffersOpen] = useState(false);
 
   // Load saved profile on mount
   useEffect(() => {
@@ -1067,6 +1069,52 @@ function CheckoutContent() {
                   </p>
                 )}
                 {couponError && <p className="coupon-error-msg">✕ {couponError}</p>}
+
+                {/* Partner Bank Coupons Quick Select */}
+                {!couponInfo && (
+                  <div style={{ marginTop: 10, paddingTop: 8, borderTop: "1px dashed var(--border)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <span style={{ fontSize: 11, color: "var(--sub)", fontWeight: 700 }}>💳 Partner Bank Offers:</span>
+                      <button
+                        type="button"
+                        onClick={() => setBankOffersOpen(true)}
+                        style={{ background: "transparent", border: "none", color: "var(--indigo)", fontSize: 11, fontWeight: 800, cursor: "pointer" }}
+                      >
+                        View All →
+                      </button>
+                    </div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {[
+                        { code: "AMEXDEEN", label: "City Amex 10%" },
+                        { code: "BRAC10", label: "BRAC 10%" },
+                        { code: "EBLDEEN", label: "EBL 10%" },
+                        { code: "SCBDEEN", label: "SCB 15%" },
+                        { code: "NAGAD100", label: "Nagad ৳100" },
+                      ].map((chip) => (
+                        <button
+                          key={chip.code}
+                          type="button"
+                          onClick={() => {
+                            setCoupon(chip.code);
+                            applyCouponCode(chip.code);
+                          }}
+                          style={{
+                            padding: "3px 8px",
+                            borderRadius: 4,
+                            border: "1px solid var(--border)",
+                            background: "var(--surface-2)",
+                            color: "var(--ink)",
+                            fontSize: 10.5,
+                            fontWeight: 800,
+                            cursor: "pointer",
+                          }}
+                        >
+                          {chip.label} ({chip.code})
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Price Calculation Breakdown */}
@@ -1230,6 +1278,12 @@ function CheckoutContent() {
           </div>
         </div>
       )}
+
+      {/* Bank & Card Offers Modal */}
+      <BankOffersModal
+        isOpen={bankOffersOpen}
+        onClose={() => setBankOffersOpen(false)}
+      />
     </div>
   );
 }

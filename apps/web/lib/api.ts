@@ -385,6 +385,31 @@ export async function fetchCategoryCovers(): Promise<Record<string, string>> {
   return {};
 }
 
+export interface BankOffer {
+  id: string;
+  bankName: string;
+  cardType: string;
+  discount: string;
+  discountPct: number;
+  maxDiscount: number;
+  minSpend: number;
+  couponCode: string;
+  badge: string;
+  validTill: string;
+  description: string;
+  logoText: string;
+  color: string;
+}
+
+export interface RotatingCampaignItem {
+  id: string;
+  badge: string;
+  title: string;
+  subtitle: string;
+  actionUrl: string;
+  actionLabel: string;
+}
+
 export interface ActiveCampaignState {
   success: boolean;
   activeCampaign: {
@@ -409,6 +434,8 @@ export interface ActiveCampaignState {
     badge: string;
     discountRange: string;
   };
+  bankOffers?: BankOffer[];
+  rotatingCampaigns?: RotatingCampaignItem[];
 }
 
 export interface BdDistrict {
@@ -463,7 +490,7 @@ export async function fetchDeliveryFees(): Promise<DeliveryFees> {
 }
 
 /**
- * Fetches live campaign status from REST API (/v1/deen/campaigns).
+ * Fetches live campaign status and bank offers from REST API (/v1/deen/campaigns).
  */
 export async function fetchCampaigns(): Promise<ActiveCampaignState | null> {
   try {
@@ -473,6 +500,22 @@ export async function fetchCampaigns(): Promise<ActiveCampaignState | null> {
     if (res.ok) return res.json();
   } catch {}
   return null;
+}
+
+/**
+ * Fetches active bank card discounts and payment offers (/v1/deen/offers).
+ */
+export async function fetchBankOffers(): Promise<BankOffer[]> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/offers`, {
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.bankOffers) return data.bankOffers;
+    }
+  } catch {}
+  return [];
 }
 
 /**
