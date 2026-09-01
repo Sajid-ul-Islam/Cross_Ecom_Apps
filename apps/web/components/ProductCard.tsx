@@ -89,7 +89,7 @@ export default function ProductCard({ product }: Props) {
           <span className="product-card__badge product-card__badge--oos">OUT OF STOCK</span>
         )}
 
-        {/* Wishlist Heart Button */}
+        {/* Wishlist Heart Button - positioned at bottom right corner */}
         <button
           type="button"
           onClick={handleToggleWishlist}
@@ -97,19 +97,20 @@ export default function ProductCard({ product }: Props) {
           title={isSaved ? "Saved in Wishlist" : "Save to Wishlist"}
           style={{
             position: "absolute",
-            top: 8,
-            right: 8,
+            bottom: 10,
+            right: 10,
             width: 32,
             height: 32,
             borderRadius: "50%",
-            background: "rgba(255, 255, 255, 0.9)",
+            background: "rgba(255, 255, 255, 0.92)",
+            backdropFilter: "blur(4px)",
             border: "none",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             cursor: "pointer",
-            zIndex: 4,
-            boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+            zIndex: 5,
+            boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
             transition: "transform 0.15s ease",
           }}
         >
@@ -133,7 +134,7 @@ export default function ProductCard({ product }: Props) {
               position: "absolute",
               bottom: 10,
               left: 10,
-              right: 10,
+              right: 48,
               padding: "8px",
               borderRadius: 6,
               border: "none",
