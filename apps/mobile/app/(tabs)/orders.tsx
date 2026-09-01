@@ -18,6 +18,7 @@ import { useOrders } from "../../src/context/OrderContext";
 import { useReturns } from "../../src/context/ReturnContext";
 import { ReturnExchangeModal } from "../../src/components/ReturnExchangeModal";
 import { CourierTrackingModal } from "../../src/components/CourierTrackingModal";
+import { OrderStatusStepper } from "../../src/components/OrderStatusStepper";
 import { bdt, DELIVERY_OPTIONS } from "../../src/services/gateway";
 import { OrderStatus, Order } from "../../src/types";
 
@@ -168,53 +169,14 @@ export default function OrdersScreen() {
                   )}
                 </View>
 
-                {/* Progress Stepper */}
-                <View style={styles.stepperContainer}>
-                  {STATUS_STEPS.map((step, idx) => {
-                    const isDone = idx <= currentStepIdx;
-                    const isCurrent = idx === currentStepIdx;
-                    return (
-                      <React.Fragment key={step.key}>
-                        <View style={styles.stepNode}>
-                          <View
-                            style={[
-                              styles.stepDot,
-                              { backgroundColor: colors.paper, borderColor: colors.border },
-                              isDone && { backgroundColor: colors.emerald, borderColor: colors.emerald },
-                              isCurrent && { backgroundColor: colors.indigo, borderColor: colors.indigo },
-                            ]}
-                          >
-                            {isDone ? (
-                              <CheckCircle2 size={12} color="#FFFFFF" />
-                            ) : (
-                              <View style={[styles.stepDotInner, { backgroundColor: colors.border }]} />
-                            )}
-                          </View>
-                          <Text
-                            style={[
-                              styles.stepLabel,
-                              { color: colors.faint },
-                              isDone && { color: colors.ink, fontWeight: "700" },
-                              isCurrent && { color: colors.indigo, fontWeight: "800" },
-                            ]}
-                          >
-                            {step.label}
-                          </Text>
-                        </View>
-
-                        {idx < STATUS_STEPS.length - 1 && (
-                          <View
-                            style={[
-                              styles.stepLine,
-                              { backgroundColor: colors.borderLight },
-                              idx < currentStepIdx && { backgroundColor: colors.emerald },
-                            ]}
-                          />
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </View>
+                {/* Graphical Order Status Stepper */}
+                <OrderStatusStepper
+                  order={order as any}
+                  onTrackPathao={(cId) => {
+                    setSelectedOrderForTracking(order);
+                    setTrackingModalVisible(true);
+                  }}
+                />
 
                 {/* Items preview */}
                 <View style={[styles.itemsSummary, { backgroundColor: colors.paper }]}>

@@ -1211,7 +1211,61 @@ export async function deleteUserAccount(): Promise<{ success: boolean; message: 
 export interface AdminAnalyticsResult {
   success: boolean;
   timeframe: string;
-  metrics: {
+  sales?: {
+    grossRevenue: number;
+    netSales: number;
+    totalOrders: number;
+    paidOrders: number;
+    codOrders: number;
+    prepaidOrders: number;
+    aov: number;
+    itemsSold: number;
+    dailyRunRate: number;
+    projected7dRevenue: number;
+    projected30dRevenue: number;
+    growthRatePct: number;
+    salesTrend: Array<{ date: string; revenue: number; netSales: number; orders: number }>;
+    topProductPairs?: Array<{ pairTitle: string; itemA: string; itemB: string; count: number; totalRevenue: number }>;
+    productPerformance?: Array<{ id: string; name: string; sku: string; category: string; units: number; revenue: number; returnedUnits: number; returnRatePct: number; netSales: number }>;
+    categoryMatrix: Array<{ category: string; revenue: number; units: number; sharePct: number }>;
+  };
+  logistics?: {
+    totalDispatched: number;
+    deliveredCount: number;
+    deliveredValue: number;
+    returnedCount: number;
+    returnedValue: number;
+    partialCount: number;
+    partialValue: number;
+    inTransitCount: number;
+    inTransitValue: number;
+    pendingCount: number;
+    deliverySuccessRate: number;
+    returnRate: number;
+    partialRate: number;
+    courierCostIncurred: number;
+    rtoLossCost: number;
+    statusBreakdown: Record<string, number>;
+  };
+  inventory?: {
+    totalSkus: number;
+    inStockCount: number;
+    lowStockCount: number;
+    outOfStockCount: number;
+    totalUnits: number;
+    inventoryValuation: number;
+    stockHealthScore: number;
+    lowStockAlerts: Array<{ id: string; name: string; sku: string; category: string; stock: number; price: number }>;
+  };
+  customers?: {
+    totalCustomers: number;
+    repeatCustomers: number;
+    repeatRate: number;
+    averageLtv: number;
+    vipCustomers: Array<{ id: string; name: string; phone: string; totalSpent: number; totalOrders: number; district: string }>;
+    districtDistribution: Array<{ district: string; districtName: string; orderCount: number; revenue: number }>;
+  };
+  metrics?: {
     grossRevenue: number;
     totalOrders: number;
     codOrders: number;
@@ -1221,16 +1275,43 @@ export interface AdminAnalyticsResult {
     outOfStockCount: number;
     activeCustomersCount: number;
   };
-  categoryPerformance: Array<{ category: string; revenue: number }>;
+  categoryPerformance?: Array<{ category: string; revenue: number }>;
   generatedAt: string;
 }
 
-export async function fetchAdminAnalytics(timeframe = "30d"): Promise<AdminAnalyticsResult | null> {
+export interface AdminAnalyticsFilterParams {
+  timeframe?: string;
+  category?: string;
+  productId?: string;
+  district?: string;
+  payment?: string;
+}
+
+export async function fetchAdminAnalytics(paramsOrTimeframe: string | AdminAnalyticsFilterParams = "30d"): Promise<AdminAnalyticsResult | null> {
   const token = await getAuthToken();
-  if (!token) return null;
+  const headers: Record<string, string> = {
+    "x-gateway-key": "deen_mobile_gateway_secret_2026",
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  let qs = "";
+  if (typeof paramsOrTimeframe === "string") {
+    qs = `timeframe=${paramsOrTimeframe}`;
+  } else {
+    const sp = new URLSearchParams();
+    if (paramsOrTimeframe.timeframe) sp.append("timeframe", paramsOrTimeframe.timeframe);
+    if (paramsOrTimeframe.category) sp.append("category", paramsOrTimeframe.category);
+    if (paramsOrTimeframe.productId) sp.append("productId", paramsOrTimeframe.productId);
+    if (paramsOrTimeframe.district) sp.append("district", paramsOrTimeframe.district);
+    if (paramsOrTimeframe.payment) sp.append("payment", paramsOrTimeframe.payment);
+    qs = sp.toString();
+  }
+
   try {
-    const res = await request<AdminAnalyticsResult>(`/v1/deen/admin/analytics?timeframe=${timeframe}`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const res = await request<AdminAnalyticsResult>(`/v1/deen/admin/analytics?${qs}`, {
+      headers,
     }, 8000);
     return res?.success ? res : null;
   } catch {
@@ -1288,6 +1369,31 @@ export async function fetchAdminCustomersAPI(query = ""): Promise<{ success: boo
   }
 }
 
+export interface BankOffer {
+  id: string;
+  bankName: string;
+  cardType: string;
+  discount: string;
+  discountPct: number;
+  maxDiscount: number;
+  minSpend: number;
+  couponCode: string;
+  badge: string;
+  validTill: string;
+  description: string;
+  logoText: string;
+  color: string;
+}
+
+export interface RotatingCampaignItem {
+  id: string;
+  badge: string;
+  title: string;
+  subtitle: string;
+  actionUrl: string;
+  actionLabel: string;
+}
+
 export interface ActiveCampaignState {
   success: boolean;
   activeCampaign: {
@@ -1312,6 +1418,8 @@ export interface ActiveCampaignState {
     badge: string;
     discountRange: string;
   };
+  bankOffers?: BankOffer[];
+  rotatingCampaigns?: RotatingCampaignItem[];
 }
 
 export async function fetchActiveCampaigns(): Promise<ActiveCampaignState | null> {
@@ -1320,6 +1428,15 @@ export async function fetchActiveCampaigns(): Promise<ActiveCampaignState | null
     return res?.success ? res : null;
   } catch {
     return null;
+  }
+}
+
+export async function fetchBankOffers(): Promise<BankOffer[]> {
+  try {
+    const res = await request<{ success: boolean; bankOffers: BankOffer[] }>("/v1/deen/offers", {}, 5000, true);
+    return res?.bankOffers || [];
+  } catch {
+    return [];
   }
 }
 

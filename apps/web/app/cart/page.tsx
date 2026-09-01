@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCart } from "@/lib/cart";
-import { bdt, API_URL, fetchCampaigns, type ActiveCampaignState } from "@/lib/api";
+import { bdt, API_URL, fetchCampaigns, validateCoupon, type ActiveCampaignState } from "@/lib/api";
 import { useState, useEffect } from "react";
 
 const DELIVERY_OPTIONS = [
@@ -107,10 +107,9 @@ export default function CartPage() {
     setValidatingCoupon(true);
     setCouponError("");
     try {
-      const res = await fetch(`${API_URL}/v1/deen/coupon/${encodeURIComponent(clean)}`);
-      const data = await res.json();
-      if (res.ok && data.valid) {
-        setAppliedCoupon({ code: data.code, amount: data.amount, type: data.type });
+      const data = await validateCoupon(clean);
+      if (data.valid) {
+        setAppliedCoupon({ code: data.code || clean, amount: data.amount || 0, type: data.type || "fixed" });
         setCouponError("");
       } else {
         setAppliedCoupon(null);

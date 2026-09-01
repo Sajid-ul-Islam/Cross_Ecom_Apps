@@ -185,6 +185,40 @@ export interface OrderResult {
 
 import catalogSnapshot from "./catalog.snapshot.json";
 
+/**
+ * Canonical product image resolver:
+ * Converts relative paths, HTTP urls, and protocol-relative URLs into high-speed HTTPS CDN urls.
+ */
+export function resolveProductImage(src?: string, fallback?: string): string {
+  if (!src || typeof src !== "string" || src.trim().length === 0) {
+    return fallback || "https://deencommerce.com/wp-content/uploads/2026/05/jeans-1.jpg";
+  }
+  let clean = src.trim();
+  if (clean.startsWith("//")) return `https:${clean}`;
+  if (clean.startsWith("/")) return `https://deencommerce.com${clean}`;
+  if (clean.startsWith("http://")) return clean.replace("http://", "https://");
+  return clean;
+}
+
+/**
+ * Fetches real-time updated images and gallery for a product directly from REST API.
+ */
+export async function fetchProductImages(id: string): Promise<{
+  images: [string, string];
+  gallery: string[];
+  thumb: string;
+  single: string;
+  full: string;
+} | null> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/images/product/${encodeURIComponent(id)}`, {
+      next: { revalidate: 60 },
+    });
+    if (res.ok) return res.json();
+  } catch {}
+  return null;
+}
+
 export function getBundledProducts(): Product[] {
   const data = catalogSnapshot as unknown as { products?: Product[] } | Product[];
   if (Array.isArray(data)) return data;
@@ -351,6 +385,31 @@ export async function fetchCategoryCovers(): Promise<Record<string, string>> {
   return {};
 }
 
+export interface BankOffer {
+  id: string;
+  bankName: string;
+  cardType: string;
+  discount: string;
+  discountPct: number;
+  maxDiscount: number;
+  minSpend: number;
+  couponCode: string;
+  badge: string;
+  validTill: string;
+  description: string;
+  logoText: string;
+  color: string;
+}
+
+export interface RotatingCampaignItem {
+  id: string;
+  badge: string;
+  title: string;
+  subtitle: string;
+  actionUrl: string;
+  actionLabel: string;
+}
+
 export interface ActiveCampaignState {
   success: boolean;
   activeCampaign: {
@@ -375,6 +434,8 @@ export interface ActiveCampaignState {
     badge: string;
     discountRange: string;
   };
+  bankOffers?: BankOffer[];
+  rotatingCampaigns?: RotatingCampaignItem[];
 }
 
 export interface BdDistrict {
@@ -429,7 +490,7 @@ export async function fetchDeliveryFees(): Promise<DeliveryFees> {
 }
 
 /**
- * Fetches live campaign status from REST API (/v1/deen/campaigns).
+ * Fetches live campaign status and bank offers from REST API (/v1/deen/campaigns).
  */
 export async function fetchCampaigns(): Promise<ActiveCampaignState | null> {
   try {
@@ -439,6 +500,22 @@ export async function fetchCampaigns(): Promise<ActiveCampaignState | null> {
     if (res.ok) return res.json();
   } catch {}
   return null;
+}
+
+/**
+ * Fetches active bank card discounts and payment offers (/v1/deen/offers).
+ */
+export async function fetchBankOffers(): Promise<BankOffer[]> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/offers`, {
+      cache: "no-store",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.bankOffers) return data.bankOffers;
+    }
+  } catch {}
+  return [];
 }
 
 /**
@@ -759,6 +836,64 @@ export async function loginWithFacebook(
   }
 }
 
+export async function loginCustomer(
+  identifier: string,
+  password: string
+): Promise<{ success: boolean; token?: string; user?: any; name?: string; email?: string; role?: string; message?: string }> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: identifier.trim(), password }),
+    });
+    const data = await res.json();
+    if (!res.ok && !data.message) {
+      return { success: false, message: data.error || `Login failed (HTTP ${res.status})` };
+    }
+    return data;
+  } catch (err: any) {
+    return { success: false, message: err?.message || "Sign in network error. Please check your connection." };
+  }
+}
+
+export async function registerCustomer(
+  name: string,
+  phone: string,
+  password: string,
+  email?: string
+): Promise<{ success: boolean; token?: string; user?: any; name?: string; role?: string; message?: string }> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: phone.trim(),
+        name: name.trim(),
+        phone: phone.trim(),
+        password,
+        email: email?.trim(),
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok && !data.message) {
+      return { success: false, message: data.error || `Registration failed (HTTP ${res.status})` };
+    }
+    return data;
+  } catch (err: any) {
+    return { success: false, message: err?.message || "Registration network error. Please check your connection." };
+  }
+}
+
+export async function validateCoupon(code: string): Promise<{ valid: boolean; code?: string; amount?: number; type?: "fixed" | "percent"; description?: string; message?: string }> {
+  try {
+    const clean = code.trim().toUpperCase();
+    const res = await apiFetch(`${API_URL}/v1/deen/coupon/${encodeURIComponent(clean)}`);
+    return await res.json();
+  } catch (err: any) {
+    return { valid: false, message: "Could not verify coupon." };
+  }
+}
+
 /* ------------------------- outlets (source of truth = gateway env) ---- */
 
 export interface Outlet {
@@ -811,4 +946,25 @@ export async function fetchAppSettings(): Promise<AppSettings | null> {
     if (res.ok) return res.json();
   } catch {}
   return null;
+}
+
+/** Submit a return / exchange request to the gateway. */
+export async function submitReturnRequest(payload: {
+  orderId: string;
+  orderNumber: string;
+  phone: string;
+  reason: string;
+  details: string;
+  items: any[];
+}): Promise<{ success: boolean; message?: string }> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/returns`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return await res.json();
+  } catch (err: any) {
+    return { success: false, message: err?.message || "Network error submitting return request." };
+  }
 }

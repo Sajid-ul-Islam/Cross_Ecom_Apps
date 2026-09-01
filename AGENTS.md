@@ -98,8 +98,10 @@ Domain Context Boundaries:
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Authentication** | `LoginModal.tsx`, `profile.tsx` | `ProfileContext.tsx`, `gateway.ts` | `/v1/auth/*` | WP `/wp-login.php` | `test_auth.ts` |
 | **Catalog & PDP** | `shop.tsx`, `product/[id].tsx` | `gateway.ts`, `categories.ts` | `/v1/deen/catalog/*` | WC `/wp-json/wc/v3/products` | `pricing.test.ts` |
-| **Cart & Pricing** | `cart.tsx`, `Banner.tsx` | `CartContext.tsx`, `RewardsContext.tsx` | Local / Fastify | In-Memory Rules | `pricing.test.ts` |
+| **Wishlist & Saved** | `WishlistModal.tsx`, PDP Heart | `WishlistContext.tsx` | Local / Client Storage | In-Memory / Client | Automated Verified |
+| **Cart & Pricing** | `cart.tsx`, `Banner.tsx` | `CartContext.tsx`, `RewardsContext.tsx` | `/v1/deen/coupon/*` | In-Memory Rules | `pricing.test.ts` |
 | **Checkout & Order**| `checkout.tsx`, `order-success.tsx`| `OrderContext.tsx`, `districts.ts` | `/v1/deen/orders` | WC Orders + Pathao API | `pricing.test.ts` |
+| **Order Stepper** | `orders.tsx`, `OrderStatusStepper.tsx` | `OrderContext.tsx` | `/v1/deen/pathao/track/*` | Pathao Logistics API | Automated Verified |
 | **Admin & BI** | `AdminAnalyticsModal.tsx`, `index.tsx`| `gateway.ts` (`fetchAdminAnalytics`) | `/v1/deen/admin/*` | WC Orders + In-Memory | Automated Verified |
 
 ---

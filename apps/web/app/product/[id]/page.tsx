@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { fetchProduct, fetchProducts, fetchDeliveryFees, bdt, type Product, type DeliveryFees } from "@/lib/api";
+import { fetchProduct, fetchProducts, fetchDeliveryFees, bdt, resolveProductImage, type Product, type DeliveryFees } from "@/lib/api";
 import { useCart } from "@/lib/cart";
+import { useWishlist } from "@/lib/wishlist";
 import SizeGuideModal from "@/components/SizeGuideModal";
 import DenimCareGuideModal from "@/components/DenimCareGuideModal";
 import StoreStockModal from "@/components/StoreStockModal";
+import BankOffersModal from "@/components/BankOffersModal";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ProductCard from "@/components/ProductCard";
 
@@ -29,8 +31,10 @@ export default function ProductDetailPage() {
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [careGuideOpen, setCareGuideOpen] = useState(false);
   const [stockModalOpen, setStockModalOpen] = useState(false);
+  const [bankOffersOpen, setBankOffersOpen] = useState(false);
 
   const { addItem } = useCart();
+  const { isInWishlist, toggleWishlist } = useWishlist();
 
   useEffect(() => {
     fetchProduct(id).then((p) => {
@@ -86,7 +90,8 @@ export default function ProductDetailPage() {
   }
 
   const price = product.salePrice ?? product.price;
-  const gallery = product.gallery?.length ? product.gallery : [product.images[0], product.images[1]].filter(Boolean);
+  const rawGallery = product.gallery?.length ? product.gallery : [product.images[0], product.images[1]].filter(Boolean);
+  const gallery = rawGallery.map((src) => resolveProductImage(src));
 
   return (
     <div className="container" style={{ paddingBottom: 80 }}>
@@ -238,10 +243,43 @@ export default function ProductDetailPage() {
 
           {/* Blurb */}
           {product.blurb && (
-            <p style={{ fontSize: 14, color: "var(--sub)", lineHeight: 1.7, marginBottom: 20 }}>
+            <p style={{ fontSize: 14, color: "var(--sub)", lineHeight: 1.7, marginBottom: 16 }}>
               {product.blurb}
             </p>
           )}
+
+          {/* Bank & Card Discounts Trigger Banner */}
+          <div
+            onClick={() => setBankOffersOpen(true)}
+            style={{
+              background: "rgba(99,102,241,0.06)",
+              border: "1px dashed var(--indigo)",
+              borderRadius: "var(--radius)",
+              padding: "10px 14px",
+              marginBottom: 20,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+              transition: "background 0.2s",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 18 }}>💳</span>
+              <div>
+                <strong style={{ fontSize: 12, color: "var(--ink)", display: "block" }}>
+                  Bank &amp; Card Offers Available
+                </strong>
+                <span style={{ fontSize: 11, color: "var(--sub)" }}>
+                  10%–15% instant savings with City Amex, BRAC Bank &amp; EBL
+                </span>
+              </div>
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "var(--indigo)", whiteSpace: "nowrap" }}>
+              View Offers →
+            </span>
+          </div>
 
           {/* Size Selector Header with Size Guide CTA */}
           {product.sizes && product.sizes.length > 0 && (
@@ -322,11 +360,11 @@ export default function ProductDetailPage() {
           </div>
 
           {/* Main Action Buttons */}
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20, alignItems: "stretch" }}>
             <button
               type="button"
               className="btn btn--primary"
-              style={{ flex: 1.2, padding: "14px 20px", fontSize: 14, fontWeight: 900 }}
+              style={{ flex: 1.2, padding: "14px 18px", fontSize: 14, fontWeight: 900 }}
               onClick={handleAdd}
               disabled={product.stockStatus === "outofstock"}
             >
@@ -339,11 +377,41 @@ export default function ProductDetailPage() {
             <button
               type="button"
               className="btn btn--outline"
-              style={{ flex: 1, padding: "14px 20px", fontSize: 14, fontWeight: 900, textAlign: "center", cursor: "pointer", background: "var(--surface-2)" }}
+              style={{ flex: 1, padding: "14px 18px", fontSize: 14, fontWeight: 900, textAlign: "center", cursor: "pointer", background: "var(--surface-2)" }}
               onClick={handleBuyNow}
               disabled={product.stockStatus === "outofstock"}
             >
               ⚡ এখনই কিনুন (BUY NOW)
+            </button>
+            <button
+              type="button"
+              onClick={() => toggleWishlist(product)}
+              aria-label={isInWishlist(product.id) ? "Remove from wishlist" : "Add to wishlist"}
+              title={isInWishlist(product.id) ? "Remove from Wishlist" : "Save to Wishlist"}
+              style={{
+                width: 50,
+                borderRadius: "var(--radius)",
+                border: "1px solid var(--border)",
+                background: isInWishlist(product.id) ? "rgba(225, 41, 62, 0.1)" : "var(--surface-2)",
+                color: isInWishlist(product.id) ? "var(--crimson)" : "var(--ink)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                padding: 0,
+                transition: "all 0.2s ease",
+              }}
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill={isInWishlist(product.id) ? "var(--crimson)" : "none"}
+                stroke={isInWishlist(product.id) ? "var(--crimson)" : "currentColor"}
+                strokeWidth="2.2"
+              >
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+              </svg>
             </button>
           </div>
 
@@ -363,7 +431,16 @@ export default function ProductDetailPage() {
               className="btn btn--outline"
               style={{ flex: 1, fontSize: 12, padding: "8px 12px", fontWeight: 700 }}
             >
-              📖 Denim Care Guide
+              {(() => {
+                const cat = (product.category || "").toUpperCase();
+                if (cat.includes("JEAN") || cat.includes("DENIM")) return "📖 Denim Care Guide";
+                if (cat.includes("PANJABI") || cat.includes("PUNJABI")) return "📖 Panjabi Care Guide";
+                if (cat.includes("SHIRT") && !cat.includes("T-SHIRT")) return "📖 Shirt Care Guide";
+                if (cat.includes("T-SHIRT") || cat.includes("TEE") || cat.includes("TANK")) return "📖 T-Shirt Care Guide";
+                if (cat.includes("POLO")) return "📖 Polo Care Guide";
+                if (cat.includes("TROUSER") || cat.includes("PANT") || cat.includes("CHINO")) return "📖 Trousers Care Guide";
+                return "📖 Garment Care Guide";
+              })()}
             </button>
             <WhatsAppButton
               productName={product.name}
@@ -387,7 +464,29 @@ export default function ProductDetailPage() {
               </button>
               {activeAccordion === "fabric" && (
                 <div style={{ padding: "0 16px 14px", fontSize: 13, color: "var(--sub)", lineHeight: 1.6 }}>
-                  Crafted from 13.5 oz artisanal raw selvedge denim woven on vintage shuttle looms. Features genuine redline selvedge ID, antique brass donut buttons, and copper rivets.
+                  {(() => {
+                    if (product.fabric && product.fabric.trim().length > 10) return product.fabric;
+                    const cat = (product.category || "").toUpperCase();
+                    if (cat.includes("JEAN") || cat.includes("DENIM")) {
+                      return "Crafted from 13.5 oz artisanal raw selvedge denim woven on vintage shuttle looms. Features genuine redline selvedge ID, antique brass donut buttons, and copper rivets.";
+                    }
+                    if (cat.includes("PANJABI") || cat.includes("PUNJABI")) {
+                      return "Crafted from 100% Egyptian Giza combed cotton & dobby jacquard weaves. Features high-density artisanal embroidery, tailored band collar, and natural coconut buttons.";
+                    }
+                    if (cat.includes("SHIRT") && !cat.includes("T-SHIRT")) {
+                      return "Tailored from breathable high-count cotton poplin and linen blends. Engineered with reinforced side gussets, contoured camp collar, and mother-of-pearl buttons.";
+                    }
+                    if (cat.includes("T-SHIRT") || cat.includes("TEE") || cat.includes("TANK")) {
+                      return "Cut from 220–240 GSM heavyweight pre-shrunk compact combed cotton. Zero-torque knit prevents seam twisting; double-needle bound ribbed neck retains shape.";
+                    }
+                    if (cat.includes("POLO")) {
+                      return "Knitted from premium combed compact cotton honeycomb piqué. Features anti-curl tipped flat-knit collar, micro-vent side seams, and reinforced two-button placket.";
+                    }
+                    if (cat.includes("TROUSER") || cat.includes("PANT") || cat.includes("CHINO")) {
+                      return "Constructed from heavy stretch cotton twill and high-tensile ripstop. Features articulated mobility knee darts, deep utility slant pockets, and reinforced stress bar-tacks.";
+                    }
+                    return "Engineered with premium natural cotton fibers and reinforced stitching for supreme endurance and everyday comfort.";
+                  })()}
                 </div>
               )}
             </div>
@@ -483,6 +582,8 @@ export default function ProductDetailPage() {
       <DenimCareGuideModal
         isOpen={careGuideOpen}
         onClose={() => setCareGuideOpen(false)}
+        category={product.category}
+        productName={product.name}
       />
 
       <StoreStockModal
@@ -490,6 +591,11 @@ export default function ProductDetailPage() {
         onClose={() => setStockModalOpen(false)}
         product={product}
         selectedSize={selectedSize}
+      />
+
+      <BankOffersModal
+        isOpen={bankOffersOpen}
+        onClose={() => setBankOffersOpen(false)}
       />
 
       <style>{`

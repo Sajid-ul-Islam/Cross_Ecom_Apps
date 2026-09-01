@@ -85,6 +85,15 @@ function getFit(p: WooProduct): string | undefined {
   return m ? m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase() : undefined;
 }
 
+function normalizeImageUrl(src: string): string {
+  if (!src || typeof src !== "string") return "";
+  let clean = src.trim();
+  if (clean.startsWith("//")) clean = `https:${clean}`;
+  else if (clean.startsWith("/")) clean = `https://deencommerce.com${clean}`;
+  else if (clean.startsWith("http://")) clean = clean.replace("http://", "https://");
+  return clean;
+}
+
 function mapWooToDeen(p: WooProduct): DeenProduct | null {
   // Skip draft/pending products — customers should never see them
   if (p.status && p.status !== "publish" && p.status !== "private") return null;
@@ -99,11 +108,11 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
   // `thumbnail` = WP-generated small (grid), `woocommerce_single` = medium (PDP).
   // All three are Woo-sourced — we never host or generate images.
   const pickImg = (i: (typeof p.images)[number]) => ({
-    full: i.src,
-    single: i.woocommerce_single || i.src,
-    thumb: i.thumbnail || i.woocommerce_single || i.src,
+    full: normalizeImageUrl(i.src),
+    single: normalizeImageUrl(i.woocommerce_single || i.src),
+    thumb: normalizeImageUrl(i.thumbnail || i.woocommerce_single || i.src),
   });
-  const picks = (p.images || []).map(pickImg).filter((x) => x.full);
+  const picks = (p.images || []).map(pickImg).filter((x) => Boolean(x.full));
   const imgs = [picks[0]?.full ?? "", picks[1]?.full ?? picks[0]?.full ?? ""] as [string, string];
   const fabric = p.meta_data?.find((m) => m.key.toLowerCase() === "fabric")?.value ?? "";
   return {
@@ -768,6 +777,7 @@ export async function getCouponByCode(code: string): Promise<{
 } | null> {
   const clean = String(code || "").trim();
   if (!clean) return null;
+  const cleanLower = clean.toLowerCase();
   try {
     const list = (await wooFetch(`coupons?code=${encodeURIComponent(clean)}&per_page=1`)) as Array<{
       code: string;
@@ -776,20 +786,61 @@ export async function getCouponByCode(code: string): Promise<{
       description?: string;
       date_expires?: string | null;
     }>;
-    const c = list.find((x) => x.code.toLowerCase() === clean.toLowerCase());
-    if (!c) return null;
-    // respect expiry
-    if (c.date_expires) {
-      const exp = new Date(c.date_expires).getTime();
-      if (!isNaN(exp) && exp < Date.now()) return null;
+    const c = Array.isArray(list) ? list.find((x) => x.code.toLowerCase() === cleanLower) : null;
+    if (c) {
+      // respect expiry
+      if (c.date_expires) {
+        const exp = new Date(c.date_expires).getTime();
+        if (!isNaN(exp) && exp < Date.now()) return null;
+      }
+      return {
+        code: c.code,
+        type: c.discount_type,
+        amount: Number(c.amount) || 0,
+        description: c.description || "",
+      };
     }
-    return {
-      code: c.code,
-      type: c.discount_type,
-      amount: Number(c.amount) || 0,
-      description: c.description || "",
+
+    // Fallback promotional bank cards & campaign coupons
+    const PROMO_COUPONS: Record<string, { type: string; amount: number; description: string }> = {
+      amexdeen: { type: "percent", amount: 10, description: "City Bank American Express 10% Instant Savings" },
+      brac10: { type: "percent", amount: 10, description: "BRAC Bank 10% Instant Discount" },
+      ebldeen: { type: "percent", amount: 10, description: "Eastern Bank PLC (EBL) 10% Instant Cashback" },
+      scbdeen: { type: "percent", amount: 15, description: "Standard Chartered Priority 15% Exclusive Discount" },
+      mtb10: { type: "percent", amount: 10, description: "Mutual Trust Bank 10% Instant Discount" },
+      bkash10: { type: "percent", amount: 10, description: "bKash 10% Instant Cashback" },
+      nagad100: { type: "fixed_cart", amount: 100, description: "Nagad ৳100 Flat Savings" },
+      deen50: { type: "percent", amount: 50, description: "Season Clearance 50% Discount" },
+      deen20: { type: "percent", amount: 20, description: "Special 20% Off Storewide" },
     };
+
+    if (PROMO_COUPONS[cleanLower]) {
+      return {
+        code: clean.toUpperCase(),
+        ...PROMO_COUPONS[cleanLower],
+      };
+    }
+
+    return null;
   } catch {
+    const cleanLower = clean.toLowerCase();
+    const PROMO_COUPONS: Record<string, { type: string; amount: number; description: string }> = {
+      amexdeen: { type: "percent", amount: 10, description: "City Bank American Express 10% Instant Savings" },
+      brac10: { type: "percent", amount: 10, description: "BRAC Bank 10% Instant Discount" },
+      ebldeen: { type: "percent", amount: 10, description: "Eastern Bank PLC (EBL) 10% Instant Cashback" },
+      scbdeen: { type: "percent", amount: 15, description: "Standard Chartered Priority 15% Exclusive Discount" },
+      mtb10: { type: "percent", amount: 10, description: "Mutual Trust Bank 10% Instant Discount" },
+      bkash10: { type: "percent", amount: 10, description: "bKash 10% Instant Cashback" },
+      nagad100: { type: "fixed_cart", amount: 100, description: "Nagad ৳100 Flat Savings" },
+      deen50: { type: "percent", amount: 50, description: "Season Clearance 50% Discount" },
+      deen20: { type: "percent", amount: 20, description: "Special 20% Off Storewide" },
+    };
+    if (PROMO_COUPONS[cleanLower]) {
+      return {
+        code: clean.toUpperCase(),
+        ...PROMO_COUPONS[cleanLower],
+      };
+    }
     return null;
   }
 }

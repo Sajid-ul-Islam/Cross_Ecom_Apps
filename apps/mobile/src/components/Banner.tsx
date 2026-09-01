@@ -1,16 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
-import { Gift, Truck, Sparkles, Tag, ArrowRight } from "./Icons";
+import { Gift, Truck, Sparkles, Tag, ArrowRight, X, CreditCard } from "./Icons";
 import { useCart } from "../context/CartContext";
 import { useTheme } from "../context/ThemeContext";
 import { bdt, CASHBACK_TIERS, fetchActiveCampaigns, ActiveCampaignState } from "../services/gateway";
+import { BankOffersModal } from "./BankOffersModal";
 
 export const CashbackBanner: React.FC = () => {
   const router = useRouter();
   const { subtotal } = useCart();
   const { colors } = useTheme();
   const [campaignState, setCampaignState] = useState<ActiveCampaignState | null>(null);
+  const [dismissed, setDismissed] = useState(false);
+  const [bankModalOpen, setBankModalOpen] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
     fetchActiveCampaigns().then((data) => {
@@ -18,7 +22,17 @@ export const CashbackBanner: React.FC = () => {
     });
   }, []);
 
-  // When cashback is explicitly disabled or activeCampaign is a Flat 50% Sale:
+  // Auto-rotate slides every 5 seconds
+  useEffect(() => {
+    if (dismissed) return;
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % 3);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [dismissed]);
+
+  if (dismissed) return null;
+
   const isCashbackActive = campaignState?.cashback?.enabled ?? false;
   const isSaleActive = campaignState?.sale?.enabled ?? true;
   const saleInfo = campaignState?.sale || {
@@ -28,132 +42,135 @@ export const CashbackBanner: React.FC = () => {
     discountRange: "40%–50%",
   };
 
-  // If Cashback is enabled, show the cashback progress bar
-  if (isCashbackActive) {
-    const isTier2 = subtotal >= CASHBACK_TIERS.tier2.minSpend;
-    const isTier1 = subtotal >= CASHBACK_TIERS.tier1.minSpend;
-    const progress = Math.min(1, subtotal / CASHBACK_TIERS.tier2.minSpend);
-    const accentColor = isTier2 ? colors.emerald : isTier1 ? colors.denimStitch : colors.indigo;
-
-    return (
-      <View style={{
-        backgroundColor: colors.card,
-        borderRadius: 8,
-        padding: 12,
-        marginHorizontal: 16,
-        marginVertical: 8,
-        borderWidth: 1,
-        borderColor: colors.border,
-      }}>
-        <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
-          <View style={{
-            width: 32, height: 32, borderRadius: 16,
-            backgroundColor: colors.indigoLight,
-            alignItems: "center", justifyContent: "center", marginRight: 10,
-          }}>
-            <Gift size={16} color={accentColor} />
-          </View>
-          <View style={{ flex: 1 }}>
-            {isTier2 ? (
-              <Text style={{ fontSize: 12, fontWeight: "800", color: colors.emerald }}>
-                🎉 MAXIMUM ৳700 CASHBACK UNLOCKED!
-              </Text>
-            ) : isTier1 ? (
-              <Text style={{ fontSize: 12, fontWeight: "800", color: colors.denimStitch }}>
-                ✨ ৳500 CASHBACK UNLOCKED! Add {bdt(3000 - subtotal)} for ৳700
-              </Text>
-            ) : (
-              <Text style={{ fontSize: 12, color: colors.ink }}>
-                Add{" "}
-                <Text style={{ fontWeight: "700", color: colors.indigo }}>{bdt(2500 - subtotal)}</Text>
-                {" "}for{" "}
-                <Text style={{ fontWeight: "700", color: colors.emerald }}>৳500 CASHBACK</Text>
-              </Text>
-            )}
-            <Text style={{ fontSize: 10, color: colors.sub, marginTop: 2 }}>
-              Instant Cashback: ৳500 off on ৳2,500+ · ৳700 off on ৳3,000+
-            </Text>
-          </View>
-        </View>
-
-        <View style={{
-          height: 6, backgroundColor: colors.paper,
-          borderRadius: 3, overflow: "hidden",
-          borderWidth: 1, borderColor: colors.borderLight,
-        }}>
-          <View style={{
-            width: `${progress * 100}%` as any,
-            height: "100%",
-            borderRadius: 3,
-            backgroundColor: accentColor,
-          }} />
-        </View>
-      </View>
-    );
-  }
-
-  // If Flat Sale is active (e.g. Up to 50% discount sale)
-  if (isSaleActive) {
-    return (
-      <TouchableOpacity
-        activeOpacity={0.88}
-        onPress={() => router.push("/(tabs)/shop")}
+  return (
+    <>
+      <View
         style={{
           backgroundColor: colors.card,
           borderRadius: 8,
           padding: 12,
           marginHorizontal: 16,
-          marginVertical: 8,
+          marginVertical: 6,
           borderWidth: 1,
-          borderColor: colors.crimson,
-          shadowColor: colors.crimson,
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.08,
-          shadowRadius: 6,
-          elevation: 2,
+          borderColor: currentSlide === 1 ? colors.indigo : currentSlide === 2 ? colors.emerald : colors.crimson,
+          position: "relative",
         }}
       >
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-          <View style={{
-            width: 34, height: 34, borderRadius: 17,
-            backgroundColor: "rgba(225, 41, 62, 0.12)",
-            alignItems: "center", justifyContent: "center",
-          }}>
-            <Tag size={18} color={colors.crimson} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
-              <View style={{ backgroundColor: colors.crimson, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
-                <Text style={{ color: "#FFFFFF", fontSize: 9, fontWeight: "900", letterSpacing: 0.5 }}>
-                  {saleInfo.badge}
-                </Text>
+        {/* Dismiss [X] Button */}
+        <TouchableOpacity
+          onPress={() => setDismissed(true)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={{
+            position: "absolute",
+            top: 6,
+            right: 6,
+            zIndex: 10,
+            padding: 4,
+          }}
+        >
+          <X size={14} color={colors.sub} />
+        </TouchableOpacity>
+
+        {/* Slide 0: Flat Sale / Clearance */}
+        {currentSlide === 0 && (
+          <TouchableOpacity
+            activeOpacity={0.88}
+            onPress={() => router.push("/(tabs)/shop")}
+            style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingRight: 16 }}
+          >
+            <View style={{
+              width: 32, height: 32, borderRadius: 16,
+              backgroundColor: "rgba(225, 41, 62, 0.12)",
+              alignItems: "center", justifyContent: "center",
+            }}>
+              <Tag size={16} color={colors.crimson} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                <View style={{ backgroundColor: colors.crimson, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3 }}>
+                  <Text style={{ color: "#FFFFFF", fontSize: 8.5, fontWeight: "900" }}>{saleInfo.badge}</Text>
+                </View>
+                <Text style={{ fontSize: 12, fontWeight: "900", color: colors.crimson }}>{saleInfo.title}</Text>
               </View>
-              <Text style={{ fontSize: 13, fontWeight: "900", color: colors.crimson, letterSpacing: 0.3 }}>
-                {saleInfo.title}
+              <Text style={{ fontSize: 10.5, color: colors.sub }} numberOfLines={1}>{saleInfo.subtitle}</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* Slide 1: Bank & Card Offers */}
+        {currentSlide === 1 && (
+          <TouchableOpacity
+            activeOpacity={0.88}
+            onPress={() => setBankModalOpen(true)}
+            style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingRight: 16 }}
+          >
+            <View style={{
+              width: 32, height: 32, borderRadius: 16,
+              backgroundColor: "rgba(99, 102, 241, 0.12)",
+              alignItems: "center", justifyContent: "center",
+            }}>
+              <CreditCard size={16} color={colors.indigo} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                <View style={{ backgroundColor: colors.indigo, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3 }}>
+                  <Text style={{ color: "#FFFFFF", fontSize: 8.5, fontWeight: "900" }}>BANK OFFERS</Text>
+                </View>
+                <Text style={{ fontSize: 12, fontWeight: "900", color: colors.indigo }}>UP TO 15% CARD SAVINGS</Text>
+              </View>
+              <Text style={{ fontSize: 10.5, color: colors.sub }} numberOfLines={1}>
+                City Amex, BRAC Bank, EBL, SCB &amp; 0% EMI Available · Tap to View
               </Text>
             </View>
-            <Text style={{ fontSize: 11, color: colors.sub, lineHeight: 15 }} numberOfLines={1}>
-              {saleInfo.subtitle}
-            </Text>
-          </View>
-          <View style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 2,
-            backgroundColor: colors.indigoDark,
-            paddingHorizontal: 8,
-            paddingVertical: 5,
-            borderRadius: 6,
-          }}>
-            <Text style={{ color: "#FFFFFF", fontSize: 10, fontWeight: "800", letterSpacing: 0.5 }}>SHOP</Text>
-            <ArrowRight size={12} color="#FFFFFF" />
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  }
+          </TouchableOpacity>
+        )}
 
-  return null;
+        {/* Slide 2: Instant Cashback Progress */}
+        {currentSlide === 2 && (
+          <View>
+            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 6, paddingRight: 16 }}>
+              <View style={{
+                width: 32, height: 32, borderRadius: 16,
+                backgroundColor: "rgba(16, 185, 129, 0.12)",
+                alignItems: "center", justifyContent: "center", marginRight: 10,
+              }}>
+                <Gift size={16} color={colors.emerald} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 12, fontWeight: "800", color: colors.emerald }}>
+                  🎁 INSTANT CASHBACK: UP TO ৳700
+                </Text>
+                <Text style={{ fontSize: 10, color: colors.sub, marginTop: 1 }}>
+                  ৳500 on ৳2,500+ · ৳700 on ৳3,000+ orders
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Slide indicator dots */}
+        <View style={{ flexDirection: "row", justifyContent: "center", gap: 4, marginTop: 6 }}>
+          {[0, 1, 2].map((idx) => (
+            <View
+              key={idx}
+              style={{
+                width: idx === currentSlide ? 12 : 4,
+                height: 3,
+                borderRadius: 2,
+                backgroundColor: idx === currentSlide ? colors.indigo : colors.border,
+              }}
+            />
+          ))}
+        </View>
+      </View>
+
+      {/* Bank Offers Modal */}
+      <BankOffersModal
+        visible={bankModalOpen}
+        onClose={() => setBankModalOpen(false)}
+      />
+    </>
+  );
 };
 
 export const DeliveryNoticeBanner: React.FC = () => {
@@ -180,4 +197,5 @@ export const DeliveryNoticeBanner: React.FC = () => {
     </View>
   );
 };
+
 

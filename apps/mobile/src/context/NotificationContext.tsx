@@ -97,10 +97,45 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     (async () => {
       try {
         const notifJson = await AsyncStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
-        if (notifJson) {
+        if (notifJson && JSON.parse(notifJson).length > 0) {
           setNotifications(JSON.parse(notifJson));
         } else {
-          await AsyncStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify([]));
+          const defaultList: NotificationItem[] = [
+            {
+              id: "notif_flash_sale",
+              type: "PROMO",
+              title: "🔥 Flat up to 50% Off Season Clearance",
+              body: "Save 40%–50% on selected raw selvedge denim, panjabis & artisanal shirts. Limited time only!",
+              timestamp: new Date().toISOString(),
+              read: false,
+              promoCode: "DEEN50",
+              actionUrl: "/(tabs)/shop",
+              actionLabel: "Shop Sale Now →",
+            },
+            {
+              id: "notif_cashback",
+              type: "PROMO",
+              title: "🎁 Up to ৳700 Instant Cashback Available",
+              body: "Get ৳500 instant cashback on orders over ৳2,500 and ৳700 on ৳3,000+. Automatically applies at checkout.",
+              timestamp: new Date(Date.now() - 3600000).toISOString(),
+              read: false,
+              actionUrl: "/(tabs)/shop",
+              actionLabel: "Unlock Cashback →",
+            },
+            {
+              id: "notif_bank_cards",
+              type: "PROMO",
+              title: "💳 Up to 15% Bank Card Instant Savings",
+              body: "Use City Bank Amex (code: AMEXDEEN), BRAC Bank (code: BRAC10), EBL (code: EBLDEEN) or SCB Priority for instant discount.",
+              timestamp: new Date(Date.now() - 7200000).toISOString(),
+              read: false,
+              promoCode: "AMEXDEEN",
+              actionUrl: "/(tabs)/shop",
+              actionLabel: "View Eligible Items →",
+            },
+          ];
+          setNotifications(defaultList);
+          await AsyncStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(defaultList));
         }
 
         const bcJson = await AsyncStorage.getItem(BROADCASTS_STORAGE_KEY);

@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { useRouter } from "expo-router";
-import { ShoppingBag, ArrowLeft, Search, Bell } from "./Icons";
+import { ShoppingBag, ArrowLeft, Search, Bell, Heart } from "./Icons";
 import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useCart } from "../context/CartContext";
+import { useWishlist } from "../context/WishlistContext";
 import { useNotifications } from "../context/NotificationContext";
 import { NotificationModal } from "./NotificationModal";
+import { WishlistModal } from "./WishlistModal";
 
 interface HeaderProps {
   title?: string;
@@ -31,8 +33,10 @@ export const Header: React.FC<HeaderProps> = ({
   const { colors, isDark } = useTheme();
   const styles = createStyles(colors);
   const { totalItems } = useCart();
+  const { wishlist } = useWishlist();
   const { unreadCount } = useNotifications();
   const [notifVisible, setNotifVisible] = useState(false);
+  const [wishlistVisible, setWishlistVisible] = useState(false);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.paper, borderBottomColor: colors.border }]}>
@@ -108,6 +112,22 @@ export const Header: React.FC<HeaderProps> = ({
             </TouchableOpacity>
           )}
 
+          {/* Wishlist Heart Button */}
+          <TouchableOpacity
+            style={[styles.notifButton, { backgroundColor: colors.cardSecondary }]}
+            onPress={() => setWishlistVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`Wishlist, ${wishlist.length} saved items`}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Heart size={20} color={wishlist.length > 0 ? colors.crimson : colors.ink} />
+            {wishlist.length > 0 && (
+              <View style={[styles.notifBadge, { backgroundColor: colors.crimson }]}>
+                <Text style={styles.notifBadgeText}>{wishlist.length > 9 ? "9+" : wishlist.length}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
           {showBag && (
             <TouchableOpacity
               style={[styles.bagButton, { backgroundColor: colors.cardSecondary }]}
@@ -131,6 +151,12 @@ export const Header: React.FC<HeaderProps> = ({
       <NotificationModal
         visible={notifVisible}
         onClose={() => setNotifVisible(false)}
+      />
+
+      {/* Wishlist Drawer Modal */}
+      <WishlistModal
+        visible={wishlistVisible}
+        onClose={() => setWishlistVisible(false)}
       />
     </View>
   );

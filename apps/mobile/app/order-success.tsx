@@ -14,6 +14,7 @@ import { CheckCircle2, Package, ArrowRight, Home, PhoneCall } from "../src/compo
 import { LottieAnimation } from "../src/components/LottieAnimation";
 import { useTheme } from "../src/context/ThemeContext";
 import { ScreenShell } from "../src/components/ScreenShell";
+import { OrderStatusStepper } from "../src/components/OrderStatusStepper";
 import { bdt, lookupCustomer, registerCustomer } from "../src/services/gateway";
 import { ThemeColors } from "../src/theme/colors";
 import { sharedStyles } from "../src/theme/sharedStyles";
@@ -78,6 +79,22 @@ export default function OrderSuccessScreen() {
             </View>
           </View>
         </View>
+
+        {/* Graphical 5-Step Order Status Stepper */}
+        <OrderStatusStepper
+          order={{
+            id: params.orderId || params.orderNumber || "ORD-NEW",
+            number: params.orderNumber || "DC-???",
+            status: "processing",
+            total: Number(params.total || 0),
+            deliveryFee: 50,
+            paymentMethodTitle: "Cash on Delivery",
+            createdAt: new Date().toISOString(),
+            items: [],
+            billing: { name: params.guestName || "", phone: params.guestPhone || "", address: "", city: "Dhaka", district: "BD-13" },
+            shipping: { name: params.guestName || "", phone: params.guestPhone || "", address: "", city: "Dhaka", district: "BD-13" },
+          }}
+        />
 
         {/* What happens next */}
         <View style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>

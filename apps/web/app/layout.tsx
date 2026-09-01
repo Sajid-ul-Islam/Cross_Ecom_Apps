@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { CartProvider } from "@/lib/cart";
+import { WishlistProvider } from "@/lib/wishlist";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import DynamicCampaignBanner from "@/components/DynamicCampaignBanner";
@@ -51,14 +52,16 @@ export default function RootLayout({
       </head>
       <body>
         <CartProvider>
-          <div className="site-header-wrapper">
-            <DynamicCampaignBanner />
-            <Header />
-          </div>
-          <main className="page-content">{children}</main>
-          <Footer />
-          <MobileBottomNav />
-          <ScrollToTop />
+          <WishlistProvider>
+            <div className="site-header-wrapper">
+              <DynamicCampaignBanner />
+              <Header />
+            </div>
+            <main className="page-content">{children}</main>
+            <Footer />
+            <MobileBottomNav />
+            <ScrollToTop />
+          </WishlistProvider>
         </CartProvider>
       </body>
     </html>
