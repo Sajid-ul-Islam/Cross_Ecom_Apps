@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { BD_DISTRICTS } from "@/lib/districts";
-import { API_URL, fetchOrders, fetchDistricts, loginWithGoogle, loginWithFacebook, fetchOutlets, fetchAppSettings, type OrderResult, type BdDistrict, type Outlet } from "@/lib/api";
+import { API_URL, fetchOrders, fetchDistricts, loginCustomer, registerCustomer, loginWithGoogle, loginWithFacebook, fetchOutlets, fetchAppSettings, type OrderResult, type BdDistrict, type Outlet } from "@/lib/api";
 import AdminAnalyticsModal from "@/components/AdminAnalyticsModal";
 
 const PROFILE_STORAGE_KEY = "deen_web_user_profile";
@@ -99,24 +99,19 @@ export default function ProfilePage() {
     }
     setAuthSubmitting(true);
     try {
-      const res = await fetch(`${API_URL}/v1/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: loginIdent.trim(), password: loginPass }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        const role = data.role === "admin" ? "admin" : "customer";
+      const data = await loginCustomer(loginIdent.trim(), loginPass);
+      if (data.success) {
+        const role = data.role === "admin" || (data.user && data.user.role === "admin") ? "admin" : "customer";
         const updated: UserProfile = {
           ...profile,
-          name: data.name || loginIdent.trim(),
-          email: data.email || "",
+          name: data.name || (data.user && data.user.name) || loginIdent.trim(),
+          email: data.email || (data.user && data.user.email) || "",
           role,
           isGuest: false,
         };
         setProfile(updated);
         localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
-        setAuthNotice({ type: "success", text: `Welcome back, ${data.name || loginIdent}!` });
+        setAuthNotice({ type: "success", text: `Welcome back, ${updated.name}!` });
         setTimeout(() => {
           setAuthSubmitting(false);
           setAuthModalOpen(false);
@@ -144,12 +139,7 @@ export default function ProfilePage() {
     }
     setAuthSubmitting(true);
     try {
-      const res = await fetch(`${API_URL}/v1/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: signupName.trim(), phone: cleanPhone, email: signupEmail.trim() }),
-      });
-      await res.json();
+      const data = await registerCustomer(signupName.trim(), cleanPhone, "DeenCustomerPass@2026", signupEmail.trim());
       const updated: UserProfile = {
         ...profile,
         name: signupName.trim(),

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { API_URL, type OrderResult } from "@/lib/api";
+import { submitReturnRequest, type OrderResult } from "@/lib/api";
 
 interface ReturnExchangeModalProps {
   isOpen: boolean;
@@ -29,20 +29,15 @@ export default function ReturnExchangeModal({
     setNotice(null);
 
     try {
-      const res = await fetch(`${API_URL}/v1/deen/returns`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId: order.id,
-          orderNumber: order.number,
-          phone: order.phone || "",
-          reason,
-          details: details.trim(),
-          items: order.lines || [],
-        }),
+      const data = await submitReturnRequest({
+        orderId: order.id,
+        orderNumber: order.number,
+        phone: order.phone || "",
+        reason,
+        details: details.trim(),
+        items: order.lines || [],
       });
-      const data = await res.json();
-      if (res.ok && data.success) {
+      if (data.success) {
         setNotice({ type: "success", text: "✓ Return/Exchange request submitted! Our concierge team will contact you within 24 hours." });
         setTimeout(() => {
           setSubmitting(false);

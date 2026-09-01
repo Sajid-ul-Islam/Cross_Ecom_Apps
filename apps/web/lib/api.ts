@@ -836,6 +836,64 @@ export async function loginWithFacebook(
   }
 }
 
+export async function loginCustomer(
+  identifier: string,
+  password: string
+): Promise<{ success: boolean; token?: string; user?: any; name?: string; email?: string; role?: string; message?: string }> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: identifier.trim(), password }),
+    });
+    const data = await res.json();
+    if (!res.ok && !data.message) {
+      return { success: false, message: data.error || `Login failed (HTTP ${res.status})` };
+    }
+    return data;
+  } catch (err: any) {
+    return { success: false, message: err?.message || "Sign in network error. Please check your connection." };
+  }
+}
+
+export async function registerCustomer(
+  name: string,
+  phone: string,
+  password: string,
+  email?: string
+): Promise<{ success: boolean; token?: string; user?: any; name?: string; role?: string; message?: string }> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: phone.trim(),
+        name: name.trim(),
+        phone: phone.trim(),
+        password,
+        email: email?.trim(),
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok && !data.message) {
+      return { success: false, message: data.error || `Registration failed (HTTP ${res.status})` };
+    }
+    return data;
+  } catch (err: any) {
+    return { success: false, message: err?.message || "Registration network error. Please check your connection." };
+  }
+}
+
+export async function validateCoupon(code: string): Promise<{ valid: boolean; code?: string; amount?: number; type?: "fixed" | "percent"; description?: string; message?: string }> {
+  try {
+    const clean = code.trim().toUpperCase();
+    const res = await apiFetch(`${API_URL}/v1/deen/coupon/${encodeURIComponent(clean)}`);
+    return await res.json();
+  } catch (err: any) {
+    return { valid: false, message: "Could not verify coupon." };
+  }
+}
+
 /* ------------------------- outlets (source of truth = gateway env) ---- */
 
 export interface Outlet {
@@ -888,4 +946,25 @@ export async function fetchAppSettings(): Promise<AppSettings | null> {
     if (res.ok) return res.json();
   } catch {}
   return null;
+}
+
+/** Submit a return / exchange request to the gateway. */
+export async function submitReturnRequest(payload: {
+  orderId: string;
+  orderNumber: string;
+  phone: string;
+  reason: string;
+  details: string;
+  items: any[];
+}): Promise<{ success: boolean; message?: string }> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/returns`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return await res.json();
+  } catch (err: any) {
+    return { success: false, message: err?.message || "Network error submitting return request." };
+  }
 }

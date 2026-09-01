@@ -36,6 +36,7 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
     setLoading(true);
     try {
       const headers = {
+        "x-api-key": "fa002b126085801f23d9375d94409752503639919e39690c42877fc58c624973",
         "x-gateway-key": "deen_mobile_gateway_secret_2026",
       };
 
@@ -76,6 +77,7 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
+          "x-api-key": "fa002b126085801f23d9375d94409752503639919e39690c42877fc58c624973",
           "x-gateway-key": "deen_mobile_gateway_secret_2026",
         },
         body: JSON.stringify({

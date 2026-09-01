@@ -44,7 +44,7 @@ async function runTests() {
   assert(guestRes.statusCode === 201, `Guest signup status code is 201 (got ${guestRes.statusCode})`);
   const guestData = JSON.parse(guestRes.payload);
   assert(guestData.success === true, "Guest signup success is true");
-  assert(typeof guestData.token === "string" && guestData.token.startsWith("guest_"), `Guest token format valid: ${guestData.token}`);
+  assert(typeof guestData.token === "string" && (guestData.token.startsWith("guest_") || guestData.token.startsWith("gst.")), `Guest token format valid: ${guestData.token}`);
   assert(/^01[3-9]\d{8}$/.test(guestData.phone), `Guest phone format valid BD number: ${guestData.phone}`);
 
   // 2. Test Guest Token Verification (`GET /v1/auth/guest/:token`)

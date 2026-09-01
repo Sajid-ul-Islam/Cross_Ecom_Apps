@@ -745,7 +745,11 @@ export function verifySessionToken(tokenString: string): SessionTokenPayload | n
 
 function resolveGuestSession(token?: string): { token: string; phone: string; name: string; createdAt: number; orderId?: number } | null {
   if (!token) return null;
-  const clean = token.replace(/^bearer\s+/i, "").trim();
+  let decoded = token;
+  try {
+    decoded = decodeURIComponent(token);
+  } catch {}
+  const clean = decoded.replace(/^bearer\s+/i, "").trim();
 
   // 1. Check stateless cryptographic token
   const verified = verifySessionToken(clean);
@@ -767,7 +771,11 @@ function resolveGuestSession(token?: string): { token: string; phone: string; na
 
 function resolveAuthSession(token?: string): { token: string; phone?: string; username?: string; name?: string; email?: string; role?: string; userId?: string | number; createdAt?: number } | null {
   if (!token) return null;
-  const clean = token.replace(/^bearer\s+/i, "").trim();
+  let decoded = token;
+  try {
+    decoded = decodeURIComponent(token);
+  } catch {}
+  const clean = decoded.replace(/^bearer\s+/i, "").trim();
 
   // 1. Check stateless cryptographic token
   const verified = verifySessionToken(clean);
@@ -3855,8 +3863,13 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   });
 
   /* ---- guest session lookup (resume in-flight guest) ---- */
-  app.get("/v1/auth/guest/:token", async (req, reply) => {
-    const session = resolveGuestSession((req.params as any).token);
+  const handleGuestLookup = async (req: any, reply: any) => {
+    const rawToken =
+      req.params?.token ||
+      req.params?.["*"] ||
+      req.query?.token ||
+      (req.headers.authorization ? String(req.headers.authorization).replace(/^bearer\s+/i, "") : "");
+    const session = resolveGuestSession(rawToken);
     if (!session) {
       return reply.code(404).send({ success: false, message: "Guest session not found or expired." });
     }
@@ -3876,7 +3889,10 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       phone: session.phone,
       createdAt: session.createdAt,
     });
-  });
+  };
+
+  app.get("/v1/auth/guest", handleGuestLookup);
+  app.get("/v1/auth/guest/*", handleGuestLookup);
 
   /* ---- register / convert a recognized guest into a customer ---- */
   /* Body: { name, phone, email? } links the phone to a customer record

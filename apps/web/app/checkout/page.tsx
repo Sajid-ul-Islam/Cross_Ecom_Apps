@@ -14,6 +14,7 @@ import {
   fetchProduct,
   loginWithGoogle,
   loginWithFacebook,
+  validateCoupon,
   type ActiveCampaignState,
   type BdDistrict,
 } from "@/lib/api";
@@ -358,13 +359,12 @@ function CheckoutContent() {
     setCouponBusy(true);
     setCouponError("");
     try {
-      const res = await fetch(`${API_URL}/v1/deen/coupon/${encodeURIComponent(code)}`);
-      const data = await res.json();
-      if (res.ok && data.valid) {
+      const data = await validateCoupon(code);
+      if (data.valid) {
         setCouponInfo({
-          code: data.code,
+          code: data.code || code,
           type: data.type || "fixed",
-          amount: data.amount,
+          amount: data.amount || 0,
           description: data.description || (data.type === "percent" ? `${data.amount}% OFF` : `৳${data.amount} discount`),
         });
       } else {

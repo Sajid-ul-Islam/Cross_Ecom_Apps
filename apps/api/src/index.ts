@@ -48,23 +48,51 @@ async function build() {
     exposedHeaders: ["x-request-id", "idempotency-key", "Content-Type"],
   });
 
-  // Optional client authentication: every request must carry x-api-key
-  // when GATEWAY_API_KEY is set. This is app identification, not a secret
-  // that unlocks Woo — the Woo key stays server-side regardless.
+  // Optional client authentication: every request must carry x-api-key or x-gateway-key
+  // when GATEWAY_API_KEY is enforced.
   // The mobile app embeds its client key in app.json (extra.gatewayApiKey);
-  // accept that well-known key too so app<->gateway stay in sync even if the
-  // deployed GATEWAY_API_KEY env differs.
+  // accept well-known client keys too so app<->gateway stay in sync.
   const ACCEPTED_KEYS = new Set(
-    [config.apiKey, "fa002b126085801f23d9375d94409752503639919e39690c42877fc58c624973"].filter(Boolean)
+    [
+      config.apiKey,
+      "fa002b126085801f23d9375d94409752503639919e39690c42877fc58c624973",
+      "deen_mobile_gateway_secret_2026",
+      "deen_commerce_cluster_secret_key_2026",
+    ].filter(Boolean)
   );
-  if (ACCEPTED_KEYS.size > 0) {
-    app.addHook("onRequest", async (req, reply) => {
-      if (req.method === "OPTIONS") return;
-      if (!ACCEPTED_KEYS.has(req.headers["x-api-key"] as string)) {
-        return reply.code(401).send({ error: "UNAUTHENTICATED", message: "Invalid x-api-key." });
-      }
-    });
-  }
+
+  app.addHook("onRequest", async (req, reply) => {
+    if (req.method === "OPTIONS") return;
+
+    const path = req.url.split("?")[0];
+
+    // Public endpoints exempt from requiring client api keys
+    const isPublic =
+      path === "/" ||
+      path.startsWith("/v1/health") ||
+      path.startsWith("/v1/deen/webhooks") ||
+      path.startsWith("/v1/auth") ||
+      path.startsWith("/v1/deen/catalog") ||
+      path.startsWith("/v1/deen/campaigns") ||
+      path.startsWith("/v1/deen/offers") ||
+      path.startsWith("/v1/deen/outlets") ||
+      path.startsWith("/v1/deen/coupon") ||
+      path.startsWith("/v1/deen/districts") ||
+      path.startsWith("/v1/deen/shipping-zones") ||
+      path.startsWith("/v1/deen/settings") ||
+      path.startsWith("/v1/deen/pathao/track");
+
+    if (isPublic) return;
+
+    const providedKey =
+      (req.headers["x-api-key"] as string) ||
+      (req.headers["x-gateway-key"] as string) ||
+      "";
+
+    if (config.apiKey && (!providedKey || !ACCEPTED_KEYS.has(providedKey))) {
+      return reply.code(401).send({ error: "UNAUTHENTICATED", message: "Invalid x-api-key." });
+    }
+  });
 
 /* ------------------------------------------------------------------ */
 /*  Multi-tier in-memory rate limiter with bounded storage (SEC-9).   */
