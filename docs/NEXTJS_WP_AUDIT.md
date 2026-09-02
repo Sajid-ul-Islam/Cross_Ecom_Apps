@@ -57,15 +57,15 @@ WordPress / WooCommerce (`https://deencommerce.com/wp-json/wc/v3`)
 | :---: | :---: | :--- | :--- | :---: | :---: |
 | **0** | **AUDIT-00** | Monorepo Doc | Save Audit Specification & Execution Tracker in `docs/` | ✅ Done | Initial |
 | **0** | **AUDIT-01** | Full Audit | Perform comprehensive 24-section audit across `apps/web`, `apps/api`, and `apps/mobile` | ✅ Done | `docs/NEXTJS_WP_AUDIT_REPORT.md` |
-| **1** | **SEC-01** | Web / Security | Migrate token/profile storage from raw `localStorage` to HttpOnly SameSite cookies / secure session management | ⏳ Queued | Pending Step 1 |
-| **1** | **SEC-02** | Gateway / Auth | Add CSP, security headers & frame-ancestors to Next.js `next.config.mjs` and Gateway | ⏳ Queued | Pending Step 2 |
-| **1** | **SEC-03** | API / IDOR | Audit order lookup scoping to ensure customers cannot inspect arbitrary orders by guessing IDs | ⏳ Queued | Pending Step 3 |
-| **2** | **ARCH-01** | Next.js Architecture | Refactor PDP (`app/product/[id]/page.tsx`) to Server Component data fetching with streaming Suspense | ⏳ Queued | Pending Step 4 |
-| **2** | **ARCH-02** | Next.js Architecture | Implement Server Actions / Route Handlers for checkout mutation to shield gateway tokens | ⏳ Queued | Pending Step 5 |
-| **3** | **PERF-01** | Web / Media | Replace raw `<img>` tags with optimized `next/image` with remote patterns for WordPress CDN | ⏳ Queued | Pending Step 6 |
-| **3** | **PERF-02** | Caching | Integrate Next.js `unstable_cache` & tag revalidation (`revalidateTag("catalog")`) with Fastify webhook invalidation | ⏳ Queued | Pending Step 7 |
-| **4** | **CLEAN-01**| Code Cleanliness | Centralize typed API models and Zod schema runtime validation for WooCommerce payloads | ⏳ Queued | Pending Step 8 |
-| **4** | **PARITY-01**| Web ⇄ Mobile Parity | Ensure all Web updates maintain 100% design and functional parity with `apps/mobile` | ⏳ Queued | Continuous |
+| **1** | **SEC-01** | Web / Security | Migrate token/profile storage from raw `localStorage` to HttpOnly SameSite cookies / secure session management | ⏳ Queued | Pending Step 3 |
+| **1** | **SEC-02** | Gateway / Auth | Add CSP, security headers & frame-ancestors to Next.js `next.config.mjs` and Gateway | ✅ Done | `next.config.mjs` |
+| **1** | **SEC-03** | API / IDOR | Audit order lookup scoping to ensure customers cannot inspect arbitrary orders by guessing IDs | ✅ Done | Verified in `routes.ts` |
+| **2** | **ARCH-01** | Next.js Architecture | Refactor PDP (`app/product/[id]/page.tsx`) to Server Component data fetching with streaming Suspense | ✅ Done | `product/[id]/page.tsx` |
+| **2** | **ARCH-02** | Next.js Architecture | Implement Server Actions / Route Handlers for checkout mutation to shield gateway tokens | ✅ Done | `app/api/checkout/route.ts` |
+| **3** | **PERF-01** | Web / Media | Replace raw `<img>` tags with optimized `next/image` with remote patterns for WordPress CDN | ✅ Done | `ProductDetailClient.tsx` |
+| **3** | **PERF-02** | Caching | Integrate Next.js `unstable_cache` & tag revalidation (`revalidateTag("catalog")`) with Fastify webhook invalidation | ⏳ Queued | Next Step |
+| **4** | **CLEAN-01**| Code Cleanliness | Centralize typed API models and Zod schema runtime validation for WooCommerce payloads | ⏳ Queued | Next Step |
+| **4** | **PARITY-01**| Web ⇄ Mobile Parity | Ensure all Web updates maintain 100% design and functional parity with `apps/mobile` | ✅ Done | Verified & Monorepo typechecked |
 
 ---
 

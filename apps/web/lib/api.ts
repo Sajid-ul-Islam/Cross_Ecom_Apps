@@ -622,6 +622,33 @@ export async function placeOrder(
     idempotencyKey,
   };
 
+  // When running in the browser, route through the Next.js Route Handler to shield the Gateway API key
+  if (typeof window !== "undefined") {
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(orderPayload),
+      });
+      if (res.ok) {
+        return (await res.json()) as OrderResult;
+      }
+      if (res.status >= 400 && res.status < 500) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || data.error || "Order validation failed.");
+      }
+    } catch (err: any) {
+      if (err?.message && !err.message.includes("fetch")) {
+        throw err;
+      }
+      // If Route Handler is unreachable, fall through to direct multi-origin gateway failover
+    }
+  }
+
   const origins = Array.from(new Set([API_URL, BACKUP_GATEWAY_URL]));
 
   let lastError: Error | null = null;
