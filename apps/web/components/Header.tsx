@@ -302,17 +302,16 @@ export default function Header() {
               )}
             </Link>
 
-            {/* Dedicated Profile Action (Desktop & Mobile) */}
+            {/* Dedicated Profile Action (Desktop Only - Mobile uses bottom nav) */}
             <Link
               href="/profile"
-              className="nav__icon-btn"
+              className="nav__icon-btn nav__profile-desktop"
               aria-label="Account Profile"
               title={profile && !profile.isGuest ? `Account: ${profile.name || "Member"}` : "Account & Profile"}
               style={{
                 width: 38,
                 height: 38,
                 borderRadius: "50%",
-                display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 background: "var(--surface-2)",
