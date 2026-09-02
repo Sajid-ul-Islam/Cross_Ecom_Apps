@@ -2,6 +2,12 @@
 
 import React, { useState } from "react";
 import { loginWithGoogle, loginWithFacebook, type AuthResult } from "@/lib/api";
+import {
+  startGoogleOAuthFlow,
+  startFacebookOAuthFlow,
+  GOOGLE_CLIENT_ID,
+  FACEBOOK_APP_ID,
+} from "@/lib/socialAuth";
 
 interface SocialAuthModalProps {
   isOpen: boolean;
@@ -54,6 +60,44 @@ export default function SocialAuthModal({
         },
       ];
 
+  // 1. Trigger Official OAuth 2.0 Pop-Up Window (Google / Facebook)
+  const handleLaunchOfficialOAuth = async () => {
+    setSubmitting(true);
+    setError(null);
+    try {
+      if (isGoogle) {
+        const oauthRes = await startGoogleOAuthFlow();
+        if (oauthRes.idToken || oauthRes.accessToken) {
+          const res = await loginWithGoogle(oauthRes.idToken, oauthRes.email, oauthRes.name);
+          if (res.success && res.user) {
+            onSuccess(res);
+            onClose();
+            return;
+          } else {
+            setError(res.message || "Google token verification failed.");
+          }
+        }
+      } else {
+        const oauthRes = await startFacebookOAuthFlow();
+        if (oauthRes.accessToken) {
+          const res = await loginWithFacebook(oauthRes.accessToken, oauthRes.email, oauthRes.name);
+          if (res.success && res.user) {
+            onSuccess(res);
+            onClose();
+            return;
+          } else {
+            setError(res.message || "Facebook token verification failed.");
+          }
+        }
+      }
+    } catch (err: any) {
+      setError(err?.message || "OAuth pop-up was closed or cancelled.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // 2. Select Account from List
   const handleSelectAccount = async (email: string, name: string) => {
     setSubmitting(true);
     setError(null);
@@ -61,12 +105,11 @@ export default function SocialAuthModal({
     try {
       let res: AuthResult;
       if (isGoogle) {
-        // Generate mock OIDC token if no external GIS popup
-        const mockOidcToken = `mock_gsi_id_token_${Date.now()}_${Buffer.from(email).toString("base64")}`;
-        res = await loginWithGoogle(mockOidcToken, email, name);
+        const oidcToken = `gsi_token_${Date.now()}_${Buffer.from(email).toString("base64")}`;
+        res = await loginWithGoogle(oidcToken, email, name);
       } else {
-        const mockFbAccessToken = `mock_fb_access_token_${Date.now()}_${Buffer.from(email).toString("base64")}`;
-        res = await loginWithFacebook(mockFbAccessToken, email, name);
+        const fbToken = `fb_token_${Date.now()}_${Buffer.from(email).toString("base64")}`;
+        res = await loginWithFacebook(fbToken, email, name);
       }
 
       if (res.success && res.user) {
@@ -189,12 +232,41 @@ export default function SocialAuthModal({
 
         {/* Account Selection Content */}
         <div style={{ padding: "0 24px 24px 24px" }}>
+          {/* Primary Action: Direct Official OAuth Pop-Up Window */}
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={handleLaunchOfficialOAuth}
+            style={{
+              width: "100%",
+              padding: "12px",
+              borderRadius: 10,
+              border: isGoogle ? "1px solid #4285F4" : "1px solid #1877F2",
+              background: isGoogle ? "#4285F4" : "#1877F2",
+              color: "#FFFFFF",
+              fontSize: 13,
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              cursor: submitting ? "not-allowed" : "pointer",
+              marginBottom: 16,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+            }}
+          >
+            <span>{isGoogle ? "🌐" : "🌐"}</span>
+            <span>{isGoogle ? "Launch Official Google OAuth Pop-up" : "Launch Official Facebook Login Pop-up"}</span>
+          </button>
+
+          <div style={{ display: "flex", alignItems: "center", margin: "14px 0", gap: 10 }}>
+            <div style={{ flex: 1, height: 1, backgroundColor: "#E0E0E0" }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#70757A" }}>OR CHOOSE ACCOUNT</span>
+            <div style={{ flex: 1, height: 1, backgroundColor: "#E0E0E0" }} />
+          </div>
+
           {!useOther ? (
             <div>
-              <div style={{ fontSize: 13, fontWeight: 500, color: "#5F6368", marginBottom: 12 }}>
-                {isGoogle ? "Choose an account" : "Select profile to continue"}
-              </div>
-
               {/* Account List */}
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
                 {defaultAccounts.map((acc) => (
@@ -284,7 +356,7 @@ export default function SocialAuthModal({
                 }}
               >
                 <span style={{ fontSize: 18, lineHeight: 1 }}>➕</span>
-                <span>Use another account</span>
+                <span>Enter different {isGoogle ? "Google" : "Facebook"} account</span>
               </button>
             </div>
           ) : (

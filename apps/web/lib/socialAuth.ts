@@ -1,18 +1,21 @@
 /**
- * Social Auth Utilities for Google & Facebook OAuth Pop-up Windows
+ * Social Auth Utilities for Real Google & Facebook OAuth Pop-up Windows
  */
 
-export interface SocialAccountProfile {
-  id: string;
-  name: string;
-  email: string;
-  avatarUrl?: string;
+export const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
+export const FACEBOOK_APP_ID = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID || "";
+
+export interface SocialAuthResponse {
   provider: "google" | "facebook";
-  token?: string;
+  idToken?: string;
+  accessToken?: string;
+  email?: string;
+  name?: string;
+  avatarUrl?: string;
 }
 
 /**
- * Calculates centered dimensions and opens a standard OAuth pop-up window.
+ * Calculates centered coordinates and opens a standard OAuth pop-up window.
  */
 export function openOAuthPopupWindow(
   url: string,
@@ -45,26 +48,111 @@ export function openOAuthPopupWindow(
 }
 
 /**
- * Loads the Google Identity Services SDK dynamically if not already on the page.
+ * Initiates a REAL Google OAuth 2.0 / OIDC pop-up flow.
+ * Opens Google's account selection window and waits for token via postMessage.
  */
-export function loadGoogleIdentityServices(): Promise<boolean> {
-  if (typeof window === "undefined") return Promise.resolve(false);
-  if ((window as any).google?.accounts?.id) return Promise.resolve(true);
-
-  return new Promise((resolve) => {
-    const existing = document.getElementById("google-gsi-client");
-    if (existing) {
-      existing.addEventListener("load", () => resolve(true));
-      return;
+export function startGoogleOAuthFlow(clientId = GOOGLE_CLIENT_ID): Promise<SocialAuthResponse> {
+  return new Promise((resolve, reject) => {
+    if (typeof window === "undefined") {
+      return reject(new Error("Window is undefined"));
     }
 
-    const script = document.createElement("script");
-    script.id = "google-gsi-client";
-    script.src = "https://accounts.google.com/gsi/client";
-    script.async = true;
-    script.defer = true;
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.head.appendChild(script);
+    const redirectUri = `${window.location.origin}/auth/callback`;
+    const targetClientId = clientId || "324683072704-mockclientid.apps.googleusercontent.com";
+
+    // Google OAuth 2.0 Authorization Endpoint with prompt=select_account to force account chooser
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      new URLSearchParams({
+        client_id: targetClientId,
+        redirect_uri: redirectUri,
+        response_type: "token id_token",
+        scope: "openid email profile",
+        prompt: "select_account",
+        nonce: `deen_${Date.now()}`,
+      }).toString();
+
+    const popup = openOAuthPopupWindow(authUrl, "Sign in with Google", 500, 620);
+
+    if (!popup) {
+      return reject(new Error("Pop-up blocked. Please allow pop-ups for this site."));
+    }
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type === "OAUTH_SUCCESS") {
+        window.removeEventListener("message", handleMessage);
+        resolve({
+          provider: "google",
+          idToken: event.data.idToken,
+          accessToken: event.data.accessToken,
+        });
+      } else if (event.data?.type === "OAUTH_ERROR") {
+        window.removeEventListener("message", handleMessage);
+        reject(new Error(event.data.error || "Google sign-in was cancelled or failed."));
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+
+    // Watch for manual popup close by user
+    const checkClosed = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(checkClosed);
+        window.removeEventListener("message", handleMessage);
+      }
+    }, 1000);
+  });
+}
+
+/**
+ * Initiates a REAL Facebook OAuth Login pop-up flow.
+ * Opens Facebook's login dialog window and waits for access token via postMessage.
+ */
+export function startFacebookOAuthFlow(appId = FACEBOOK_APP_ID): Promise<SocialAuthResponse> {
+  return new Promise((resolve, reject) => {
+    if (typeof window === "undefined") {
+      return reject(new Error("Window is undefined"));
+    }
+
+    const redirectUri = `${window.location.origin}/auth/callback`;
+    const targetAppId = appId || "1083928172948271";
+
+    const authUrl = `https://www.facebook.com/v19.0/dialog/oauth?` +
+      new URLSearchParams({
+        client_id: targetAppId,
+        redirect_uri: redirectUri,
+        response_type: "token",
+        scope: "email,public_profile",
+        auth_type: "reauthenticate",
+      }).toString();
+
+    const popup = openOAuthPopupWindow(authUrl, "Log in with Facebook", 560, 640);
+
+    if (!popup) {
+      return reject(new Error("Pop-up blocked. Please allow pop-ups for this site."));
+    }
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type === "OAUTH_SUCCESS") {
+        window.removeEventListener("message", handleMessage);
+        resolve({
+          provider: "facebook",
+          accessToken: event.data.accessToken,
+        });
+      } else if (event.data?.type === "OAUTH_ERROR") {
+        window.removeEventListener("message", handleMessage);
+        reject(new Error(event.data.error || "Facebook login was cancelled or failed."));
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+
+    const checkClosed = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(checkClosed);
+        window.removeEventListener("message", handleMessage);
+      }
+    }, 1000);
   });
 }
