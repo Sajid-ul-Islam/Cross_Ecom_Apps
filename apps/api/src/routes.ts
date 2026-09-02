@@ -1680,7 +1680,9 @@ export async function registerDeenRoutes(app: FastifyInstance) {
 
       const paymentTitle = payment === "cod" ? "Cash on delivery"
         : payment === "bkash" || payment === "bkash-for-woocommerce" ? "bKash"
-        : payment === "nagad" ? "Nagad"
+        : payment === "nagad" || payment === "nagad-for-woocommerce" ? "Nagad"
+        : payment === "rocket" || payment === "rocket-for-woocommerce" ? "Rocket"
+        : payment === "bacs" || payment === "bank" || payment === "bank_transfer" ? "Direct Bank Transfer"
         : payment === "sslcommerz" ? "SSLCommerz"
         : "Online Payment";
       const paymentStatus = payment === "cod" ? "Pending (Cash on Delivery)" : "Awaiting Payment";
