@@ -8,10 +8,16 @@ interface AdminAnalyticsModalProps {
   onClose: () => void;
 }
 
+interface AdminAnalyticsViewProps {
+  isEmbedded?: boolean;
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
 type TabType = "sales" | "pairs" | "logistics" | "stock" | "customers" | "orders";
 type TimeframeType = "today" | "7d" | "30d" | "90d" | "all";
 
-export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsModalProps) {
+export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose }: AdminAnalyticsViewProps) {
   const [activeTab, setActiveTab] = useState<TabType>("sales");
   const [timeframe, setTimeframe] = useState<TimeframeType>("30d");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
@@ -35,10 +41,12 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
   const loadData = async () => {
     setLoading(true);
     try {
-      const headers = {
+      const token = typeof window !== "undefined" ? localStorage.getItem("deen_web_guest_token") : null;
+      const headers: Record<string, string> = {
         "x-api-key": "fa002b126085801f23d9375d94409752503639919e39690c42877fc58c624973",
         "x-gateway-key": "deen_mobile_gateway_secret_2026",
       };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
 
       const params = new URLSearchParams({
         timeframe,
@@ -65,10 +73,10 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
   };
 
   useEffect(() => {
-    if (isOpen && isUnlocked) {
+    if ((isEmbedded || isOpen) && isUnlocked) {
       loadData();
     }
-  }, [isOpen, timeframe, categoryFilter, productFilter, districtFilter, paymentFilter, isUnlocked]);
+  }, [isEmbedded, isOpen, timeframe, categoryFilter, productFilter, districtFilter, paymentFilter, isUnlocked]);
 
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
     setStatusUpdatingId(orderId);
@@ -129,31 +137,49 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
     return matchesStatus && matchesSearch;
   });
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" style={{ maxWidth: 1040, width: "95vw", maxHeight: "92vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="modal-header" style={{ borderBottom: "1px solid var(--border)", paddingBottom: 14 }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ background: "var(--indigo)", color: "#fff", padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 900 }}>
-                EXECUTIVE BI & OPERATIONS
-              </span>
-              <span style={{ background: "rgba(16,185,129,0.15)", color: "var(--emerald)", padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 800 }}>
-                🔒 SECURED / ZERO CUSTOMER EXPOSURE
-              </span>
-              <h2 style={{ fontSize: 18, fontWeight: 900, color: "var(--ink)", margin: 0 }}>
-                DEEN BI DASHBOARD
-              </h2>
-            </div>
-            <p style={{ fontSize: 12, color: "var(--sub)", marginTop: 2 }}>
-              Dynamic Multi-Cohort Product Performance, Frequent Itemset Pairs, Pathao Logistics & Stock Valuation
-            </p>
+  if (!isEmbedded && !isOpen) return null;
+
+  const content = (
+    <div
+      className={isEmbedded ? "admin-bi-embedded-card" : "modal-content"}
+      style={
+        isEmbedded
+          ? {
+              width: "100%",
+              background: "var(--surface)",
+              border: "1.5px solid var(--indigo)",
+              borderRadius: "var(--radius)",
+              padding: 24,
+              boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
+            }
+          : { maxWidth: 1040, width: "95vw", maxHeight: "92vh", overflowY: "auto" }
+      }
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Header */}
+      <div className="modal-header" style={{ borderBottom: "1px solid var(--border)", paddingBottom: 14 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ background: "var(--indigo)", color: "#fff", padding: "3px 8px", borderRadius: 4, fontSize: 10, fontWeight: 900 }}>
+              EXECUTIVE BI & OPERATIONS
+            </span>
+            <span style={{ background: "rgba(16,185,129,0.15)", color: "var(--emerald)", padding: "3px 8px", borderRadius: 4, fontSize: 10, fontWeight: 800 }}>
+              🔒 SECURED / ZERO CUSTOMER EXPOSURE
+            </span>
+            <h2 style={{ fontSize: 18, fontWeight: 900, color: "var(--ink)", margin: 0 }}>
+              DEEN BI DASHBOARD
+            </h2>
           </div>
+          <p style={{ fontSize: 12, color: "var(--sub)", marginTop: 2 }}>
+            Dynamic Multi-Cohort Product Performance, Frequent Itemset Pairs, Pathao Logistics & Stock Valuation
+          </p>
+        </div>
+        {onClose && (
           <button type="button" className="modal-close" onClick={onClose} aria-label="Close modal">
             ✕
           </button>
-        </div>
+        )}
+      </div>
 
         {!isUnlocked ? (
           /* Security Gate for Store Admins */
@@ -830,7 +856,21 @@ export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsM
             )}
           </>
         )}
-      </div>
     </div>
   );
+
+  if (isEmbedded) {
+    return content;
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      {content}
+    </div>
+  );
+}
+
+export default function AdminAnalyticsModal({ isOpen, onClose }: AdminAnalyticsModalProps) {
+  if (!isOpen) return null;
+  return <AdminAnalyticsView isEmbedded={false} isOpen={isOpen} onClose={onClose} />;
 }

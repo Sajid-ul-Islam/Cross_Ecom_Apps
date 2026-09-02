@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { BD_DISTRICTS } from "@/lib/districts";
 import { API_URL, fetchOrders, fetchDistricts, loginCustomer, registerCustomer, loginWithGoogle, loginWithFacebook, fetchOutlets, fetchAppSettings, type OrderResult, type BdDistrict, type Outlet, type AuthResult } from "@/lib/api";
-import AdminAnalyticsModal from "@/components/AdminAnalyticsModal";
+import AdminAnalyticsModal, { AdminAnalyticsView } from "@/components/AdminAnalyticsModal";
 import SocialAuthModal from "@/components/SocialAuthModal";
 
 const PROFILE_STORAGE_KEY = "deen_web_user_profile";
@@ -81,6 +81,7 @@ export default function ProfilePage() {
     e.preventDefault();
     try {
       localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+      if (typeof window !== "undefined") window.dispatchEvent(new Event("deen_profile_updated"));
       setSavedMessage("✓ Profile and sizing preferences saved successfully!");
       setTimeout(() => setSavedMessage(""), 3500);
     } catch {}
@@ -90,6 +91,7 @@ export default function ProfilePage() {
     const guest: UserProfile = { ...DEFAULT_PROFILE, isGuest: true };
     setProfile(guest);
     localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(guest));
+    if (typeof window !== "undefined") window.dispatchEvent(new Event("deen_profile_updated"));
     setOrders([]);
   };
 
@@ -114,6 +116,7 @@ export default function ProfilePage() {
         setProfile(updated);
         localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
         if (data.token) localStorage.setItem("deen_web_guest_token", data.token);
+        if (typeof window !== "undefined") window.dispatchEvent(new Event("deen_profile_updated"));
         fetch("/api/auth/session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -306,6 +309,13 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
+
+      {/* 1.5. STORE ADMINISTRATOR EXECUTIVE BI & OPERATIONS DASHBOARD */}
+      {profile.role === "admin" && (
+        <div style={{ margin: "24px 0" }}>
+          <AdminAnalyticsView isEmbedded={true} />
+        </div>
+      )}
 
       {/* 2. Recent Orders & Live Pathao Tracking */}
       <div className="profile-section-card">
@@ -610,6 +620,7 @@ export default function ProfilePage() {
                           setProfile(updated);
                           localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
                           if (data.token) localStorage.setItem("deen_web_guest_token", data.token);
+                          if (typeof window !== "undefined") window.dispatchEvent(new Event("deen_profile_updated"));
                           setAuthNotice({ type: "success", text: "Logged in as Store Administrator!" });
                           setTimeout(() => {
                             setAuthSubmitting(false);

@@ -19,6 +19,7 @@ export default function Header() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [bankOffersOpen, setBankOffersOpen] = useState(false);
   const [wishlistOpen, setWishlistOpen] = useState(false);
+  const [profile, setProfile] = useState<{ role?: string; isGuest?: boolean; name?: string } | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("deen_theme");
@@ -26,6 +27,23 @@ export default function Header() {
     const dark = saved ? saved === "dark" : prefersDark;
     setIsDark(dark);
     document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+
+    const readProfile = () => {
+      try {
+        const p = localStorage.getItem("deen_web_user_profile");
+        if (p) setProfile(JSON.parse(p));
+        else setProfile(null);
+      } catch {
+        setProfile(null);
+      }
+    };
+    readProfile();
+    window.addEventListener("storage", readProfile);
+    window.addEventListener("deen_profile_updated", readProfile);
+    return () => {
+      window.removeEventListener("storage", readProfile);
+      window.removeEventListener("deen_profile_updated", readProfile);
+    };
   }, []);
 
   const toggleTheme = () => {
@@ -35,11 +53,15 @@ export default function Header() {
     localStorage.setItem("deen_theme", next ? "dark" : "light");
   };
 
+  const isAdmin = profile?.role === "admin";
+
   const navLinks = [
     { href: "/", label: "Home" },
     { href: "/shop", label: "Shop" },
     { href: "/categories", label: "Categories" },
     { href: "/orders", label: "Track Order" },
+    { href: "/profile", label: "Profile" },
+    ...(isAdmin ? [{ href: "/admin", label: "👑 Admin BI" }] : []),
   ];
 
   return (
@@ -282,6 +304,58 @@ export default function Header() {
                 </span>
               )}
             </Link>
+
+            {/* Dedicated Profile & Admin BI Actions (Desktop & Mobile) */}
+            {isAdmin ? (
+              <Link
+                href="/admin"
+                className="nav__icon-btn"
+                aria-label="Store Admin BI Dashboard"
+                title="Store Admin BI Dashboard"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "0 12px",
+                  height: 38,
+                  borderRadius: 19,
+                  background: "linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)",
+                  border: "1.5px solid var(--indigo)",
+                  color: "#fff",
+                  fontSize: 11.5,
+                  fontWeight: 900,
+                  textDecoration: "none",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <span>👑</span>
+                <span>ADMIN BI</span>
+              </Link>
+            ) : (
+              <Link
+                href="/profile"
+                className="nav__icon-btn"
+                aria-label="Account Profile"
+                title={profile && !profile.isGuest ? `Account: ${profile.name || "Member"}` : "Account & Profile"}
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  color: pathname === "/profile" ? "var(--indigo)" : "var(--ink)",
+                  textDecoration: "none",
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </Link>
+            )}
           </div>
         </div>
       </header>
