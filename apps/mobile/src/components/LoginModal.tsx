@@ -48,7 +48,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   initialMode = "signin",
 }) => {
   const { colors, isDark } = useTheme();
-  const { login, loginWithGoogle, loginWithFacebook, registerCustomer, profile } = useProfile();
+  const { login, loginAsAdmin, loginWithGoogle, loginWithFacebook, registerCustomer, profile } = useProfile();
   const styles = createStyles(colors);
 
   const [mode, setMode] = useState<"signin" | "signup">(initialMode);
@@ -436,6 +436,55 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   >
                     <Text style={{ fontSize: 13, fontWeight: "800", color: "#1877F2" }}>f  Facebook</Text>
                   </TouchableOpacity>
+                </View>
+
+                {/* Store Admin Quick Access */}
+                <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.borderLight }}>
+                  <TouchableOpacity
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
+                      height: 42,
+                      borderRadius: 8,
+                      backgroundColor: colors.cardSecondary,
+                      borderWidth: 1.5,
+                      borderColor: colors.indigo,
+                    }}
+                    activeOpacity={0.8}
+                    onPress={async () => {
+                      setUsername("admin");
+                      setPassword("admin");
+                      setSubmitting(true);
+                      try {
+                        const res = await loginAsAdmin("admin");
+                        if (res.success) {
+                          setNotice({ type: "success", text: "Logged in as Store Administrator!" });
+                          setTimeout(() => {
+                            setSubmitting(false);
+                            onClose();
+                            if (onSuccess) onSuccess();
+                          }, 500);
+                        } else {
+                          setSubmitting(false);
+                          setNotice({ type: "error", text: res.message || "Admin login failed." });
+                        }
+                      } catch {
+                        setSubmitting(false);
+                        setNotice({ type: "error", text: "Admin login network error." });
+                      }
+                    }}
+                    disabled={submitting}
+                  >
+                    <Sparkles size={15} color={colors.indigo} />
+                    <Text style={{ fontSize: 12, fontWeight: "800", color: colors.indigo }}>
+                      👑 LOGIN AS STORE ADMIN
+                    </Text>
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 10, color: colors.sub, textAlign: "center", marginTop: 6 }}>
+                    Store Admin Privileges & BI Analytics (user: admin · pass: admin)
+                  </Text>
                 </View>
 
                 <TouchableOpacity onPress={onClose} style={styles.guestLink}>

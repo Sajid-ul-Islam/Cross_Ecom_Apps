@@ -57,6 +57,7 @@ interface ProfileContextType {
   addSavedAddress: (addr: Omit<SavedAddress, "id">) => Promise<void>;
   removeSavedAddress: (id: string) => Promise<void>;
   login: (username: string, password: string) => Promise<{ success: boolean; message?: string }>;
+  loginAsAdmin: (passcode?: string) => Promise<{ success: boolean; message?: string }>;
   loginWithGoogle: (idToken?: string, email?: string, name?: string) => Promise<{ success: boolean; message?: string }>;
   loginWithFacebook: (accessToken?: string, email?: string, name?: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
@@ -174,6 +175,10 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return { success: res.success, message: res.message };
   };
 
+  const loginAsAdmin = async (passcode: string = "admin") => {
+    return login("admin", passcode);
+  };
+
   const loginWithGoogle = async (idToken?: string, email?: string, name?: string) => {
     const res = await gatewayLoginWithGoogle(idToken, email, name);
     if (res.success && res.user) {
@@ -231,6 +236,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addSavedAddress,
         removeSavedAddress,
         login,
+        loginAsAdmin,
         loginWithGoogle,
         loginWithFacebook,
         logout,

@@ -129,3 +129,24 @@ test("Campaign: Cashback applies when cashback offer is toggled on", () => {
   assert.equal(res.amount, 700);
   assert.equal(res.tier, 2);
 });
+
+function verifyAdminCredentials(username: string, password: string): boolean {
+  const cleanUser = username.trim().toLowerCase();
+  const cleanPass = password.trim();
+  const isMasterUser = ["admin", "deenadmin", "sajid", "sazid", "admin@deencommerce.com", "admin@deen.com"].includes(cleanUser);
+  const allowedPass = ["admin", "admin123", "admin2026", "deenadmin2026", "DeenAdmin@2026"];
+  return isMasterUser && allowedPass.includes(cleanPass);
+}
+
+test("Admin Auth: Valid admin credentials return true", () => {
+  assert.equal(verifyAdminCredentials("admin", "admin"), true);
+  assert.equal(verifyAdminCredentials("admin", "admin2026"), true);
+  assert.equal(verifyAdminCredentials("deenadmin", "deenadmin2026"), true);
+  assert.equal(verifyAdminCredentials("sajid", "admin"), true);
+});
+
+test("Admin Auth: Invalid credentials return false", () => {
+  assert.equal(verifyAdminCredentials("admin", "wrongpass"), false);
+  assert.equal(verifyAdminCredentials("guest", "admin"), false);
+});
+

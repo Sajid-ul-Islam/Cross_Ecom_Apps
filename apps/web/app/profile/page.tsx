@@ -588,6 +588,64 @@ export default function ProfilePage() {
                     <span>f</span> Facebook
                   </button>
                 </div>
+
+                {/* Store Admin Quick Access */}
+                <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setLoginIdent("admin");
+                      setLoginPass("admin");
+                      setAuthSubmitting(true);
+                      try {
+                        const data = await loginCustomer("admin", "admin");
+                        if (data.success) {
+                          const updated: UserProfile = {
+                            ...profile,
+                            name: "DEEN Store Admin",
+                            email: "admin@deencommerce.com",
+                            role: "admin",
+                            isGuest: false,
+                          };
+                          setProfile(updated);
+                          localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+                          if (data.token) localStorage.setItem("deen_web_guest_token", data.token);
+                          setAuthNotice({ type: "success", text: "Logged in as Store Administrator!" });
+                          setTimeout(() => {
+                            setAuthSubmitting(false);
+                            setAuthModalOpen(false);
+                          }, 500);
+                        } else {
+                          setAuthSubmitting(false);
+                          setAuthNotice({ type: "error", text: data.message || "Admin login failed." });
+                        }
+                      } catch {
+                        setAuthSubmitting(false);
+                        setAuthNotice({ type: "error", text: "Admin login network error." });
+                      }
+                    }}
+                    disabled={authSubmitting}
+                    className="btn btn--outline"
+                    style={{
+                      width: "100%",
+                      padding: 10,
+                      fontSize: 12.5,
+                      fontWeight: 800,
+                      borderColor: "var(--indigo)",
+                      color: "var(--indigo)",
+                      background: "var(--surface-2)",
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    👑 LOGIN AS STORE ADMIN
+                  </button>
+                  <p style={{ fontSize: 11, color: "var(--text-sub)", textAlign: "center", marginTop: 6, margin: "6px 0 0" }}>
+                    Store Admin Privileges & BI Analytics (user: admin · pass: admin)
+                  </p>
+                </div>
               </form>
             ) : (
               <form onSubmit={handleSignUp} className="modal-form">
