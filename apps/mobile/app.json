@@ -29,7 +29,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#000000"
+        "backgroundColor": "#FF6900"
       },
       "package": "com.deencommerce.app",
       "versionCode": 1,
