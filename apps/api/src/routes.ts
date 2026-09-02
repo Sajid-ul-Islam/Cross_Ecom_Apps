@@ -11,10 +11,13 @@ import {
 } from "./security.js";
 import { SEED_PRODUCTS, type DeenProduct } from "./seed.js";
 import { fetchReturnsIntelligence } from "./returnsService.js";
+import { buildPathaoLogisticsBi } from "./pathaoBiService.js";
+import { biCache } from "./biCacheService.js";
 import {
   fetchWooProducts,
   fetchWooVariations,
   fetchWooStats,
+  fetchWooOrders,
   fetchWooCategoryList,
   fetchWooCategoryImages,
   wooStatus,
@@ -902,6 +905,18 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   await loadPushTokens();
   await loadBroadcasts();
   await loadPayments();
+  await biCache.init();
+
+  // Non-blocking background worker: keeps BI analytics and Pathao logistics warm in cache
+  biCache.startBackgroundWorker(async () => {
+    try {
+      const wooOrders = await fetchWooOrders({ perPage: 100 });
+      const combined = [...(orders || []), ...wooOrders];
+      await buildPathaoLogisticsBi(combined);
+    } catch (err) {
+      console.warn("[biCache] Background worker warm-up warning:", (err as Error).message);
+    }
+  }, 5 * 60 * 1000);
 
   /* ---- catalog (filter + search + sort) ---- */
   app.get("/v1/deen/products", async (req, reply) => {
@@ -1855,6 +1870,8 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       recordGuestPurchase(digits, String(name).trim());
       orders.unshift(order);
       saveOrders();
+      biCache.invalidate("analytics:");
+      biCache.invalidate("pathao_returns_intelligence");
 
       // Trigger transactional push notification if device push token matches phone
       const userTokens = Array.from(pushTokens.values())
@@ -3355,10 +3372,16 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       category = "ALL",
       district = "ALL",
       payment = "ALL",
+      refresh,
     } = (req.query as any) || {};
 
-    const allOrders = orders || [];
-    const products = await getCatalog();
+    const cacheKey = `analytics:${timeframe}:${category}:${productId}:${district}:${payment}`;
+
+    const { data: analyticsPayload, hit, ageSeconds, computeDurationMs } = await biCache.getOrCompute(
+      cacheKey,
+      async () => {
+        const allOrders = orders || [];
+        const products = await getCatalog();
 
     const now = Date.now();
     const timeframeDays = timeframe === "today" ? 1 : timeframe === "7d" ? 7 : timeframe === "30d" ? 30 : timeframe === "90d" ? 90 : 365;
@@ -3697,85 +3720,93 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       );
     }
 
-    return reply.send({
-      success: true,
-      filtersApplied: {
-        timeframe,
-        productId,
-        category,
-        district,
-        payment,
+        return {
+          success: true,
+          filtersApplied: {
+            timeframe,
+            productId,
+            category,
+            district,
+            payment,
+          },
+          sales: {
+            grossRevenue,
+            netSales,
+            totalOrders: effectiveTotalOrders,
+            paidOrders: deliveredCount || 58,
+            codOrders: codOrders || 48,
+            prepaidOrders,
+            aov,
+            itemsSold: totalItemsCount || 86,
+            dailyRunRate,
+            projected7dRevenue,
+            projected30dRevenue,
+            growthRatePct,
+            salesTrend: Object.values(dailyMap),
+            topProductPairs,
+            productPerformance: productPerformanceList,
+            categoryMatrix: Object.entries(categoryRev).map(([cat, data]) => ({
+              category: cat,
+              revenue: data.revenue,
+              units: data.units,
+              sharePct: grossRevenue > 0 ? Number(((data.revenue / grossRevenue) * 100).toFixed(1)) : 25,
+            })),
+          },
+          logistics: {
+            totalDispatched: effectiveTotalOrders - pendingCount,
+            deliveredCount,
+            deliveredValue,
+            returnedCount,
+            returnedValue,
+            partialCount,
+            partialValue,
+            inTransitCount,
+            inTransitValue,
+            pendingCount,
+            deliverySuccessRate,
+            returnRate,
+            partialRate,
+            courierCostIncurred,
+            rtoLossCost,
+            statusBreakdown: {
+              delivered: deliveredCount,
+              in_transit: inTransitCount,
+              pending: pendingCount,
+              returned: returnedCount,
+              partial: partialCount,
+            },
+          },
+          inventory: {
+            totalSkus,
+            inStockCount,
+            lowStockCount,
+            outOfStockCount,
+            totalUnits: totalInventoryUnits,
+            inventoryValuation,
+            stockHealthScore,
+            lowStockAlerts,
+          },
+          customers: {
+            totalCustomers,
+            repeatCustomers,
+            repeatRate,
+            averageLtv,
+            vipCustomers: customerList.slice(0, 5),
+            districtDistribution,
+          },
+          generatedAt: new Date().toISOString(),
+        };
       },
-      sales: {
-        grossRevenue,
-        netSales,
-        totalOrders: effectiveTotalOrders,
-        paidOrders: deliveredCount || 58,
-        codOrders: codOrders || 48,
-        prepaidOrders,
-        aov,
-        itemsSold: totalItemsCount || 86,
-        dailyRunRate,
-        projected7dRevenue,
-        projected30dRevenue,
-        growthRatePct,
-        salesTrend: Object.values(dailyMap),
-        topProductPairs,
-        productPerformance: productPerformanceList,
-        categoryMatrix: Object.entries(categoryRev).map(([cat, data]) => ({
-          category: cat,
-          revenue: data.revenue,
-          units: data.units,
-          sharePct: grossRevenue > 0 ? Number(((data.revenue / grossRevenue) * 100).toFixed(1)) : 25,
-        })),
-      },
-      logistics: {
-        totalDispatched: effectiveTotalOrders - pendingCount,
-        deliveredCount,
-        deliveredValue,
-        returnedCount,
-        returnedValue,
-        partialCount,
-        partialValue,
-        inTransitCount,
-        inTransitValue,
-        pendingCount,
-        deliverySuccessRate,
-        returnRate,
-        partialRate,
-        courierCostIncurred,
-        rtoLossCost,
-        statusBreakdown: {
-          delivered: deliveredCount,
-          in_transit: inTransitCount,
-          pending: pendingCount,
-          returned: returnedCount,
-          partial: partialCount,
-        },
-      },
-      inventory: {
-        totalSkus,
-        inStockCount,
-        lowStockCount,
-        outOfStockCount,
-        totalUnits: totalInventoryUnits,
-        inventoryValuation,
-        stockHealthScore,
-        lowStockAlerts,
-      },
-      customers: {
-        totalCustomers,
-        repeatCustomers,
-        repeatRate,
-        averageLtv,
-        vipCustomers: customerList.slice(0, 5),
-        districtDistribution,
-      },
-      generatedAt: new Date().toISOString(),
-    });
+      { forceFresh: refresh === "true" || refresh === "1", ttlMs: 10 * 60 * 1000 }
+    );
+
+    reply.header("X-Cache", hit ? "HIT" : "MISS");
+    reply.header("X-Cache-Age", String(ageSeconds));
+    reply.header("X-Compute-Time-Ms", String(computeDurationMs));
+    return reply.send(analyticsPayload);
   });
 
-  /* ---- DEEN-BI RETURNS & OPERATIONAL RECOVERY INTELLIGENCE ---- */
+  /* ---- DEEN-BI RETURNS & OPERATIONAL RECOVERY INTELLIGENCE (Pathao REST API + Historical) ---- */
   app.get("/v1/deen/admin/returns-intelligence", async (req, reply) => {
     const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
     const gatewayKey = req.headers["x-gateway-key"] as string | undefined;
@@ -3785,9 +3816,60 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required." });
     }
 
-    const { refresh } = (req.query as any) || {};
-    const summary = await fetchReturnsIntelligence(refresh === "true");
-    return reply.send({ success: true, ...summary });
+    const { refresh, source = "all" } = (req.query as any) || {};
+    const cacheKey = `pathao_returns_intelligence:${source}`;
+
+    const { data: payload, hit, ageSeconds, computeDurationMs } = await biCache.getOrCompute(
+      cacheKey,
+      async () => {
+        // 1. Fetch live WooCommerce orders & combine with local orders
+        const wooOrders = await fetchWooOrders({ perPage: 100 });
+        const allOrders = [...(orders || []), ...wooOrders];
+
+        // 2. Compute Pathao REST API logistics intelligence
+        const livePathao = await buildPathaoLogisticsBi(allOrders);
+
+        // 3. Sync draft archive
+        const draftSummary = await fetchReturnsIntelligence(refresh === "true");
+
+        return {
+          success: true,
+          livePathao,
+          draftArchive: draftSummary,
+          activeSource: source,
+          totalRecords: livePathao.totalParcels + draftSummary.totalRecords,
+          nonPaidReturns: livePathao.returnedCount + draftSummary.nonPaidReturns,
+          paidReturns: livePathao.deliveredCount + draftSummary.paidReturns,
+          partials: livePathao.partialCount + draftSummary.partials,
+          exchanges: draftSummary.exchanges,
+          estimatedRtoLossBdt: livePathao.returnedLossBdt + draftSummary.estimatedRtoLossBdt,
+          reasonBreakdown: {
+            sizeMismatch: livePathao.reasonBreakdown.sizeMismatch + draftSummary.reasonBreakdown.sizeMismatch,
+            cnr: livePathao.reasonBreakdown.cnr + draftSummary.reasonBreakdown.cnr,
+            unavailable: livePathao.reasonBreakdown.unavailable + draftSummary.reasonBreakdown.unavailable,
+            courierDelay: livePathao.reasonBreakdown.courierDelay + draftSummary.reasonBreakdown.courierDelay,
+            completed: livePathao.reasonBreakdown.completed,
+            other: draftSummary.reasonBreakdown.other,
+          },
+          onTimeStats: {
+            onTime: draftSummary.onTimeStats.onTime,
+            late: draftSummary.onTimeStats.late,
+            onTimeRatePct: livePathao.onTimeDispatchRatePct,
+          },
+          recentFeed: [
+            ...livePathao.parcels.slice(0, 20),
+            ...draftSummary.recentFeed.slice(0, 10),
+          ],
+          cachedAt: new Date().toISOString(),
+        };
+      },
+      { forceFresh: refresh === "true" || refresh === "1", ttlMs: 10 * 60 * 1000 }
+    );
+
+    reply.header("X-Cache", hit ? "HIT" : "MISS");
+    reply.header("X-Cache-Age", String(ageSeconds));
+    reply.header("X-Compute-Time-Ms", String(computeDurationMs));
+    return reply.send(payload);
   });
 
   /* ---- ADMIN ORDERS DIRECTORY (Live view with Pathao status and customer notes) ---- */

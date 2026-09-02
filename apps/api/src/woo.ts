@@ -649,6 +649,25 @@ export async function findWooOrderByKey(
 }
 
 /**
+ * Fetches recent orders directly from WooCommerce REST API (/wp-json/wc/v3/orders).
+ */
+export async function fetchWooOrders(opts?: { perPage?: number; page?: number; status?: string }): Promise<any[]> {
+  if (!wooHealthy()) return [];
+  try {
+    const params: Record<string, string> = {
+      per_page: String(opts?.perPage ?? 100),
+      page: String(opts?.page ?? 1),
+    };
+    if (opts?.status && opts.status !== "ALL") params.status = opts.status;
+    const res = (await wooFetch("orders", params)) as any[];
+    return Array.isArray(res) ? res : [];
+  } catch (e) {
+    console.warn("[woo] fetchWooOrders warning:", (e as Error).message);
+    return [];
+  }
+}
+
+/**
  * Finds an existing WooCommerce customer by email or creates a new customer via WC REST API.
  * Attaches social provider ID in customer meta_data without touching WordPress core files.
  */
