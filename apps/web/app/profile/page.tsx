@@ -113,6 +113,12 @@ export default function ProfilePage() {
         };
         setProfile(updated);
         localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+        if (data.token) localStorage.setItem("deen_web_guest_token", data.token);
+        fetch("/api/auth/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: data.token, profile: updated }),
+        }).catch(() => {});
         setAuthNotice({ type: "success", text: `Welcome back, ${updated.name}!` });
         setTimeout(() => {
           setAuthSubmitting(false);
@@ -152,6 +158,12 @@ export default function ProfilePage() {
       };
       setProfile(updated);
       localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+      if (data.token) localStorage.setItem("deen_web_guest_token", data.token);
+      fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: data.token, profile: updated }),
+      }).catch(() => {});
       setAuthNotice({ type: "success", text: `Welcome to DEEN Club, ${signupName.trim()}!` });
       setTimeout(() => {
         setAuthSubmitting(false);
@@ -182,6 +194,12 @@ export default function ProfilePage() {
       };
       setProfile(updated);
       localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+      if (res.token) localStorage.setItem("deen_web_guest_token", res.token);
+      fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: res.token, profile: updated }),
+      }).catch(() => {});
       setAuthNotice({ type: "success", text: `✓ Signed in successfully as ${res.user.name}!` });
       setTimeout(() => {
         setAuthModalOpen(false);

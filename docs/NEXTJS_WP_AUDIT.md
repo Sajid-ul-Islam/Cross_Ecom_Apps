@@ -57,7 +57,7 @@ WordPress / WooCommerce (`https://deencommerce.com/wp-json/wc/v3`)
 | :---: | :---: | :--- | :--- | :---: | :---: |
 | **0** | **AUDIT-00** | Monorepo Doc | Save Audit Specification & Execution Tracker in `docs/` | ✅ Done | Initial |
 | **0** | **AUDIT-01** | Full Audit | Perform comprehensive 24-section audit across `apps/web`, `apps/api`, and `apps/mobile` | ✅ Done | `docs/NEXTJS_WP_AUDIT_REPORT.md` |
-| **1** | **SEC-01** | Web / Security | Migrate token/profile storage from raw `localStorage` to HttpOnly SameSite cookies / secure session management | ⏳ Queued | Pending Step 3 |
+| **1** | **SEC-01** | Web / Security | Migrate token/profile storage from raw `localStorage` to HttpOnly SameSite cookies / secure session management | ✅ Done | `app/api/auth/session/route.ts` |
 | **1** | **SEC-02** | Gateway / Auth | Add CSP, security headers & frame-ancestors to Next.js `next.config.mjs` and Gateway | ✅ Done | `next.config.mjs` |
 | **1** | **SEC-03** | API / IDOR | Audit order lookup scoping to ensure customers cannot inspect arbitrary orders by guessing IDs | ✅ Done | Verified in `routes.ts` |
 | **2** | **ARCH-01** | Next.js Architecture | Refactor PDP (`app/product/[id]/page.tsx`) to Server Component data fetching with streaming Suspense | ✅ Done | `product/[id]/page.tsx` |
