@@ -101,6 +101,9 @@ body {
 h1, h2, h3, h4, h5 {
   line-height: 1.2;
   color: var(--ink);
+  letter-spacing: -0.025em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
@@ -108,8 +111,14 @@ a {
   text-decoration: none;
 }
 
-/* ── Buttons ─────────────────────────────────────── */
-.btn {
+/* Tabular figures for prices to eliminate number jitter */
+.bdt-price, .price, .product-card__price, .price-val, .order-total, .stat-value {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ── Buttons with Tactile Micro-Interactions (Emil Kowalski Physics) ── */
+.btn, .btn--primary, .btn--outline, .qty-btn, .cat-visual-tile, .slot-chip, .saved-addr-chip {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -121,28 +130,40 @@ a {
   letter-spacing: 0.3px;
   cursor: pointer;
   border: none;
-  transition: all 0.18s ease;
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.btn-primary {
+.btn:active, .btn--primary:active, .btn--outline:active, .cat-visual-tile:active, .qty-btn:active {
+  transform: scale(0.97) !important;
+}
+
+.btn-primary, .btn--primary {
   background: var(--indigo);
   color: #fff;
+  box-shadow: 0 4px 14px rgba(42, 54, 128, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
-.btn-primary:hover {
+.btn-primary:hover, .btn--primary:hover {
   background: var(--indigo-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(42, 54, 128, 0.3);
+  transform: translateY(-1.5px);
+  box-shadow: 0 8px 24px rgba(42, 54, 128, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
-.btn-primary:active { transform: translateY(0); }
 
-.btn-outline {
+.btn-outline, .btn--outline {
   background: transparent;
   color: var(--indigo);
-  border: 2px solid var(--indigo);
+  border: 1.5px solid var(--indigo);
 }
-.btn-outline:hover {
+.btn-outline:hover, .btn--outline:hover {
   background: var(--indigo);
   color: #fff;
+}
+
+/* Modern Accessible Focus States (WCAG 2.2 AA) */
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--indigo);
+  outline-offset: 2px;
 }
 
 .btn-ghost {

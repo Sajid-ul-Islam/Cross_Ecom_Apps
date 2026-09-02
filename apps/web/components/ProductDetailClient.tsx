@@ -569,9 +569,74 @@ export default function ProductDetailClient({
         onClose={() => setBankOffersOpen(false)}
       />
 
+      {/* Mobile Sticky Bottom Floating Action Bar (YC UX Ergonomics) */}
+      <div className="mobile-floating-buy-bar">
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
+          <div style={{ position: "relative", width: 40, height: 48, borderRadius: 6, overflow: "hidden", flexShrink: 0, background: "var(--surface-2)" }}>
+            {gallery[0] && (
+              <Image src={gallery[0]} alt="" fill sizes="40px" style={{ objectFit: "cover" }} />
+            )}
+          </div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {product.name}
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 900, color: "var(--indigo)" }}>
+              {bdt(price)}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <button
+            type="button"
+            className="btn btn--primary"
+            style={{ padding: "10px 16px", fontSize: 13, fontWeight: 800, whiteSpace: "nowrap" }}
+            onClick={handleAdd}
+            disabled={product.stockStatus === "outofstock"}
+          >
+            {added ? "✓ Added" : "🛍 Add"}
+          </button>
+          <button
+            type="button"
+            className="btn btn--outline"
+            style={{ padding: "10px 14px", fontSize: 13, fontWeight: 800, whiteSpace: "nowrap", background: "var(--surface)" }}
+            onClick={handleBuyNow}
+            disabled={product.stockStatus === "outofstock"}
+          >
+            ⚡ Buy
+          </button>
+        </div>
+      </div>
+
       <style>{`
+        @media (min-width: 769px) {
+          .mobile-floating-buy-bar { display: none !important; }
+        }
         @media (max-width: 768px) {
           .product-detail-grid { grid-template-columns: 1fr !important; gap: 24px !important; }
+          .mobile-floating-buy-bar {
+            position: fixed;
+            bottom: 64px;
+            left: 12px;
+            right: 12px;
+            z-index: 900;
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+          }
+          [data-theme="dark"] .mobile-floating-buy-bar {
+            background: rgba(22, 28, 42, 0.95);
+            border-color: rgba(255, 255, 255, 0.12);
+          }
         }
       `}</style>
     </div>
