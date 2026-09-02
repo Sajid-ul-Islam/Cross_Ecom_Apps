@@ -7,6 +7,15 @@
     "icon": "./assets/icon.png",
     "scheme": "deen",
     "userInterfaceStyle": "automatic",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/6e5914c5-c56c-4cc7-ad0b-f9bf6cf3d7bd",
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.deencommerce.app"
