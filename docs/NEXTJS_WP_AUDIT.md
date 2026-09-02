@@ -64,7 +64,7 @@ WordPress / WooCommerce (`https://deencommerce.com/wp-json/wc/v3`)
 | **2** | **ARCH-02** | Next.js Architecture | Implement Server Actions / Route Handlers for checkout mutation to shield gateway tokens | ✅ Done | `app/api/checkout/route.ts` |
 | **3** | **PERF-01** | Web / Media | Replace raw `<img>` tags with optimized `next/image` with remote patterns for WordPress CDN | ✅ Done | `ProductDetailClient.tsx` |
 | **3** | **PERF-02** | Caching | Integrate Next.js `unstable_cache` & tag revalidation (`revalidateTag("catalog")`) with Fastify webhook invalidation | ✅ Done | `api/revalidate/route.ts` & `lib/api.ts` |
-| **4** | **CLEAN-01**| Code Cleanliness | Centralize typed API models and Zod schema runtime validation for WooCommerce payloads | ⏳ Queued | Next Step |
+| **4** | **CLEAN-01**| Code Cleanliness | Centralize typed API models and runtime validation for WooCommerce payloads | ✅ Done | `apps/web/lib/schemas.ts` |
 | **4** | **PARITY-01**| Web ⇄ Mobile Parity | Ensure all Web updates maintain 100% design and functional parity with `apps/mobile` | ✅ Done | Verified & Monorepo typechecked |
 
 ---
