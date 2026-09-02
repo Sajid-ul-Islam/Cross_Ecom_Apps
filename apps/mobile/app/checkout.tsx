@@ -70,8 +70,9 @@ export default function CheckoutScreen() {
   const [deliverySlot, setDeliverySlot] = useState<DeliverySlot>(profile.deliverySlot || "any");
   const [deliveryNotes, setDeliveryNotes] = useState(profile.deliveryNotes || "");
   const [payment, setPayment] = useState<string>("cod"); // Woo gateway id (cod / bkash-for-woocommerce / sslcommerz)
-  const [paymentMethods, setPaymentMethods] = useState<{ id: string; title: string; description: string; type: "cod" | "redirect" }[]>([]);
   const [trxId, setTrxId] = useState("");
+  const [bkashNumber, setBkashNumber] = useState("");
+  const [paymentMethods, setPaymentMethods] = useState<{ id: string; title: string; description: string; type: "cod" | "redirect" }[]>([]);
   const [isGuestMode, setIsGuestMode] = useState<boolean>(profile.isGuest);
   const [guestSession, setGuestSession] = useState<null | Awaited<ReturnType<typeof getGuestSession>>>(null);
   const [redeemPoints, setRedeemPoints] = useState(false);
@@ -187,6 +188,18 @@ export default function CheckoutScreen() {
         unit: i.product.salePrice ?? i.product.price,
       }));
 
+      if (payment.includes("bkash")) {
+        if (!bkashNumber.trim() || !trxId.trim()) {
+          setErrorMsg("Please enter your bKash number and Transaction ID.");
+          setLoading(false);
+          return;
+        }
+      }
+
+      const finalDeliveryNotes = payment.includes("bkash")
+        ? `bKash Sender: ${bkashNumber.trim()}\n${deliveryNotes.trim()}`
+        : deliveryNotes.trim();
+
       const created = await placeOrder({
         name: isGift ? (giftName.trim() || name.trim()) : name.trim(),
         phone: isGift ? (giftPhone.replace(/[^0-9]/g, "").slice(-11) || digits) : digits,
@@ -199,7 +212,7 @@ export default function CheckoutScreen() {
         area: selectedArea,
         deliveryOption: selectedArea,
         deliverySlot,
-        deliveryNotes: deliveryNotes.trim() || undefined,
+        deliveryNotes: finalDeliveryNotes || undefined,
         payment,
         trxId: trxId.trim() || undefined,
         coupon: couponInfo ? couponInfo.code : undefined,
@@ -700,10 +713,39 @@ export default function CheckoutScreen() {
                     <View style={styles.payInfo}>
                       <Text style={[styles.payTitle, { color: colors.ink }]}>{m.title}</Text>
                       {m.description ? <Text style={[styles.paySub, { color: colors.sub }]}>{m.description}</Text> : null}
-                      {!isCod && <Text style={[styles.paySub, { color: colors.sub }]}>You'll be taken to the secure {m.title} page to complete payment.</Text>}
+                      {!isCod && !m.id.includes("bkash") && <Text style={[styles.paySub, { color: colors.sub }]}>You'll be taken to the secure {m.title} page to complete payment.</Text>}
                     </View>
                     {isCod && <View style={[styles.payTag, { backgroundColor: colors.indigo }]}><Text style={styles.payTagText}>MOST POPULAR</Text></View>}
                   </TouchableOpacity>
+
+                  {/* Manual bKash Inputs */}
+                  {active && m.id.includes("bkash") && (
+                    <View style={{ padding: 12, backgroundColor: colors.indigoLight, borderBottomLeftRadius: 10, borderBottomRightRadius: 10, borderWidth: 1.5, borderColor: colors.indigo, borderTopWidth: 0, marginTop: -2 }}>
+                      <Text style={{ fontSize: 13, color: colors.ink, marginBottom: 10, fontWeight: "600" }}>
+                        1. Go to your bKash Menu & select Send Money.{"\n"}
+                        2. Send <Text style={{fontWeight: "800", color: colors.indigoDark}}>৳{total.toLocaleString("en-BD")}</Text> to <Text style={{fontWeight: "800", color: colors.indigoDark}}>01952 700 500</Text> (Personal).{"\n"}
+                        3. Enter your bKash number and Transaction ID below.
+                      </Text>
+                      
+                      <View style={{ gap: 8 }}>
+                        <TextInput
+                          style={[styles.input, { backgroundColor: colors.paper, borderColor: colors.border, color: colors.ink }]}
+                          value={bkashNumber}
+                          onChangeText={setBkashNumber}
+                          placeholder="Your bKash Number (e.g. 017...)"
+                          placeholderTextColor={colors.faint}
+                          keyboardType="phone-pad"
+                        />
+                        <TextInput
+                          style={[styles.input, { backgroundColor: colors.paper, borderColor: colors.border, color: colors.ink }]}
+                          value={trxId}
+                          onChangeText={setTrxId}
+                          placeholder="bKash Transaction ID (TrxID)"
+                          placeholderTextColor={colors.faint}
+                        />
+                      </View>
+                    </View>
+                  )}
                 </View>
               );
             })

@@ -145,6 +145,8 @@ function CheckoutContent() {
   const [deliverySlot, setDeliverySlot] = useState<string>("any");
   const [deliveryNotes, setDeliveryNotes] = useState("");
   const [payment, setPayment] = useState<string>("cod");
+  const [bkashNumber, setBkashNumber] = useState("");
+  const [trxId, setTrxId] = useState("");
 
   // Gift / Separate Shipping
   const [isGift, setIsGift] = useState(false);
@@ -389,6 +391,18 @@ function CheckoutContent() {
     setApiError("");
 
     try {
+      if (payment.includes("bkash")) {
+        if (!bkashNumber.trim() || !trxId.trim()) {
+          setApiError("Please enter your bKash number and Transaction ID (TrxID).");
+          setLoading(false);
+          return;
+        }
+      }
+
+      const finalDeliveryNotes = payment.includes("bkash")
+        ? `bKash Sender: ${bkashNumber.trim()}\n${deliveryNotes.trim()}`
+        : deliveryNotes.trim();
+
       const orderResult = await placeOrder({
         name: isGift ? (giftName.trim() || name.trim()) : name.trim(),
         phone: isGift ? (giftPhone.replace(/[^0-9]/g, "").slice(-11) || cleanPhoneDigits) : cleanPhoneDigits,
@@ -403,9 +417,10 @@ function CheckoutContent() {
         postcode: "1200",
         area: selectedArea,
         payment,
+        trxId: trxId.trim() || undefined,
         deliverySlot,
-        deliveryNotes: deliveryNotes.trim() || undefined,
-        customerNote: deliveryNotes.trim() || undefined,
+        deliveryNotes: finalDeliveryNotes || undefined,
+        customerNote: finalDeliveryNotes || undefined,
         coupon: couponInfo ? couponInfo.code : undefined,
         isGuestOrder: isGuestMode,
         isGiftOrder: isGift,
@@ -938,6 +953,31 @@ function CheckoutContent() {
                   <p className="payment-info-sub">
                     You can pay the full amount of <strong>{bdt(total)}</strong> in cash when the courier hands over the parcel. Zero advance payment required!
                   </p>
+                </div>
+              ) : payment.includes("bkash") ? (
+                <div className="payment-info-box" style={{ marginTop: 16, background: "var(--indigo-light)", borderColor: "var(--indigo)" }}>
+                  <p className="payment-info-title" style={{ color: "var(--ink)" }}>Manual bKash Verification</p>
+                  <p className="payment-info-sub" style={{ marginBottom: 12 }}>
+                    1. Go to your bKash Menu & select Send Money.<br/>
+                    2. Send <strong>{bdt(total)}</strong> to <strong>01952 700 500</strong> (Personal).<br/>
+                    3. Enter your bKash number and Transaction ID below.
+                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <input
+                      className="form-input"
+                      type="text"
+                      placeholder="Your bKash Number (e.g. 017...)"
+                      value={bkashNumber}
+                      onChange={(e) => setBkashNumber(e.target.value)}
+                    />
+                    <input
+                      className="form-input"
+                      type="text"
+                      placeholder="bKash Transaction ID (TrxID)"
+                      value={trxId}
+                      onChange={(e) => setTrxId(e.target.value)}
+                    />
+                  </div>
                 </div>
               ) : (
                 <div className="payment-info-box" style={{ marginTop: 16 }}>

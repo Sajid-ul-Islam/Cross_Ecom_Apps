@@ -145,6 +145,7 @@ export interface OrderPayload {
   giftRecipientPhone?: string;
   guestToken?: string;
   idempotencyKey?: string;
+  trxId?: string;
 }
 
 export interface OrderResult {
