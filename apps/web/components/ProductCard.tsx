@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
 import { useWishlist } from "@/lib/wishlist";
@@ -48,15 +49,16 @@ export default function ProductCard({ product }: Props) {
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Image */}
-      <div className="product-card__image-wrap" style={{ position: "relative" }}>
+      <div className="product-card__image-wrap" style={{ position: "relative", width: "100%", aspectRatio: "3/4", overflow: "hidden" }}>
         {!imgError ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={isHovered && secondaryImg !== primaryImg ? secondaryImg : primaryImg}
             alt={product.name}
-            loading="lazy"
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             onError={() => setImgError(true)}
             style={{
+              objectFit: "cover",
               transition: "transform 0.3s ease, opacity 0.2s ease",
             }}
           />
