@@ -447,3 +447,176 @@ export function LiveIntegrationsStatusCard({
     </div>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/*  5. DEEN-BI Returns Classification Donut Chart (SVG)                */
+/* ------------------------------------------------------------------ */
+
+interface ReturnsClassificationProps {
+  paid: number;
+  exchanges: number;
+  partials: number;
+  nonPaid: number;
+}
+
+export function ReturnsClassificationDonutChart({ paid, exchanges, partials, nonPaid }: ReturnsClassificationProps) {
+  const categories = [
+    { key: "paid", label: "Paid Return", count: paid, color: "#10B981" },
+    { key: "exchanges", label: "Product/Size Exchange", count: exchanges, color: "#6366F1" },
+    { key: "partials", label: "Partial Delivery", count: partials, color: "#F59E0B" },
+    { key: "nonPaid", label: "Non-Paid Return (RTO)", count: nonPaid, color: "#EF4444" },
+  ];
+
+  const total = categories.reduce((sum, c) => sum + c.count, 0) || 1;
+
+  const size = 180;
+  const strokeWidth = 24;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+
+  let currentOffset = 0;
+  const segments = categories.map((c) => {
+    const pct = c.count / total;
+    const strokeDasharray = `${pct * circumference} ${circumference}`;
+    const strokeDashoffset = -currentOffset;
+    currentOffset += pct * circumference;
+    return { ...c, pct, strokeDasharray, strokeDashoffset };
+  });
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap", justifyContent: "space-around" }}>
+      <div style={{ position: "relative", width: size, height: size }}>
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: "rotate(-90deg)" }}>
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="transparent"
+            stroke="var(--border)"
+            strokeWidth={strokeWidth}
+          />
+          {segments.map((seg) => (
+            <circle
+              key={seg.key}
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              fill="transparent"
+              stroke={seg.color}
+              strokeWidth={strokeWidth}
+              strokeDasharray={seg.strokeDasharray}
+              strokeDashoffset={seg.strokeDashoffset}
+              strokeLinecap="round"
+              style={{ transition: "stroke-dashoffset 0.6s ease" }}
+            />
+          ))}
+        </svg>
+
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+            pointerEvents: "none",
+          }}
+        >
+          <span style={{ fontSize: 20, fontWeight: 900, color: "var(--ink)", lineHeight: 1 }}>
+            {total.toLocaleString()}
+          </span>
+          <span style={{ fontSize: 9, fontWeight: 800, color: "var(--sub)", marginTop: 4, letterSpacing: 0.5 }}>
+            LOGGED PARCELS
+          </span>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1, minWidth: 200 }}>
+        {categories.map((c) => {
+          const pct = Math.round((c.count / total) * 100);
+          return (
+            <div key={c.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11.5 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: c.color }} />
+                <span style={{ color: "var(--ink)", fontWeight: 700 }}>{c.label}</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <strong style={{ color: "var(--ink)" }}>{c.count.toLocaleString()}</strong>
+                <span style={{ color: "var(--sub)", fontSize: 10, minWidth: 32, textAlign: "right" }}>({pct}%)</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  6. DEEN-BI Return Root Causes Bar Chart (SVG)                     */
+/* ------------------------------------------------------------------ */
+
+interface ReturnReasonsProps {
+  reasons: {
+    sizeMismatch: number;
+    cnr: number;
+    unavailable: number;
+    courierDelay: number;
+    other: number;
+  };
+}
+
+export function ReturnReasonsBarChart({ reasons }: ReturnReasonsProps) {
+  const items = [
+    { label: "📏 Size & Fit Mismatch", count: reasons.sizeMismatch || 0, color: "#6366F1", tag: "Fit / Measurement" },
+    { label: "🚫 Customer Denied (CNR)", count: reasons.cnr || 0, color: "#EF4444", tag: "Refused at Door" },
+    { label: "📍 Customer Unavailable", count: reasons.unavailable || 0, color: "#F59E0B", tag: "Rescheduled / Absent" },
+    { label: "🛵 Courier / Delivery Delay", count: reasons.courierDelay || 0, color: "#3B82F6", tag: "Rider Late / No Call" },
+    { label: "⚙️ Other / Cancelled", count: reasons.other || 0, color: "#8B5CF6", tag: "General Return" },
+  ];
+
+  const total = items.reduce((sum, it) => sum + it.count, 0) || 1;
+  const maxCount = Math.max(...items.map((it) => it.count), 1);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {items.map((it, i) => {
+        const pctOfTotal = Math.round((it.count / total) * 100);
+        const barWidth = Math.max(8, Math.round((it.count / maxCount) * 100));
+
+        return (
+          <div key={i} style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "10px 14px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <strong style={{ fontSize: 12, color: "var(--ink)" }}>{it.label}</strong>
+                <span style={{ fontSize: 9.5, color: "var(--sub)", background: "var(--border)", padding: "1px 6px", borderRadius: 4 }}>
+                  {it.tag}
+                </span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <strong style={{ fontSize: 12.5, color: "var(--ink)" }}>{it.count.toLocaleString()}</strong>
+                <span style={{ fontSize: 10, fontWeight: 800, color: it.color, background: `${it.color}18`, padding: "1px 6px", borderRadius: 4 }}>
+                  {pctOfTotal}%
+                </span>
+              </div>
+            </div>
+
+            <div style={{ width: "100%", height: 7, background: "var(--border)", borderRadius: 4, overflow: "hidden" }}>
+              <div
+                style={{
+                  width: `${barWidth}%`,
+                  height: "100%",
+                  background: it.color,
+                  borderRadius: 4,
+                  transition: "width 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
+                }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}

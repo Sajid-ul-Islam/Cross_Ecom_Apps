@@ -7,6 +7,8 @@ import {
   LogisticsDonutChart,
   CategoryRevenueBarChart,
   LiveIntegrationsStatusCard,
+  ReturnsClassificationDonutChart,
+  ReturnReasonsBarChart,
 } from "@/components/AdminCharts";
 
 interface AdminAnalyticsModalProps {
@@ -20,7 +22,7 @@ interface AdminAnalyticsViewProps {
   onClose?: () => void;
 }
 
-type TabType = "sales" | "pairs" | "logistics" | "stock" | "customers" | "orders";
+type TabType = "sales" | "pairs" | "logistics" | "returns" | "stock" | "customers" | "orders";
 type TimeframeType = "today" | "7d" | "30d" | "90d" | "all";
 
 export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose }: AdminAnalyticsViewProps) {
@@ -34,6 +36,9 @@ export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose 
   const [data, setData] = useState<any>(null);
   const [ordersData, setOrdersData] = useState<any[]>([]);
   const [productsData, setProductsData] = useState<any[]>([]);
+  const [returnsData, setReturnsData] = useState<any>(null);
+  const [returnsFilter, setReturnsFilter] = useState<string>("ALL");
+  const [returnsSearch, setReturnsSearch] = useState<string>("");
   const [orderSearch, setOrderSearch] = useState("");
   const [orderStatusFilter, setOrderStatusFilter] = useState("ALL");
   const [loading, setLoading] = useState(false);
@@ -62,15 +67,17 @@ export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose 
         payment: paymentFilter,
       });
 
-      const [resAnalytics, resOrders, resProducts] = await Promise.all([
-        fetch(`${API_URL}/v1/deen/admin/analytics?${params.toString()}`, { headers }).then((r) => r.json()),
-        fetch(`${API_URL}/v1/deen/admin/orders?limit=100`, { headers }).then((r) => r.json()),
-        fetch(`${API_URL}/v1/deen/admin/products`, { headers }).then((r) => r.json()),
+      const [resAnalytics, resOrders, resProducts, resReturns] = await Promise.all([
+        fetch(`${API_URL}/v1/deen/admin/analytics?${params.toString()}`, { headers }).then((r) => r.json()).catch(() => null),
+        fetch(`${API_URL}/v1/deen/admin/orders?limit=100`, { headers }).then((r) => r.json()).catch(() => null),
+        fetch(`${API_URL}/v1/deen/admin/products`, { headers }).then((r) => r.json()).catch(() => null),
+        fetch(`${API_URL}/v1/deen/admin/returns-intelligence`, { headers }).then((r) => r.json()).catch(() => null),
       ]);
 
       if (resAnalytics?.success) setData(resAnalytics);
       if (resOrders?.orders) setOrdersData(resOrders.orders);
       if (resProducts?.products) setProductsData(resProducts.products);
+      if (resReturns?.success) setReturnsData(resReturns);
     } catch {
       // Graceful fallback
     } finally {
@@ -352,7 +359,8 @@ export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose 
               {[
                 { id: "sales", label: "📈 Sales & Forecast", badge: null },
                 { id: "pairs", label: "🔗 Product Pairs & Bundles", badge: sales?.topProductPairs ? `${sales.topProductPairs.length} Pairs` : null },
-                { id: "logistics", label: "🚚 Pathao & Returns", badge: logistics ? `${logistics.deliverySuccessRate}% Deliv` : null },
+                { id: "logistics", label: "🚚 Pathao Logistics", badge: logistics ? `${logistics.deliverySuccessRate}% Deliv` : null },
+                { id: "returns", label: "🔄 DEEN-BI Returns & Recovery", badge: returnsData?.totalRecords ? `${returnsData.totalRecords.toLocaleString()}` : "2.5k" },
                 { id: "stock", label: "📦 Stock & Valuation", badge: inventory ? `${inventory.lowStockCount} Low` : null },
                 { id: "customers", label: "👥 VIP Customers", badge: null },
                 { id: "orders", label: `📋 Orders (${ordersData.length})`, badge: null },
@@ -622,6 +630,265 @@ export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose 
                           <span style={{ fontSize: 11, fontWeight: 800, color: "var(--crimson)" }}>RETURNED / RTO</span>
                           <p style={{ fontSize: 18, fontWeight: 900, margin: "4px 0 0", color: "var(--crimson)" }}>{logistics.returnedCount}</p>
                         </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* ---------------- DEEN-BI RETURNS & OPERATIONAL RECOVERY TAB ---------------- */}
+                {activeTab === "returns" && returnsData && (
+                  <>
+                    {/* Top KPI Cards */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12 }}>
+                      <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", padding: 14, borderRadius: "var(--radius)" }}>
+                        <span style={{ fontSize: 11, color: "var(--sub)", fontWeight: 800 }}>LOGGED PARCELS (DEEN-BI)</span>
+                        <p style={{ fontSize: 24, fontWeight: 900, color: "var(--ink)", margin: "4px 0 0" }}>
+                          {returnsData.totalRecords.toLocaleString()}
+                        </p>
+                        <span style={{ fontSize: 10, color: "var(--sub)" }}>Synced from Pathao stream</span>
+                      </div>
+
+                      <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", padding: 14, borderRadius: "var(--radius)" }}>
+                        <span style={{ fontSize: 11, color: "var(--emerald)", fontWeight: 800 }}>PAID RETURNS</span>
+                        <p style={{ fontSize: 24, fontWeight: 900, color: "var(--emerald)", margin: "4px 0 0" }}>
+                          {returnsData.paidReturns.toLocaleString()}
+                        </p>
+                        <span style={{ fontSize: 10, color: "var(--sub)" }}>Delivered & paid by customer</span>
+                      </div>
+
+                      <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", padding: 14, borderRadius: "var(--radius)" }}>
+                        <span style={{ fontSize: 11, color: "var(--indigo)", fontWeight: 800 }}>EXCHANGES</span>
+                        <p style={{ fontSize: 24, fontWeight: 900, color: "var(--indigo)", margin: "4px 0 0" }}>
+                          {returnsData.exchanges.toLocaleString()}
+                        </p>
+                        <span style={{ fontSize: 10, color: "var(--sub)" }}>Size / product replacements</span>
+                      </div>
+
+                      <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", padding: 14, borderRadius: "var(--radius)" }}>
+                        <span style={{ fontSize: 11, color: "var(--amber)", fontWeight: 800 }}>ON-TIME DISPATCH</span>
+                        <p style={{ fontSize: 24, fontWeight: 900, color: "var(--amber)", margin: "4px 0 0" }}>
+                          {returnsData.onTimeStats?.onTimeRatePct}%
+                        </p>
+                        <span style={{ fontSize: 10, color: "var(--sub)" }}>Target latency: 72 hours</span>
+                      </div>
+
+                      <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", padding: 14, borderRadius: "var(--radius)" }}>
+                        <span style={{ fontSize: 11, color: "var(--crimson)", fontWeight: 800 }}>ESTIMATED RTO LOSS</span>
+                        <p style={{ fontSize: 24, fontWeight: 900, color: "var(--crimson)", margin: "4px 0 0" }}>
+                          {bdt(returnsData.estimatedRtoLossBdt)}
+                        </p>
+                        <span style={{ fontSize: 10, color: "var(--sub)" }}>৳90 loss per non-paid return</span>
+                      </div>
+                    </div>
+
+                    {/* Dual Charts Grid */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 14 }}>
+                      {/* Classification Donut */}
+                      <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 18, background: "var(--surface)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                          <h4 style={{ fontSize: 13, fontWeight: 900, color: "var(--ink)", margin: 0 }}>
+                            📊 RETURN & DISPATCH CLASSIFICATION
+                          </h4>
+                          <span style={{ fontSize: 11, color: "var(--sub)" }}>
+                            DEEN-BI Breakdown
+                          </span>
+                        </div>
+                        <ReturnsClassificationDonutChart
+                          paid={returnsData.paidReturns}
+                          exchanges={returnsData.exchanges}
+                          partials={returnsData.partials}
+                          nonPaid={returnsData.nonPaidReturns}
+                        />
+                      </div>
+
+                      {/* Root Causes Bar Chart */}
+                      <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 18, background: "var(--surface)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                          <h4 style={{ fontSize: 13, fontWeight: 900, color: "var(--ink)", margin: 0 }}>
+                            🔍 ROOT CAUSE ATTRIBUTION
+                          </h4>
+                          <span style={{ fontSize: 11, color: "var(--indigo)", fontWeight: 800 }}>
+                            Customer & Courier Signals
+                          </span>
+                        </div>
+                        <ReturnReasonsBarChart reasons={returnsData.reasonBreakdown} />
+                      </div>
+                    </div>
+
+                    {/* Live Stream Table */}
+                    <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 16, background: "var(--surface)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+                        <div>
+                          <h4 style={{ fontSize: 13, fontWeight: 900, color: "var(--ink)", margin: 0 }}>
+                            📋 LIVE RETURNS & DISPATCH RECONCILIATION STREAM
+                          </h4>
+                          <span style={{ fontSize: 11, color: "var(--sub)" }}>
+                            Real-time entries with live Pathao consignment tracking
+                          </span>
+                        </div>
+
+                        {/* Search & Filter Controls */}
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          <input
+                            type="text"
+                            placeholder="Search Order ID or Courier ID…"
+                            value={returnsSearch}
+                            onChange={(e) => setReturnsSearch(e.target.value)}
+                            style={{
+                              padding: "6px 12px",
+                              borderRadius: 6,
+                              border: "1px solid var(--border)",
+                              background: "var(--surface-2)",
+                              color: "var(--ink)",
+                              fontSize: 11,
+                              minWidth: 200,
+                            }}
+                          />
+                          <select
+                            value={returnsFilter}
+                            onChange={(e) => setReturnsFilter(e.target.value)}
+                            style={{
+                              padding: "6px 10px",
+                              borderRadius: 6,
+                              border: "1px solid var(--border)",
+                              background: "var(--surface-2)",
+                              color: "var(--ink)",
+                              fontSize: 11,
+                              fontWeight: 700,
+                            }}
+                          >
+                            <option value="ALL">All Classifications</option>
+                            <option value="Paid Return">Paid Returns</option>
+                            <option value="Exchange">Exchanges</option>
+                            <option value="Partial">Partials</option>
+                            <option value="Non Paid Return">Non-Paid Returns</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Stream Table */}
+                      <div style={{ overflowX: "auto" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5, textAlign: "left" }}>
+                          <thead>
+                            <tr style={{ borderBottom: "1px solid var(--border)", color: "var(--sub)" }}>
+                              <th style={{ padding: "8px 6px" }}>DATE</th>
+                              <th style={{ padding: "8px 6px" }}>ORDER ID</th>
+                              <th style={{ padding: "8px 6px" }}>PATHAO CONSIGNMENT</th>
+                              <th style={{ padding: "8px 6px" }}>TYPE</th>
+                              <th style={{ padding: "8px 6px" }}>PRODUCT DETAILS</th>
+                              <th style={{ padding: "8px 6px" }}>REASON</th>
+                              <th style={{ padding: "8px 6px" }}>STATUS</th>
+                              <th style={{ padding: "8px 6px" }}>RESTOCK</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {returnsData.recentFeed
+                              ?.filter((rec: any) => {
+                                if (returnsFilter !== "ALL" && rec.classification !== returnsFilter) return false;
+                                if (returnsSearch.trim()) {
+                                  const q = returnsSearch.toLowerCase();
+                                  return (
+                                    rec.orderId?.toLowerCase().includes(q) ||
+                                    rec.courierId?.toLowerCase().includes(q) ||
+                                    rec.productDetails?.toLowerCase().includes(q) ||
+                                    rec.customerReason?.toLowerCase().includes(q)
+                                  );
+                                }
+                                return true;
+                              })
+                              .slice(0, 20)
+                              .map((rec: any, idx: number) => {
+                                const badgeColor =
+                                  rec.classification === "Paid Return"
+                                    ? "var(--emerald)"
+                                    : rec.classification === "Exchange"
+                                    ? "var(--indigo)"
+                                    : rec.classification === "Partial"
+                                    ? "var(--amber)"
+                                    : "var(--crimson)";
+
+                                return (
+                                  <tr key={idx} style={{ borderBottom: "1px solid var(--border)" }}>
+                                    <td style={{ padding: "10px 6px", color: "var(--sub)", whiteSpace: "nowrap" }}>{rec.date}</td>
+                                    <td style={{ padding: "10px 6px", fontWeight: 800, color: "var(--ink)" }}>#{rec.orderId}</td>
+                                    <td style={{ padding: "10px 6px" }}>
+                                      {rec.courierId ? (
+                                        <a
+                                          href={`https://merchant.pathao.com/tracking?consignment_id=${encodeURIComponent(rec.courierId)}`}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          style={{
+                                            color: "#3B82F6",
+                                            fontWeight: 800,
+                                            textDecoration: "underline",
+                                            fontSize: 11,
+                                          }}
+                                          title="Track on Pathao Merchant Portal"
+                                        >
+                                          {rec.courierId} ↗
+                                        </a>
+                                      ) : (
+                                        <span style={{ color: "var(--sub)" }}>—</span>
+                                      )}
+                                    </td>
+                                    <td style={{ padding: "10px 6px" }}>
+                                      <span
+                                        style={{
+                                          background: `${badgeColor}18`,
+                                          color: badgeColor,
+                                          padding: "2px 8px",
+                                          borderRadius: 4,
+                                          fontWeight: 800,
+                                          fontSize: 10,
+                                          whiteSpace: "nowrap",
+                                        }}
+                                      >
+                                        {rec.classification}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: "10px 6px", maxWidth: 220, color: "var(--ink)" }}>
+                                      <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={rec.productDetails}>
+                                        {rec.productDetails || "Garment Item"}
+                                      </div>
+                                    </td>
+                                    <td style={{ padding: "10px 6px", maxWidth: 180, color: "var(--sub)" }}>
+                                      <div style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={rec.customerReason || rec.courierReason}>
+                                        {rec.customerReason || rec.courierReason || "CNR / Returned"}
+                                      </div>
+                                    </td>
+                                    <td style={{ padding: "10px 6px" }}>
+                                      <span
+                                        style={{
+                                          background: rec.onTimeStatus === "On Time" ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)",
+                                          color: rec.onTimeStatus === "On Time" ? "var(--emerald)" : "var(--crimson)",
+                                          padding: "2px 6px",
+                                          borderRadius: 4,
+                                          fontSize: 10,
+                                          fontWeight: 800,
+                                        }}
+                                      >
+                                        {rec.onTimeStatus}
+                                      </span>
+                                    </td>
+                                    <td style={{ padding: "10px 6px" }}>
+                                      <span
+                                        style={{
+                                          background: rec.inventoryStatus === "Received" ? "rgba(16,185,129,0.15)" : "rgba(245,158,11,0.15)",
+                                          color: rec.inventoryStatus === "Received" ? "var(--emerald)" : "var(--amber)",
+                                          padding: "2px 6px",
+                                          borderRadius: 4,
+                                          fontSize: 10,
+                                          fontWeight: 800,
+                                        }}
+                                      >
+                                        {rec.inventoryStatus}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
                   </>

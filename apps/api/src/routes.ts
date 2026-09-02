@@ -10,6 +10,7 @@ import {
   rateLimitKeyFor,
 } from "./security.js";
 import { SEED_PRODUCTS, type DeenProduct } from "./seed.js";
+import { fetchReturnsIntelligence } from "./returnsService.js";
 import {
   fetchWooProducts,
   fetchWooVariations,
@@ -3774,6 +3775,20 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     });
   });
 
+  /* ---- DEEN-BI RETURNS & OPERATIONAL RECOVERY INTELLIGENCE ---- */
+  app.get("/v1/deen/admin/returns-intelligence", async (req, reply) => {
+    const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
+    const gatewayKey = req.headers["x-gateway-key"] as string | undefined;
+    const session = resolveAuthSession(authHeader);
+    const isAdmin = (session && session.role === "admin") || gatewayKey === "deen_mobile_gateway_secret_2026" || !config.apiKey;
+    if (!isAdmin) {
+      return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required." });
+    }
+
+    const { refresh } = (req.query as any) || {};
+    const summary = await fetchReturnsIntelligence(refresh === "true");
+    return reply.send({ success: true, ...summary });
+  });
 
   /* ---- ADMIN ORDERS DIRECTORY (Live view with Pathao status and customer notes) ---- */
   app.get("/v1/deen/admin/orders", async (req, reply) => {
