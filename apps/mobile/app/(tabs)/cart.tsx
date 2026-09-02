@@ -200,7 +200,7 @@ export default function BagScreen() {
         <View style={styles.securityNote}>
           <ShieldCheck size={16} color={colors.emerald} />
           <Text style={[styles.securityNoteText, { color: colors.sub }]}>
-            Official DEEN checkout · Cash on delivery & bKash / Nagad accepted.
+            Official DEEN checkout · Cash on delivery & bKash / Card accepted.
           </Text>
         </View>
       </ScrollView>

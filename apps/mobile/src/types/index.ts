@@ -74,7 +74,7 @@ export interface CartItem {
   variationId?: number;
 }
 
-export type PaymentMethod = "cod" | "bkash" | "nagad" | "manual";
+export type PaymentMethod = "cod" | "bkash" | "manual";
 
 export type DeliveryOptionKey =
   | "dhaka_standard"
@@ -123,7 +123,7 @@ export interface Order {
   payment: string; // Woo gateway id: "cod" | "bkash-for-woocommerce" | "sslcommerz" | ...
   paymentTitle?: string;
   paymentStatus?: string;
-  trxId?: string; // bKash/Nagad manual transfer transaction ID (manual payment)
+  trxId?: string; // bKash manual transfer transaction ID (manual payment)
   coupon?: string; // customer-entered coupon code (validated against Woo)
   couponDiscount?: number; // discount applied by the coupon
   paymentUrl?: string; // Woo hosted payment page (redirect methods: bKash/SSLCommerz)
@@ -274,7 +274,7 @@ export interface ReturnExchangeRequest {
   pickupAddress: string;
   contactPhone: string;
   customerName: string;
-  refundMethod?: "bkash" | "nagad" | "bank" | "store_credit";
+  refundMethod?: "bkash" | "bank" | "store_credit";
   refundAccount?: string;
   status: ReturnStatus;
   createdAt: string;

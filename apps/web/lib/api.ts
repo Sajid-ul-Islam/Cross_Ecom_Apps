@@ -741,9 +741,39 @@ export type Category = (typeof CATEGORIES)[number];
 
 /* ----------------------------- payments ---------------------------- */
 
+export interface DeenPaymentMethod {
+  id: string;
+  title: string;
+  description: string;
+  type: "cod" | "redirect";
+}
+
+/**
+ * Fetches real, enabled payment gateways from WooCommerce via Fastify gateway.
+ * Source of truth = live WooCommerce settings.
+ */
+export async function fetchPaymentMethods(): Promise<DeenPaymentMethod[]> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/payment-methods`, {
+      next: { revalidate: 300, tags: ["payment-methods"] },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data?.methods) && data.methods.length > 0) {
+        return data.methods;
+      }
+    }
+  } catch {}
+  return [
+    { id: "cod", title: "Cash on delivery", description: "Pay with cash upon delivery.", type: "cod" },
+    { id: "bkash-for-woocommerce", title: "bKash", description: "Pay with bKash PGW.", type: "redirect" },
+    { id: "sslcommerz", title: "Debit / Credit Card (SSLCommerz)", description: "Pay securely through SSLCommerz.", type: "redirect" },
+  ];
+}
+
 export async function initiatePayment(
   orderId: string,
-  paymentMethod: "bkash" | "nagad" | "card" | "online",
+  paymentMethod: "bkash" | "card" | "online",
   amount?: number
 ): Promise<{ success: boolean; transaction?: Record<string, unknown>; merchantNumber: string; instruction: string; verificationUrl: string }> {
   const res = await apiFetch(`${API_URL}/v1/deen/payments/initiate`, {
@@ -761,7 +791,7 @@ export async function initiatePayment(
 export async function verifyPayment(
   orderId: string,
   trxId: string,
-  paymentMethod: "bkash" | "nagad" | "card" | "online" = "bkash",
+  paymentMethod: "bkash" | "card" | "online" = "bkash",
   senderPhone?: string
 ): Promise<{ success: boolean; message: string; order?: OrderResult }> {
   const res = await apiFetch(`${API_URL}/v1/deen/payments/verify`, {

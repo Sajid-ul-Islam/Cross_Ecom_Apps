@@ -1497,7 +1497,7 @@ export interface PaymentInitiationResult {
 
 export async function initiatePaymentAPI(
   orderId: string,
-  paymentMethod: "bkash" | "nagad" | "card" | "online",
+  paymentMethod: "bkash" | "card" | "online",
   amount?: number
 ): Promise<PaymentInitiationResult> {
   return request<PaymentInitiationResult>("/v1/deen/payments/initiate", {
@@ -1509,7 +1509,7 @@ export async function initiatePaymentAPI(
 export async function verifyPaymentAPI(
   orderId: string,
   trxId: string,
-  paymentMethod: "bkash" | "nagad" | "card" | "online" = "bkash",
+  paymentMethod: "bkash" | "card" | "online" = "bkash",
   senderPhone?: string
 ): Promise<{ success: boolean; message: string; order?: Order }> {
   return request<{ success: boolean; message: string; order?: Order }>("/v1/deen/payments/verify", {

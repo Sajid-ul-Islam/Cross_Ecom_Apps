@@ -188,27 +188,18 @@ export default function CheckoutScreen() {
         unit: i.product.salePrice ?? i.product.price,
       }));
 
-      const isManualMfs = payment.includes("bkash") || payment.includes("nagad") || payment.includes("rocket");
-      const isBankTransfer = payment.includes("bacs") || payment.includes("bank");
+      const isManualMfs = payment.includes("bkash");
 
       if (isManualMfs) {
         if (!bkashNumber.trim() || !trxId.trim()) {
-          const providerName = payment.includes("nagad") ? "Nagad" : payment.includes("rocket") ? "Rocket" : "bKash";
-          setErrorMsg(`Please enter your ${providerName} mobile number and Transaction ID (TrxID).`);
-          setLoading(false);
-          return;
-        }
-      } else if (isBankTransfer) {
-        if (!bkashNumber.trim() || !trxId.trim()) {
-          setErrorMsg("Please enter your Bank & Account Name and Deposit Reference / TrxID.");
+          setErrorMsg("Please enter your bKash mobile number and Transaction ID (TrxID).");
           setLoading(false);
           return;
         }
       }
 
-      const paymentLabel = isBankTransfer ? "Bank Transfer" : isManualMfs ? (payment.includes("nagad") ? "Nagad" : payment.includes("rocket") ? "Rocket" : "bKash") : payment.toUpperCase();
-      const finalDeliveryNotes = (isManualMfs || isBankTransfer)
-        ? `[${paymentLabel} Payment]\n${isBankTransfer ? "Sender A/C" : "Sender Phone"}: ${bkashNumber.trim()}\nRef/TrxID: ${trxId.trim()}\n${deliveryNotes.trim()}`
+      const finalDeliveryNotes = isManualMfs
+        ? `[bKash Payment]\nSender Phone: ${bkashNumber.trim()}\nRef/TrxID: ${trxId.trim()}\n${deliveryNotes.trim()}`
         : deliveryNotes.trim();
 
       const created = await placeOrder({
@@ -724,18 +715,18 @@ export default function CheckoutScreen() {
                     <View style={styles.payInfo}>
                       <Text style={[styles.payTitle, { color: colors.ink }]}>{m.title}</Text>
                       {m.description ? <Text style={[styles.paySub, { color: colors.sub }]}>{m.description}</Text> : null}
-                      {!isCod && !m.id.includes("bkash") && !m.id.includes("nagad") && !m.id.includes("rocket") && !m.id.includes("bacs") && !m.id.includes("bank") && (
+                      {!isCod && !m.id.includes("bkash") && (
                         <Text style={[styles.paySub, { color: colors.sub }]}>You'll be taken to the secure {m.title} page to complete payment.</Text>
                       )}
                     </View>
                     {isCod && <View style={[styles.payTag, { backgroundColor: colors.indigo }]}><Text style={styles.payTagText}>MOST POPULAR</Text></View>}
                   </TouchableOpacity>
 
-                  {/* Manual bKash / Nagad / Rocket Inputs */}
-                  {active && (m.id.includes("bkash") || m.id.includes("nagad") || m.id.includes("rocket")) && (
+                  {/* Manual bKash Inputs */}
+                  {active && m.id.includes("bkash") && (
                     <View style={{ padding: 12, backgroundColor: colors.indigoLight, borderBottomLeftRadius: 10, borderBottomRightRadius: 10, borderWidth: 1.5, borderColor: colors.indigo, borderTopWidth: 0, marginTop: -2 }}>
                       <Text style={{ fontSize: 13, color: colors.ink, marginBottom: 10, fontWeight: "600", lineHeight: 18 }}>
-                        1. Open your {m.id.includes("nagad") ? "Nagad" : m.id.includes("rocket") ? "Rocket" : "bKash"} App & select Send Money.{"\n"}
+                        1. Open your bKash App & select Send Money.{"\n"}
                         2. Send <Text style={{fontWeight: "800", color: colors.indigoDark}}>৳{total.toLocaleString("en-BD")}</Text> to <Text style={{fontWeight: "800", color: colors.indigoDark}}>01952 700 500</Text> (Personal).{"\n"}
                         3. Enter your sender number and Transaction ID below.
                       </Text>
@@ -745,7 +736,7 @@ export default function CheckoutScreen() {
                           style={[styles.input, { backgroundColor: colors.paper, borderColor: colors.border, color: colors.ink }]}
                           value={bkashNumber}
                           onChangeText={setBkashNumber}
-                          placeholder={`Your ${m.id.includes("nagad") ? "Nagad" : m.id.includes("rocket") ? "Rocket" : "bKash"} Number (01XXXXXXXXX)`}
+                          placeholder="Your bKash Number (01XXXXXXXXX)"
                           placeholderTextColor={colors.faint}
                           keyboardType="phone-pad"
                         />
@@ -754,39 +745,6 @@ export default function CheckoutScreen() {
                           value={trxId}
                           onChangeText={setTrxId}
                           placeholder="Transaction ID (TrxID)"
-                          placeholderTextColor={colors.faint}
-                        />
-                      </View>
-                    </View>
-                  )}
-
-                  {/* Direct Bank Transfer (BACS) Inputs */}
-                  {active && (m.id.includes("bacs") || m.id.includes("bank")) && (
-                    <View style={{ padding: 12, backgroundColor: colors.indigoLight, borderBottomLeftRadius: 10, borderBottomRightRadius: 10, borderWidth: 1.5, borderColor: colors.indigo, borderTopWidth: 0, marginTop: -2 }}>
-                      <Text style={{ fontSize: 13, color: colors.ink, marginBottom: 8, fontWeight: "700" }}>
-                        🏦 DEEN Corporate Bank Account Details:
-                      </Text>
-                      <View style={{ backgroundColor: colors.card, padding: 10, borderRadius: 8, marginBottom: 10, borderWidth: 1, borderColor: colors.border }}>
-                        <Text style={{ fontSize: 12, color: colors.ink, fontWeight: "600" }}>• Bank: City Bank PLC (or BRAC Bank PLC)</Text>
-                        <Text style={{ fontSize: 12, color: colors.ink, fontWeight: "600" }}>• Account Name: DEEN COMMERCE</Text>
-                        <Text style={{ fontSize: 12, color: colors.indigo, fontWeight: "800" }}>• Account No: 1503700500001</Text>
-                        <Text style={{ fontSize: 12, color: colors.ink }}>• Branch: Principal Branch, Dhaka</Text>
-                        <Text style={{ fontSize: 12, color: colors.ink }}>• Amount: ৳{total.toLocaleString("en-BD")} (via NPSB / BEFTN / Deposit)</Text>
-                      </View>
-                      
-                      <View style={{ gap: 8 }}>
-                        <TextInput
-                          style={[styles.input, { backgroundColor: colors.paper, borderColor: colors.border, color: colors.ink }]}
-                          value={bkashNumber}
-                          onChangeText={setBkashNumber}
-                          placeholder="Your Bank & Sender Account Name (e.g. EBL - Rahim Ahmed)"
-                          placeholderTextColor={colors.faint}
-                        />
-                        <TextInput
-                          style={[styles.input, { backgroundColor: colors.paper, borderColor: colors.border, color: colors.ink }]}
-                          value={trxId}
-                          onChangeText={setTrxId}
-                          placeholder="Deposit Slip / NPSB Reference / Trx ID"
                           placeholderTextColor={colors.faint}
                         />
                       </View>

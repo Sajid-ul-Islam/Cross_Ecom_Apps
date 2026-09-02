@@ -1,7 +1,7 @@
 /* ------------------------------------------------------------------ */
 /*  Seed catalog — mirrored from the live deencommerce.com store.      */
 /*  Acts as the data source until live WooCommerce keys are provided.  */
-/* ৳ BDT prices. Payments: COD · bKash · Nagad.                       */
+/* ৳ BDT prices. Payments: COD · bKash · Cards.                       */
 /* ------------------------------------------------------------------ */
 
 export type DeenCategory =

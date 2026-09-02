@@ -66,7 +66,7 @@ const ORDER_BODY_SCHEMA = {
       district:   { type: "string", maxLength: 100 },
       state:      { type: "string", maxLength: 20 },
       postcode:   { type: "string", maxLength: 10 },
-      payment:    { type: "string", enum: ["cod", "bkash", "nagad", "card", "online", "bkash-for-woocommerce", "sslcommerz"] },
+      payment:    { type: "string", enum: ["cod", "bkash", "card", "online", "bkash-for-woocommerce", "sslcommerz"] },
       trxId:      { type: "string", maxLength: 60 },
       coupon:     { type: "string", maxLength: 60 },
       guestToken: { type: "string", maxLength: 80 },
@@ -162,7 +162,7 @@ const PAYMENT_INIT_SCHEMA = {
     required: ["orderId", "paymentMethod"],
     properties: {
       orderId:       { type: "string", minLength: 1, maxLength: 100 },
-      paymentMethod: { type: "string", enum: ["bkash", "nagad", "card", "online"] },
+      paymentMethod: { type: "string", enum: ["bkash", "card", "online"] },
       amount:        { type: "number", minimum: 1 },
       customerPhone: { type: "string", maxLength: 20 },
       customerName:  { type: "string", maxLength: 100 },
@@ -178,7 +178,7 @@ const PAYMENT_VERIFY_SCHEMA = {
     properties: {
       orderId:       { type: "string", minLength: 1, maxLength: 100 },
       trxId:         { type: "string", minLength: 4, maxLength: 60 },
-      paymentMethod: { type: "string", enum: ["bkash", "nagad", "card", "online"] },
+      paymentMethod: { type: "string", enum: ["bkash", "card", "online"] },
       senderPhone:   { type: "string", maxLength: 20 },
     },
     additionalProperties: true,
@@ -377,7 +377,7 @@ const BROADCASTS_FILE     = `${DATA_DIR}/broadcasts.json`;
 const PAYMENTS_FILE       = `${DATA_DIR}/payments.json`;
 
 /* ------------------------------------------------------------------ */
-/*  Payment Transactions persistence (bKash · Nagad · Card)          */
+/*  Payment Transactions persistence (bKash · Card · Online)          */
 /* ------------------------------------------------------------------ */
 export interface PaymentTransaction {
   id: string;
@@ -385,7 +385,7 @@ export interface PaymentTransaction {
   orderNumber?: string;
   wooId?: number;
   amount: number;
-  paymentMethod: "bkash" | "nagad" | "card" | "online";
+  paymentMethod: "bkash" | "card" | "online";
   customerPhone?: string;
   customerName?: string;
   status: "INITIATED" | "PENDING_VERIFICATION" | "COMPLETED" | "FAILED" | "CANCELLED";
@@ -1369,21 +1369,6 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       color: "#E2136E",
     },
     {
-      id: "mfs_nagad",
-      bankName: "Nagad",
-      cardType: "Nagad Direct Gateway",
-      discount: "৳100 Flat Savings",
-      discountPct: 0,
-      maxDiscount: 100,
-      minSpend: 1500,
-      couponCode: "NAGAD100",
-      badge: "NAGAD",
-      validTill: "31 Dec 2026",
-      description: "Flat ৳100 discount on minimum order value of ৳1,500 via Nagad gateway.",
-      logoText: "Nagad",
-      color: "#F7931E",
-    },
-    {
       id: "emi_facility",
       bankName: "0% EMI Facility",
       cardType: "3, 6, 9 & 12 Months EMI",
@@ -1680,10 +1665,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
 
       const paymentTitle = payment === "cod" ? "Cash on delivery"
         : payment === "bkash" || payment === "bkash-for-woocommerce" ? "bKash"
-        : payment === "nagad" || payment === "nagad-for-woocommerce" ? "Nagad"
-        : payment === "rocket" || payment === "rocket-for-woocommerce" ? "Rocket"
-        : payment === "bacs" || payment === "bank" || payment === "bank_transfer" ? "Direct Bank Transfer"
-        : payment === "sslcommerz" ? "SSLCommerz"
+        : payment === "sslcommerz" || payment === "card" || payment === "online" ? "Pay Online (Cards / SSLCommerz)"
         : "Online Payment";
       const paymentStatus = payment === "cod" ? "Pending (Cash on Delivery)" : "Awaiting Payment";
 
@@ -2432,14 +2414,14 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   });
 
   /* ------------------------------------------------------------------ */
-  /*  Bangladeshi Payment Gateways (bKash · Nagad · Card · Online)      */
+  /*  Bangladeshi Payment Gateways (bKash · Card · Online)              */
   /* ------------------------------------------------------------------ */
 
   /* 1. Initiate payment session / intent for an order */
   app.post("/v1/deen/payments/initiate", { schema: PAYMENT_INIT_SCHEMA }, async (req, reply) => {
     const b = (req.body as any) || {};
     const orderId = String(b.orderId).trim();
-    const method = b.paymentMethod as "bkash" | "nagad" | "card" | "online";
+    const method = b.paymentMethod as "bkash" | "card" | "online";
 
     const targetOrder = orders.find((o) => o.id === orderId || o.number === orderId);
     if (!targetOrder) {
@@ -2474,19 +2456,17 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       instruction:
         method === "bkash"
           ? `Send ৳${amount} to bKash Merchant/Personal Account: ${deenMerchantNumber} (Reference: ${targetOrder.number}) and enter TrxID.`
-          : method === "nagad"
-          ? `Send ৳${amount} to Nagad Account: ${deenMerchantNumber} (Reference: ${targetOrder.number}) and enter TrxID.`
           : `Online payment session initialized for Order #${targetOrder.number}.`,
       verificationUrl: `/v1/deen/payments/verify`,
     });
   });
 
-  /* 2. Verify payment / Submit bKash or Nagad Transaction ID (TrxID) */
+  /* 2. Verify payment / Submit bKash Transaction ID (TrxID) */
   app.post("/v1/deen/payments/verify", { schema: PAYMENT_VERIFY_SCHEMA }, async (req, reply) => {
     const b = (req.body as any) || {};
     const orderId = String(b.orderId).trim();
     const trxId = String(b.trxId).trim().toUpperCase();
-    const method = (b.paymentMethod || "bkash") as "bkash" | "nagad" | "card" | "online";
+    const method = (b.paymentMethod || "bkash") as "bkash" | "card" | "online";
 
     const targetOrder = orders.find((o) => o.id === orderId || o.number === orderId);
     if (!targetOrder) {

@@ -19,7 +19,7 @@
   - Store Pickup: **৳0**
 - **Live Pathao Logistics Tracking**: Orders with `ptc_consignment_id` render real-time clickable Pathao tracking buttons (`https://merchant.pathao.com/tracking?consignment_id=...`).
 - **Cart & Wishlist State Management**: Client-side reactive cart, coupon discount applications, item count badges, and persistent storage.
-- **Multiple Payment Gateways**: Cash on Delivery (COD), bKash, Nagad, and Card payments.
+- **Multiple Payment Gateways**: Cash on Delivery (COD), bKash, and Card payments (SSLCommerz).
 - **Modern Responsive Design**: Editorial aesthetics tailored for raw selvedge denim, premium panjabis, and menswear collections.
 
 ---

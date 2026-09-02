@@ -86,7 +86,7 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
   const [pickupMethod, setPickupMethod] = useState<"courier_pickup" | "studio_dropoff">("courier_pickup");
   const [pickupAddress, setPickupAddress] = useState<string>(order?.address || "");
   const [contactPhone, setContactPhone] = useState<string>(order?.phone || "");
-  const [refundMethod, setRefundMethod] = useState<"bkash" | "nagad" | "bank" | "store_credit">("bkash");
+  const [refundMethod, setRefundMethod] = useState<"bkash" | "bank" | "store_credit">("bkash");
   const [refundAccount, setRefundAccount] = useState<string>(order?.phone || "");
   const [submitting, setSubmitting] = useState<boolean>(false);
 
@@ -430,11 +430,10 @@ export const ReturnExchangeModal: React.FC<ReturnExchangeModalProps> = ({
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>6. REFUND METHOD *</Text>
                 <View style={styles.refundMethodGrid}>
-                  {(["bkash", "nagad", "bank", "store_credit"] as const).map((m) => {
+                  {(["bkash", "bank", "store_credit"] as const).map((m) => {
                     const active = refundMethod === m;
                     const labels: Record<string, string> = {
                       bkash: "bKash Wallet",
-                      nagad: "Nagad Wallet",
                       bank: "Bank Transfer",
                       store_credit: "DEEN Store Voucher (+5% Bonus)",
                     };

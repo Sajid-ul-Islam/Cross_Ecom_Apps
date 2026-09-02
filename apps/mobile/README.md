@@ -235,7 +235,7 @@ The Fastify gateway is live at `https://cross-ecom-apps.onrender.com/`:
 
 ### 🔮 Future Milestones & Enhancements
 - [ ] Connect production Expo Push Notification server (`expo-server-sdk`) for OS-level background notifications.
-- [ ] Connect production bKash & Nagad merchant gateway tokens for direct mobile payment callbacks.
+- [ ] Connect production bKash & SSLCommerz merchant gateway tokens for direct mobile payment callbacks.
 - [ ] Attach persistent SQLite / PostgreSQL database for persistent bug ticket archival.
 - [ ] Add live barcode/QR code scanner for in-store outlet pickup verification.
 

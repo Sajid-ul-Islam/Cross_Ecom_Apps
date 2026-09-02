@@ -53,7 +53,7 @@
 - **5-Tab Navigation**: Unified `[ 🏠 Home ] [ 🗂️ Categories ] [ 🛒 Cart (live badge) ] [ 📦 Orders ] [ 👤 Profile ]`.
 - **Customer Wishlist & Saved Items Suite**: Save-for-later favorites with heart toggles on cards (bottom-right corner, non-overlapping), PDP, header count badge, and slide-out `WishlistModal` with 1-click "Move to Bag".
 - **In-App Notification Center & Bell Icon**: Categorized announcements (Promos, Bank Offers, Order Updates) with 1-click coupon code copying.
-- **Bank & MFS Card Discounts Suite**: Dedicated deals modal for City Bank Amex, BRAC Bank, EBL, SCB, MTB, bKash, and Nagad (`GET /v1/deen/offers`).
+- **Bank & MFS Card Discounts Suite**: Dedicated deals modal for City Bank Amex, BRAC Bank, EBL, SCB, MTB, and bKash (`GET /v1/deen/offers`).
 - **Instant Search Modal Drawer**: Fast debounced catalog discovery with category quick-chips and instant PDP routing.
 - **Garment Measurement Specs**: Interactive Size Guide modal (Inches & CM) for Jeans, Trousers, Shirts, Polos, and Panjabis.
 - **Denim Care Handbook**: Artisanal Japanese raw selvedge 3-step care guide (Initial Cold Soak, Break-In & Honeycomb Fading, Wool Wash Preservation).

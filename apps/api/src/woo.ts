@@ -809,7 +809,6 @@ export async function getCouponByCode(code: string): Promise<{
       scbdeen: { type: "percent", amount: 15, description: "Standard Chartered Priority 15% Exclusive Discount" },
       mtb10: { type: "percent", amount: 10, description: "Mutual Trust Bank 10% Instant Discount" },
       bkash10: { type: "percent", amount: 10, description: "bKash 10% Instant Cashback" },
-      nagad100: { type: "fixed_cart", amount: 100, description: "Nagad ৳100 Flat Savings" },
       deen50: { type: "percent", amount: 50, description: "Season Clearance 50% Discount" },
       deen20: { type: "percent", amount: 20, description: "Special 20% Off Storewide" },
     };
@@ -831,7 +830,6 @@ export async function getCouponByCode(code: string): Promise<{
       scbdeen: { type: "percent", amount: 15, description: "Standard Chartered Priority 15% Exclusive Discount" },
       mtb10: { type: "percent", amount: 10, description: "Mutual Trust Bank 10% Instant Discount" },
       bkash10: { type: "percent", amount: 10, description: "bKash 10% Instant Cashback" },
-      nagad100: { type: "fixed_cart", amount: 100, description: "Nagad ৳100 Flat Savings" },
       deen50: { type: "percent", amount: 50, description: "Season Clearance 50% Discount" },
       deen20: { type: "percent", amount: 20, description: "Special 20% Off Storewide" },
     };

@@ -84,21 +84,9 @@ const PAYMENT_METHODS = [
   },
   {
     id: "bkash",
-    title: "bKash Send Money / Direct",
+    title: "bKash Direct / Send Money",
     description: "Pay securely via bKash personal send-money with instant TrxID entry.",
     icon: "📱",
-  },
-  {
-    id: "nagad",
-    title: "Nagad Send Money",
-    description: "Instant payment using Nagad digital financial service.",
-    icon: "📲",
-  },
-  {
-    id: "bacs",
-    title: "Direct Bank Transfer / NPSB",
-    description: "Transfer directly to DEEN corporate bank account (City Bank / BRAC Bank).",
-    icon: "🏦",
   },
   {
     id: "card",
@@ -397,27 +385,18 @@ function CheckoutContent() {
     setApiError("");
 
     try {
-      const isManualMfs = payment.includes("bkash") || payment.includes("nagad") || payment.includes("rocket");
-      const isBankTransfer = payment.includes("bacs") || payment.includes("bank");
+      const isManualMfs = payment.includes("bkash");
 
       if (isManualMfs) {
         if (!bkashNumber.trim() || !trxId.trim()) {
-          const provider = payment.includes("nagad") ? "Nagad" : payment.includes("rocket") ? "Rocket" : "bKash";
-          setApiError(`Please enter your ${provider} mobile number and Transaction ID (TrxID).`);
-          setLoading(false);
-          return;
-        }
-      } else if (isBankTransfer) {
-        if (!bkashNumber.trim() || !trxId.trim()) {
-          setApiError("Please enter your Bank & Account Name and Deposit Reference / TrxID.");
+          setApiError("Please enter your bKash mobile number and Transaction ID (TrxID).");
           setLoading(false);
           return;
         }
       }
 
-      const paymentLabel = isBankTransfer ? "Bank Transfer" : isManualMfs ? (payment.includes("nagad") ? "Nagad" : payment.includes("rocket") ? "Rocket" : "bKash") : payment.toUpperCase();
-      const finalDeliveryNotes = (isManualMfs || isBankTransfer)
-        ? `[${paymentLabel} Payment]\n${isBankTransfer ? "Sender A/C" : "Sender Phone"}: ${bkashNumber.trim()}\nRef/TrxID: ${trxId.trim()}\n${deliveryNotes.trim()}`
+      const finalDeliveryNotes = isManualMfs
+        ? `[bKash Payment]\nSender Phone: ${bkashNumber.trim()}\nTrxID: ${trxId.trim()}\n${deliveryNotes.trim()}`
         : deliveryNotes.trim();
 
       const orderResult = await placeOrder({
@@ -996,58 +975,6 @@ function CheckoutContent() {
                     />
                   </div>
                 </div>
-              ) : payment.includes("nagad") ? (
-                <div className="payment-info-box" style={{ marginTop: 16, background: "var(--indigo-light)", borderColor: "var(--indigo)" }}>
-                  <p className="payment-info-title" style={{ color: "var(--ink)" }}>📲 Manual Nagad Send Money</p>
-                  <p className="payment-info-sub" style={{ marginBottom: 12, lineHeight: 1.6 }}>
-                    1. Open your Nagad App & select <strong>Send Money</strong>.<br/>
-                    2. Send <strong>{bdt(total)}</strong> to <strong>01952 700 500</strong> (Personal).<br/>
-                    3. Enter your Nagad number and Transaction ID (TrxID) below:
-                  </p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    <input
-                      className="form-input"
-                      type="text"
-                      placeholder="Your Nagad Number (e.g. 018XXXXXXXX)"
-                      value={bkashNumber}
-                      onChange={(e) => setBkashNumber(e.target.value)}
-                    />
-                    <input
-                      className="form-input"
-                      type="text"
-                      placeholder="Nagad Transaction ID (TrxID)"
-                      value={trxId}
-                      onChange={(e) => setTrxId(e.target.value)}
-                    />
-                  </div>
-                </div>
-              ) : (payment.includes("bacs") || payment.includes("bank")) ? (
-                <div className="payment-info-box" style={{ marginTop: 16, background: "var(--indigo-light)", borderColor: "var(--indigo)" }}>
-                  <p className="payment-info-title" style={{ color: "var(--ink)" }}>🏦 DEEN Corporate Bank Account Details</p>
-                  <div style={{ background: "var(--surface)", padding: 12, borderRadius: 8, margin: "10px 0 14px", border: "1px solid var(--border)", fontSize: 13, lineHeight: 1.6 }}>
-                    <div><strong>• Bank:</strong> City Bank PLC / BRAC Bank PLC</div>
-                    <div><strong>• Account Name:</strong> DEEN COMMERCE</div>
-                    <div><strong>• Account Number:</strong> <span style={{ color: "var(--indigo)", fontWeight: 800 }}>1503700500001</span></div>
-                    <div><strong>• Branch:</strong> Principal Branch, Dhaka</div>
-                    <div><strong>• Amount:</strong> <strong>{bdt(total)}</strong> (via NPSB / BEFTN / Cash Deposit)</div>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    <input
-                      className="form-input"
-                      type="text"
-                      placeholder="Your Bank & Account Name (e.g. EBL - Rahim Ahmed)"
-                      value={bkashNumber}
-                      onChange={(e) => setBkashNumber(e.target.value)}
-                    />
-                    <input
-                      className="form-input"
-                      type="text"
-                      placeholder="Deposit Slip / NPSB Ref / Transaction ID"
-                      value={trxId}
-                      onChange={(e) => setTrxId(e.target.value)}
-                    />
-                  </div>
-                </div>
               ) : (
                 <div className="payment-info-box" style={{ marginTop: 16 }}>
                   <p className="payment-info-title">🔒 Digital Merchant Processing</p>
@@ -1184,7 +1111,7 @@ function CheckoutContent() {
                         { code: "BRAC10", label: "BRAC 10%" },
                         { code: "EBLDEEN", label: "EBL 10%" },
                         { code: "SCBDEEN", label: "SCB 15%" },
-                        { code: "NAGAD100", label: "Nagad ৳100" },
+                        { code: "BKASH10", label: "bKash 10%" },
                       ].map((chip) => (
                         <button
                           key={chip.code}
