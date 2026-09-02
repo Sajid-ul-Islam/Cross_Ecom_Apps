@@ -297,7 +297,7 @@ export async function fetchProducts(params?: {
 
     const res = await apiFetch(
       `${API_URL}/v1/deen/products${qs.toString() ? "?" + qs.toString() : ""}`,
-      { next: { revalidate: 60 } }
+      { next: { revalidate: 60, tags: ["catalog", "products"] } }
     );
     if (res.ok) {
       const data: Product[] = await res.json();
@@ -330,7 +330,7 @@ export async function fetchProducts(params?: {
 export async function fetchProduct(id: string): Promise<Product | null> {
   try {
     const res = await apiFetch(`${API_URL}/v1/deen/products/${encodeURIComponent(id)}`, {
-      next: { revalidate: 60 },
+      next: { revalidate: 60, tags: ["catalog", `product-${id}`] },
     });
     if (res.ok) {
       const product = await res.json();
@@ -352,7 +352,7 @@ export async function fetchProduct(id: string): Promise<Product | null> {
 export async function fetchCategories(): Promise<{ category: string; count: number }[]> {
   try {
     const res = await apiFetch(`${API_URL}/v1/deen/categories`, {
-      next: { revalidate: 300 },
+      next: { revalidate: 300, tags: ["categories"] },
     });
     if (res.ok) {
       const data = await res.json();
@@ -376,7 +376,7 @@ export async function fetchCategories(): Promise<{ category: string; count: numb
 export async function fetchCategoryCovers(): Promise<Record<string, string>> {
   try {
     const res = await apiFetch(`${API_URL}/v1/deen/category-covers`, {
-      next: { revalidate: 300 },
+      next: { revalidate: 300, tags: ["covers", "categories"] },
     });
     if (res.ok) {
       const data = await res.json();
