@@ -7,6 +7,11 @@
     "icon": "./assets/icon.png",
     "scheme": "deen",
     "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0D111A"
+    },
     "runtimeVersion": {
       "policy": "appVersion"
     },
@@ -18,14 +23,18 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.deencommerce.app"
+      "bundleIdentifier": "com.deencommerce.app",
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.deencommerce.app"
+      "package": "com.deencommerce.app",
+      "versionCode": 1,
+      "permissions": [],
+      "softwareKeyboardLayoutMode": "pan"
     },
     "web": {
       "bundler": "metro",
