@@ -43,12 +43,12 @@ export default function MobileBottomNav() {
       ),
     },
     {
-      href: "/orders",
-      label: "Orders",
+      href: "#chat",
+      label: "Chat",
+      isAction: true,
       icon: (active: boolean) => (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "var(--indigo)" : "currentColor"} strokeWidth={active ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <polyline points="12 6 12 12 16 14" />
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
       ),
     },
@@ -67,6 +67,23 @@ export default function MobileBottomNav() {
   return (
     <nav className="mobile-bottom-nav" aria-label="Mobile Navigation">
       {tabs.map((tab) => {
+        if (tab.isAction) {
+          return (
+            <button
+              key={tab.label}
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("deen_open_chat"))}
+              className="mobile-tab-btn"
+              style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
+            >
+              <div className="mobile-tab-icon-wrap">
+                {tab.icon(false)}
+              </div>
+              <span className="mobile-tab-label">{tab.label}</span>
+            </button>
+          );
+        }
+
         const isActive = pathname === tab.href || (tab.href !== "/" && pathname.startsWith(tab.href));
         return (
           <Link

@@ -297,10 +297,10 @@ export default function Header() {
               )}
             </button>
 
-            {/* Cart Button */}
+            {/* Cart Button (Desktop only — mobile view uses bottom nav cart) */}
             <Link
               href="/cart"
-              className="nav__icon-btn"
+              className="nav__icon-btn nav__cart-desktop-only"
               aria-label="Cart"
               style={{
                 position: "relative",

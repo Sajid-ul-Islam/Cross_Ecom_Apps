@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 
-import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Gift, ShieldCheck } from "../../src/components/Icons";
+import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Gift, ShieldCheck, Clock } from "../../src/components/Icons";
 import { ScreenShell } from "../../src/components/ScreenShell";
 import { CashbackBanner } from "../../src/components/Banner";
 import { useTheme } from "../../src/context/ThemeContext";
@@ -54,6 +54,14 @@ export default function BagScreen() {
         <Text style={styles.shopBtnText}>CONTINUE SHOPPING</Text>
         <ArrowRight size={16} color="#FFFFFF" />
       </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.trackOrdersEmptyBtn, { borderColor: colors.border, backgroundColor: colors.cardSecondary }]}
+        activeOpacity={0.85}
+        onPress={() => router.push("/(tabs)/orders")}
+      >
+        <Clock size={16} color={colors.ink} />
+        <Text style={[styles.trackOrdersEmptyBtnText, { color: colors.ink }]}>TRACK MY ORDERS & LOGISTICS</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -67,6 +75,27 @@ export default function BagScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <CashbackBanner />
+
+        {/* Orders & Logistics Quick Access Card */}
+        <TouchableOpacity
+          style={[styles.ordersCard, { backgroundColor: colors.cardSecondary, borderColor: colors.border }]}
+          activeOpacity={0.85}
+          onPress={() => router.push("/(tabs)/orders")}
+          accessibilityRole="button"
+          accessibilityLabel="Track my existing orders"
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+            <View style={[styles.ordersIconCircle, { backgroundColor: colors.indigoLight }]}>
+              <Clock size={18} color={colors.indigo} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.ordersCardTitle, { color: colors.ink }]}>Looking for past orders?</Text>
+              <Text style={[styles.ordersCardSub, { color: colors.sub }]}>Track live shipments & Pathao courier status</Text>
+            </View>
+          </View>
+          <ArrowRight size={16} color={colors.sub} />
+        </TouchableOpacity>
+
         {/* Cart Item Cards */}
         <View style={styles.itemsList}>
           {cart.map((item) => {
@@ -526,6 +555,47 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
       fontSize: 12,
       fontWeight: "800",
       letterSpacing: 1,
+    },
+    trackOrdersEmptyBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 14,
+      paddingHorizontal: 20,
+      borderRadius: 6,
+      borderWidth: 1,
+      marginTop: 12,
+      width: "100%",
+    },
+    trackOrdersEmptyBtnText: {
+      fontSize: 12,
+      fontWeight: "800",
+      letterSpacing: 0.8,
+    },
+    ordersCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: 14,
+      borderRadius: 8,
+      borderWidth: 1,
+      marginBottom: 16,
+    },
+    ordersIconCircle: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    ordersCardTitle: {
+      fontSize: 13,
+      fontWeight: "800",
+    },
+    ordersCardSub: {
+      fontSize: 11,
+      marginTop: 2,
     },
   });
 }

@@ -25,7 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
   title = "DEEN",
   showBack = false,
   showSearch = true,
-  showBag = true,
+  showBag = false,
   showNotif = true,
   subtitle,
   onSearchPress,

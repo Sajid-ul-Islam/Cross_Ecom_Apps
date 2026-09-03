@@ -52,6 +52,12 @@ export default function AiConciergeDrawer() {
     }
   }, [messages, loading]);
 
+  useEffect(() => {
+    const handleOpenChat = () => setIsOpen(true);
+    window.addEventListener("deen_open_chat", handleOpenChat);
+    return () => window.removeEventListener("deen_open_chat", handleOpenChat);
+  }, []);
+
   const handleSend = async (userText: string) => {
     const text = userText.trim();
     if (!text || loading) return;
@@ -146,13 +152,10 @@ export default function AiConciergeDrawer() {
             right: 28px;
           }
         }
-        /* Mobile: positioned safely above the 62px bottom navigation bar with zero overlap */
+        /* Mobile: hidden because Chat is placed directly in the mobile bottom navigation bar */
         @media (max-width: 768px) {
           .floating-chat-trigger {
-            bottom: 74px;
-            right: 16px;
-            padding: 8px 15px;
-            font-size: 12px;
+            display: none !important;
           }
         }
       `}</style>

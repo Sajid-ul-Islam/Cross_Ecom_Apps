@@ -45,14 +45,19 @@ const QUICK_PROMPTS = [
   "📍 Where are your retail showrooms in Dhaka?",
 ];
 
-interface AiConciergeModalProps {
+export interface AiConciergeModalProps {
   visible: boolean;
   onClose: () => void;
 }
 
-export const AiConciergeModal: React.FC<AiConciergeModalProps> = ({
-  visible,
+export interface AiChatViewProps {
+  onClose?: () => void;
+  isEmbedded?: boolean;
+}
+
+export const AiChatView: React.FC<AiChatViewProps> = ({
   onClose,
+  isEmbedded = false,
 }) => {
   const router = useRouter();
   const { colors, isDark } = useTheme();
@@ -143,26 +148,21 @@ export const AiConciergeModal: React.FC<AiConciergeModalProps> = ({
     }, 2000);
   };
 
-  if (!visible) return null;
-
-  return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView
-        style={styles.overlay}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <View style={styles.sheet}>
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.headerLeft}>
-              <View style={styles.aiAvatar}>
-                <Sparkles size={18} color="#FFFFFF" />
-              </View>
-              <View>
-                <Text style={styles.title}>DEEN AI CONCIERGE</Text>
-                <Text style={styles.sub}>● RAG Knowledge & Live Catalog Active</Text>
-              </View>
+  const content = (
+    <View style={isEmbedded ? styles.sheetEmbedded : styles.sheet}>
+      {/* Header */}
+      {!isEmbedded && (
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <View style={styles.aiAvatar}>
+              <Sparkles size={18} color="#FFFFFF" />
             </View>
+            <View>
+              <Text style={styles.title}>DEEN AI CONCIERGE</Text>
+              <Text style={styles.sub}>● RAG Knowledge & Live Catalog Active</Text>
+            </View>
+          </View>
+          {onClose && (
             <TouchableOpacity
               style={styles.closeBtn}
               onPress={onClose}
@@ -172,7 +172,9 @@ export const AiConciergeModal: React.FC<AiConciergeModalProps> = ({
             >
               <X size={20} color={colors.ink} />
             </TouchableOpacity>
-          </View>
+          )}
+        </View>
+      )}
 
           {/* Messages Scroll Area */}
           <ScrollView
@@ -254,7 +256,7 @@ export const AiConciergeModal: React.FC<AiConciergeModalProps> = ({
                         style={styles.actionChip}
                         activeOpacity={0.8}
                         onPress={() => {
-                          onClose();
+                          onClose?.();
                           if (act.action === "open_whatsapp") {
                             Linking.openURL("https://wa.me/8801952700500");
                           } else if (act.action === "navigate_shop") {
@@ -321,7 +323,34 @@ export const AiConciergeModal: React.FC<AiConciergeModalProps> = ({
             </TouchableOpacity>
           </View>
         </View>
+      );
+
+  if (isEmbedded) {
+    return (
+      <KeyboardAvoidingView
+        style={{ flex: 1, backgroundColor: colors.paper }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        {content}
       </KeyboardAvoidingView>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.overlay}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      {content}
+    </KeyboardAvoidingView>
+  );
+};
+
+export const AiConciergeModal: React.FC<AiConciergeModalProps> = ({ visible, onClose }) => {
+  if (!visible) return null;
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <AiChatView onClose={onClose} />
     </Modal>
   );
 };
@@ -338,6 +367,12 @@ function createStyles(colors: ThemeColors) {
       borderTopLeftRadius: 20,
       borderTopRightRadius: 20,
       height: Math.round(height * 0.85),
+      display: "flex",
+      flexDirection: "column",
+    },
+    sheetEmbedded: {
+      backgroundColor: colors.paper,
+      flex: 1,
       display: "flex",
       flexDirection: "column",
     },

@@ -1,6 +1,6 @@
 import React from "react";
 import { Tabs } from "expo-router";
-import { Home, Layers, ShoppingBag, Clock, User } from "../../src/components/Icons";
+import { Home, Layers, ShoppingBag, MessageCircle, User } from "../../src/components/Icons";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useCart } from "../../src/context/CartContext";
 
@@ -58,10 +58,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="chat"
+        options={{
+          title: "Chat",
+          tabBarIcon: ({ color, size }) => <MessageCircle size={size} color={String(color)} />,
+        }}
+      />
+      <Tabs.Screen
         name="orders"
         options={{
-          title: "Orders",
-          tabBarIcon: ({ color, size }) => <Clock size={size} color={String(color)} />,
+          href: null,
         }}
       />
       <Tabs.Screen

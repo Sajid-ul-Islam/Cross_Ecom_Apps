@@ -1038,8 +1038,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   to { opacity: 1; transform: translateY(0); }
 }
 @media (max-width: 768px) {
+  .nav__cart-desktop-only {
+    display: none !important;
+  }
   .scroll-to-top-btn {
-    bottom: 126px; /* Stacked 8px above the mobile Chat button (bottom: 74px) */
+    bottom: 74px; /* Cleanly 12px above the 62px mobile bottom nav bar */
     right: 16px;
   }
 }
