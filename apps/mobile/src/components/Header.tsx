@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { useRouter } from "expo-router";
-import { ShoppingBag, ArrowLeft, Search, Bell, Heart } from "./Icons";
+import { ShoppingBag, ArrowLeft, Search, Bell, Heart, Sparkles } from "./Icons";
 import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useCart } from "../context/CartContext";
@@ -9,6 +9,7 @@ import { useWishlist } from "../context/WishlistContext";
 import { useNotifications } from "../context/NotificationContext";
 import { NotificationModal } from "./NotificationModal";
 import { WishlistModal } from "./WishlistModal";
+import { AiConciergeModal } from "./AiConciergeModal";
 
 interface HeaderProps {
   title?: string;
@@ -37,6 +38,7 @@ export const Header: React.FC<HeaderProps> = ({
   const { unreadCount } = useNotifications();
   const [notifVisible, setNotifVisible] = useState(false);
   const [wishlistVisible, setWishlistVisible] = useState(false);
+  const [aiVisible, setAiVisible] = useState(false);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.paper, borderBottomColor: colors.border }]}>
@@ -71,9 +73,16 @@ export const Header: React.FC<HeaderProps> = ({
 
         {showBack && (
           <View style={styles.centerTitleContainer}>
-            <Text style={[styles.headerTitle, { color: colors.ink }]} numberOfLines={1}>
-              {title}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, justifyContent: "center" }}>
+              <Image
+                source={require("../../assets/icon.png")}
+                style={{ width: 18, height: 18, borderRadius: 4 }}
+                resizeMode="cover"
+              />
+              <Text style={[styles.headerTitle, { color: colors.ink }]} numberOfLines={1}>
+                {title}
+              </Text>
+            </View>
             {subtitle && (
               <Text style={[styles.headerSubtitle, { color: colors.sub }]} numberOfLines={1}>
                 {subtitle}
@@ -112,6 +121,17 @@ export const Header: React.FC<HeaderProps> = ({
             </TouchableOpacity>
           )}
 
+          {/* AI Concierge Assistant */}
+          <TouchableOpacity
+            style={[styles.notifButton, { backgroundColor: colors.indigoLight }]}
+            onPress={() => setAiVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel="DEEN AI Shopping Concierge"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Sparkles size={19} color={colors.indigo} />
+          </TouchableOpacity>
+
           {/* Wishlist Heart Button */}
           <TouchableOpacity
             style={[styles.notifButton, { backgroundColor: colors.cardSecondary }]}
@@ -146,6 +166,12 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </View>
       </View>
+
+      {/* AI Concierge Modal */}
+      <AiConciergeModal
+        visible={aiVisible}
+        onClose={() => setAiVisible(false)}
+      />
 
       {/* In-App Notifications Modal */}
       <NotificationModal

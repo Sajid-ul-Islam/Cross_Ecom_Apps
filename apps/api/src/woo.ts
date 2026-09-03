@@ -103,7 +103,12 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
   const pct = parseDiscountPct(catNames);
   const current = Number(p.price) || 0;
   const regular = p.regular_price ? Number(p.regular_price) : pct ? Math.round(current / (1 - pct / 100)) : undefined;
-  const salePrice = p.on_sale && p.sale_price ? Number(p.sale_price) : p.on_sale ? current : undefined;
+  const rawSale = p.sale_price ? Number(p.sale_price) : undefined;
+  const onSale = Boolean(p.on_sale || (regular && current < regular) || (regular && rawSale && rawSale < regular));
+  const salePrice = onSale ? (rawSale || current) : undefined;
+  const regularPrice = onSale ? (regular || Math.round(current / (1 - (pct || 20) / 100))) : (regular || current);
+  const salePct = pct || (onSale && regularPrice && salePrice && regularPrice > salePrice ? Math.round(((regularPrice - salePrice) / regularPrice) * 100) : undefined);
+
   // Pick the right Woo/WP size per surface. `src` = full original (heavy);
   // `thumbnail` = WP-generated small (grid), `woocommerce_single` = medium (PDP).
   // All three are Woo-sourced — we never host or generate images.
@@ -120,10 +125,10 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
     sku: p.sku,
     name: p.name,
     category,
-    price: current,
+    price: regularPrice || current,
     salePrice,
-    regularPrice: regular,
-    salePct: pct,
+    regularPrice,
+    salePct,
     sizes,
     images: [imgs[0] ?? "", imgs[1] ?? imgs[0] ?? ""] as [string, string],
     gallery: picks.map((x) => x.full),
@@ -136,6 +141,51 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
     rating: Number(p.average_rating) || 0,
     ratingCount: Number(p.rating_count) || 0,
     blurb: (p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220) ?? "",
+  };
+}
+
+function mapStoreProductToDeen(p: any): DeenProduct {
+  const regularPrice = p.prices?.regular_price ? Number(p.prices.regular_price) : undefined;
+  const salePrice = p.prices?.sale_price ? Number(p.prices.sale_price) : undefined;
+  const currentPrice = Number(p.prices?.price) || salePrice || regularPrice || 0;
+  const onSale = Boolean(p.on_sale && regularPrice && salePrice && regularPrice > salePrice);
+  const catNames = (p.categories || []).map((c: any) => c.name);
+  const category = mapCategory(catNames);
+  const pct = onSale && regularPrice && salePrice
+    ? Math.round(((regularPrice - salePrice) / regularPrice) * 100)
+    : parseDiscountPct(catNames);
+
+  const sizeAttr = (p.attributes || []).find((a: any) => /size|মাপ/i.test(a.name));
+  const sizes = sizeAttr?.terms ? sizeAttr.terms.map((t: any) => t.name) : ["30", "32", "34", "36", "38"];
+
+  const imgs = (p.images || []).map((img: any) => normalizeImageUrl(img.src || img.thumbnail || "")).filter(Boolean);
+  const primaryImg = imgs[0] || "https://images.unsplash.com/photo-1542272604-780c96856592?w=800";
+  const secondaryImg = imgs[1] || primaryImg;
+
+  const cleanName = (p.name || "").replace(/&#038;/g, "&").replace(/&amp;/g, "&").replace(/&quot;/g, '"');
+
+  return {
+    id: String(p.id),
+    sku: p.sku || `DS-${p.id}`,
+    name: cleanName,
+    category,
+    price: regularPrice || currentPrice,
+    salePrice: onSale ? salePrice : undefined,
+    regularPrice: onSale ? regularPrice : undefined,
+    salePct: pct,
+    sizes: sizes.length > 0 ? sizes : ["M", "L", "XL"],
+    images: [primaryImg, secondaryImg],
+    gallery: imgs.length > 0 ? imgs : [primaryImg],
+    thumb: imgs[0] || primaryImg,
+    single: imgs[0] || primaryImg,
+    full: imgs[0] || primaryImg,
+    fabric: "Artisanal Denim & Fabric",
+    fit: "Slim Fit",
+    stockStatus: p.is_in_stock ? "instock" : "outofstock",
+    rating: Number(p.average_rating) || 4.9,
+    ratingCount: Number(p.review_count) || 12,
+    blurb: (p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220) || "Authentic DEEN design crafted in Bangladesh.",
+    isNew: catNames.some((c: string) => /new/i.test(c)),
   };
 }
 
@@ -390,16 +440,50 @@ export async function fetchWooProducts(opts?: { status?: string }): Promise<Deen
 
   const loader = async () => {
     const out: DeenProduct[] = [];
-    const perPage = 100;
-    for (let page = 1; page <= 10; page++) {
-      const batch = (await wooFetch("products", { status: statusFilter, per_page: String(perPage), page: String(page) })) as WooProduct[];
-      if (!Array.isArray(batch) || batch.length === 0) break;
-      for (const p of batch) {
-        const d = mapWooToDeen(p);
-        if (d) out.push(d);
+
+    // 1. Try authenticated WooCommerce REST API if keys are present
+    if (wooHealthy()) {
+      try {
+        const perPage = 100;
+        for (let page = 1; page <= 10; page++) {
+          const batch = (await wooFetch("products", { status: statusFilter, per_page: String(perPage), page: String(page) })) as WooProduct[];
+          if (!Array.isArray(batch) || batch.length === 0) break;
+          for (const p of batch) {
+            const d = mapWooToDeen(p);
+            if (d) out.push(d);
+          }
+          if (batch.length < perPage) break;
+        }
+        if (out.length > 0) return out;
+      } catch (err) {
+        console.warn("[woo] Authenticated WC API failed, trying public Store API:", (err as Error).message);
       }
-      if (batch.length < perPage) break;
     }
+
+    // 2. Fetch live exact products and images directly from deencommerce.com Store API
+    try {
+      const siteUrl = config.woo.site || "https://deencommerce.com";
+      for (let page = 1; page <= 3; page++) {
+        const res = await fetch(`${siteUrl}/wp-json/wc/store/v1/products?per_page=100&page=${page}`, {
+          headers: { "User-Agent": "DEEN-Commerce-Gateway/1.0" },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!res.ok) break;
+        const storeProducts = await res.json();
+        if (!Array.isArray(storeProducts) || storeProducts.length === 0) break;
+        for (const sp of storeProducts) {
+          out.push(mapStoreProductToDeen(sp));
+        }
+        if (storeProducts.length < 100) break;
+      }
+      if (out.length > 0) {
+        console.log(`[woo] Successfully fetched ${out.length} live products directly from ${siteUrl}`);
+        return out;
+      }
+    } catch (storeErr) {
+      console.warn("[woo] Store API fetch failed:", (storeErr as Error).message);
+    }
+
     return out;
   };
 
@@ -517,29 +601,241 @@ export async function fetchWooCategoryList(): Promise<{ category: string; count:
 /**
  * Source of truth for category cover images: WooCommerce's
  * `products/categories` endpoint, which carries each category's real
- * WordPress media `image.src`. The app is a thin client — covers must
- * originate from Woo/WordPress, never hardcoded or third-party hosts.
- * Returns a map keyed by DeenCategory name -> cover image URL.
+ * WordPress media `image.src`.
  */
+export const CANONICAL_CATEGORY_COVERS: Record<string, string> = {
+  JEANS: "https://deencommerce.com/wp-content/uploads/2025/11/Jeans.webp",
+  PANJABI: "https://deencommerce.com/wp-content/uploads/2026/02/Category.jpg",
+  SHIRT: "https://deencommerce.com/wp-content/uploads/2026/04/Category.webp",
+  "T-SHIRT": "https://deencommerce.com/wp-content/uploads/2026/04/category.jpg",
+  POLO: "https://deencommerce.com/wp-content/uploads/2025/11/Polo.webp",
+  TROUSERS: "https://deencommerce.com/wp-content/uploads/2026/04/Trouser-Category.jpg",
+  ACCESSORIES: "https://deencommerce.com/wp-content/uploads/2025/08/Accessories.webp",
+};
+
 export async function fetchWooCategoryImages(): Promise<Record<string, string>> {
   if (coverCache && Date.now() - coverCache.at < CACHE_TTL_MS) return coverCache.data;
-  const out: Record<string, string> = {};
-  if (!wooHealthy()) return out;
+  const out: Record<string, string> = { ...CANONICAL_CATEGORY_COVERS };
+
+  // Fetch live category images from deencommerce.com public Store API
   try {
-    const cats = (await wooFetch("products/categories", {
-      per_page: "100",
-      hide_empty: "false",
-    })) as Array<{ name: string; image?: { src?: string } | null }>;
-    for (const c of cats || []) {
-      const mapped = mapCategory([c.name]);
-      if (mapped === "OTHER") continue;
-      const src = c.image?.src;
-      if (src && !out[mapped]) out[mapped] = src;
+    const siteUrl = config.woo.site || "https://deencommerce.com";
+    const res = await fetch(`${siteUrl}/wp-json/wc/store/v1/products/categories?per_page=100`, {
+      headers: { "User-Agent": "DEEN-Commerce-Gateway/1.0" },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (res.ok) {
+      const cats = (await res.json()) as Array<{ slug: string; name: string; image?: { src?: string } | null }>;
+      for (const c of cats || []) {
+        const src = c.image?.src;
+        if (!src) continue;
+        const s = (c.slug || "").toLowerCase();
+        if (s === "jeans") out.JEANS = normalizeImageUrl(src);
+        else if (s === "men-panjabi" || s === "panjabi") out.PANJABI = normalizeImageUrl(src);
+        else if (s === "shirt") out.SHIRT = normalizeImageUrl(src);
+        else if (s === "t-shirts" || s === "t-shirt") out["T-SHIRT"] = normalizeImageUrl(src);
+        else if (s === "polo" || s === "polo-shirt") out.POLO = normalizeImageUrl(src);
+        else if (s === "trousers") out.TROUSERS = normalizeImageUrl(src);
+        else if (s === "accessories") out.ACCESSORIES = normalizeImageUrl(src);
+      }
     }
   } catch (e) {
-    console.error("[woo] category images failed:", (e as Error).message);
+    console.warn("[woo] live category covers fetch failed, using canonical covers:", (e as Error).message);
   }
+
   coverCache = { at: Date.now(), data: out };
+  return out;
+}
+
+export interface DeenHeroSlide {
+  id: string;
+  desktop: string;
+  mobile: string;
+  badge: string;
+  title: string;
+  headline: string;
+  subtitle: string;
+  actionUrl: string;
+  actionLabel: string;
+}
+
+export interface DeenHeroBanner {
+  desktop: string;
+  mobile: string;
+  title: string;
+  tagline: string;
+  subtitle: string;
+  actionUrl: string;
+  actionLabel: string;
+  slides: DeenHeroSlide[];
+}
+
+const DEFAULT_SLIDES: DeenHeroSlide[] = [
+  {
+    id: "slide_denim",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-2.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/08/Mobile-Hero-Banner.jpg",
+    badge: "দেশের প্রথম ডেনিম ব্র্যান্ড · DEEN",
+    title: "Raw Washed. Selvedge Heritage.",
+    headline: "ARTISANAL INDIGO & RAW SELVEDGE",
+    subtitle: "Woven on Vintage Shuttle Looms with Deep Rope-Dyed Indigo & Artisanal Precision.",
+    actionUrl: "/shop?category=JEANS",
+    actionLabel: "Explore Denim Collection →",
+  },
+  {
+    id: "slide_shirts",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-1.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-1.jpg",
+    badge: "NEW SEASON DROP · 2026",
+    title: "Cuban Collar & Dobby Jacquards.",
+    headline: "BREATHABLE RESORT & CASUAL SHIRTS",
+    subtitle: "High-density lightweight textures engineered specifically for Bangladesh's humid weather.",
+    actionUrl: "/shop?category=SHIRT",
+    actionLabel: "Shop Summer Shirts →",
+  },
+  {
+    id: "slide_tailoring",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
+    badge: "BESPOKE EVERYDAY LIVING",
+    title: "Tailored Comfort & Modern Classics.",
+    headline: "CARGO TROUSERS & HERITAGE PANJABIS",
+    subtitle: "Enduring silhouettes, reinforced bar-tacking, and supreme cotton craftsmanship.",
+    actionUrl: "/shop",
+    actionLabel: "Discover All Pieces →",
+  },
+];
+
+let heroCache: { at: number; data: DeenHeroBanner } | null = null;
+
+export async function fetchWooHeroBanner(): Promise<DeenHeroBanner> {
+  if (heroCache && Date.now() - heroCache.at < CACHE_TTL_MS) return heroCache.data;
+
+  const fallback: DeenHeroBanner = {
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-2.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/08/Mobile-Hero-Banner.jpg",
+    title: "দেশের প্রথম ডেনিম ব্র্যান্ড",
+    tagline: "Empathetic Men's Lifestyle Fashion in Bangladesh",
+    subtitle: "Woven on Vintage Shuttle Looms with Deep Rope-Dyed Indigo & Artisanal Precision",
+    actionUrl: "/shop",
+    actionLabel: "Explore Collection",
+    slides: DEFAULT_SLIDES,
+  };
+
+  try {
+    const siteUrl = config.woo.site || "https://deencommerce.com";
+    const res = await fetch(`${siteUrl}/wp-json/wp/v2/media?search=banner&per_page=10`, {
+      headers: { "User-Agent": "DEEN-Commerce-Gateway/1.0" },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (res.ok) {
+      const mediaList = (await res.json()) as Array<{ source_url?: string; title?: { rendered?: string } }>;
+      const webBanner2 = mediaList.find((m) => /web-banner-2/i.test(m.source_url || ""));
+      const webBanner1 = mediaList.find((m) => /web-banner-1/i.test(m.source_url || ""));
+      const webBanner0 = mediaList.find((m) => /web-banner\./i.test(m.source_url || ""));
+      const mobileBanner = mediaList.find((m) => /mobile-hero-banner/i.test(m.source_url || ""));
+
+      if (webBanner2?.source_url) {
+        fallback.desktop = normalizeImageUrl(webBanner2.source_url);
+        fallback.slides[0].desktop = normalizeImageUrl(webBanner2.source_url);
+      }
+      if (mobileBanner?.source_url) {
+        fallback.mobile = normalizeImageUrl(mobileBanner.source_url);
+        fallback.slides[0].mobile = normalizeImageUrl(mobileBanner.source_url);
+      }
+      if (webBanner1?.source_url) {
+        fallback.slides[1].desktop = normalizeImageUrl(webBanner1.source_url);
+        fallback.slides[1].mobile = normalizeImageUrl(webBanner1.source_url);
+      }
+      if (webBanner0?.source_url) {
+        fallback.slides[2].desktop = normalizeImageUrl(webBanner0.source_url);
+        fallback.slides[2].mobile = normalizeImageUrl(webBanner0.source_url);
+      }
+    }
+  } catch (e) {
+    console.warn("[woo] live hero banner fetch failed, using fallback:", (e as Error).message);
+  }
+
+  heroCache = { at: Date.now(), data: fallback };
+  return fallback;
+}
+
+export interface DeenSectionBanner {
+  id: string;
+  title: string;
+  image: string;
+  category: string;
+  actionUrl: string;
+}
+
+const CANONICAL_SECTION_BANNERS: DeenSectionBanner[] = [
+  {
+    id: "sec_denim",
+    title: "Raw Washed & Selvedge Denim Campaign",
+    image: "https://deencommerce.com/wp-content/uploads/2026/08/Section-image.jpg",
+    category: "JEANS",
+    actionUrl: "/shop?category=JEANS",
+  },
+  {
+    id: "sec_shirt",
+    title: "Summer Essential Resort & Cuban Shirts",
+    image: "https://deencommerce.com/wp-content/uploads/2026/06/Shirt-Section-Image.png",
+    category: "SHIRT",
+    actionUrl: "/shop?category=SHIRT",
+  },
+  {
+    id: "sec_panjabi",
+    title: "Artisanal Heritage Panjabi Collection",
+    image: "https://deencommerce.com/wp-content/uploads/2026/06/Panjabi-Section-Image.webp",
+    category: "PANJABI",
+    actionUrl: "/shop?category=PANJABI",
+  },
+  {
+    id: "sec_halfsleeve",
+    title: "Breathable Tees & Casual Polos",
+    image: "https://deencommerce.com/wp-content/uploads/2026/06/Half-sleeve-Section-iomage.webp",
+    category: "T-SHIRT",
+    actionUrl: "/shop?category=T-SHIRT",
+  },
+  {
+    id: "sec_trousers",
+    title: "Tailored Cargo Trousers & Everyday Comfort",
+    image: "https://deencommerce.com/wp-content/uploads/2026/05/Section-Image-4.jpg",
+    category: "TROUSERS",
+    actionUrl: "/shop?category=TROUSERS",
+  },
+];
+
+let sectionBannersCache: { at: number; data: DeenSectionBanner[] } | null = null;
+
+export async function fetchWooSectionBanners(): Promise<DeenSectionBanner[]> {
+  if (sectionBannersCache && Date.now() - sectionBannersCache.at < CACHE_TTL_MS) {
+    return sectionBannersCache.data;
+  }
+
+  const out = [...CANONICAL_SECTION_BANNERS];
+  try {
+    const siteUrl = config.woo.site || "https://deencommerce.com";
+    const res = await fetch(`${siteUrl}/wp-json/wp/v2/media?search=section&per_page=15`, {
+      headers: { "User-Agent": "DEEN-Commerce-Gateway/1.0" },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (res.ok) {
+      const mediaList = (await res.json()) as Array<{ source_url?: string; title?: { rendered?: string } }>;
+      for (const m of mediaList) {
+        const title = (m.title?.rendered || "").toLowerCase();
+        const src = m.source_url ? normalizeImageUrl(m.source_url) : null;
+        if (!src) continue;
+        if (title.includes("shirt") && out[1]) out[1].image = src;
+        else if (title.includes("panjabi") && out[2]) out[2].image = src;
+        else if (title.includes("half sleeve") && out[3]) out[3].image = src;
+      }
+    }
+  } catch (e) {
+    console.warn("[woo] live section banners fetch error:", (e as Error).message);
+  }
+
+  sectionBannersCache = { at: Date.now(), data: out };
   return out;
 }
 

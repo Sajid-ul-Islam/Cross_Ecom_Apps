@@ -66,7 +66,7 @@ export default function Header() {
       <header className="nav">
         <div className="container nav__inner">
           {/* Brand */}
-          <Link href="/" className="nav__brand" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Link href="/" className="nav__brand" style={{ display: "flex", alignItems: "center" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/logo.png"

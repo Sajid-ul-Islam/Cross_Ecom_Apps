@@ -53,7 +53,7 @@ interface ProfileContextType {
   isLoggedIn: boolean;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   switchToGuestMode: () => Promise<void>;
-  registerCustomer: (data: { name: string; phone: string; email?: string; address?: string; district?: string; city?: string }) => Promise<void>;
+  registerCustomer: (data: { name: string; phone: string; email?: string; password?: string; address?: string; district?: string; city?: string }) => Promise<void>;
   addSavedAddress: (addr: Omit<SavedAddress, "id">) => Promise<void>;
   removeSavedAddress: (id: string) => Promise<void>;
   login: (username: string, password: string) => Promise<{ success: boolean; message?: string }>;
@@ -120,7 +120,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
-  const registerCustomer = async (data: { name: string; phone: string; email?: string; address?: string; district?: string; city?: string }) => {
+  const registerCustomer = async (data: { name: string; phone: string; email?: string; password?: string; address?: string; district?: string; city?: string }) => {
     persist({
       ...profile,
       accountType: "customer",

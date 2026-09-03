@@ -479,6 +479,13 @@ export const MessageCircle = make(
   <Path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />,
 );
 
+export const Send = make(
+  <>
+    <Path d="m22 2-7 20-4-9-9-4Z" />
+    <Path d="M22 2 11 13" />
+  </>,
+);
+
 export const BookOpen = make(
   <>
     <Path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />

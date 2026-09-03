@@ -71,10 +71,16 @@ export default function BagScreen() {
         <View style={styles.itemsList}>
           {cart.map((item) => {
             const unitPrice = item.product.salePrice ?? item.product.price;
+            const itemImageUri =
+              item.product.thumb ||
+              item.product.images?.[0] ||
+              item.product.gallery?.[0] ||
+              "https://images.unsplash.com/photo-1542272604-780c96856592?w=800";
+
             return (
               <View key={`${item.productId}-${item.size}`} style={[styles.cartCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <Image
-                  source={{ uri: item.product.images[0] }}
+                  source={{ uri: itemImageUri }}
                   style={styles.itemImage}
                   resizeMode="cover"
                 />
@@ -84,7 +90,9 @@ export default function BagScreen() {
                     <Text style={[styles.itemCategory, { color: colors.sub }]}>{item.product.category}</Text>
                     <TouchableOpacity
                       onPress={() => removeFromCart(item.productId, item.size)}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove ${item.product.name} (Size ${item.size}) from cart`}
                     >
                       <Trash2 size={16} color={colors.crimson} />
                     </TouchableOpacity>
@@ -107,6 +115,9 @@ export default function BagScreen() {
                       <TouchableOpacity
                         style={styles.stepBtn}
                         onPress={() => updateQty(item.productId, item.size, -1)}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Decrease quantity of ${item.product.name}`}
                       >
                         <Minus size={14} color={colors.ink} />
                       </TouchableOpacity>
@@ -114,6 +125,9 @@ export default function BagScreen() {
                       <TouchableOpacity
                         style={styles.stepBtn}
                         onPress={() => updateQty(item.productId, item.size, 1)}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Increase quantity of ${item.product.name}`}
                       >
                         <Plus size={14} color={colors.ink} />
                       </TouchableOpacity>

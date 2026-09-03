@@ -124,6 +124,9 @@ export const ContactDetailsForm: React.FC<ContactDetailsFormProps> = ({
           <TouchableOpacity
             style={[styles.editChip, { backgroundColor: colors.paper, borderColor: colors.border }]}
             activeOpacity={0.8}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel={editingContact ? "Finish editing personal information" : "Edit personal information"}
             onPress={() => {
               if (editingContact) {
                 handleSaveContact();
@@ -235,6 +238,9 @@ export const ContactDetailsForm: React.FC<ContactDetailsFormProps> = ({
           <TouchableOpacity
             style={[styles.editChip, { backgroundColor: colors.paper, borderColor: colors.border }]}
             activeOpacity={0.8}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel={editingAddress ? "Finish editing delivery address" : "Edit delivery address"}
             onPress={() => {
               if (editingAddress) {
                 handleSaveAddress();

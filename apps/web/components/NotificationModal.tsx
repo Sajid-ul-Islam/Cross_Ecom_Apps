@@ -34,30 +34,40 @@ export default function NotificationModal({ isOpen, onClose, onOpenBankOffers }:
   useEffect(() => {
     // Generate dynamic notifications from active campaigns and bank discounts
     Promise.all([fetchCampaigns(), fetchBankOffers()]).then(([campaign, bankOffers]) => {
+      const isCashbackActive = Boolean(campaign?.cashback?.enabled);
+      const isSaleActive = Boolean(campaign?.sale?.enabled);
       const list: NotificationItem[] = [
-        {
-          id: "notif_flash_sale",
-          type: "PROMO",
-          title: "🔥 Flat up to 50% Off Season Clearance",
-          body: "Save 40%–50% on selected raw selvedge denim, panjabis & artisanal shirts. Limited time only!",
-          time: "Just now",
-          read: false,
-          couponCode: "DEEN50",
-          actionUrl: "/shop",
-          actionLabel: "Shop Sale Now →",
-          badge: "LIMITED SALE",
-        },
-        {
-          id: "notif_cashback",
-          type: "PROMO",
-          title: "🎁 Up to ৳700 Instant Cashback Available",
-          body: "Get ৳500 instant cashback on orders over ৳2,500 and ৳700 on ৳3,000+. Automatically applies at checkout.",
-          time: "2h ago",
-          read: false,
-          actionUrl: "/shop",
-          actionLabel: "Unlock Cashback →",
-          badge: "CASHBACK",
-        },
+        ...(isSaleActive
+          ? [
+              {
+                id: "notif_flash_sale",
+                type: "PROMO" as const,
+                title: campaign?.sale?.title ? `🔥 ${campaign.sale.title}` : "🔥 Flat up to 50% Off Season Clearance",
+                body: campaign?.sale?.subtitle || "Save 40%–50% on selected raw selvedge denim, panjabis & artisanal shirts. Limited time only!",
+                time: "Just now",
+                read: false,
+                couponCode: "DEEN50",
+                actionUrl: "/shop",
+                actionLabel: "Shop Sale Now →",
+                badge: "LIMITED SALE",
+              },
+            ]
+          : []),
+        ...(isCashbackActive
+          ? [
+              {
+                id: "notif_cashback",
+                type: "PROMO" as const,
+                title: "🎁 Up to ৳700 Instant Cashback Available",
+                body: "Get ৳500 instant cashback on orders over ৳2,500 and ৳700 on ৳3,000+. Automatically applies at checkout.",
+                time: "2h ago",
+                read: false,
+                actionUrl: "/shop",
+                actionLabel: "Unlock Cashback →",
+                badge: "CASHBACK",
+              },
+            ]
+          : []),
         {
           id: "notif_amex",
           type: "BANK",

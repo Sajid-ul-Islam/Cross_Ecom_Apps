@@ -34,6 +34,7 @@ export interface DeenProduct {
   fabric: string;
   fit?: string; // jeans fit from Woo attribute (Regular | Slim | Straight)
   stockStatus: "instock" | "outofstock" | "onbackorder";
+  stockQuantity?: number;
   rating: number;
   ratingCount: number;
   blurb: string;
@@ -58,6 +59,9 @@ function p(
   blurb: string,
   isNew = false
 ): DeenProduct {
+  const hasSale = typeof salePrice === "number" && salePrice < price;
+  const regularPrice = hasSale ? price : undefined;
+  const salePct = hasSale ? Math.round(((price - salePrice) / price) * 100) : undefined;
   return {
     id,
     sku,
@@ -65,6 +69,8 @@ function p(
     category,
     price,
     salePrice,
+    regularPrice,
+    salePct,
     sizes,
     images: [`${CDN}/${a}`, `${CDN}/${b}`],
     gallery: [`${CDN}/${a}`, `${CDN}/${b}`],

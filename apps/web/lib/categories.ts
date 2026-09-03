@@ -15,7 +15,7 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     subtitle: "Woven on Vintage Shuttle Looms with Deep Rope-Dyed Indigo",
     description:
       "Engineered from ring-spun Japanese & Turkish indigo fabrics with reinforced chain-stitched hems, custom oxidized copper rivets, and tailored ergonomic tapers.",
-    coverImage: "https://deencommerce.com/wp-content/uploads/2026/05/jeans-1.jpg",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2025/11/Jeans.webp",
     metaBadge: "13.5 OZ SELVEDGE",
     highlights: ["12.5oz–14.5oz Raw & Washed Denim", "YKK Solid Brass Zippers", "Comfort Stretch & Raw Rigid Fits"],
   },
@@ -25,7 +25,7 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     subtitle: "Luxurious Hand-Loom Cotton, Silk & Jacquard Weaves",
     description:
       "Crafted for Friday prayers, weddings, and Eid festivals. Tailored with modern minimalist plackets, mother-of-pearl buttons, and structured band collars.",
-    coverImage: "https://deencommerce.com/wp-content/uploads/2026/05/Section-Image-4.jpg",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2026/02/Category.jpg",
     metaBadge: "EID & FESTIVE",
     highlights: ["100% Egyptian Giza & Organic Cotton", "Artisanal Thread Embroidery", "Slim & Traditional Relaxed Cuts"],
   },
@@ -35,7 +35,7 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     subtitle: "Breathable Linens, Indigo Chambrays & Formal Twills",
     description:
       "Versatile shirting from boardroom presentations to weekend getaways. Cut with single-needle tailoring, reinforced side gussets, and pre-washed soft textures.",
-    coverImage: "https://deencommerce.com/wp-content/uploads/2026/06/Half-sleeve-Section-iomage.webp",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2026/04/Category.webp",
     metaBadge: "100% COTTON",
     highlights: ["High-Count 80s & 100s 2-Ply Cotton", "Wrinkle-Resistant Weaves", "Mother-of-Pearl Buttons"],
   },
@@ -45,7 +45,7 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     subtitle: "Zero-Torque Combed Cotton with Structured Boxy Drapes",
     description:
       "Zero-shrink, drop-shoulder and classic tailored crew necks crafted from dense combed cotton with bound double-ribbed necklines.",
-    coverImage: "https://deencommerce.com/wp-content/uploads/2026/07/1x1-2.png",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2026/04/category.jpg",
     metaBadge: "240 GSM ZERO-TORQUE",
     highlights: ["220–240 GSM Heavy Cotton", "Pre-Shrunk Bio-Washed", "Durable Ribbed Collar"],
   },
@@ -55,7 +55,7 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     subtitle: "Piqué & Jacquard Knits with Mother of Pearl Accents",
     description:
       "Heavyweight cotton piqué knitted with micro-vent side seams and tipped flat-knit anti-curl collars. Designed to retain sharp structure through countless washes.",
-    coverImage: "https://deencommerce.com/wp-content/uploads/2026/07/Desktop-Hero-Banner.jpg",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2025/11/Polo.webp",
     metaBadge: "HONEYCOMB PIQUE",
     highlights: ["100% Combed Compact Cotton", "Mercerized Anti-Pilling Finish", "Laser-Etched Minimalist Branding"],
   },
@@ -65,9 +65,19 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     subtitle: "Articulated Knee Pleats, Heavy Ripstop & High-Density Twills",
     description:
       "Ergonomic utility bottoms designed for city mobility. Featuring deep slant cargo pockets, reinforced knees, and tailored ankle cinches.",
-    coverImage: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2026/04/Trouser-Category.jpg",
     metaBadge: "COTTON RIPSTOP",
     highlights: ["High-Density Military Weave", "Articulated Knees", "Reinforced Stress Points"],
+  },
+  ACCESSORIES: {
+    slug: "ACCESSORIES",
+    title: "Leather Goods & Accessories",
+    subtitle: "Full-Grain Veg-Tan Belts, Selvedge Wallets & Bags",
+    description:
+      "Artisanal leather accessories handcrafted by master leatherworkers in Old Dhaka. Solid brass hardware that patinas gracefully with age.",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2025/08/Accessories.webp",
+    metaBadge: "VEG-TAN LEATHER",
+    highlights: ["Full-Grain Cowhide", "Solid Brass Buckles", "Handcrafted in Old Dhaka"],
   },
   COMBO: {
     slug: "COMBO",
@@ -75,7 +85,7 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     subtitle: "Complete Looks with Integrated Multi-Buy Savings",
     description:
       "Stylist-curated wardrobe bundles pairing premium selvedge jeans with matching oxford shirts and accessories at exclusive package discounts.",
-    coverImage: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2025/11/Jeans.webp",
     metaBadge: "Best Value Packs",
     highlights: ["Bundled Discount Tier", "Pre-Matched Palette Pairings", "Gift Ready Packaging"],
   },

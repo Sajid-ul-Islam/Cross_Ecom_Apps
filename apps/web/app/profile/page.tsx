@@ -50,6 +50,7 @@ export default function ProfilePage() {
   const [signupName, setSignupName] = useState("");
   const [signupPhone, setSignupPhone] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
   const [authNotice, setAuthNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false);
@@ -213,9 +214,13 @@ export default function ProfilePage() {
       setAuthNotice({ type: "error", text: "Valid 11-digit Bangladeshi mobile number required (01XXXXXXXXX)." });
       return;
     }
+    if (!signupPassword || signupPassword.length < 6) {
+      setAuthNotice({ type: "error", text: "Password must be at least 6 characters long." });
+      return;
+    }
     setAuthSubmitting(true);
     try {
-      const data = await registerCustomer(signupName.trim(), cleanPhone, "DeenCustomerPass@2026", signupEmail.trim());
+      const data = await registerCustomer(signupName.trim(), cleanPhone, signupPassword, signupEmail.trim());
       const updated: UserProfile = {
         ...profile,
         name: signupName.trim(),
@@ -468,7 +473,7 @@ export default function ProfilePage() {
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 4 }}>
               <span style={{ color: "var(--sub)", fontSize: 13 }}>Saved Sizing</span>
-              <strong style={{ color: "var(--indigo)", fontSize: 13 }}>👖 Waist {profile.jeansSize}" · 👕 Top {profile.topSize}</strong>
+              <strong style={{ color: "var(--indigo)", fontSize: 13 }}>👖 Waist {profile.jeansSize}&quot; · 👕 Top {profile.topSize}</strong>
             </div>
           </div>
         ) : (
@@ -901,6 +906,18 @@ export default function ProfilePage() {
                     value={signupEmail}
                     onChange={(e) => setSignupEmail(e.target.value)}
                     placeholder="name@example.com"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Create Password * (Min. 6 characters)</label>
+                  <input
+                    type="password"
+                    className="form-input"
+                    value={signupPassword}
+                    onChange={(e) => setSignupPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    minLength={6}
+                    required
                   />
                 </div>
                 <div className="perks-banner">

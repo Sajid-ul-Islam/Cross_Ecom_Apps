@@ -490,6 +490,153 @@ export async function fetchDeliveryFees(): Promise<DeliveryFees> {
   return { insideDhaka: 50, outsideDhaka: 90, express: 120, storePickup: 0 };
 }
 
+export interface HeroSlide {
+  id: string;
+  desktop: string;
+  mobile: string;
+  badge: string;
+  title: string;
+  headline: string;
+  subtitle: string;
+  actionUrl: string;
+  actionLabel: string;
+}
+
+export interface HeroBannerState {
+  desktop: string;
+  mobile: string;
+  title: string;
+  tagline: string;
+  subtitle: string;
+  actionUrl: string;
+  actionLabel: string;
+  slides: HeroSlide[];
+}
+
+const DEFAULT_BANNER_SLIDES: HeroSlide[] = [
+  {
+    id: "slide_denim",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-2.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/08/Mobile-Hero-Banner.jpg",
+    badge: "দেশের প্রথম ডেনিম ব্র্যান্ড · DEEN",
+    title: "Raw Washed. Selvedge Heritage.",
+    headline: "ARTISANAL INDIGO & RAW SELVEDGE",
+    subtitle: "Woven on Vintage Shuttle Looms with Deep Rope-Dyed Indigo & Artisanal Precision.",
+    actionUrl: "/shop?category=JEANS",
+    actionLabel: "Explore Denim Collection →",
+  },
+  {
+    id: "slide_shirts",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-1.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-1.jpg",
+    badge: "NEW SEASON DROP · 2026",
+    title: "Cuban Collar & Dobby Jacquards.",
+    headline: "BREATHABLE RESORT & CASUAL SHIRTS",
+    subtitle: "High-density lightweight textures engineered specifically for Bangladesh's humid weather.",
+    actionUrl: "/shop?category=SHIRT",
+    actionLabel: "Shop Summer Shirts →",
+  },
+  {
+    id: "slide_tailoring",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
+    badge: "BESPOKE EVERYDAY LIVING",
+    title: "Tailored Comfort & Modern Classics.",
+    headline: "CARGO TROUSERS & HERITAGE PANJABIS",
+    subtitle: "Enduring silhouettes, reinforced bar-tacking, and supreme cotton craftsmanship.",
+    actionUrl: "/shop",
+    actionLabel: "Discover All Pieces →",
+  },
+];
+
+export async function fetchHeroBanner(): Promise<HeroBannerState> {
+  const fallback: HeroBannerState = {
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-2.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/08/Mobile-Hero-Banner.jpg",
+    title: "দেশের প্রথম ডেনিম ব্র্যান্ড",
+    tagline: "Empathetic Men's Lifestyle Fashion in Bangladesh",
+    subtitle: "Woven on Vintage Shuttle Looms with Deep Rope-Dyed Indigo & Artisanal Precision",
+    actionUrl: "/shop",
+    actionLabel: "Explore Collection",
+    slides: DEFAULT_BANNER_SLIDES,
+  };
+
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/hero-banner`, {
+      next: { revalidate: 300, tags: ["hero", "banner"] },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.desktop) {
+        if (!data.slides || data.slides.length === 0) {
+          data.slides = DEFAULT_BANNER_SLIDES;
+        }
+        return data;
+      }
+    }
+  } catch {}
+  return fallback;
+}
+
+export interface SectionBannerItem {
+  id: string;
+  title: string;
+  image: string;
+  category: string;
+  actionUrl: string;
+}
+
+const FALLBACK_SECTION_BANNERS: SectionBannerItem[] = [
+  {
+    id: "sec_denim",
+    title: "Raw Washed & Selvedge Denim Campaign",
+    image: "https://deencommerce.com/wp-content/uploads/2026/08/Section-image.jpg",
+    category: "JEANS",
+    actionUrl: "/shop?category=JEANS",
+  },
+  {
+    id: "sec_shirt",
+    title: "Summer Essential Resort & Cuban Shirts",
+    image: "https://deencommerce.com/wp-content/uploads/2026/06/Shirt-Section-Image.png",
+    category: "SHIRT",
+    actionUrl: "/shop?category=SHIRT",
+  },
+  {
+    id: "sec_panjabi",
+    title: "Artisanal Heritage Panjabi Collection",
+    image: "https://deencommerce.com/wp-content/uploads/2026/06/Panjabi-Section-Image.webp",
+    category: "PANJABI",
+    actionUrl: "/shop?category=PANJABI",
+  },
+  {
+    id: "sec_halfsleeve",
+    title: "Breathable Tees & Casual Polos",
+    image: "https://deencommerce.com/wp-content/uploads/2026/06/Half-sleeve-Section-iomage.webp",
+    category: "T-SHIRT",
+    actionUrl: "/shop?category=T-SHIRT",
+  },
+  {
+    id: "sec_trousers",
+    title: "Tailored Cargo Trousers & Everyday Comfort",
+    image: "https://deencommerce.com/wp-content/uploads/2026/05/Section-Image-4.jpg",
+    category: "TROUSERS",
+    actionUrl: "/shop?category=TROUSERS",
+  },
+];
+
+export async function fetchSectionBanners(): Promise<SectionBannerItem[]> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/section-banners`, {
+      next: { revalidate: 300, tags: ["section", "banners"] },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) return data;
+    }
+  } catch {}
+  return FALLBACK_SECTION_BANNERS;
+}
+
 /**
  * Fetches live campaign status and bank offers from REST API (/v1/deen/campaigns).
  */

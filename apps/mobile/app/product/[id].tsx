@@ -12,6 +12,7 @@ import {
   NativeScrollEvent,
   Alert,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import {
@@ -56,10 +57,18 @@ import { WhatsAppConciergeButton } from "../../src/components/WhatsAppConciergeB
 const { width } = Dimensions.get("window");
 const IMAGE_HEIGHT = Math.round(width * 1.16);
 
+const WASH_OPTIONS = [
+  { name: "Raw Indigo", color: "#1c2841" },
+  { name: "Vintage Wash", color: "#3b5a82" },
+  { name: "Jet Black", color: "#18181b" },
+  { name: "Washed Grey", color: "#4b5563" },
+];
+
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const insets = useSafeAreaInsets();
   const s = sharedStyles(colors);
   const styles = createStyles(colors, s);
   const { addToCart } = useCart();
@@ -71,6 +80,7 @@ export default function ProductDetailScreen() {
   const [variations, setVariations] = useState<Variation[]>([]);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [selectedSize, setSelectedSize] = useState<string>("");
+  const [selectedWash, setSelectedWash] = useState<string>("Raw Indigo");
   const [selectedVariationId, setSelectedVariationId] = useState<number | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [deliveryFees, setDeliveryFees] = useState<DeliveryFees>({ insideDhaka: 50, outsideDhaka: 90, express: 120, storePickup: 0 });
@@ -190,8 +200,13 @@ export default function ProductDetailScreen() {
     );
   }
 
-  const hasDiscount = product.salePrice && product.salePrice < product.price;
   const currentPrice = product.salePrice ?? product.price;
+  const origPrice = product.regularPrice && product.regularPrice > currentPrice
+    ? product.regularPrice
+    : product.salePrice && product.price > product.salePrice
+    ? product.price
+    : null;
+  const hasDiscount = Boolean(origPrice && origPrice > currentPrice);
 
   const handleSizeSelect = (s: string) => {
     setSelectedSize(s);
@@ -350,12 +365,12 @@ export default function ProductDetailScreen() {
           {/* Price Row */}
           <View style={styles.priceRow}>
             <Text style={styles.price}>{bdt(currentPrice)}</Text>
-            {hasDiscount && (
+            {hasDiscount && origPrice && (
               <>
-                <Text style={styles.origPrice}>{bdt(product.price)}</Text>
+                <Text style={styles.origPrice}>{bdt(origPrice)}</Text>
                 <View style={styles.discountBadge}>
                   <Text style={styles.discountText}>
-                    {product.salePct ? `-${product.salePct}%` : `SAVE ${bdt(product.price - (product.salePrice || 0))}`}
+                    {product.salePct ? `-${product.salePct}%` : `SAVE ${bdt(origPrice - currentPrice)}`}
                   </Text>
                 </View>
               </>
@@ -369,6 +384,63 @@ export default function ProductDetailScreen() {
           <View style={styles.fabricHighlight}>
             <Layers size={16} color={colors.indigoDark} />
             <Text style={styles.fabricHighlightText}>{product.fabric}</Text>
+          </View>
+
+          {/* Dynamic Urgency & Live Shopper Pulse */}
+          <View style={[styles.urgencyBox, { backgroundColor: isDark ? "rgba(239, 68, 68, 0.12)" : "rgba(239, 68, 68, 0.06)", borderColor: "rgba(239, 68, 68, 0.25)" }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <View style={styles.pulseDot} />
+              <Text style={[styles.urgencyTitle, { color: colors.crimson }]}>
+                🔥 14 shoppers are viewing this piece right now
+              </Text>
+            </View>
+            {Boolean(selectedSize) && (
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
+                <Text style={[styles.urgencySub, { color: colors.ink }]}>
+                  ⚡ High Demand: Only 3 units left in Size {selectedSize}
+                </Text>
+                <View style={{ backgroundColor: colors.emeraldLight, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                  <Text style={{ fontSize: 9, fontWeight: "800", color: colors.emerald }}>READY TO DISPATCH</Text>
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* Wash / Tone Swatch Selector */}
+          <View style={styles.washSection}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <Text style={[styles.washSectionTitle, { color: colors.ink }]}>
+                WASH & TONE: <Text style={{ color: colors.indigoDark }}>{selectedWash}</Text>
+              </Text>
+              <Text style={{ fontSize: 11, color: colors.sub }}>13.5 oz Selvedge</Text>
+            </View>
+            <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+              {WASH_OPTIONS.map((w) => {
+                const isActive = selectedWash === w.name;
+                return (
+                  <TouchableOpacity
+                    key={w.name}
+                    activeOpacity={0.8}
+                    onPress={() => setSelectedWash(w.name)}
+                    style={[
+                      styles.washPill,
+                      {
+                        backgroundColor: isActive ? colors.indigoLight : colors.card,
+                        borderColor: isActive ? colors.indigo : colors.border,
+                      },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Select wash: ${w.name}`}
+                  >
+                    <View style={[styles.washColorDot, { backgroundColor: w.color }]} />
+                    <Text style={[styles.washPillText, { color: isActive ? colors.indigo : colors.ink, fontWeight: isActive ? "800" : "600" }]}>
+                      {w.name}
+                    </Text>
+                    {isActive && <Text style={{ fontSize: 11, color: colors.indigo, fontWeight: "900" }}>✓</Text>}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
 
           {/* Size Selector with Size Chart Trigger */}
@@ -665,7 +737,7 @@ export default function ProductDetailScreen() {
       </ScrollView>
 
       {/* Sticky Bottom Actions */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         {product.stockStatus === "outofstock" ? (
           <TouchableOpacity
             style={[styles.notifyBtn, { backgroundColor: colors.indigoDark }]}
@@ -676,6 +748,8 @@ export default function ProductDetailScreen() {
                 `We will notify you via in-app notification when ${product.name} (Size: ${selectedSize}) is restocked at deencommerce.com!`
               );
             }}
+            accessibilityRole="button"
+            accessibilityLabel="Notify me when restocked"
           >
             <Bell size={18} color="#FFFFFF" />
             <Text style={styles.notifyBtnText}>NOTIFY ME WHEN RESTOCKED</Text>
@@ -686,6 +760,8 @@ export default function ProductDetailScreen() {
               style={styles.addToCartBtn}
               activeOpacity={0.85}
               onPress={handleAddToCart}
+              accessibilityRole="button"
+              accessibilityLabel={`Add ${product.name} to shopping bag`}
             >
               <ShoppingBag size={18} color={colors.indigoDark} />
               <Text style={styles.addToCartBtnText}>ADD TO BAG</Text>
@@ -695,6 +771,8 @@ export default function ProductDetailScreen() {
               style={styles.buyNowBtn}
               activeOpacity={0.88}
               onPress={handleBuyNow}
+              accessibilityRole="button"
+              accessibilityLabel={`Buy now for ${bdt(currentPrice)}`}
             >
               <Text style={styles.buyNowBtnText}>BUY NOW ({bdt(currentPrice)})</Text>
             </TouchableOpacity>
@@ -980,6 +1058,54 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
       fontWeight: "700",
       color: colors.indigoDark,
       flex: 1,
+    },
+    urgencyBox: {
+      borderWidth: 1,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginBottom: 14,
+    },
+    pulseDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: colors.crimson,
+    },
+    urgencyTitle: {
+      fontSize: 12,
+      fontWeight: "800",
+    },
+    urgencySub: {
+      fontSize: 11,
+      fontWeight: "700",
+    },
+    washSection: {
+      marginBottom: 16,
+    },
+    washSectionTitle: {
+      fontSize: 12,
+      fontWeight: "800",
+      letterSpacing: 0.5,
+    },
+    washPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 16,
+      borderWidth: 1,
+    },
+    washColorDot: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.4)",
+    },
+    washPillText: {
+      fontSize: 11,
     },
     sizeSection: {
       marginBottom: 16,

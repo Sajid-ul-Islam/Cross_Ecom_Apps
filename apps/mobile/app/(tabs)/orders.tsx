@@ -245,17 +245,38 @@ export default function OrdersScreen() {
 
                 {/* Action Buttons */}
                 <View style={[styles.orderActionsRow, { borderTopColor: colors.borderLight }]}>
-                  <TouchableOpacity
-                    style={[styles.trackBtn, { backgroundColor: colors.indigo }]}
-                    activeOpacity={0.8}
-                    onPress={() => {
-                      setSelectedOrderForTracking(order);
-                      setTrackingModalVisible(true);
-                    }}
-                  >
-                    <Truck size={13} color="#FFFFFF" />
-                    <Text style={styles.trackBtnText}>TRACK ON PATHAO</Text>
-                  </TouchableOpacity>
+                  {hasPathao ? (
+                    <TouchableOpacity
+                      style={[styles.trackBtn, { backgroundColor: colors.indigo }]}
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        setSelectedOrderForTracking(order);
+                        setTrackingModalVisible(true);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Track parcel on Pathao, Consignment ID ${order.pathaoConsignmentId}`}
+                    >
+                      <Truck size={13} color="#FFFFFF" />
+                      <Text style={styles.trackBtnText} numberOfLines={1}>TRACK ON PATHAO</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View
+                      style={[
+                        styles.trackBtn,
+                        {
+                          backgroundColor: colors.cardSecondary,
+                          borderColor: colors.borderLight,
+                          borderWidth: 1,
+                        },
+                      ]}
+                      accessibilityRole="text"
+                      accessibilityLiveRegion="polite"
+                      accessibilityLabel="Order is preparing for dispatch"
+                    >
+                      <Clock size={13} color={colors.sub} />
+                      <Text style={[styles.trackBtnText, { color: colors.sub }]}>PREPARING DISPATCH</Text>
+                    </View>
+                  )}
 
                   <TouchableOpacity
                     style={[styles.returnBtn, { backgroundColor: colors.indigoLight, borderColor: colors.indigo }]}
@@ -264,6 +285,8 @@ export default function OrdersScreen() {
                       setSelectedOrderForReturn(order);
                       setReturnModalVisible(true);
                     }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Exchange or return order"
                   >
                     <RotateCcw size={13} color={colors.indigo} />
                     <Text style={[styles.returnBtnText, { color: colors.indigo }]}>EXCHANGE / RETURN</Text>

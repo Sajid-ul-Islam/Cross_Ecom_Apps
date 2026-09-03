@@ -41,6 +41,29 @@ export default function HomeScreen() {
   const [stats, setStats] = useState<Stats | null>(null);
 
   const [broadcastModalVisible, setBroadcastModalVisible] = useState(false);
+  const [activeHeroSlide, setActiveHeroSlide] = useState(0);
+
+  const HERO_SLIDES = [
+    {
+      id: "slide_denim",
+      image: "https://deencommerce.com/wp-content/uploads/2026/08/Mobile-Hero-Banner.jpg",
+    },
+    {
+      id: "slide_shirt",
+      image: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-1.jpg",
+    },
+    {
+      id: "slide_tailoring",
+      image: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
+    },
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveHeroSlide((prev) => (prev + 1) % 3);
+    }, 5500);
+    return () => clearInterval(timer);
+  }, []);
 
   const loadData = useCallback(async () => {
     try {
@@ -91,36 +114,54 @@ export default function HomeScreen() {
 
         <CashbackBanner />
 
-        {/* Hero Section */}
-        <View style={styles.heroWrapper}>
+        {/* Auto-Slide Pure Photography Hero Banner */}
+        <TouchableOpacity
+          activeOpacity={0.92}
+          onPress={() => router.push("/(tabs)/shop")}
+          style={{
+            marginHorizontal: 16,
+            marginVertical: 10,
+            borderRadius: 14,
+            overflow: "hidden",
+            position: "relative",
+            height: 230,
+            backgroundColor: "#000",
+          }}
+        >
           <Image
-            source={{
-              uri: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
-            }}
-            style={styles.heroImage}
+            source={{ uri: HERO_SLIDES[activeHeroSlide].image }}
+            style={{ width: "100%", height: "100%" }}
             resizeMode="cover"
           />
-          <View style={styles.heroOverlay}>
-            <View style={styles.heroBadge}>
-              <Sparkles size={12} color="#FFFFFF" />
-              <Text style={styles.heroBadgeText}>EST. 2018 · DHAKA</Text>
-            </View>
-            <Text style={styles.heroTagline}>দেশের প্রথম ডেনিম ব্র্যান্ড</Text>
-            <Text style={styles.heroTitle}>ARTISANAL INDIGO & RAW SELVEDGE</Text>
-            <Text style={styles.heroSub}>
-              Engineered for Bangladesh’s climate with authentic shuttle-loom selvage & pure dobby jacquards.
-            </Text>
 
-            <TouchableOpacity
-              style={styles.heroBtn}
-              activeOpacity={0.85}
-              onPress={() => router.push("/(tabs)/shop")}
-            >
-              <Text style={styles.heroBtnText}>EXPLORE COLLECTION</Text>
-              <ArrowRight size={16} color="#FFFFFF" />
-            </TouchableOpacity>
+          {/* Minimal Floating Indicator Dots */}
+          <View
+            style={{
+              position: "absolute",
+              bottom: 12,
+              left: 0,
+              right: 0,
+              flexDirection: "row",
+              gap: 6,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            {HERO_SLIDES.map((_, i) => (
+              <TouchableOpacity
+                key={i}
+                onPress={() => setActiveHeroSlide(i)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={{
+                  width: i === activeHeroSlide ? 22 : 6,
+                  height: 5,
+                  borderRadius: 3,
+                  backgroundColor: i === activeHeroSlide ? "#FFFFFF" : "rgba(255,255,255,0.4)",
+                }}
+              />
+            ))}
           </View>
-        </View>
+        </TouchableOpacity>
 
         {/* ADMIN ONLY — Store Insights / BI dashboard.
             Customers never see sales data. Gated by role. */}
@@ -286,10 +327,25 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
+        {/* Section Offer Banner 1: Selvedge Denim Campaign */}
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => router.push({ pathname: "/category/[slug]", params: { slug: "JEANS" } })}
+          style={{ marginHorizontal: 16, marginVertical: 12, borderRadius: 12, overflow: "hidden", height: 160, backgroundColor: "#000" }}
+        >
+          <Image
+            source={{ uri: "https://deencommerce.com/wp-content/uploads/2026/08/Section-image.jpg" }}
+            style={{ width: "100%", height: "100%" }}
+            resizeMode="cover"
+          />
+        </TouchableOpacity>
+
         {/* Denim Masterpieces */}
         <SectionHeader
           title="SIGNATURE DENIM"
           subtitle="100% Cotton Selvedge & Comfort Stretch Jeans"
+          actionText="All Jeans →"
+          onActionPress={() => router.push({ pathname: "/category/[slug]", params: { slug: "JEANS" } })}
         />
 
         <View style={styles.grid}>
@@ -300,10 +356,25 @@ export default function HomeScreen() {
           ))}
         </View>
 
+        {/* Section Offer Banner 2: Summer Resort Shirts */}
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => router.push({ pathname: "/category/[slug]", params: { slug: "SHIRT" } })}
+          style={{ marginHorizontal: 16, marginVertical: 12, borderRadius: 12, overflow: "hidden", height: 160, backgroundColor: "#000" }}
+        >
+          <Image
+            source={{ uri: "https://deencommerce.com/wp-content/uploads/2026/06/Shirt-Section-Image.png" }}
+            style={{ width: "100%", height: "100%" }}
+            resizeMode="cover"
+          />
+        </TouchableOpacity>
+
         {/* Festive Panjabi Section */}
         <SectionHeader
           title="HERITAGE PANJABI & KURTA"
           subtitle="Indigo dyed pure dobby cottons"
+          actionText="All Panjabis →"
+          onActionPress={() => router.push({ pathname: "/category/[slug]", params: { slug: "PANJABI" } })}
         />
 
         <View style={styles.grid}>
@@ -313,6 +384,19 @@ export default function HomeScreen() {
             </View>
           ))}
         </View>
+
+        {/* Section Offer Banner 3: Casual Summer Drop */}
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => router.push({ pathname: "/category/[slug]", params: { slug: "T-SHIRT" } })}
+          style={{ marginHorizontal: 16, marginVertical: 12, borderRadius: 12, overflow: "hidden", height: 160, backgroundColor: "#000" }}
+        >
+          <Image
+            source={{ uri: "https://deencommerce.com/wp-content/uploads/2026/06/Half-sleeve-Section-iomage.webp" }}
+            style={{ width: "100%", height: "100%" }}
+            resizeMode="cover"
+          />
+        </TouchableOpacity>
 
         {/* Brand Authenticity Footer Card */}
         <View style={styles.brandTrustCard}>

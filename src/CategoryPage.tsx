@@ -1,9 +1,15 @@
 import type { Dispatch, SetStateAction } from "react";
 import { CATEGORIES, PRODUCTS, type CartMap } from "./data";
 import { Reveal, useToast } from "./ui";
-import { fallbackCover, useWooCovers } from "./woocom";
 import { ProductCard } from "./Shop";
 import { IcArrow, IcBolt, IcBox, IcCamera, IcChevron } from "./icons";
+
+const useWooCovers = () => ({
+  coverFor: (_slug: string) => "",
+  isLive: (_slug: string) => false,
+  done: true,
+});
+const fallbackCover = (_slug: string) => "";
 
 export function CategoryPage({
   slug,

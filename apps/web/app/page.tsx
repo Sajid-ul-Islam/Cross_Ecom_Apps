@@ -1,24 +1,40 @@
 import Link from "next/link";
-import { fetchProducts, fetchCampaigns, fetchCategoryCovers, fetchCategories, fetchOutlets, bdt } from "@/lib/api";
+import { fetchProducts, fetchCampaigns, fetchCategoryCovers, fetchCategories, fetchOutlets, fetchHeroBanner, fetchSectionBanners, bdt } from "@/lib/api";
 import { getCategoryInfo } from "@/lib/categories";
 import ProductCard from "@/components/ProductCard";
+import HeroSlider from "@/components/HeroSlider";
+import SectionOfferBanner from "@/components/SectionOfferBanner";
 
 export const metadata = {
-  title: "DEEN - দেশের প্রথম ডেনিম ব্র্যান্ড | Official Online Store",
+  title: "DEEN - দেশের প্রথম ডেনিম ব্র্যান্ড",
   description: "DEEN is an empathetic lifestyle e-commerce denim and apparel brand based in Bangladesh.",
 };
 
-const HERO_IMAGE =
-  "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg";
-
 export default async function HomePage() {
-  const [featured, newArrivals, campaign, remoteCovers, categoriesList, outletsList] = await Promise.all([
-    fetchProducts({ per_page: 8, sort: "price-desc" }),
+  const [
+    featured,
+    newArrivals,
+    jeansProducts,
+    shirtsProducts,
+    panjabiProducts,
+    campaign,
+    remoteCovers,
+    categoriesList,
+    outletsList,
+    heroBanner,
+    sectionBanners,
+  ] = await Promise.all([
+    fetchProducts({ per_page: 8 }),
     fetchProducts({ per_page: 4, sort: "new" }),
+    fetchProducts({ category: "JEANS", per_page: 4 }),
+    fetchProducts({ category: "SHIRT", per_page: 4 }),
+    fetchProducts({ category: "PANJABI", per_page: 4 }),
     fetchCampaigns(),
     fetchCategoryCovers(),
     fetchCategories(),
     fetchOutlets(),
+    fetchHeroBanner(),
+    fetchSectionBanners(),
   ]);
 
   const isCashback = campaign?.cashback?.enabled;
@@ -41,36 +57,8 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* ── Hero ─────────────────────────────────────── */}
-      <section className="hero">
-        <div className="hero__bg">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={HERO_IMAGE} alt="DEEN - দেশের প্রথম ডেনিম ব্র্যান্ড" />
-        </div>
-        <div className="hero__overlay" />
-        <div className="hero__content">
-          <div className="hero__badge">
-            <span>✦</span>
-            <span>দেশের প্রথম ডেনিম ব্র্যান্ড · DEEN</span>
-          </div>
-          <p className="hero__tagline">Empathetic Men&apos;s Lifestyle Fashion in Bangladesh</p>
-          <h1 className="hero__title">
-            Raw Washed.<br />Selvedge Heritage.
-          </h1>
-          <p className="hero__sub">
-            From vintage slim-fit denim to Cuban collar shirts and heavyweight cotton — every piece
-            is engineered for premium comfort, structure, and endurance.
-          </p>
-          <div className="hero__actions">
-            <Link href="/shop" className="btn btn-primary btn-lg">
-              Shop Collection →
-            </Link>
-            <Link href="/shop?category=JEANS" className="btn btn-lg" style={{ background: "rgba(255,255,255,0.15)", color: "#fff", backdropFilter: "blur(8px)" }}>
-              Explore Denim
-            </Link>
-          </div>
-        </div>
-      </section>
+      {/* ── Dynamic Hero Slideshow from Live API ─────────── */}
+      <HeroSlider bannerData={heroBanner} />
 
       <div className="container">
         {/* ── Dynamic Campaign Offer from REST API ─────────────────── */}
@@ -204,24 +192,98 @@ export default async function HomePage() {
           <style>{`.cat-img:hover { transform: scale(1.06); }`}</style>
         </section>
 
-        {/* ── Featured Products ─────────────────────────── */}
+        {/* ── Featured Products / Best Sellers ──────────── */}
         <section className="section">
           <div className="section__header">
             <div>
-              <h2 className="section__title">Best Sellers</h2>
-              <p className="section__sub">Our most-loved pieces</p>
+              <h2 className="section__title">Best Sellers & High Demand</h2>
+              <p className="section__sub">Our most-loved pieces, deeply stocked and tailored for comfort</p>
             </div>
             <Link href="/shop" className="section__link">View all →</Link>
           </div>
           <div className="product-grid">
-            {featured.map((p) => (
+            {featured.slice(0, 4).map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
         </section>
 
+        {/* ── Section Offer Banner 1: Selvedge Denim Campaign ── */}
+        {sectionBanners[0] && (
+          <SectionOfferBanner banner={sectionBanners[0]} />
+        )}
+
+        {/* ── Artisanal Denim Collection ────────────────── */}
+        {jeansProducts.length > 0 && (
+          <section className="section">
+            <div className="section__header">
+              <div>
+                <h2 className="section__title">Artisanal Selvedge Denim</h2>
+                <p className="section__sub">Woven on vintage shuttle looms with deep rope-dyed indigo</p>
+              </div>
+              <Link href="/shop?category=JEANS" className="section__link">Explore All Denim →</Link>
+            </div>
+            <div className="product-grid">
+              {jeansProducts.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ── Section Offer Banner 2: Summer Shirts Campaign ── */}
+        {sectionBanners[1] && (
+          <SectionOfferBanner banner={sectionBanners[1]} />
+        )}
+
+        {/* ── Cuban Collar & Resort Shirts ────────────────── */}
+        {shirtsProducts.length > 0 && (
+          <section className="section">
+            <div className="section__header">
+              <div>
+                <h2 className="section__title">Cuban Collar & Casual Shirts</h2>
+                <p className="section__sub">High-density lightweight textures engineered for Bangladesh&apos;s humid weather</p>
+              </div>
+              <Link href="/shop?category=SHIRT" className="section__link">Shop All Shirts →</Link>
+            </div>
+            <div className="product-grid">
+              {shirtsProducts.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ── Section Offer Banner 3: Heritage Panjabi Campaign ── */}
+        {sectionBanners[2] && (
+          <SectionOfferBanner banner={sectionBanners[2]} />
+        )}
+
+        {/* ── Signature Panjabi Collection ───────────────── */}
+        {panjabiProducts.length > 0 && (
+          <section className="section">
+            <div className="section__header">
+              <div>
+                <h2 className="section__title">Heritage Panjabi Collection</h2>
+                <p className="section__sub">Pure cotton dobby, bespoke embroidery & timeless elegance</p>
+              </div>
+              <Link href="/shop?category=PANJABI" className="section__link">View All Panjabis →</Link>
+            </div>
+            <div className="product-grid">
+              {panjabiProducts.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* ── Section Offer Banner 4: Breathable Casuals ── */}
+        {sectionBanners[3] && (
+          <SectionOfferBanner banner={sectionBanners[3]} />
+        )}
+
         {/* ── Trust Bar ────────────────────────────────── */}
-        <section style={{ marginBottom: 60 }}>
+        <section style={{ marginBottom: 40, marginTop: 20 }}>
           <div className="trust-bar">
             {[
               {

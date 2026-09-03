@@ -1007,7 +1007,8 @@ export async function clearGuestSession(): Promise<void> {
 export async function registerCustomer(
   name: string,
   phone: string,
-  email?: string
+  email?: string,
+  password?: string
 ): Promise<{ success: boolean; message: string; returning: boolean } | null> {
   try {
     const res = await request<{
@@ -1016,7 +1017,12 @@ export async function registerCustomer(
       returning: boolean;
     }>("/v1/auth/register", {
       method: "POST",
-      body: JSON.stringify({ name, phone, email: email || undefined }),
+      body: JSON.stringify({
+        name,
+        phone,
+        email: email || undefined,
+        password: password || undefined,
+      }),
     }, 6000);
     return res;
   } catch {

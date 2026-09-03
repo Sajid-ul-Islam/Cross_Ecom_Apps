@@ -180,12 +180,14 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       const res = await registerCustomerAPI(
         signupName.trim(),
         cleanPhone,
-        signupEmail.trim()
+        signupEmail.trim() || undefined,
+        signupPassword
       );
       await registerCustomer({
         name: signupName.trim(),
         phone: cleanPhone,
         email: signupEmail.trim(),
+        password: signupPassword,
       });
       setNotice({ type: "success", text: `Account created! Welcome to DEEN, ${signupName.trim()}!` });
       setTimeout(() => {

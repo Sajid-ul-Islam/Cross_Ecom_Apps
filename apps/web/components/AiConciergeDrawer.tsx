@@ -1,0 +1,486 @@
+"use client";
+
+import React, { useState, useRef, useEffect } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { API_URL, bdt, resolveProductImage } from "@/lib/api";
+import { useCart } from "@/lib/cart";
+
+interface AiMessage {
+  id: string;
+  sender: "user" | "ai";
+  text: string;
+  products?: Array<{
+    id: string;
+    name: string;
+    category: string;
+    price: number;
+    salePrice?: number;
+    image: string;
+    sizes: string[];
+  }>;
+  actions?: Array<{ label: string; action: string }>;
+}
+
+const QUICK_PROMPTS = [
+  "👖 Suggest selvedge jeans under ৳2500",
+  "🚚 Chittagong delivery charge & time?",
+  "🔄 How does the 7-day size exchange work?",
+  "📍 Where are your retail showrooms in Dhaka?",
+];
+
+export default function AiConciergeDrawer() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { addItem } = useCart();
+  const [addedIds, setAddedIds] = useState<Record<string, boolean>>({});
+
+  const [messages, setMessages] = useState<AiMessage[]>([
+    {
+      id: "welcome",
+      sender: "ai",
+      text: "👋 Welcome to **DEEN AI Concierge**! I can recommend menswear outfits from our live catalog, calculate Bangladesh delivery charges, explain our 7-day doorstep size exchange, or locate our 4 retail showrooms.\n\nHow can I help you today?",
+    },
+  ]);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, loading]);
+
+  const handleSend = async (userText: string) => {
+    const text = userText.trim();
+    if (!text || loading) return;
+
+    const userMsg: AiMessage = {
+      id: `user_${Date.now()}`,
+      sender: "user",
+      text,
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
+    setLoading(true);
+
+    try {
+      const res = await fetch(`${API_URL}/v1/deen/ai/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: text,
+          history: messages.slice(-4).map((m) => ({
+            role: m.sender === "user" ? "user" : "assistant",
+            content: m.text,
+          })),
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to consult AI");
+
+      const data = await res.json();
+      const aiMsg: AiMessage = {
+        id: `ai_${Date.now()}`,
+        sender: "ai",
+        text: data.reply,
+        products: data.suggestedProducts,
+        actions: data.suggestedActions,
+      };
+
+      setMessages((prev) => [...prev, aiMsg]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `ai_err_${Date.now()}`,
+          sender: "ai",
+          text: "I experienced a brief connection blip with our catalog knowledge base. You can also chat directly with our Dhaka stylists on WhatsApp at **01952-700500**!",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleQuickAdd = (p: any) => {
+    const size = p.sizes?.[0] || "32";
+    addItem(p, size);
+    setAddedIds((prev) => ({ ...prev, [p.id]: true }));
+    setTimeout(() => {
+      setAddedIds((prev) => ({ ...prev, [p.id]: false }));
+    }, 2000);
+  };
+
+  return (
+    <>
+      {/* Floating Trigger Button */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(true)}
+        style={{
+          position: "fixed",
+          bottom: 76,
+          right: 20,
+          zIndex: 999,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "10px 18px",
+          borderRadius: 30,
+          background: "linear-gradient(135deg, var(--indigo) 0%, #4338ca 100%)",
+          color: "#FFFFFF",
+          border: "1px solid rgba(255,255,255,0.2)",
+          boxShadow: "0 8px 24px rgba(79, 70, 229, 0.35)",
+          cursor: "pointer",
+          fontWeight: 800,
+          fontSize: 13,
+          letterSpacing: 0.5,
+        }}
+        aria-label="Open DEEN AI Concierge"
+      >
+        <span style={{ fontSize: 16 }}>✨</span>
+        <span>AI Concierge</span>
+      </button>
+
+      {/* Drawer Overlay */}
+      {isOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            zIndex: 10000,
+            display: "flex",
+            justifyContent: "flex-end",
+            backdropFilter: "blur(2px)",
+          }}
+          onClick={() => setIsOpen(false)}
+        >
+          {/* Drawer Body */}
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 420,
+              height: "100%",
+              background: "var(--surface-1)",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "-8px 0 32px rgba(0, 0, 0, 0.3)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid var(--border)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                background: "var(--surface-2)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: "50%",
+                    background: "var(--indigo)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#fff",
+                    fontSize: 16,
+                  }}
+                >
+                  ✨
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 900, color: "var(--text-main)" }}>
+                    DEEN AI Concierge
+                  </h3>
+                  <span style={{ fontSize: 11, color: "var(--emerald)", fontWeight: 700 }}>
+                    ● RAG Knowledge &amp; Live Catalog Active
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: 20,
+                  color: "var(--text-sub)",
+                  cursor: "pointer",
+                  padding: 4,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Chat Body */}
+            <div
+              ref={scrollRef}
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                padding: 16,
+                display: "flex",
+                flexDirection: "column",
+                gap: 14,
+              }}
+            >
+              {messages.map((m) => (
+                <div
+                  key={m.id}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: m.sender === "user" ? "flex-end" : "flex-start",
+                  }}
+                >
+                  <div
+                    style={{
+                      maxWidth: "85%",
+                      padding: "12px 16px",
+                      borderRadius: 14,
+                      borderBottomRightRadius: m.sender === "user" ? 2 : 14,
+                      borderBottomLeftRadius: m.sender === "ai" ? 2 : 14,
+                      background: m.sender === "user" ? "var(--indigo)" : "var(--surface-2)",
+                      color: m.sender === "user" ? "#FFFFFF" : "var(--text-main)",
+                      fontSize: 13,
+                      lineHeight: 1.6,
+                      whiteSpace: "pre-wrap",
+                      border: m.sender === "ai" ? "1px solid var(--border)" : "none",
+                    }}
+                  >
+                    {m.text}
+                  </div>
+
+                  {/* Embedded Suggested Products */}
+                  {m.products && m.products.length > 0 && (
+                    <div
+                      style={{
+                        marginTop: 10,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                        width: "100%",
+                      }}
+                    >
+                      {m.products.map((p) => {
+                        const price = p.salePrice ?? p.price;
+                        const isAdded = addedIds[p.id];
+
+                        return (
+                          <div
+                            key={p.id}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 12,
+                              padding: 10,
+                              borderRadius: 8,
+                              background: "var(--surface-2)",
+                              border: "1px solid var(--border)",
+                            }}
+                          >
+                            <div
+                              style={{
+                                position: "relative",
+                                width: 48,
+                                height: 58,
+                                borderRadius: 6,
+                                overflow: "hidden",
+                                flexShrink: 0,
+                              }}
+                            >
+                              <Image
+                                src={resolveProductImage(p.image)}
+                                alt={p.name}
+                                fill
+                                sizes="48px"
+                                style={{ objectFit: "cover" }}
+                              />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <span style={{ fontSize: 10, fontWeight: 800, color: "var(--text-sub)", textTransform: "uppercase" }}>
+                                {p.category}
+                              </span>
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  color: "var(--text-main)",
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                }}
+                              >
+                                {p.name}
+                              </div>
+                              <div style={{ fontSize: 13, fontWeight: 900, color: "var(--indigo)" }}>
+                                {bdt(price)}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleQuickAdd(p)}
+                              style={{
+                                padding: "6px 10px",
+                                borderRadius: 6,
+                                border: "none",
+                                background: isAdded ? "var(--emerald)" : "var(--indigo)",
+                                color: "#fff",
+                                fontSize: 11,
+                                fontWeight: 800,
+                                cursor: "pointer",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {isAdded ? "✓ Added" : "+ Bag"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Action Chips */}
+                  {m.actions && (
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                      {m.actions.map((act) => (
+                        <button
+                          key={act.action}
+                          type="button"
+                          onClick={() => {
+                            if (act.action === "open_whatsapp") {
+                              window.open("https://wa.me/8801952700500", "_blank");
+                            } else if (act.action === "navigate_shop") {
+                              window.location.href = "/shop";
+                            } else if (act.action === "navigate_orders") {
+                              window.location.href = "/orders";
+                            } else if (act.action === "navigate_checkout") {
+                              window.location.href = "/checkout";
+                            }
+                          }}
+                          style={{
+                            padding: "4px 10px",
+                            borderRadius: 14,
+                            border: "1px solid var(--border)",
+                            background: "var(--surface-1)",
+                            color: "var(--indigo)",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                          }}
+                        >
+                          {act.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {loading && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 8 }}>
+                  <span style={{ fontSize: 14 }}>✨</span>
+                  <span style={{ fontSize: 12, color: "var(--text-sub)", fontStyle: "italic" }}>
+                    Retrieving catalog &amp; knowledge base…
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Prompt Suggestions */}
+            {messages.length <= 2 && (
+              <div style={{ padding: "0 16px 10px", display: "flex", flexDirection: "column", gap: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: "var(--text-sub)", letterSpacing: 0.5 }}>
+                  SUGGESTED QUESTIONS:
+                </span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {QUICK_PROMPTS.map((qp) => (
+                    <button
+                      key={qp}
+                      type="button"
+                      onClick={() => handleSend(qp)}
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 8,
+                        border: "1px solid var(--border)",
+                        background: "var(--surface-2)",
+                        color: "var(--text-main)",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        textAlign: "left",
+                      }}
+                    >
+                      {qp}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Input Bar */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSend(input);
+              }}
+              style={{
+                padding: 12,
+                borderTop: "1px solid var(--border)",
+                background: "var(--surface-2)",
+                display: "flex",
+                gap: 8,
+              }}
+            >
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask in Bengali or English…"
+                style={{
+                  flex: 1,
+                  padding: "10px 14px",
+                  borderRadius: 8,
+                  border: "1px solid var(--border)",
+                  background: "var(--surface-1)",
+                  color: "var(--text-main)",
+                  fontSize: 13,
+                  outline: "none",
+                }}
+              />
+              <button
+                type="submit"
+                disabled={!input.trim() || loading}
+                style={{
+                  padding: "10px 16px",
+                  borderRadius: 8,
+                  border: "none",
+                  background: "var(--indigo)",
+                  color: "#fff",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  opacity: !input.trim() || loading ? 0.6 : 1,
+                }}
+              >
+                Send
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

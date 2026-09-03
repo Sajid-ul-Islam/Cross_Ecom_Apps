@@ -15,14 +15,6 @@ const DEFAULT_CAMPAIGNS: RotatingCampaignItem[] = [
     actionLabel: "Shop Sale",
   },
   {
-    id: "camp_cashback",
-    badge: "🎁 INSTANT CASHBACK",
-    title: "Cashback Reward",
-    subtitle: "৳500 Cashback on ৳2,500+ · ৳700 Cashback on ৳3,000+ orders.",
-    actionUrl: "/shop",
-    actionLabel: "Unlock Rewards",
-  },
-  {
     id: "camp_cards",
     badge: "💳 BANK CARD SAVINGS",
     title: "Up to 15% Bank Card Discounts",
@@ -66,9 +58,11 @@ export default function DynamicCampaignBanner() {
     };
   }, []);
 
-  const campaigns = campaignState?.rotatingCampaigns && campaignState.rotatingCampaigns.length > 0
+  const isCashbackActive = Boolean(campaignState?.cashback?.enabled);
+  const rawCampaigns = campaignState?.rotatingCampaigns && campaignState.rotatingCampaigns.length > 0
     ? campaignState.rotatingCampaigns
     : DEFAULT_CAMPAIGNS;
+  const campaigns = isCashbackActive ? rawCampaigns : rawCampaigns.filter((c) => c.id !== "camp_cashback");
 
   // Auto-cycle through campaigns every 5 seconds
   useEffect(() => {

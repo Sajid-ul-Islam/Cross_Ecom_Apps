@@ -18,7 +18,15 @@ export default function ProductCard({ product }: Props) {
   const [added, setAdded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const price = product.salePrice ?? product.price;
+  const currentPrice = product.salePrice ?? product.price;
+  const price = currentPrice;
+  const originalPrice = product.regularPrice && product.regularPrice > currentPrice
+    ? product.regularPrice
+    : product.salePrice && product.price > product.salePrice
+    ? product.price
+    : null;
+  const hasDiscount = Boolean(originalPrice && originalPrice > currentPrice);
+  const discountPct = product.salePct || (hasDiscount && originalPrice ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100) : 0);
 
   const isSaved = isInWishlist(product.id);
 
@@ -161,9 +169,14 @@ export default function ProductCard({ product }: Props) {
         <p className="product-card__category">{product.category}</p>
         <p className="product-card__name">{product.name}</p>
         <div className="product-card__price-row">
-          <span className="product-card__price">{bdt(price)}</span>
-          {product.regularPrice && product.regularPrice > price && (
-            <span className="product-card__original">{bdt(product.regularPrice)}</span>
+          <span className="product-card__price">{bdt(currentPrice)}</span>
+          {hasDiscount && originalPrice && (
+            <>
+              <span className="product-card__original">{bdt(originalPrice)}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#e11d48", background: "rgba(225, 29, 72, 0.08)", padding: "1px 5px", borderRadius: 3 }}>
+                -{discountPct}%
+              </span>
+            </>
           )}
         </div>
         {product.sizes.length > 0 && (
@@ -178,6 +191,16 @@ export default function ProductCard({ product }: Props) {
       <style>{`
         .product-card:hover .product-card__quick-add {
           opacity: 1 !important;
+        }
+        @media (max-width: 768px), (hover: none) {
+          .product-card__quick-add {
+            opacity: 1 !important;
+            bottom: 8px !important;
+            left: 8px !important;
+            right: 42px !important;
+            padding: 6px 8px !important;
+            font-size: 10px !important;
+          }
         }
       `}</style>
     </Link>

@@ -125,27 +125,54 @@ export const CashbackBanner: React.FC = () => {
           </TouchableOpacity>
         )}
 
-        {/* Slide 2: Instant Cashback Progress */}
+        {/* Slide 2: Instant Cashback if active, else Nationwide Delivery */}
         {currentSlide === 2 && (
-          <View>
-            <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 6, paddingRight: 16 }}>
+          isCashbackActive ? (
+            <View>
+              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 6, paddingRight: 16 }}>
+                <View style={{
+                  width: 32, height: 32, borderRadius: 16,
+                  backgroundColor: "rgba(16, 185, 129, 0.12)",
+                  alignItems: "center", justifyContent: "center", marginRight: 10,
+                }}>
+                  <Gift size={16} color={colors.emerald} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 12, fontWeight: "800", color: colors.emerald }}>
+                    🎁 INSTANT CASHBACK: UP TO ৳700
+                  </Text>
+                  <Text style={{ fontSize: 10, color: colors.sub, marginTop: 1 }}>
+                    ৳500 on ৳2,500+ · ৳700 on ৳3,000+ orders
+                  </Text>
+                </View>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              activeOpacity={0.88}
+              onPress={() => router.push("/(tabs)/shop")}
+              style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingRight: 16 }}
+            >
               <View style={{
                 width: 32, height: 32, borderRadius: 16,
                 backgroundColor: "rgba(16, 185, 129, 0.12)",
-                alignItems: "center", justifyContent: "center", marginRight: 10,
+                alignItems: "center", justifyContent: "center",
               }}>
-                <Gift size={16} color={colors.emerald} />
+                <Truck size={16} color={colors.emerald} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 12, fontWeight: "800", color: colors.emerald }}>
-                  🎁 INSTANT CASHBACK: UP TO ৳700
-                </Text>
-                <Text style={{ fontSize: 10, color: colors.sub, marginTop: 1 }}>
-                  ৳500 on ৳2,500+ · ৳700 on ৳3,000+ orders
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                  <View style={{ backgroundColor: colors.emerald, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 3 }}>
+                    <Text style={{ color: "#FFFFFF", fontSize: 8.5, fontWeight: "900" }}>EXPRESS DISPATCH</Text>
+                  </View>
+                  <Text style={{ fontSize: 12, fontWeight: "900", color: colors.emerald }}>NATIONWIDE DELIVERY FROM ৳50</Text>
+                </View>
+                <Text style={{ fontSize: 10.5, color: colors.sub }} numberOfLines={1}>
+                  24–48h Pathao Express Dhaka · 3–5 days across 64 districts
                 </Text>
               </View>
-            </View>
-          </View>
+            </TouchableOpacity>
+          )
         )}
 
         {/* Slide indicator dots */}

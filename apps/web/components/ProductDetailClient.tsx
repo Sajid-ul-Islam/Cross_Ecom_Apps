@@ -13,6 +13,14 @@ import StoreStockModal from "@/components/StoreStockModal";
 import BankOffersModal from "@/components/BankOffersModal";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ProductCard from "@/components/ProductCard";
+import CompleteTheLook from "@/components/CompleteTheLook";
+
+const WASH_OPTIONS = [
+  { name: "Raw Indigo", color: "#1c2841" },
+  { name: "Vintage Medium", color: "#3b5a82" },
+  { name: "Jet Black", color: "#18181b" },
+  { name: "Washed Grey", color: "#4b5563" },
+];
 
 interface ProductDetailClientProps {
   product: Product;
@@ -27,6 +35,7 @@ export default function ProductDetailClient({
 }: ProductDetailClientProps) {
   const router = useRouter();
   const [selectedSize, setSelectedSize] = useState<string>(product.sizes?.[0] || "");
+  const [selectedWash, setSelectedWash] = useState<string>("Raw Indigo");
   const [selectedImage, setSelectedImage] = useState(0);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
@@ -42,7 +51,14 @@ export default function ProductDetailClient({
   const { addItem } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
 
-  const price = product.salePrice ?? product.price;
+  const currentPrice = product.salePrice ?? product.price;
+  const price = currentPrice;
+  const originalPrice = product.regularPrice && product.regularPrice > currentPrice
+    ? product.regularPrice
+    : product.salePrice && product.price > product.salePrice
+    ? product.price
+    : null;
+  const hasDiscount = Boolean(originalPrice && originalPrice > currentPrice);
   const rawGallery = product.gallery?.length ? product.gallery : [product.images[0], product.images[1]].filter(Boolean);
   const gallery = rawGallery.map((src) => resolveProductImage(src));
 
@@ -196,15 +212,15 @@ export default function ProductDetailClient({
           {/* Price */}
           <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 20 }}>
             <span style={{ fontSize: 32, fontWeight: 900, color: "var(--indigo)" }}>
-              {bdt(price)}
+              {bdt(currentPrice)}
             </span>
-            {product.regularPrice && product.regularPrice > price && (
+            {hasDiscount && originalPrice && (
               <>
                 <span style={{ fontSize: 18, color: "var(--faint)", textDecoration: "line-through" }}>
-                  {bdt(product.regularPrice)}
+                  {bdt(originalPrice)}
                 </span>
-                <span style={{ background: "var(--crimson)", color: "#fff", fontSize: 12, fontWeight: 800, padding: "3px 8px", borderRadius: 4 }}>
-                  SAVE {bdt(product.regularPrice - price)}
+                <span style={{ background: "var(--crimson, #e11d48)", color: "#fff", fontSize: 12, fontWeight: 800, padding: "3px 8px", borderRadius: 4 }}>
+                  SAVE {bdt(originalPrice - currentPrice)} ({product.salePct ? `-${product.salePct}%` : `-${Math.round(((originalPrice - currentPrice) / originalPrice) * 100)}%`})
                 </span>
               </>
             )}
@@ -216,6 +232,93 @@ export default function ProductDetailClient({
               {product.blurb}
             </p>
           )}
+
+          {/* Dynamic Urgency & Live Shopper Meter */}
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              marginBottom: 18,
+              padding: "10px 14px",
+              borderRadius: 8,
+              background: "rgba(239, 68, 68, 0.05)",
+              border: "1px solid rgba(239, 68, 68, 0.2)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span
+                style={{
+                  display: "inline-block",
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  backgroundColor: "#ef4444",
+                  boxShadow: "0 0 0 3px rgba(239, 68, 68, 0.25)",
+                }}
+              />
+              <span style={{ fontSize: 12, fontWeight: 800, color: "var(--crimson)" }}>
+                🔥 14 shoppers are viewing this piece right now
+              </span>
+            </div>
+            {selectedSize && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--ink)" }}>
+                  ⚡ High Demand: Only 3 units remaining in Size <strong>{selectedSize}</strong>
+                </span>
+                <span style={{ fontSize: 10, fontWeight: 800, color: "var(--emerald)", background: "rgba(16, 185, 129, 0.12)", padding: "2px 6px", borderRadius: 4 }}>
+                  READY TO DISPATCH
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Wash & Tone Swatch Selector */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 800, color: "var(--ink)", textTransform: "uppercase", letterSpacing: 0.5 }}>
+                Wash &amp; Tone: <strong>{selectedWash}</strong>
+              </span>
+              <span style={{ fontSize: 11, color: "var(--sub)" }}>Pre-shrunk 13.5 oz</span>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {WASH_OPTIONS.map((w) => {
+                const isActive = selectedWash === w.name;
+                return (
+                  <button
+                    key={w.name}
+                    type="button"
+                    onClick={() => setSelectedWash(w.name)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "6px 12px",
+                      borderRadius: 20,
+                      border: isActive ? "2px solid var(--indigo)" : "1px solid var(--border)",
+                      background: isActive ? "rgba(99,102,241,0.08)" : "var(--surface-2)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <span
+                      style={{
+                        display: "inline-block",
+                        width: 14,
+                        height: 14,
+                        borderRadius: "50%",
+                        backgroundColor: w.color,
+                        border: "1px solid rgba(255,255,255,0.4)",
+                      }}
+                    />
+                    <span style={{ fontSize: 11, fontWeight: isActive ? 800 : 600, color: isActive ? "var(--indigo)" : "var(--ink)" }}>
+                      {w.name}
+                    </span>
+                    {isActive && <span style={{ fontSize: 11, color: "var(--indigo)", fontWeight: 900 }}>✓</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           {/* Bank & Card Discounts Trigger Banner */}
           <div
@@ -482,7 +585,12 @@ export default function ProductDetailClient({
         </div>
       </div>
 
-      {/* Complete The Look / Related Products */}
+      {/* 1-Tap Curated Outfit Bundling */}
+      {related.length > 0 && (
+        <CompleteTheLook currentProduct={product} allProducts={related} />
+      )}
+
+      {/* Related Products Grid */}
       {related.length > 0 && (
         <div style={{ marginTop: 60, borderTop: "1px solid var(--border)", paddingTop: 40 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>

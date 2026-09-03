@@ -27,8 +27,14 @@ function ProductCardBase({ product, style }: ProductCardProps) {
     });
   };
 
-  const hasDiscount = product.salePrice && product.salePrice < product.price;
-  const pct = product.salePct ?? (hasDiscount ? Math.round(((product.price - (product.salePrice || 0)) / product.price) * 100) : 0);
+  const currentPrice = product.salePrice ?? product.price;
+  const origPrice = product.regularPrice && product.regularPrice > currentPrice
+    ? product.regularPrice
+    : product.salePrice && product.price > product.salePrice
+    ? product.price
+    : null;
+  const hasDiscount = Boolean(origPrice && origPrice > currentPrice);
+  const pct = product.salePct ?? (hasDiscount && origPrice ? Math.round(((origPrice - currentPrice) / origPrice) * 100) : 0);
   const outOfStock = product.stockStatus === "outofstock";
   // Use the Woo thumbnail variant for the grid (fast + correct ratio); fall back
   // to the first gallery/full image if thumb is missing. Never host our own image.
@@ -86,9 +92,11 @@ function ProductCardBase({ product, style }: ProductCardProps) {
         <TouchableOpacity
           style={[styles.heartBtn, { backgroundColor: isDark ? "rgba(13, 17, 26, 0.85)" : "rgba(255, 255, 255, 0.85)" }]}
           onPress={() => toggleWishlist(product)}
-          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel={isSaved ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
         >
-          <Heart size={14} color={isSaved ? colors.crimson : colors.ink} />
+          <Heart size={15} color={isSaved ? colors.crimson : colors.ink} />
         </TouchableOpacity>
       </View>
 
@@ -100,10 +108,15 @@ function ProductCardBase({ product, style }: ProductCardProps) {
 
         <View style={styles.priceRow}>
           <Text style={[styles.price, { color: isDark ? colors.indigo : colors.indigoDark }]}>
-            {bdt(product.salePrice ?? product.price)}
+            {bdt(currentPrice)}
           </Text>
-          {hasDiscount && (
-            <Text style={[styles.originalPrice, { color: colors.faint }]}>{bdt(product.price)}</Text>
+          {hasDiscount && origPrice && (
+            <>
+              <Text style={[styles.originalPrice, { color: colors.faint }]}>{bdt(origPrice)}</Text>
+              <Text style={{ fontSize: 11, fontWeight: "800", color: "#e11d48", marginLeft: 4 }}>
+                -{pct}%
+              </Text>
+            </>
           )}
         </View>
 
@@ -202,9 +215,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 8,
     right: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },

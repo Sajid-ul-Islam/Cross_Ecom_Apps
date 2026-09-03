@@ -12,6 +12,7 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 
 import { Modal } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ArrowLeft,
   ShieldCheck,
@@ -51,6 +52,7 @@ export default function CheckoutScreen() {
   const { placeOrder } = useOrders();
   const { profile } = useProfile();
   const { coins, tierLabel, redeemCoins, earnCoins } = useRewards();
+  const insets = useSafeAreaInsets();
   const styles = createStyles(colors, s);
 
   const [name, setName] = useState(profile.name || "");
@@ -61,6 +63,7 @@ export default function CheckoutScreen() {
     BD_DISTRICTS.find((d) => d.code === "BD-13") || BD_DISTRICTS[0]
   );
   const [districtModalOpen, setDistrictModalOpen] = useState(false);
+  const [districtModalTarget, setDistrictModalTarget] = useState<"billing" | "gift">("billing");
   const [districtSearch, setDistrictSearch] = useState("");
   const [city, setCity] = useState("Dhaka");
   const [address, setAddress] = useState(profile.address || "");
@@ -511,10 +514,18 @@ export default function CheckoutScreen() {
                 <Text style={[styles.label, { color: colors.ink }]}>District *</Text>
                 <TouchableOpacity
                   style={[styles.input, { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.card, borderColor: colors.border }]}
-                  onPress={() => {}}
+                  onPress={() => {
+                    setDistrictModalTarget("gift");
+                    setDistrictModalOpen(true);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Gift Delivery District: ${giftDistrict.name}`}
                 >
                   <Text style={{ fontSize: 14, fontWeight: "700", color: colors.ink }}>
                     📍 {giftDistrict.name} ({giftDistrict.code})
+                  </Text>
+                  <Text style={{ fontSize: 12, fontWeight: "800", color: colors.indigo }}>
+                    CHANGE ▼
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -599,7 +610,12 @@ export default function CheckoutScreen() {
                       borderWidth: 1.5,
                     },
                   ]}
-                  onPress={() => setDistrictModalOpen(true)}
+                  onPress={() => {
+                    setDistrictModalTarget("billing");
+                    setDistrictModalOpen(true);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delivery District: ${district.name}`}
                 >
                   <Text style={{ fontSize: 14, fontWeight: "700", color: colors.ink }}>
                     📍 {district.name} ({district.code})
@@ -894,12 +910,27 @@ export default function CheckoutScreen() {
       </ScrollView>
 
       {/* Confirm & Place Order Footer */}
-      <View style={[styles.bottomBar, { backgroundColor: colors.paper, borderTopColor: colors.border }]}>
+      <View
+        style={[
+          styles.bottomBar,
+          {
+            backgroundColor: colors.paper,
+            borderTopColor: colors.border,
+            paddingBottom: Math.max(insets.bottom, 14),
+          },
+        ]}
+      >
         <TouchableOpacity
           style={[styles.placeOrderBtn, { backgroundColor: colors.indigo }]}
           activeOpacity={0.88}
           onPress={handlePlaceOrder}
           disabled={loading}
+          accessibilityRole="button"
+          accessibilityLabel={
+            payment === "cod"
+              ? `Place cash on delivery order for ${bdt(total)}`
+              : `Proceed to payment for ${bdt(total)}`
+          }
         >
           {loading ? (
             <ActivityIndicator color="#FFFFFF" />
@@ -936,7 +967,7 @@ export default function CheckoutScreen() {
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <View>
                 <Text style={{ fontSize: 16, fontWeight: "900", color: colors.ink }}>
-                  SELECT DISTRICT (64 DISTRICTS)
+                  {districtModalTarget === "gift" ? "GIFT RECIPIENT DISTRICT" : "SELECT DISTRICT (64 DISTRICTS)"}
                 </Text>
                 <Text style={{ fontSize: 12, color: colors.sub }}>
                   Used for WooCommerce state & Pathao delivery routing
@@ -945,6 +976,8 @@ export default function CheckoutScreen() {
               <TouchableOpacity
                 style={{ padding: 6 }}
                 onPress={() => setDistrictModalOpen(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Close district modal"
               >
                 <Text style={{ fontSize: 18, fontWeight: "800", color: colors.ink }}>✕</Text>
               </TouchableOpacity>
@@ -974,7 +1007,8 @@ export default function CheckoutScreen() {
                 d.name.toLowerCase().includes(districtSearch.toLowerCase()) ||
                 d.code.toLowerCase().includes(districtSearch.toLowerCase())
               ).map((d) => {
-                const isSelected = district.code === d.code;
+                const activeDistrict = districtModalTarget === "gift" ? giftDistrict : district;
+                const isSelected = activeDistrict.code === d.code;
                 return (
                   <TouchableOpacity
                     key={d.code}
@@ -990,13 +1024,18 @@ export default function CheckoutScreen() {
                       borderBottomColor: colors.borderLight,
                     }}
                     onPress={() => {
-                      setDistrict(d);
-                      if (d.code === "BD-13") {
-                        setSelectedArea("dhaka_standard");
-                        if (city === "Chittagong" || !city) setCity("Dhaka");
+                      if (districtModalTarget === "gift") {
+                        setGiftDistrict(d);
+                        if (!giftCity || giftCity === "Dhaka") setGiftCity(d.name);
                       } else {
-                        setSelectedArea("outside_standard");
-                        if (city === "Dhaka" || !city) setCity(d.name);
+                        setDistrict(d);
+                        if (d.code === "BD-13") {
+                          setSelectedArea("dhaka_standard");
+                          if (city === "Chittagong" || !city) setCity("Dhaka");
+                        } else {
+                          setSelectedArea("outside_standard");
+                          if (city === "Dhaka" || !city) setCity(d.name);
+                        }
                       }
                       setDistrictModalOpen(false);
                       setDistrictSearch("");
