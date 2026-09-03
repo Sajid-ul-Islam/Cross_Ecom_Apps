@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { useRouter } from "expo-router";
 
 import { Save, RotateCcw, AlertCircle } from "../../src/components/Icons";
 import { ScreenShell } from "../../src/components/ScreenShell";
@@ -56,6 +57,7 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => voi
 }
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const {
     profile,
     updateProfile,
@@ -259,7 +261,7 @@ export default function ProfileScreen() {
             onAboutPress={() => setAboutModalVisible(true)}
             onReportPress={handleReport}
             onBroadcastPress={() => setBroadcastModalVisible(true)}
-            onAnalyticsPress={() => setAnalyticsModalVisible(true)}
+            onAnalyticsPress={() => router.push("/admin")}
             onCustomersPress={() => setCustomersModalVisible(true)}
           />
         </ScrollView>

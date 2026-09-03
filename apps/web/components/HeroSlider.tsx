@@ -63,178 +63,207 @@ export default function HeroSlider({ bannerData }: HeroSliderProps) {
   };
 
   return (
-    <section
-      className="hero-slider-clean"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      aria-label="DEEN Official Collection"
-      style={{
-        position: "relative",
-        width: "100%",
-        aspectRatio: "1920 / 720",
-        minHeight: 280,
-        maxHeight: 680,
-        overflow: "hidden",
-        backgroundColor: "#000",
-      }}
-    >
-      {/* Slides (Edge-to-Edge Pure Photography) */}
-      {slides.map((slide, index) => {
-        const isActive = index === current;
-        return (
-          <Link
-            key={slide.id || index}
-            href={slide.actionUrl || "/shop"}
-            aria-hidden={!isActive}
-            style={{
-              position: "absolute",
-              inset: 0,
-              display: "block",
-              opacity: isActive ? 1 : 0,
-              visibility: isActive ? "visible" : "hidden",
-              transform: isActive ? "scale(1)" : "scale(1.03)",
-              transition: "opacity 800ms cubic-bezier(0.25, 1, 0.5, 1), transform 1200ms cubic-bezier(0.25, 1, 0.5, 1)",
-              zIndex: isActive ? 2 : 1,
-              cursor: "pointer",
-            }}
-          >
-            <picture style={{ width: "100%", height: "100%", display: "block" }}>
-              <source media="(max-width: 768px)" srcSet={slide.mobile || slide.desktop} />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={slide.desktop}
-                alt={slide.headline || slide.title || "DEEN Collection Banner"}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  objectPosition: "center center",
-                  display: "block",
-                  transform: isActive ? "scale(1)" : "scale(1.03)",
-                  transition: "transform 5000ms ease-out",
-                }}
-                loading={index === 0 ? "eager" : "lazy"}
-              />
-            </picture>
-          </Link>
-        );
-      })}
+    <>
+      <style>{`
+        .hero-slider-clean {
+          position: relative;
+          width: 100%;
+          overflow: hidden;
+          background-color: #080c14;
+        }
+        /* Desktop aspect ratio */
+        @media (min-width: 769px) {
+          .hero-slider-clean {
+            aspect-ratio: 1920 / 720;
+            min-height: 360px;
+            max-height: 640px;
+          }
+          .hero-slider-clean img {
+            object-position: center 25%;
+          }
+        }
+        /* Optimized Mobile fashion portrait framing */
+        @media (max-width: 768px) {
+          .hero-slider-clean {
+            aspect-ratio: 4 / 5;
+            min-height: 440px;
+            max-height: 560px;
+          }
+          .hero-slider-clean img {
+            object-fit: cover !important;
+            object-position: center top !important;
+          }
+          .hero-slider-nav-btn {
+            display: none !important; /* On mobile, touch swipe provides a cleaner, full-bleed experience */
+          }
+        }
+      `}</style>
 
-      {/* Subtle Slide Navigation Controls */}
-      {slides.length > 1 && (
-        <>
-          {/* Previous Arrow */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              prevSlide();
-            }}
-            aria-label="Previous Slide"
-            style={{
-              position: "absolute",
-              left: 14,
-              top: "50%",
-              transform: "translateY(-50%)",
-              zIndex: 10,
-              width: 40,
-              height: 40,
-              borderRadius: "50%",
-              backgroundColor: "rgba(0, 0, 0, 0.35)",
-              border: "1px solid rgba(255, 255, 255, 0.25)",
-              color: "#FFFFFF",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              backdropFilter: "blur(6px)",
-              transition: "all 180ms ease",
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-          </button>
+      <section
+        className="hero-slider-clean"
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        aria-label="DEEN Official Collection"
+      >
+        {/* Slides (Edge-to-Edge Pure Photography) */}
+        {slides.map((slide, index) => {
+          const isActive = index === current;
+          return (
+            <Link
+              key={slide.id || index}
+              href={slide.actionUrl || "/shop"}
+              aria-hidden={!isActive}
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "block",
+                opacity: isActive ? 1 : 0,
+                visibility: isActive ? "visible" : "hidden",
+                transform: isActive ? "scale(1)" : "scale(1.025)",
+                transition: "opacity 800ms cubic-bezier(0.25, 1, 0.5, 1), transform 1200ms cubic-bezier(0.25, 1, 0.5, 1)",
+                zIndex: isActive ? 2 : 1,
+                cursor: "pointer",
+              }}
+            >
+              <picture style={{ width: "100%", height: "100%", display: "block" }}>
+                <source media="(max-width: 768px)" srcSet={slide.mobile || slide.desktop} />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={slide.desktop}
+                  alt={slide.headline || slide.title || "DEEN Collection Banner"}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    display: "block",
+                    transform: isActive ? "scale(1)" : "scale(1.025)",
+                    transition: "transform 5000ms ease-out",
+                  }}
+                  loading={index === 0 ? "eager" : "lazy"}
+                />
+              </picture>
+            </Link>
+          );
+        })}
 
-          {/* Next Arrow */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              nextSlide();
-            }}
-            aria-label="Next Slide"
-            style={{
-              position: "absolute",
-              right: 14,
-              top: "50%",
-              transform: "translateY(-50%)",
-              zIndex: 10,
-              width: 40,
-              height: 40,
-              borderRadius: "50%",
-              backgroundColor: "rgba(0, 0, 0, 0.35)",
-              border: "1px solid rgba(255, 255, 255, 0.25)",
-              color: "#FFFFFF",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              backdropFilter: "blur(6px)",
-              transition: "all 180ms ease",
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-          </button>
+        {/* Desktop Slide Navigation Controls */}
+        {slides.length > 1 && (
+          <>
+            {/* Previous Arrow */}
+            <button
+              type="button"
+              className="hero-slider-nav-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                prevSlide();
+              }}
+              aria-label="Previous Slide"
+              style={{
+                position: "absolute",
+                left: 16,
+                top: "50%",
+                transform: "translateY(-50%)",
+                zIndex: 10,
+                width: 44,
+                height: 44,
+                borderRadius: "50%",
+                backgroundColor: "rgba(0, 0, 0, 0.4)",
+                border: "1px solid rgba(255, 255, 255, 0.25)",
+                color: "#FFFFFF",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                backdropFilter: "blur(6px)",
+                transition: "all 180ms ease",
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+            </button>
 
-          {/* Minimal Bottom Indicators */}
-          <div
-            style={{
-              position: "absolute",
-              bottom: 14,
-              left: "50%",
-              transform: "translateX(-50%)",
-              zIndex: 10,
-              display: "flex",
-              gap: 6,
-              alignItems: "center",
-              padding: "4px 10px",
-              borderRadius: 999,
-              backgroundColor: "rgba(0, 0, 0, 0.4)",
-              backdropFilter: "blur(6px)",
-            }}
-          >
-            {slides.map((_, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setCurrent(idx);
-                }}
-                aria-label={`Go to slide ${idx + 1}`}
-                style={{
-                  width: idx === current ? 24 : 6,
-                  height: 6,
-                  borderRadius: 3,
-                  backgroundColor: idx === current ? "#FFFFFF" : "rgba(255, 255, 255, 0.45)",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: 0,
-                  transition: "all 250ms ease",
-                }}
-              />
-            ))}
-          </div>
-        </>
-      )}
-    </section>
+            {/* Next Arrow */}
+            <button
+              type="button"
+              className="hero-slider-nav-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                nextSlide();
+              }}
+              aria-label="Next Slide"
+              style={{
+                position: "absolute",
+                right: 16,
+                top: "50%",
+                transform: "translateY(-50%)",
+                zIndex: 10,
+                width: 44,
+                height: 44,
+                borderRadius: "50%",
+                backgroundColor: "rgba(0, 0, 0, 0.4)",
+                border: "1px solid rgba(255, 255, 255, 0.25)",
+                color: "#FFFFFF",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                backdropFilter: "blur(6px)",
+                transition: "all 180ms ease",
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+
+            {/* Minimal Indicators (Accessible & Elevated for Mobile) */}
+            <div
+              style={{
+                position: "absolute",
+                bottom: 16,
+                left: "50%",
+                transform: "translateX(-50%)",
+                zIndex: 10,
+                display: "flex",
+                gap: 7,
+                alignItems: "center",
+                padding: "6px 12px",
+                borderRadius: 999,
+                backgroundColor: "rgba(0, 0, 0, 0.5)",
+                backdropFilter: "blur(8px)",
+              }}
+            >
+              {slides.map((_, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setCurrent(idx);
+                  }}
+                  aria-label={`Go to slide ${idx + 1}`}
+                  style={{
+                    width: idx === current ? 26 : 7,
+                    height: 7,
+                    borderRadius: 4,
+                    backgroundColor: idx === current ? "#FFFFFF" : "rgba(255, 255, 255, 0.45)",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: 0,
+                    transition: "all 250ms cubic-bezier(0.16, 1, 0.3, 1)",
+                  }}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </section>
+    </>
   );
 }

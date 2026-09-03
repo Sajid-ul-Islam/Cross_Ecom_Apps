@@ -20,10 +20,14 @@ interface AdminAnalyticsModalProps {
   onClose: () => void;
 }
 
+export interface AdminAnalyticsViewProps {
+  onClose?: () => void;
+  isStandalone?: boolean;
+}
+
 type MobileTabType = "sales" | "pairs" | "logistics" | "stock" | "customers";
 
-export const AdminAnalyticsModal: React.FC<AdminAnalyticsModalProps> = ({ visible, onClose }) => {
-  if (!visible) return null;
+export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onClose, isStandalone = false }) => {
   const { colors } = useTheme();
   const styles = createStyles(colors);
 
@@ -49,10 +53,8 @@ export const AdminAnalyticsModal: React.FC<AdminAnalyticsModalProps> = ({ visibl
   };
 
   useEffect(() => {
-    if (visible) {
-      loadAnalytics();
-    }
-  }, [visible, timeframe, selectedCategory]);
+    loadAnalytics();
+  }, [timeframe, selectedCategory]);
 
   const sales = data?.sales;
   const logistics = data?.logistics;
@@ -60,10 +62,8 @@ export const AdminAnalyticsModal: React.FC<AdminAnalyticsModalProps> = ({ visibl
   const customers = data?.customers;
   const m = data?.metrics;
 
-  return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <View style={[styles.modalCard, { backgroundColor: colors.paper }]}>
+  const content = (
+    <View style={[isStandalone ? { flex: 1, backgroundColor: colors.paper } : styles.modalCard, { backgroundColor: colors.paper }]}>
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: colors.borderLight }]}>
             <View style={styles.headerLeft}>
@@ -413,8 +413,25 @@ export const AdminAnalyticsModal: React.FC<AdminAnalyticsModalProps> = ({ visibl
               </>
             )}
           </ScrollView>
-        </View>
-      </View>
+    </View>
+  );
+
+  if (isStandalone) {
+    return content;
+  }
+
+  return (
+    <View style={styles.overlay}>
+      {content}
+    </View>
+  );
+};
+
+export const AdminAnalyticsModal: React.FC<AdminAnalyticsModalProps> = ({ visible, onClose }) => {
+  if (!visible) return null;
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <AdminAnalyticsView onClose={onClose} isStandalone={false} />
     </Modal>
   );
 };

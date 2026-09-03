@@ -114,7 +114,7 @@ export default function HomeScreen() {
 
         <CashbackBanner />
 
-        {/* Auto-Slide Pure Photography Hero Banner */}
+        {/* Auto-Slide Pure Photography Hero Banner (Optimized Portrait Ratio) */}
         <TouchableOpacity
           activeOpacity={0.92}
           onPress={() => router.push("/(tabs)/shop")}
@@ -124,8 +124,13 @@ export default function HomeScreen() {
             borderRadius: 14,
             overflow: "hidden",
             position: "relative",
-            height: 230,
+            height: Math.min(Math.round((width - 32) * 1.2), 440),
             backgroundColor: "#000",
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.15,
+            shadowRadius: 10,
+            elevation: 4,
           }}
         >
           <Image
@@ -232,6 +237,16 @@ export default function HomeScreen() {
                 ))}
               </>
             )}
+
+            {/* Direct Link to Dedicated Admin BI Page */}
+            <TouchableOpacity
+              style={[styles.quickBroadcastBtn, { backgroundColor: colors.indigo, marginBottom: 8 }]}
+              activeOpacity={0.88}
+              onPress={() => router.push("/admin")}
+            >
+              <Sparkles size={14} color="#FFFFFF" />
+              <Text style={styles.quickBroadcastText}>📊 OPEN DEDICATED ADMIN BI DASHBOARD →</Text>
+            </TouchableOpacity>
 
             {/* Quick Broadcast Action */}
             <TouchableOpacity

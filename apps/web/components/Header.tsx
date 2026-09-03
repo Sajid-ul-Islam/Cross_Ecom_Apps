@@ -93,11 +93,54 @@ export default function Header() {
                   </Link>
                 </li>
               ))}
+              {profile?.role === "admin" && (
+                <li>
+                  <Link
+                    href="/admin"
+                    className="nav__link"
+                    style={{
+                      color: "var(--indigo)",
+                      fontWeight: 900,
+                      background: "rgba(99, 102, 241, 0.12)",
+                      padding: "4px 10px",
+                      borderRadius: 6,
+                      border: "1px solid rgba(99, 102, 241, 0.3)",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    📊 Admin BI
+                  </Link>
+                </li>
+              )}
             </ul>
           </nav>
 
           {/* Actions */}
           <div className="nav__actions" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {profile?.role === "admin" && (
+              <Link
+                href="/admin"
+                className="btn-admin-pill"
+                title="Open Dedicated Admin BI Page"
+                style={{
+                  color: "#fff",
+                  backgroundColor: "#6366f1",
+                  fontSize: 11.5,
+                  fontWeight: 900,
+                  padding: "6px 12px",
+                  borderRadius: 999,
+                  textDecoration: "none",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  boxShadow: "0 2px 8px rgba(99,102,241,0.35)",
+                }}
+              >
+                📊 Admin BI
+              </Link>
+            )}
             {/* Search Button (Both Web Mobile View & Desktop) */}
             <button
               type="button"
