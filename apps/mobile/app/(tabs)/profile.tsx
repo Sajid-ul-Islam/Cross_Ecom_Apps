@@ -68,6 +68,7 @@ export default function ProfileScreen() {
   const { themeMode, isDark, setThemeMode, colors } = useTheme();
   const s = sharedStyles(colors);
   const styles = createStyles(colors, s);
+  const isAdmin = profile?.role === "admin" || profile?.accountType === "admin";
 
   // Profile form fields
   const [name, setName] = useState(profile?.name || "");
@@ -279,22 +280,22 @@ export default function ProfileScreen() {
           />
         </ScrollView>
 
-        {/* Embedded Modals — only mounted when active to prevent child render crashes */}
-        {analyticsModalVisible && (
+        {/* Embedded Modals — admin modals are strictly gated so customers never allocate memory for them */}
+        {isAdmin && analyticsModalVisible && (
           <AdminAnalyticsModal
             visible={analyticsModalVisible}
             onClose={() => setAnalyticsModalVisible(false)}
           />
         )}
 
-        {customersModalVisible && (
+        {isAdmin && customersModalVisible && (
           <AdminCustomersModal
             visible={customersModalVisible}
             onClose={() => setCustomersModalVisible(false)}
           />
         )}
 
-        {broadcastModalVisible && (
+        {isAdmin && broadcastModalVisible && (
           <AdminBroadcastModal
             visible={broadcastModalVisible}
             onClose={() => setBroadcastModalVisible(false)}
