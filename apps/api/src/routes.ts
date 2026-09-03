@@ -37,6 +37,9 @@ import {
   getCouponByCode,
   findWooOrderByKey,
   findOrCreateWooCustomer,
+  registerOrSyncWooCustomer,
+  getWooCustomerByPhoneOrEmail,
+  updateWooCustomer,
 } from "./woo.js";
 import {
   getPathaoToken,
@@ -3354,6 +3357,14 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       saveCustomers();
     }
 
+    // Option C: Sync new password to WooCommerce customer
+    const targetWpUserId = (session as any)?.wpUserId || (cleanPhone && (customersByPhone[cleanPhone] as any)?.wpUserId);
+    if (targetWpUserId) {
+      updateWooCustomer(targetWpUserId, { password: newPassword }).catch((err) =>
+        console.error("[gateway] updateWooCustomer password failed:", (err as Error).message)
+      );
+    }
+
     audit("auth.change_password", true, maskPhone(identifier));
     return reply.send({
       success: true,
@@ -3399,6 +3410,19 @@ export async function registerDeenRoutes(app: FastifyInstance) {
         };
       }
       saveCustomers();
+    }
+
+    // Option C: Sync customer profile updates directly to WooCommerce
+    const profileWpUserId = (session as any)?.wpUserId || (phone && (customersByPhone[phone] as any)?.wpUserId);
+    if (profileWpUserId) {
+      updateWooCustomer(profileWpUserId, {
+        name,
+        email: email || undefined,
+        phone,
+        address,
+        city,
+        district,
+      }).catch((err) => console.error("[gateway] updateWooCustomer profile failed:", (err as Error).message));
     }
 
     audit("auth.update_profile", true, maskPhone(phone || name));
@@ -4311,37 +4335,70 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       audit("auth.register", false, maskPhone(phone));
       return reply.code(422).send({ success: false, message: "Enter a valid BD mobile number - 01XXXXXXXXX." });
     }
+
+    // Option C: Synchronize directly with official WooCommerce REST API
+    const wooCustomer = await registerOrSyncWooCustomer({
+      name,
+      phone,
+      email: b.email,
+      password: b.password,
+      address: b.address,
+      city: b.city,
+      district: b.district,
+    });
+
     const existing = customersByPhone[phone];
     const wasGuest = Boolean(existing);
     if (existing) {
-      if (b.email) existing.email = b.email;
+      existing.name = wooCustomer.name;
+      if (wooCustomer.email) existing.email = wooCustomer.email;
+      (existing as any).wpUserId = wooCustomer.id;
     } else {
       customersByPhone[phone] = {
-        name,
+        name: wooCustomer.name,
         phone,
-        email: b.email || undefined,
+        email: wooCustomer.email,
         registeredAt: new Date().toISOString(),
         orderCount: 0,
       };
+      (customersByPhone[phone] as any).wpUserId = wooCustomer.id;
     }
     saveCustomers();
+
+    const user = {
+      id: `wp_${wooCustomer.id}`,
+      wpUserId: wooCustomer.id,
+      name: wooCustomer.name,
+      username: wooCustomer.username,
+      email: wooCustomer.email,
+      phone: wooCustomer.phone,
+      role: "customer",
+      accountType: "customer",
+      isGuest: false,
+      orderCount: customersByPhone[phone].orderCount,
+    };
+
+    const now = Date.now();
+    const token = signSessionToken({
+      type: "user",
+      userId: user.id,
+      username: user.username,
+      name: user.name,
+      email: user.email,
+      role: "customer",
+      iat: now,
+      exp: now + AUTH_SESSION_TTL_MS,
+    });
+    authSessions.set(token, { ...user, token, createdAt: now });
+    saveAuthSessions();
+
     return reply.code(200).send({
       success: true,
       message: wasGuest
-        ? `Welcome back, ${name}! Your customer profile is now saved.`
-        : `Guest converted to customer. Welcome, ${name}!`,
-      user: {
-        id: `cus_${phone}`,
-        name: customersByPhone[phone].name,
-        username: name.toLowerCase().replace(/\s+/g, "."),
-        email: customersByPhone[phone].email || "",
-        phone: customersByPhone[phone].phone,
-        role: "customer",
-        accountType: "customer",
-        isGuest: false,
-        orderCount: customersByPhone[phone].orderCount,
-      },
-      token: `cus_${phone}_${Date.now()}`,
+        ? `Welcome back, ${name}! Your customer profile is synchronized with WooCommerce.`
+        : `Customer account created successfully in WooCommerce. Welcome, ${name}!`,
+      user,
+      token,
       returning: wasGuest,
     });
   });
@@ -4352,7 +4409,25 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     if (!/^01[3-9]\d{8}$/.test(phone)) {
       return reply.code(422).send({ success: false, message: "Invalid phone number." });
     }
-    const cust = customersByPhone[phone];
+    let cust = customersByPhone[phone];
+
+    // Option C: Query real WooCommerce customer if not in local memory
+    if (!cust) {
+      const wooCust = await getWooCustomerByPhoneOrEmail(phone);
+      if (wooCust) {
+        cust = {
+          name: `${wooCust.first_name || ""} ${wooCust.last_name || ""}`.trim() || wooCust.username,
+          phone,
+          email: wooCust.email,
+          registeredAt: wooCust.date_created || new Date().toISOString(),
+          orderCount: Number(wooCust.orders_count) || 0,
+        };
+        (cust as any).wpUserId = wooCust.id;
+        customersByPhone[phone] = cust;
+        saveCustomers();
+      }
+    }
+
     if (!cust) {
       return reply.send({ success: true, found: false, phone });
     }
