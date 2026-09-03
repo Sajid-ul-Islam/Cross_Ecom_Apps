@@ -3631,6 +3631,77 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     });
   });
 
+  /* ------------------------------------------------------------------ */
+  /*  Unified Orders Cache & WooCommerce Synced Data Provider           */
+  /*  Merges live WooCommerce store orders with local gateway orders.   */
+  /* ------------------------------------------------------------------ */
+  let _unifiedOrdersCache: { at: number; data: any[] } | null = null;
+  const UNIFIED_ORDERS_CACHE_TTL_MS = 60 * 1000; // 60 seconds
+
+  function extractConsignmentId(o: any): string {
+    if (o.pathaoConsignmentId) return String(o.pathaoConsignmentId).trim();
+    const meta = o.meta_data || [];
+    const ptc = meta.find((m: any) => m.key === "ptc_consignment_id" || m.key === "_ptc_consignment_id");
+    if (ptc?.value) return String(ptc.value).trim();
+    const pathao = meta.find((m: any) => /consignment/i.test(m.key));
+    if (pathao?.value) return String(pathao.value).trim();
+    return "";
+  }
+
+  function extractPtcStatus(o: any): string {
+    if (o.pathaoStatus) return String(o.pathaoStatus).trim();
+    const meta = o.meta_data || [];
+    const ptc = meta.find((m: any) => m.key === "ptc_status" || m.key === "_ptc_status");
+    if (ptc?.value) return String(ptc.value).trim();
+    return o.status || "processing";
+  }
+
+  async function getUnifiedOrders(forceRefresh = false): Promise<any[]> {
+    const now = Date.now();
+    if (!forceRefresh && _unifiedOrdersCache && now - _unifiedOrdersCache.at < UNIFIED_ORDERS_CACHE_TTL_MS) {
+      return _unifiedOrdersCache.data;
+    }
+
+    let wooList: any[] = [];
+    try {
+      const [p1, p2] = await Promise.all([
+        fetchWooOrders({ perPage: 100, page: 1 }),
+        fetchWooOrders({ perPage: 100, page: 2 }),
+      ]);
+      wooList = [...p1, ...p2];
+    } catch (e) {
+      console.warn("[admin] fetchWooOrders warning:", (e as Error).message);
+    }
+
+    const map = new Map<string, any>();
+    for (const o of wooList) {
+      const idStr = String(o.id || o.number);
+      const cid = extractConsignmentId(o);
+      if (cid) o.pathaoConsignmentId = cid;
+      o.pathaoStatus = extractPtcStatus(o);
+      map.set(idStr, o);
+    }
+
+    for (const o of orders) {
+      const idStr = String(o.id || o.number);
+      if (!map.has(idStr)) {
+        const cid = extractConsignmentId(o);
+        if (cid) o.pathaoConsignmentId = cid;
+        o.pathaoStatus = extractPtcStatus(o);
+        map.set(idStr, o);
+      }
+    }
+
+    const unified = Array.from(map.values()).sort((a, b) => {
+      const tA = new Date(a.date_created || a.created_at || 0).getTime();
+      const tB = new Date(b.date_created || b.created_at || 0).getTime();
+      return tB - tA;
+    });
+
+    _unifiedOrdersCache = { at: now, data: unified };
+    return unified;
+  }
+
   /* ---- ADMIN BI ANALYTICS SUITE (Gated by admin session / gateway key) ---- */
   app.get("/v1/deen/admin/analytics", async (req, reply) => {
     const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
@@ -3655,7 +3726,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const { data: analyticsPayload, hit, ageSeconds, computeDurationMs } = await biCache.getOrCompute(
       cacheKey,
       async () => {
-        const allOrders = orders || [];
+        const allOrders = await getUnifiedOrders(refresh === "true" || refresh === "1");
         const products = await getCatalog();
 
         const now = Date.now();
@@ -4378,22 +4449,24 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required." });
     }
 
-    const { status, q, limit = 50 } = (req.query as any) || {};
-    let allOrders = [...(orders || [])];
+    const { status, q, limit = 50, refresh } = (req.query as any) || {};
+    let allOrders = await getUnifiedOrders(refresh === "true" || refresh === "1");
 
     // Format orders
     let formatted = allOrders.map((o) => {
       const items = (o.line_items || o.items || []).map((it: any) => ({
         id: String(it.id || it.product_id || ""),
         name: it.name || it.product_name || "Garment Item",
-        size: it.size || "Standard",
+        size: it.size || it.meta_data?.find((m: any) => /size|attribute_pa_size/i.test(m.key))?.value || it.name?.split(" - ").pop() || "Standard",
         qty: Number(it.quantity || it.qty || 1),
-        price: Number(it.price || it.unit || 0),
+        price: Number(it.price || (Number(it.total || 0) / Number(it.quantity || 1)) || 0),
         total: Number(it.total || (it.price || 0) * (it.quantity || 1) || 0),
+        image: it.image?.src || "",
       }));
 
       const stateCode = o.billing?.state || o.customer?.district || "BD-13";
       const districtName = BD_STATES.find((d: { code: string; name: string }) => d.code === stateCode)?.name || o.billing?.city || "Dhaka";
+      const consignmentId = extractConsignmentId(o);
 
       return {
         id: String(o.id || o.number || ""),
@@ -4411,9 +4484,9 @@ export async function registerDeenRoutes(app: FastifyInstance) {
         deliveryFee: Number(o.shipping_total || o.delivery || 50),
         total: Number(o.total || o.totalAmount || 0),
         status: o.status || "processing",
-        pathaoStatus: o.pathaoStatus || (o.status === "completed" ? "Delivered" : "In Transit"),
-        pathaoConsignmentId: o.pathaoConsignmentId || "",
-        pathaoTrackingUrl: o.pathaoConsignmentId ? `https://merchant.pathao.com/tracking?consignment_id=${o.pathaoConsignmentId}` : undefined,
+        pathaoStatus: extractPtcStatus(o) || (o.status === "completed" ? "Delivered" : "In Transit"),
+        pathaoConsignmentId: consignmentId,
+        pathaoTrackingUrl: consignmentId ? `https://merchant.pathao.com/tracking?consignment_id=${consignmentId}` : undefined,
         customerNote: o.customer_note || (o.meta_data?.find((m: any) => m.key === "_customer_instructions")?.value) || "",
         items,
       };
@@ -4441,6 +4514,64 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       success: true,
       count: formatted.length,
       orders: formatted.slice(0, Number(limit)),
+    });
+  });
+
+  /* ---- ADMIN CUSTOMER DIRECTORY (Real verified customers from live WooCommerce orders) ---- */
+  app.get("/v1/deen/admin/customers", async (req, reply) => {
+    const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
+    const gatewayKey = req.headers["x-gateway-key"] as string | undefined;
+    const session = resolveAuthSession(authHeader);
+    const isAdmin = (session && session.role === "admin") || gatewayKey === "deen_mobile_gateway_secret_2026" || !config.apiKey;
+    if (!isAdmin) {
+      return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required." });
+    }
+
+    const { q, limit = 50 } = (req.query as any) || {};
+    const allOrders = await getUnifiedOrders();
+
+    const customerMap = new Map<string, any>();
+    for (const o of allOrders) {
+      const phone = String(o.billing?.phone || o.customer?.phone || "").replace(/[^0-9]/g, "");
+      if (!phone || phone.length < 10) continue;
+      const cleanPhone = phone.startsWith("88") ? phone.slice(2) : phone;
+      if (!customerMap.has(cleanPhone)) {
+        const name = o.billing?.first_name ? `${o.billing.first_name} ${o.billing.last_name || ""}`.trim() : o.customer?.name || "Valued Customer";
+        customerMap.set(cleanPhone, {
+          id: cleanPhone,
+          phone: cleanPhone,
+          name,
+          email: o.billing?.email || o.customer?.email || "",
+          district: o.billing?.state || o.customer?.district || "BD-13",
+          districtName: BD_STATES.find((d: { code: string; name: string }) => d.code === (o.billing?.state || o.customer?.district))?.name || o.billing?.city || "Dhaka",
+          totalOrders: 0,
+          totalSpent: 0,
+          lastOrderDate: o.date_created || o.created_at,
+          lastOrderId: String(o.id || o.number || ""),
+        });
+      }
+      const c = customerMap.get(cleanPhone);
+      c.totalOrders += 1;
+      c.totalSpent += Number(o.total || o.totalAmount || 0);
+    }
+
+    let customers = Array.from(customerMap.values()).sort((a, b) => b.totalSpent - a.totalSpent);
+
+    if (q) {
+      const s = String(q).toLowerCase();
+      customers = customers.filter(
+        (c) =>
+          c.name.toLowerCase().includes(s) ||
+          c.phone.includes(s) ||
+          c.email.toLowerCase().includes(s) ||
+          c.districtName.toLowerCase().includes(s)
+      );
+    }
+
+    return reply.send({
+      success: true,
+      count: customers.length,
+      customers: customers.slice(0, Number(limit)),
     });
   });
 
