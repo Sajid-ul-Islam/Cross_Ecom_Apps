@@ -128,7 +128,11 @@ export function SalesTrendAreaChart({ data, height = 240 }: SalesTrendAreaChartP
         })}
 
         {/* Shaded Revenue Area */}
-        <path d={areaPath} fill="url(#salesGrad)" />
+        <path
+          d={areaPath}
+          fill="url(#salesGrad)"
+          style={{ transition: "d 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease" }}
+        />
 
         {/* Net Sales Secondary Line */}
         <path
@@ -137,6 +141,7 @@ export function SalesTrendAreaChart({ data, height = 240 }: SalesTrendAreaChartP
           stroke="#10B981"
           strokeWidth="2"
           strokeDasharray="4,4"
+          style={{ transition: "d 0.5s cubic-bezier(0.4, 0, 0.2, 1)" }}
         />
 
         {/* Gross Revenue Primary Line */}
@@ -147,6 +152,7 @@ export function SalesTrendAreaChart({ data, height = 240 }: SalesTrendAreaChartP
           strokeWidth="2.75"
           strokeLinecap="round"
           strokeLinejoin="round"
+          style={{ transition: "d 0.5s cubic-bezier(0.4, 0, 0.2, 1)" }}
         />
 
         {/* X-Axis Date Labels & Vertical hover bars */}
@@ -187,7 +193,7 @@ export function SalesTrendAreaChart({ data, height = 240 }: SalesTrendAreaChartP
                 fill={isHovered ? "#fff" : "#4F46E5"}
                 stroke="#4F46E5"
                 strokeWidth={isHovered ? 3 : 1.5}
-                style={{ transition: "all 0.15s ease" }}
+                style={{ transition: "cx 0.5s cubic-bezier(0.4, 0, 0.2, 1), cy 0.5s cubic-bezier(0.4, 0, 0.2, 1), r 0.15s ease" }}
               />
 
               {/* Date label at bottom */}
