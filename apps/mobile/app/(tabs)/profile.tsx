@@ -16,7 +16,6 @@ import { BD_DISTRICTS } from "../../src/data/districts";
 import { AccountHeader } from "../../src/components/profile/AccountHeader";
 import { RecentOrderPreview } from "../../src/components/profile/RecentOrderPreview";
 import { ContactDetailsForm } from "../../src/components/profile/ContactDetailsForm";
-import { DeliveryOptions } from "../../src/components/profile/DeliveryOptions";
 import { SizingPreferences } from "../../src/components/profile/SizingPreferences";
 import { ThemeAndNotifications } from "../../src/components/profile/ThemeAndNotifications";
 import { SecuritySection } from "../../src/components/profile/SecuritySection";
@@ -224,25 +223,21 @@ export default function ProfileScreen() {
             onAddressChange={setAddress}
             onCityChange={setCity}
             onDistrictChange={setDistrict}
+            onSaveProfile={handleSave}
             onAddAddress={addSavedAddress}
             onRemoveAddress={removeSavedAddress}
           />
 
-          {/* 4. Default Delivery Speed / Slot Preferences */}
-          <DeliveryOptions
-            selectedArea={selectedArea}
-            onSelectArea={setSelectedArea}
-          />
-
-          {/* 5. Saved Sizing Profile */}
+          {/* 4. Saved Sizing Profile */}
           <SizingPreferences
             jeansSize={jeansSize}
             topSize={topSize}
             onJeansSizeChange={setJeansSize}
             onTopSizeChange={setTopSize}
+            onSave={handleSave}
           />
 
-          {/* 6. Appearance & Theme + Notification Preferences */}
+          {/* 5. Appearance & Theme + Notification Preferences */}
           <ThemeAndNotifications
             pushOrders={pushOrders}
             pushPromos={pushPromos}
@@ -250,7 +245,7 @@ export default function ProfileScreen() {
             onPushPromosChange={setPushPromos}
           />
 
-          {/* 7. Top-Notch Account Security & Password Update */}
+          {/* 6. Top-Notch Account Security & Password Update */}
           <SecuritySection
             onRegisterPress={() => {
               setAuthModalMode("signup");
@@ -259,18 +254,7 @@ export default function ProfileScreen() {
             onSuccessNotice={showToast}
           />
 
-          {/* 8. Save Preferences Button */}
-          <TouchableOpacity
-            style={[styles.saveBtn, { backgroundColor: colors.indigo }, saving && { opacity: 0.7 }]}
-            activeOpacity={0.88}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            <Save size={18} color="#FFFFFF" />
-            <Text style={styles.saveBtnText}>{saving ? "SAVING CHANGES..." : "SAVE PREFERENCES"}</Text>
-          </TouchableOpacity>
-
-          {/* 9. Store Outlets & Customer Concierge + Store Admin Portal */}
+          {/* 7. Store Outlets & Customer Concierge + Store Admin Portal */}
           <StoreSection
             onAboutPress={() => setAboutModalVisible(true)}
             onReportPress={handleReport}

@@ -429,6 +429,15 @@ export const Camera = make(
   </>,
 );
 
+export const Edit = make(
+  <>
+    <Path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+    <Path d="m15 5 4 4" />
+  </>,
+);
+
+export const Pencil = Edit;
+
 export const ImageIcon = make(
   <>
     <Rect width="18" height="18" x="3" y="3" rx="2" ry="2" />

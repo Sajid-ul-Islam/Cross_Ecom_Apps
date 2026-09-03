@@ -62,6 +62,7 @@ export default function ProfilePage() {
   const [passSubmitting, setPassSubmitting] = useState(false);
   const [passNotice, setPassNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [editingContact, setEditingContact] = useState(false);
 
   useEffect(() => {
     try {
@@ -107,6 +108,7 @@ export default function ProfilePage() {
         district: profile.district,
       }).catch(() => {});
       setSavedMessage("✓ Profile and sizing preferences saved successfully!");
+      setEditingContact(false);
       setTimeout(() => setSavedMessage(""), 3500);
     } catch {
       setSavedMessage("✕ Error saving profile.");
@@ -426,140 +428,183 @@ export default function ProfilePage() {
 
       {/* 3. Contact & Delivery Address Form */}
       <form onSubmit={handleSave} className="profile-section-card">
-        <div className="profile-section-header">
+        <div className="profile-section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h3 className="profile-section-title">👤 CONTACT & DEFAULT DELIVERY ADDRESS</h3>
+          <button
+            type="button"
+            className="btn btn--secondary"
+            style={{ padding: "6px 14px", fontSize: 11, fontWeight: 800 }}
+            onClick={() => setEditingContact(!editingContact)}
+          >
+            {editingContact ? "✕ CANCEL" : "✏️ EDIT INFO"}
+          </button>
         </div>
 
-        <div className="form-grid">
-          <div className="form-group">
-            <label className="form-label">Full Name *</label>
-            <input
-              type="text"
-              className="form-input"
-              value={profile.name}
-              onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-              placeholder="e.g. Tanvir Ahmed"
-            />
+        {!editingContact ? (
+          <div style={{ display: "grid", gap: "12px", marginTop: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border-light)", paddingBottom: 8 }}>
+              <span style={{ color: "var(--sub)", fontSize: 13 }}>Full Name</span>
+              <strong style={{ color: "var(--ink)", fontSize: 13 }}>{profile.name || "Add full name"}</strong>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border-light)", paddingBottom: 8 }}>
+              <span style={{ color: "var(--sub)", fontSize: 13 }}>Mobile Phone</span>
+              <strong style={{ color: "var(--ink)", fontSize: 13 }}>{profile.phone ? `+880 ${profile.phone}` : "Add phone number"}</strong>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border-light)", paddingBottom: 8 }}>
+              <span style={{ color: "var(--sub)", fontSize: 13 }}>Email Address</span>
+              <strong style={{ color: "var(--ink)", fontSize: 13 }}>{profile.email || "Add email address"}</strong>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border-light)", paddingBottom: 8 }}>
+              <span style={{ color: "var(--sub)", fontSize: 13 }}>Primary District</span>
+              <strong style={{ color: "var(--indigo)", fontSize: 13 }}>📍 {districts.find(d => d.code === profile.district)?.name || "Dhaka"} ({profile.district})</strong>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border-light)", paddingBottom: 8 }}>
+              <span style={{ color: "var(--sub)", fontSize: 13 }}>City / Thana</span>
+              <strong style={{ color: "var(--ink)", fontSize: 13 }}>{profile.city || "Dhaka"}</strong>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--border-light)", paddingBottom: 8 }}>
+              <span style={{ color: "var(--sub)", fontSize: 13 }}>Street Address</span>
+              <strong style={{ color: "var(--ink)", fontSize: 13, maxWidth: "60%", textAlign: "right" }}>{profile.address || "No address details saved yet"}</strong>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 4 }}>
+              <span style={{ color: "var(--sub)", fontSize: 13 }}>Saved Sizing</span>
+              <strong style={{ color: "var(--indigo)", fontSize: 13 }}>👖 Waist {profile.jeansSize}" · 👕 Top {profile.topSize}</strong>
+            </div>
           </div>
+        ) : (
+          <>
+            <div className="form-grid">
+              <div className="form-group">
+                <label className="form-label">Full Name *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={profile.name}
+                  onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+                  placeholder="e.g. Tanvir Ahmed"
+                />
+              </div>
 
-          <div className="form-group">
-            <label className="form-label">Bangladeshi Mobile Number *</label>
-            <input
-              type="tel"
-              className="form-input"
-              value={profile.phone}
-              onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-              placeholder="017XXXXXXXX"
-            />
-          </div>
+              <div className="form-group">
+                <label className="form-label">Bangladeshi Mobile Number *</label>
+                <input
+                  type="tel"
+                  className="form-input"
+                  value={profile.phone}
+                  onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                  placeholder="017XXXXXXXX"
+                />
+              </div>
 
-          <div className="form-group">
-            <label className="form-label">Email Address (Optional)</label>
-            <input
-              type="email"
-              className="form-input"
-              value={profile.email}
-              onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-              placeholder="name@example.com"
-            />
-          </div>
+              <div className="form-group">
+                <label className="form-label">Email Address (Optional)</label>
+                <input
+                  type="email"
+                  className="form-input"
+                  value={profile.email}
+                  onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                  placeholder="name@example.com"
+                />
+              </div>
 
-          <div className="form-group">
-            <label className="form-label">District (All 64 BD Districts) *</label>
-            <select
-              className="form-input"
-              value={profile.district}
-              onChange={(e) => {
-                const found = districts.find((d) => d.code === e.target.value);
-                setProfile({
-                  ...profile,
-                  district: e.target.value,
-                  city: found ? found.name : profile.city,
-                });
-              }}
+              <div className="form-group">
+                <label className="form-label">District (All 64 BD Districts) *</label>
+                <select
+                  className="form-input"
+                  value={profile.district}
+                  onChange={(e) => {
+                    const found = districts.find((d) => d.code === e.target.value);
+                    setProfile({
+                      ...profile,
+                      district: e.target.value,
+                      city: found ? found.name : profile.city,
+                    });
+                  }}
+                >
+                  {districts.map((d) => (
+                    <option key={d.code} value={d.code}>
+                      {d.name} ({d.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">City / Thana / Area *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={profile.city}
+                  onChange={(e) => setProfile({ ...profile, city: e.target.value })}
+                  placeholder="e.g. Mirpur, Banani, Agrabad"
+                />
+              </div>
+
+              <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+                <label className="form-label">Street Address *</label>
+                <textarea
+                  className="form-input"
+                  rows={3}
+                  value={profile.address}
+                  onChange={(e) => setProfile({ ...profile, address: e.target.value })}
+                  placeholder="House #, Road #, Sector / Area details..."
+                />
+              </div>
+            </div>
+
+            {/* 4. Fit & Sizing Preferences */}
+            <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid var(--border-light)" }}>
+              <h4 style={{ fontSize: 13, fontWeight: 800, color: "var(--ink)", marginBottom: 12 }}>
+                📐 FIT & SIZING PREFERENCES
+              </h4>
+
+              <div style={{ marginBottom: 16 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, display: "block", marginBottom: 8 }}>
+                  Jeans Waist Size (Inches):
+                </span>
+                <div className="size-chips-wrap">
+                  {["28", "30", "32", "34", "36", "38"].map((sz) => (
+                    <button
+                      key={sz}
+                      type="button"
+                      className={`size-chip-btn ${profile.jeansSize === sz ? "size-chip-btn--active" : ""}`}
+                      onClick={() => setProfile({ ...profile, jeansSize: sz })}
+                    >
+                      {sz}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <span style={{ fontSize: 12, fontWeight: 700, display: "block", marginBottom: 8 }}>
+                  Shirt / Panjabi / Tee Size:
+                </span>
+                <div className="size-chips-wrap">
+                  {["S", "M", "L", "XL", "XXL"].map((sz) => (
+                    <button
+                      key={sz}
+                      type="button"
+                      className={`size-chip-btn ${profile.topSize === sz ? "size-chip-btn--active" : ""}`}
+                      onClick={() => setProfile({ ...profile, topSize: sz })}
+                    >
+                      {sz}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="btn btn--primary"
+              style={{ marginTop: 24, width: "100%", padding: "14px", fontWeight: 800 }}
+              disabled={savingProfile}
             >
-              {districts.map((d) => (
-                <option key={d.code} value={d.code}>
-                  {d.name} ({d.code})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">City / Thana / Area *</label>
-            <input
-              type="text"
-              className="form-input"
-              value={profile.city}
-              onChange={(e) => setProfile({ ...profile, city: e.target.value })}
-              placeholder="e.g. Mirpur, Banani, Agrabad"
-            />
-          </div>
-
-          <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-            <label className="form-label">Street Address *</label>
-            <textarea
-              className="form-input"
-              rows={3}
-              value={profile.address}
-              onChange={(e) => setProfile({ ...profile, address: e.target.value })}
-              placeholder="House #, Road #, Sector / Area details..."
-            />
-          </div>
-        </div>
-
-        {/* 4. Fit & Sizing Preferences */}
-        <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid var(--border-light)" }}>
-          <h4 style={{ fontSize: 13, fontWeight: 800, color: "var(--ink)", marginBottom: 12 }}>
-            📐 FIT & SIZING PREFERENCES
-          </h4>
-
-          <div style={{ marginBottom: 16 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, display: "block", marginBottom: 8 }}>
-              Jeans Waist Size (Inches):
-            </span>
-            <div className="size-chips-wrap">
-              {["28", "30", "32", "34", "36", "38"].map((sz) => (
-                <button
-                  key={sz}
-                  type="button"
-                  className={`size-chip-btn ${profile.jeansSize === sz ? "size-chip-btn--active" : ""}`}
-                  onClick={() => setProfile({ ...profile, jeansSize: sz })}
-                >
-                  {sz}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <span style={{ fontSize: 12, fontWeight: 700, display: "block", marginBottom: 8 }}>
-              Shirt / Panjabi / Tee Size:
-            </span>
-            <div className="size-chips-wrap">
-              {["S", "M", "L", "XL", "XXL"].map((sz) => (
-                <button
-                  key={sz}
-                  type="button"
-                  className={`size-chip-btn ${profile.topSize === sz ? "size-chip-btn--active" : ""}`}
-                  onClick={() => setProfile({ ...profile, topSize: sz })}
-                >
-                  {sz}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          className="btn btn--primary"
-          style={{ marginTop: 24, width: "100%", padding: "14px", fontWeight: 800 }}
-          disabled={savingProfile}
-        >
-          {savingProfile ? "SAVING CHANGES..." : "SAVE PREFERENCES"}
-        </button>
+              {savingProfile ? "SAVING CHANGES..." : "✓ SAVE CHANGES"}
+            </button>
+          </>
+        )}
       </form>
 
       {/* 4.5. Account Security & Password Management */}
