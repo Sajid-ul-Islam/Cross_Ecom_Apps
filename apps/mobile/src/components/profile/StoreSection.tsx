@@ -10,9 +10,6 @@ import { exportUserData, deleteUserAccount, fetchOutlets, fetchAppSettings, type
 interface StoreSectionProps {
   onAboutPress: () => void;
   onReportPress: () => void;
-  onBroadcastPress: () => void;
-  onAnalyticsPress: () => void;
-  onCustomersPress: () => void;
 }
 
 const FALLBACK_OUTLETS: Outlet[] = [
@@ -25,9 +22,6 @@ const FALLBACK_OUTLETS: Outlet[] = [
 export const StoreSection: React.FC<StoreSectionProps> = ({
   onAboutPress,
   onReportPress,
-  onBroadcastPress,
-  onAnalyticsPress,
-  onCustomersPress,
 }) => {
   const { colors } = useTheme();
   const { profile } = useProfile();
@@ -148,45 +142,6 @@ export const StoreSection: React.FC<StoreSectionProps> = ({
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* Store Admin Portal (Gated) */}
-      {profile.role === "admin" && (
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.indigo }]}>
-          <View style={styles.cardHeader}>
-            <Store size={17} color={colors.indigo} />
-            <Text style={[styles.cardTitle, { color: colors.indigo }]}>STORE ADMIN & BI DASHBOARD</Text>
-          </View>
-          <Text style={{ fontSize: 12, color: colors.sub, marginBottom: 10 }}>
-            Logged in with full Store Admin privileges. BI Analytics are active on Home.
-          </Text>
-          <TouchableOpacity
-            style={[styles.broadcastBtn, { backgroundColor: colors.indigo, marginBottom: 8 }]}
-            activeOpacity={0.88}
-            onPress={onAnalyticsPress}
-          >
-            <Sparkles size={16} color="#FFFFFF" />
-            <Text style={styles.broadcastBtnText}>📊 VIEW DETAILED BI ANALYTICS</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.broadcastBtn, { backgroundColor: colors.emerald, marginBottom: 8 }]}
-            activeOpacity={0.88}
-            onPress={onCustomersPress}
-          >
-            <Users size={16} color="#FFFFFF" />
-            <Text style={styles.broadcastBtnText}>👥 CUSTOMER DIRECTORY & ORDER PROFILES</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.broadcastBtn, { backgroundColor: colors.cardSecondary, borderColor: colors.indigo, borderWidth: 1 }]}
-            activeOpacity={0.88}
-            onPress={onBroadcastPress}
-          >
-            <Sparkles size={16} color={colors.indigo} />
-            <Text style={[styles.broadcastBtnText, { color: colors.indigo }]}>📢 SEND MARKETING BROADCAST PUSH</Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </>
   );
 };

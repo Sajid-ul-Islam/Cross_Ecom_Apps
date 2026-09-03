@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { BD_DISTRICTS } from "@/lib/districts";
 import { API_URL, fetchOrders, fetchDistricts, loginCustomer, registerCustomer, loginWithGoogle, loginWithFacebook, fetchOutlets, fetchAppSettings, changePassword, updateCustomerProfile, DEFAULT_OUTLETS, type OrderResult, type BdDistrict, type Outlet, type AuthResult } from "@/lib/api";
-import AdminAnalyticsModal, { AdminAnalyticsView } from "@/components/AdminAnalyticsModal";
 import SocialAuthModal from "@/components/SocialAuthModal";
 
 const PROFILE_STORAGE_KEY = "deen_web_user_profile";
@@ -53,7 +52,6 @@ export default function ProfilePage() {
   const [signupPassword, setSignupPassword] = useState("");
   const [authNotice, setAuthNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [authSubmitting, setAuthSubmitting] = useState(false);
-  const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false);
   const [socialModalProvider, setSocialModalProvider] = useState<"google" | "facebook" | null>(null);
 
   // Security & Password update state
@@ -357,16 +355,6 @@ export default function ProfilePage() {
             </>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
-              {profile.role === "admin" && (
-                <button
-                  type="button"
-                  className="btn btn--primary"
-                  style={{ width: "100%", fontSize: 12, fontWeight: 900, background: "linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)" }}
-                  onClick={() => setAnalyticsModalOpen(true)}
-                >
-                  📊 VIEW STORE BI & REVENUE DASHBOARD
-                </button>
-              )}
               <button
                 type="button"
                 className="btn btn--outline"
@@ -379,57 +367,6 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
-
-      {/* 1.5. STORE ADMINISTRATOR EXECUTIVE BI PORTAL ACCESS */}
-      {profile.role === "admin" && (
-        <div
-          style={{
-            background: "linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(24, 30, 48, 0.5) 100%)",
-            border: "1px solid rgba(99, 102, 241, 0.35)",
-            borderRadius: "var(--radius)",
-            padding: "24px 20px",
-            margin: "24px 0",
-            display: "flex",
-            flexWrap: "wrap",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 16,
-          }}
-        >
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: 18 }}>👑</span>
-              <h3 style={{ fontSize: 16, fontWeight: 900, color: "var(--ink)", margin: 0 }}>
-                Store Administrator BI &amp; Operations Portal
-              </h3>
-              <span style={{ background: "rgba(16,185,129,0.15)", color: "var(--emerald)", padding: "2px 8px", borderRadius: 99, fontSize: 11, fontWeight: 900 }}>
-                ● ACTIVE
-              </span>
-            </div>
-            <p style={{ color: "var(--sub)", fontSize: 13, margin: 0 }}>
-              Access full Google Analytics 4, live telemetry, Pathao logistics, orders directory, and restock alerts in the dedicated executive dashboard.
-            </p>
-          </div>
-
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <Link
-              href="/admin"
-              className="btn btn-primary"
-              style={{
-                fontWeight: 900,
-                padding: "10px 22px",
-                fontSize: 13,
-                letterSpacing: 0.5,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
-              📊 OPEN DEDICATED BI PAGE →
-            </Link>
-          </div>
-        </div>
-      )}
 
       {/* 2. Recent Orders & Live Pathao Tracking */}
       <div className="profile-section-card">
@@ -1008,12 +945,6 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
-
-      {/* Admin Analytics Modal */}
-      <AdminAnalyticsModal
-        isOpen={analyticsModalOpen}
-        onClose={() => setAnalyticsModalOpen(false)}
-      />
 
       {/* Social Auth Pop-Up Modal */}
       <SocialAuthModal

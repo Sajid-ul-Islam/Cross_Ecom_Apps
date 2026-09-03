@@ -37,7 +37,6 @@ export default async function HomePage() {
     fetchSectionBanners(),
   ]);
 
-  const isCashback = campaign?.cashback?.enabled;
   const activePromo = campaign?.activeCampaign;
 
   // Curate display categories from REST API + standard catalog
@@ -62,37 +61,7 @@ export default async function HomePage() {
 
       <div className="container">
         {/* ── Dynamic Campaign Offer from REST API ─────────────────── */}
-        {isCashback ? (
-          <div
-            style={{
-              background: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #172554 100%)",
-              borderRadius: "var(--radius)",
-              padding: "22px 30px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 16,
-              marginBottom: 48,
-              border: "1px solid rgba(240, 185, 82, 0.3)",
-            }}
-          >
-            <div>
-              <p style={{ color: "#f0b952", fontSize: 11, fontWeight: 800, letterSpacing: 1.5, marginBottom: 4 }}>
-                🔥 LIMITED-TIME CASHBACK CAMPAIGN
-              </p>
-              <p style={{ color: "#fff", fontSize: 17, fontWeight: 900, marginBottom: 2 }}>
-                Get ৳{campaign.cashback.tier1?.amount ?? 500} Cashback on {bdt(campaign.cashback.tier1?.minSpend ?? 2500)}+ · ৳{campaign.cashback.tier2?.amount ?? 700} Cashback on {bdt(campaign.cashback.tier2?.minSpend ?? 3000)}+
-              </p>
-              <p style={{ color: "rgba(255,255,255,0.7)", fontSize: 13 }}>
-                Applied automatically at checkout on all denim, shirts, and menswear.
-              </p>
-            </div>
-            <Link href="/shop" className="btn btn-sm" style={{ background: "#f0b952", color: "#000", fontWeight: 800, flexShrink: 0 }}>
-              Shop &amp; Save →
-            </Link>
-          </div>
-        ) : activePromo ? (
+        {activePromo ? (
           <div
             style={{
               background: "linear-gradient(135deg, #181124 0%, #2a1b4e 50%, #3e1f47 100%)",

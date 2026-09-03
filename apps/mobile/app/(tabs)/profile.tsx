@@ -25,7 +25,6 @@ import { ScreenErrorBoundary } from "../../src/components/ScreenErrorBoundary";
 
 // Modals
 import { AdminBroadcastModal } from "../../src/components/AdminBroadcastModal";
-import { AdminAnalyticsModal } from "../../src/components/AdminAnalyticsModal";
 import { AdminCustomersModal } from "../../src/components/AdminCustomersModal";
 import { LoginModal } from "../../src/components/LoginModal";
 import { AboutModal } from "../../src/components/AboutModal";
@@ -93,7 +92,6 @@ export default function ProfileScreen() {
 
   // Modal visibility
   const [broadcastModalVisible, setBroadcastModalVisible] = useState(false);
-  const [analyticsModalVisible, setAnalyticsModalVisible] = useState(false);
   const [customersModalVisible, setCustomersModalVisible] = useState(false);
   const [loginModalVisible, setLoginModalVisible] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<"signin" | "signup">("signin");
@@ -256,23 +254,12 @@ export default function ProfileScreen() {
             onSuccessNotice={showToast}
           />
 
-          {/* 7. Store Outlets & Customer Concierge + Store Admin Portal */}
+          {/* 7. Store Outlets & Customer Concierge */}
           <StoreSection
             onAboutPress={() => setAboutModalVisible(true)}
             onReportPress={handleReport}
-            onBroadcastPress={() => setBroadcastModalVisible(true)}
-            onAnalyticsPress={() => router.push("/admin")}
-            onCustomersPress={() => setCustomersModalVisible(true)}
           />
         </ScrollView>
-
-        {/* Embedded Modals — admin modals are strictly gated so customers never allocate memory for them */}
-        {isAdmin && analyticsModalVisible && (
-          <AdminAnalyticsModal
-            visible={analyticsModalVisible}
-            onClose={() => setAnalyticsModalVisible(false)}
-          />
-        )}
 
         {isAdmin && customersModalVisible && (
           <AdminCustomersModal

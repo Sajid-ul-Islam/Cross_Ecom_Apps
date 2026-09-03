@@ -14,7 +14,7 @@ import { useRouter } from "expo-router";
 import { ArrowRight, Sparkles, ShieldCheck, MapPin, Award, TrendingUp, Package, Tag, Users } from "../../src/components/Icons";
 import { SectionHeader } from "../../src/components/SectionHeader";
 import { ScreenShell } from "../../src/components/ScreenShell";
-import { CashbackBanner, DeliveryNoticeBanner } from "../../src/components/Banner";
+import { DeliveryNoticeBanner } from "../../src/components/Banner";
 import { StoreNoticeBanner } from "../../src/components/StoreNoticeBanner";
 import { ProductCard } from "../../src/components/ProductCard";
 import { Sparkline, CategoryBars, Donut, KpiTile } from "../../src/components/Charts";
@@ -111,9 +111,6 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         refreshControl={refreshControl}
       >
-
-        <CashbackBanner />
-
         {/* Auto-Slide Pure Photography Hero Banner (Optimized Portrait Ratio) */}
         <TouchableOpacity
           activeOpacity={0.92}

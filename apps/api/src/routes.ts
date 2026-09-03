@@ -1598,18 +1598,6 @@ export async function registerDeenRoutes(app: FastifyInstance) {
           actionUrl: "/shop",
           actionLabel: "Shop Sale",
         },
-        ...(isCashback
-          ? [
-              {
-                id: "camp_cashback",
-                badge: "🎁 INSTANT CASHBACK",
-                title: "Cashback Reward",
-                subtitle: "৳500 Cashback on ৳2,500+ · ৳700 Cashback on ৳3,000+ orders.",
-                actionUrl: "/shop",
-                actionLabel: "Unlock Rewards",
-              },
-            ]
-          : []),
         {
           id: "camp_cards",
           badge: "💳 BANK CARD SAVINGS",

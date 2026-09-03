@@ -116,33 +116,76 @@ export default function AiConciergeDrawer() {
 
   return (
     <>
-      {/* Floating Trigger Button */}
+      <style>{`
+        .floating-chat-trigger {
+          position: fixed;
+          z-index: 999;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 18px;
+          border-radius: 999px;
+          background: linear-gradient(135deg, var(--indigo) 0%, #3730a3 100%);
+          color: #ffffff;
+          border: 1px solid rgba(255, 255, 255, 0.22);
+          box-shadow: 0 6px 20px rgba(79, 70, 229, 0.38);
+          cursor: pointer;
+          font-weight: 800;
+          font-size: 13px;
+          letter-spacing: 0.3px;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .floating-chat-trigger:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 10px 28px rgba(79, 70, 229, 0.48);
+        }
+        /* Desktop: sits in bottom right */
+        @media (min-width: 769px) {
+          .floating-chat-trigger {
+            bottom: 28px;
+            right: 28px;
+          }
+        }
+        /* Mobile: positioned safely above the 62px bottom navigation bar with zero overlap */
+        @media (max-width: 768px) {
+          .floating-chat-trigger {
+            bottom: 74px;
+            right: 16px;
+            padding: 8px 15px;
+            font-size: 12px;
+          }
+        }
+      `}</style>
+
+      {/* Floating Trigger Button (Named Chat) */}
       <button
         type="button"
+        className="floating-chat-trigger"
         onClick={() => setIsOpen(true)}
-        style={{
-          position: "fixed",
-          bottom: 76,
-          right: 20,
-          zIndex: 999,
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "10px 18px",
-          borderRadius: 30,
-          background: "linear-gradient(135deg, var(--indigo) 0%, #4338ca 100%)",
-          color: "#FFFFFF",
-          border: "1px solid rgba(255,255,255,0.2)",
-          boxShadow: "0 8px 24px rgba(79, 70, 229, 0.35)",
-          cursor: "pointer",
-          fontWeight: 800,
-          fontSize: 13,
-          letterSpacing: 0.5,
-        }}
-        aria-label="Open DEEN AI Concierge"
+        aria-label="Open Chat"
       >
-        <span style={{ fontSize: 16 }}>✨</span>
-        <span>AI Concierge</span>
+        <svg
+          width="17"
+          height="17"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+        <span>Chat</span>
+        <span
+          style={{
+            width: 7,
+            height: 7,
+            borderRadius: "50%",
+            backgroundColor: "#10b981",
+            boxShadow: "0 0 6px #10b981",
+          }}
+        />
       </button>
 
       {/* Drawer Overlay */}
