@@ -23,6 +23,7 @@ interface AdminAnalyticsModalProps {
 type MobileTabType = "sales" | "pairs" | "logistics" | "stock" | "customers";
 
 export const AdminAnalyticsModal: React.FC<AdminAnalyticsModalProps> = ({ visible, onClose }) => {
+  if (!visible) return null;
   const { colors } = useTheme();
   const styles = createStyles(colors);
 

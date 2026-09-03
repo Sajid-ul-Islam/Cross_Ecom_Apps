@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, Switch, StyleSheet } from "react-native";
+import { View, Text, Switch, TouchableOpacity, StyleSheet } from "react-native";
 import { Sparkles, Bell } from "../Icons";
 import { ThemeColors } from "../../theme/colors";
 import { sharedStyles } from "../../theme/sharedStyles";
@@ -35,8 +35,10 @@ export const ThemeAndNotifications: React.FC<ThemeAndNotificationsProps> = ({
           {(["system", "light", "dark"] as const).map((mode) => {
             const active = themeMode === mode;
             return (
-              <View
+              <TouchableOpacity
                 key={mode}
+                activeOpacity={0.8}
+                onPress={() => setThemeMode(mode)}
                 style={[
                   styles.themeChip,
                   { backgroundColor: colors.paper, borderColor: colors.border },
@@ -49,7 +51,7 @@ export const ThemeAndNotifications: React.FC<ThemeAndNotificationsProps> = ({
                 <Text style={[styles.themeChipText, { color: active ? "#FFFFFF" : colors.ink }]}>
                   {mode === "system" ? "SYSTEM" : mode.toUpperCase()}
                 </Text>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>

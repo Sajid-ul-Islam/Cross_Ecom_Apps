@@ -150,7 +150,7 @@ export const ContactDetailsForm: React.FC<ContactDetailsFormProps> = ({
             onPress={() => setDistrictModalOpen(true)}
           >
             <Text style={{ fontSize: 13, fontWeight: "800", color: colors.ink }}>
-              📍 {district.name} ({district.code})
+              📍 {district?.name || "Dhaka"} ({district?.code || "BD-13"})
             </Text>
             <Text style={{ fontSize: 11, fontWeight: "800", color: colors.indigo }}>
               CHANGE ▼
@@ -266,11 +266,11 @@ export const ContactDetailsForm: React.FC<ContactDetailsFormProps> = ({
             />
 
             <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 380 }}>
-              {districts.filter((d) =>
-                d.name.toLowerCase().includes(districtSearch.toLowerCase()) ||
-                d.code.toLowerCase().includes(districtSearch.toLowerCase())
+              {(districts || []).filter((d) =>
+                (d.name || "").toLowerCase().includes(districtSearch.toLowerCase()) ||
+                (d.code || "").toLowerCase().includes(districtSearch.toLowerCase())
               ).map((d) => {
-                const isSelected = district.code === d.code;
+                const isSelected = district?.code === d.code;
                 return (
                   <TouchableOpacity
                     key={d.code}

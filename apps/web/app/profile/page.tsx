@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { BD_DISTRICTS } from "@/lib/districts";
-import { API_URL, fetchOrders, fetchDistricts, loginCustomer, registerCustomer, loginWithGoogle, loginWithFacebook, fetchOutlets, fetchAppSettings, type OrderResult, type BdDistrict, type Outlet, type AuthResult } from "@/lib/api";
+import { API_URL, fetchOrders, fetchDistricts, loginCustomer, registerCustomer, loginWithGoogle, loginWithFacebook, fetchOutlets, fetchAppSettings, changePassword, updateCustomerProfile, type OrderResult, type BdDistrict, type Outlet, type AuthResult } from "@/lib/api";
 import AdminAnalyticsModal, { AdminAnalyticsView } from "@/components/AdminAnalyticsModal";
 import SocialAuthModal from "@/components/SocialAuthModal";
 
@@ -55,6 +55,14 @@ export default function ProfilePage() {
   const [analyticsModalOpen, setAnalyticsModalOpen] = useState(false);
   const [socialModalProvider, setSocialModalProvider] = useState<"google" | "facebook" | null>(null);
 
+  // Security & Password update state
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passSubmitting, setPassSubmitting] = useState(false);
+  const [passNotice, setPassNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem(PROFILE_STORAGE_KEY);
@@ -77,14 +85,69 @@ export default function ProfilePage() {
     }
   }, [profile.phone]);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    const cleanPhone = (profile.phone || "").replace(/[^0-9]/g, "");
+    if (cleanPhone && (cleanPhone.length !== 11 || !cleanPhone.startsWith("01"))) {
+      setSavedMessage("✕ Please enter a valid 11-digit Bangladeshi mobile number (01XXXXXXXXX).");
+      setTimeout(() => setSavedMessage(""), 4000);
+      return;
+    }
+    setSavingProfile(true);
     try {
       localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
       if (typeof window !== "undefined") window.dispatchEvent(new Event("deen_profile_updated"));
+      // Sync to backend gateway in background
+      updateCustomerProfile({
+        name: profile.name,
+        phone: cleanPhone,
+        email: profile.email,
+        address: profile.address,
+        city: profile.city,
+        district: profile.district,
+      }).catch(() => {});
       setSavedMessage("✓ Profile and sizing preferences saved successfully!");
       setTimeout(() => setSavedMessage(""), 3500);
-    } catch {}
+    } catch {
+      setSavedMessage("✕ Error saving profile.");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPassNotice(null);
+    if (!newPassword || newPassword.length < 6) {
+      setPassNotice({ type: "error", text: "New password must be at least 6 characters long." });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPassNotice({ type: "error", text: "New password and confirmation password do not match." });
+      return;
+    }
+    setPassSubmitting(true);
+    try {
+      const res = await changePassword({
+        currentPassword,
+        newPassword,
+        confirmPassword,
+        identifier: profile.phone || profile.email || "customer",
+      });
+      if (res.success) {
+        setPassNotice({ type: "success", text: res.message || "✓ Password updated successfully!" });
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setTimeout(() => setPassNotice(null), 4000);
+      } else {
+        setPassNotice({ type: "error", text: res.message || "Failed to update password." });
+      }
+    } catch {
+      setPassNotice({ type: "error", text: "Network error updating password." });
+    } finally {
+      setPassSubmitting(false);
+    }
   };
 
   const handleLogout = () => {
@@ -493,10 +556,105 @@ export default function ProfilePage() {
           type="submit"
           className="btn btn--primary"
           style={{ marginTop: 24, width: "100%", padding: "14px", fontWeight: 800 }}
+          disabled={savingProfile}
         >
-          SAVE PREFERENCES
+          {savingProfile ? "SAVING CHANGES..." : "SAVE PREFERENCES"}
         </button>
       </form>
+
+      {/* 4.5. Account Security & Password Management */}
+      <div className="profile-section-card" style={{ marginTop: 24 }}>
+        <div className="profile-section-header">
+          <h3 className="profile-section-title">🔒 ACCOUNT SECURITY & PASSWORD</h3>
+        </div>
+
+        {profile.isGuest ? (
+          <div>
+            <p style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.6, marginBottom: 14 }}>
+              You are currently browsing as a guest. Create a permanent DEEN account to lock in VIP discounts, save addresses, and set an account password.
+            </p>
+            <button
+              type="button"
+              className="btn btn--primary"
+              style={{ padding: "10px 20px", fontSize: 12, fontWeight: 800 }}
+              onClick={() => {
+                setAuthMode("signup");
+                setAuthNotice(null);
+                setAuthModalOpen(true);
+              }}
+            >
+              ✨ CREATE ACCOUNT & PASSWORD
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handlePasswordUpdate}>
+            <p style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.6, marginBottom: 16 }}>
+              Update your account login password. We recommend choosing a strong password with at least 6 characters.
+            </p>
+
+            {passNotice && (
+              <div
+                className={`alert ${passNotice.type === "success" ? "alert--success" : "alert--error"}`}
+                style={{ marginBottom: 16 }}
+              >
+                {passNotice.text}
+              </div>
+            )}
+
+            <div className="form-grid">
+              <div className="form-group">
+                <label className="form-label">Current Password</label>
+                <input
+                  type="password"
+                  className="form-input"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter current password (if known)"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">New Password *</label>
+                <input
+                  type="password"
+                  className="form-input"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Confirm New Password *</label>
+                <input
+                  type="password"
+                  className="form-input"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-type new password"
+                  required
+                />
+              </div>
+            </div>
+
+            {confirmPassword && (
+              <div style={{ fontSize: 12, fontWeight: 700, marginTop: 8, color: confirmPassword === newPassword ? "var(--emerald)" : "var(--crimson)" }}>
+                {confirmPassword === newPassword ? "✓ Passwords match" : "✕ Passwords do not match"}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="btn btn--primary"
+              style={{ marginTop: 16, padding: "12px 24px", fontSize: 13, fontWeight: 800 }}
+              disabled={passSubmitting}
+            >
+              {passSubmitting ? "UPDATING PASSWORD..." : "🔑 UPDATE PASSWORD"}
+            </button>
+          </form>
+        )}
+      </div>
 
       {/* 5. DEEN Retail Outlets & WhatsApp Concierge */}
       <ProfileOutletsSection />

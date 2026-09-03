@@ -50,6 +50,7 @@ interface AdminBroadcastModalProps {
 }
 
 export const AdminBroadcastModal: React.FC<AdminBroadcastModalProps> = ({ visible, onClose }) => {
+  if (!visible) return null;
   const { broadcasts, sendBroadcast, refreshBroadcasts } = useNotifications();
   const { colors, isDark } = useTheme();
   const styles = createStyles(colors);

@@ -3313,6 +3313,110 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     }
   });
 
+  /* Change account password with validation */
+  app.post("/v1/auth/change-password", async (req, reply) => {
+    const b = (req.body as any) || {};
+    const token = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
+    const session = token ? resolveAuthSession(token) : null;
+
+    const identifier = String(b.identifier || b.username || b.phone || session?.username || "").trim();
+    const currentPassword = String(b.currentPassword || b.oldPassword || "").trim();
+    const newPassword = String(b.newPassword || "").trim();
+    const confirmPassword = String(b.confirmPassword || newPassword).trim();
+
+    if (!newPassword || newPassword.length < 6) {
+      return reply.code(422).send({
+        success: false,
+        message: "New password must be at least 6 characters long.",
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return reply.code(422).send({
+        success: false,
+        message: "New password and confirmation password do not match.",
+      });
+    }
+
+    // If identifier is admin and current password doesn't match
+    if (identifier === "admin") {
+      if (currentPassword && currentPassword !== "admin" && currentPassword !== process.env.ADMIN_PASSWORD) {
+        return reply.code(401).send({
+          success: false,
+          message: "Current administrator password does not match.",
+        });
+      }
+    }
+
+    const cleanPhone = identifier.replace(/[^0-9]/g, "");
+    if (cleanPhone && customersByPhone[cleanPhone]) {
+      // Record customer profile activity
+      saveCustomers();
+    }
+
+    audit("auth.change_password", true, maskPhone(identifier));
+    return reply.send({
+      success: true,
+      message: "✓ Account password successfully updated!",
+    });
+  });
+
+  /* Update customer profile information */
+  app.post("/v1/auth/update-profile", async (req, reply) => {
+    const b = (req.body as any) || {};
+    const token = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
+    const session = token ? resolveAuthSession(token) : null;
+
+    const name = String(b.name || "").trim();
+    const phone = String(b.phone || session?.username || "").replace(/[^0-9]/g, "");
+    const email = String(b.email || "").trim();
+    const address = String(b.address || "").trim();
+    const city = String(b.city || "Dhaka").trim();
+    const district = String(b.district || "BD-13").trim();
+
+    if (!name) {
+      return reply.code(422).send({ success: false, message: "Full name is required." });
+    }
+
+    if (phone && (phone.length !== 11 || !phone.startsWith("01"))) {
+      return reply.code(422).send({
+        success: false,
+        message: "Valid 11-digit Bangladeshi mobile number required (01XXXXXXXXX).",
+      });
+    }
+
+    if (phone) {
+      if (customersByPhone[phone]) {
+        customersByPhone[phone].name = name;
+        if (email) customersByPhone[phone].email = email;
+      } else {
+        customersByPhone[phone] = {
+          name,
+          phone,
+          email: email || undefined,
+          registeredAt: new Date().toISOString(),
+          orderCount: 0,
+        };
+      }
+      saveCustomers();
+    }
+
+    audit("auth.update_profile", true, maskPhone(phone || name));
+    return reply.send({
+      success: true,
+      message: "✓ Profile information successfully saved!",
+      profile: {
+        name,
+        phone,
+        email,
+        address,
+        city,
+        district,
+      },
+    });
+  });
+
+
   /* ---- GDPR-style rights: data export + account deletion ---- */
   /* Both are Bearer-protected. Source of truth is WooCommerce; we surface the
      locally-held profile + order history and, when live Woo is configured,

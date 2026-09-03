@@ -962,6 +962,54 @@ export async function registerCustomer(
   }
 }
 
+export async function changePassword(payload: {
+  currentPassword?: string;
+  newPassword: string;
+  confirmPassword?: string;
+  identifier?: string;
+}): Promise<{ success: boolean; message: string }> {
+  try {
+    const token = typeof window !== "undefined" ? localStorage.getItem("deen_web_guest_token") : null;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const res = await apiFetch(`${API_URL}/v1/auth/change-password`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    return data;
+  } catch (err: any) {
+    return { success: false, message: err?.message || "Password update failed. Please try again." };
+  }
+}
+
+export async function updateCustomerProfile(profileData: {
+  name: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  district?: string;
+}): Promise<{ success: boolean; message: string; profile?: any }> {
+  try {
+    const token = typeof window !== "undefined" ? localStorage.getItem("deen_web_guest_token") : null;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const res = await apiFetch(`${API_URL}/v1/auth/update-profile`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(profileData),
+    });
+    const data = await res.json();
+    return data;
+  } catch (err: any) {
+    return { success: false, message: err?.message || "Failed to update profile." };
+  }
+}
+
 export async function validateCoupon(code: string): Promise<{ valid: boolean; code?: string; amount?: number; type?: "fixed" | "percent"; description?: string; message?: string }> {
   try {
     const clean = code.trim().toUpperCase();

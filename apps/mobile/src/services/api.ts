@@ -79,8 +79,10 @@ export const getDeliveryFee = (area: string | DeliveryArea): number => {
   return DELIVERY_FEES[area] ?? 50;
 };
 
-export const bdt = (amount: number): string => {
-  return `৳${amount.toLocaleString("en-IN")}`;
+export const bdt = (amount: number | string | null | undefined): string => {
+  const num = typeof amount === "number" ? amount : Number(amount);
+  if (isNaN(num) || num === null || num === undefined) return "৳0";
+  return `৳${num.toLocaleString("en-IN")}`;
 };
 
 export const CATEGORIES: DeenCategory[] = [

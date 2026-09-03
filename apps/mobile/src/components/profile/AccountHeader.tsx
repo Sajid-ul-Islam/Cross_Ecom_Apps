@@ -59,8 +59,8 @@ export const AccountHeader: React.FC<AccountHeaderProps> = ({ onLoginPress, onRe
                   ? "👑"
                   : isGuest
                   ? "👤"
-                  : profile.name
-                  ? profile.name.charAt(0).toUpperCase()
+                  : typeof profile?.name === "string" && profile.name.trim()
+                  ? profile.name.trim().charAt(0).toUpperCase()
                   : "D"}
               </Text>
             </View>
@@ -133,7 +133,7 @@ export const AccountHeader: React.FC<AccountHeaderProps> = ({ onLoginPress, onRe
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
               <Package size={14} color={colors.indigo} />
-              <Text style={[styles.statValue, { color: colors.ink }]}>{orders.length}</Text>
+              <Text style={[styles.statValue, { color: colors.ink }]}>{orders?.length || 0}</Text>
             </View>
             <Text style={[styles.statLabel, { color: colors.sub }]}>Orders</Text>
           </TouchableOpacity>
@@ -144,7 +144,7 @@ export const AccountHeader: React.FC<AccountHeaderProps> = ({ onLoginPress, onRe
             <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
               <MapPin size={14} color={colors.emerald} />
               <Text style={[styles.statValue, { color: colors.ink }]}>
-                {profile.city || "Dhaka"}
+                {profile?.city || "Dhaka"}
               </Text>
             </View>
             <Text style={[styles.statLabel, { color: colors.sub }]}>District</Text>
@@ -159,7 +159,7 @@ export const AccountHeader: React.FC<AccountHeaderProps> = ({ onLoginPress, onRe
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
               <Heart size={14} color={colors.crimson} />
-              <Text style={[styles.statValue, { color: colors.ink }]}>{wishlist.length}</Text>
+              <Text style={[styles.statValue, { color: colors.ink }]}>{wishlist?.length || 0}</Text>
             </View>
             <Text style={[styles.statLabel, { color: colors.sub }]}>Saved</Text>
           </TouchableOpacity>

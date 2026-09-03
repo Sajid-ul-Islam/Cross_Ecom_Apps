@@ -1179,6 +1179,65 @@ export async function forgotPassword(identifier: string): Promise<{ success: boo
   }
 }
 
+export async function changePassword(payload: {
+  currentPassword?: string;
+  newPassword: string;
+  confirmPassword?: string;
+  identifier?: string;
+}): Promise<{ success: boolean; message: string }> {
+  try {
+    const token = await getAuthToken();
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const res = await request<{ success: boolean; message: string }>("/v1/auth/change-password", {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    }, 8000);
+    return {
+      success: Boolean(res?.success),
+      message: res?.message || "Password updated successfully.",
+    };
+  } catch (e: any) {
+    return {
+      success: false,
+      message: e?.message || "Failed to update password. Please check your network.",
+    };
+  }
+}
+
+export async function updateProfileAPI(profileData: {
+  name: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  district?: string;
+}): Promise<{ success: boolean; message: string; profile?: any }> {
+  try {
+    const token = await getAuthToken();
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const res = await request<{ success: boolean; message: string; profile?: any }>("/v1/auth/update-profile", {
+      method: "POST",
+      headers,
+      body: JSON.stringify(profileData),
+    }, 8000);
+    return {
+      success: Boolean(res?.success),
+      message: res?.message || "Profile updated successfully.",
+      profile: res?.profile,
+    };
+  } catch (e: any) {
+    return {
+      success: false,
+      message: e?.message || "Failed to save profile changes.",
+    };
+  }
+}
+
 export async function exportUserData(): Promise<{ success: boolean; data?: any; message?: string }> {
   const token = await getAuthToken();
   if (!token) return { success: false, message: "Authentication required." };

@@ -38,12 +38,12 @@ export const RecentOrderPreview: React.FC<RecentOrderPreviewProps> = ({ onTracki
         <View style={[styles.orderPreviewBox, { backgroundColor: colors.paper, borderColor: colors.borderLight }]}>
           <View style={styles.orderPreviewTop}>
             <Text style={[styles.orderNumberText, { color: colors.indigo }]}>
-              #{latestOrder.wooNumber || latestOrder.number}
+              #{latestOrder.wooNumber || latestOrder.number || latestOrder.id || "Order"}
               {latestOrder.wooNumber && latestOrder.number && latestOrder.wooNumber !== latestOrder.number ? ` (App ${latestOrder.number})` : ""}
             </Text>
             <View style={[styles.orderStatusBadge, { backgroundColor: colors.indigoLight }]}>
               <Text style={[styles.orderStatusText, { color: colors.indigo }]}>
-                {latestOrder.status.toUpperCase()}
+                {String(latestOrder.status || "processing").toUpperCase()}
               </Text>
             </View>
           </View>
@@ -57,7 +57,7 @@ export const RecentOrderPreview: React.FC<RecentOrderPreviewProps> = ({ onTracki
           </Text>
 
           <Text style={[styles.orderMetaText, { color: colors.sub }]}>
-            Delivery: <Text style={[styles.bold, { color: colors.ink }]}>৳{latestOrder.delivery}</Text> · Total: <Text style={[styles.bold, { color: colors.indigo }]}>{bdt(latestOrder.total)}</Text> ({latestOrder.payment === "cod" ? "Cash on Delivery" : "Prepaid"})
+            Delivery: <Text style={[styles.bold, { color: colors.ink }]}>৳{latestOrder.delivery ?? 0}</Text> · Total: <Text style={[styles.bold, { color: colors.indigo }]}>{bdt(latestOrder.total ?? 0)}</Text> ({latestOrder.payment === "cod" ? "Cash on Delivery" : "Prepaid"})
           </Text>
 
           <TouchableOpacity

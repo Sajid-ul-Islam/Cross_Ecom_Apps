@@ -22,10 +22,11 @@ interface AboutModalProps {
 }
 
 export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
+  if (!visible) return null;
   const { colors } = useTheme();
   const styles = createStyles(colors);
   const { info } = useStore();
-  const waNumber = info.whatsapp.replace(/[^0-9]/g, "");
+  const waNumber = (info?.whatsapp || "01952700500").replace(/[^0-9]/g, "");
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>

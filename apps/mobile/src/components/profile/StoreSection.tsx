@@ -41,7 +41,7 @@ export const StoreSection: React.FC<StoreSectionProps> = ({
     fetchAppSettings().then((s) => { if (s?.contact?.whatsapp) setWhatsapp(s.contact.whatsapp); });
   }, []);
 
-  const waNumber = whatsapp.replace(/[^0-9]/g, "");
+  const waNumber = (whatsapp || "01952700500").replace(/[^0-9]/g, "");
 
   return (
     <>

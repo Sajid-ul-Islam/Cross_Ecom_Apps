@@ -47,6 +47,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   onSuccess,
   initialMode = "signin",
 }) => {
+  if (!visible) return null;
   const { colors, isDark } = useTheme();
   const { login, loginAsAdmin, loginWithGoogle, loginWithFacebook, registerCustomer, profile } = useProfile();
   const styles = createStyles(colors);
