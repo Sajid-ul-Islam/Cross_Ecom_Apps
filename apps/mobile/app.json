@@ -12,9 +12,6 @@
       "resizeMode": "contain",
       "backgroundColor": "#0D111A"
     },
-    "runtimeVersion": {
-      "policy": "appVersion"
-    },
     "updates": {
       "url": "https://u.expo.dev/6e5914c5-c56c-4cc7-ad0b-f9bf6cf3d7bd",
       "enabled": true,
@@ -29,12 +26,15 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FF6900"
+        "backgroundColor": "#000000"
       },
       "package": "com.deencommerce.app",
       "versionCode": 1,
       "permissions": [],
-      "softwareKeyboardLayoutMode": "pan"
+      "softwareKeyboardLayoutMode": "pan",
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     },
     "web": {
       "bundler": "metro",
@@ -78,6 +78,9 @@
         "projectId": "6e5914c5-c56c-4cc7-ad0b-f9bf6cf3d7bd"
       }
     },
-    "owner": "b3ngali"
+    "owner": "b3ngali",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
   }
 }
