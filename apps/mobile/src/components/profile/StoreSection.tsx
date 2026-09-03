@@ -16,10 +16,10 @@ interface StoreSectionProps {
 }
 
 const FALLBACK_OUTLETS: Outlet[] = [
-  { id: "mirpur", name: "DEEN Mirpur 12 (Flagship Outlet)", tag: "CENTRAL STUDIO & STORE", address: "2nd Floor, Ramzannesa Super Market, Mirpur 12, Dhaka-1216", hours: "Open Daily: 10:00 AM - 09:30 PM", phone: "+8801952700500" },
-  { id: "wari", name: "DEEN Wari Outlet", tag: "DHAKA SOUTH OUTLET", address: "Ground Floor, 41 A.K Famous Tower, Rankin Street, Wari, Dhaka-1203", hours: "Open Daily: 10:30 AM - 09:30 PM", phone: "+8801952700500" },
-  { id: "cumilla", name: "DEEN Cumilla Outlet", tag: "CUMILLA SHOWROOM", address: "4th Floor, QR Tower, Badurtola, Cumilla", hours: "Open Daily: 10:30 AM - 09:00 PM", phone: "+8801952700500" },
-  { id: "sylhet", name: "DEEN Sylhet Outlet", tag: "SYLHET SHOWROOM", address: "Block-A, House-54/2, Kumar Para, Sylhet", hours: "Open Daily: 10:30 AM - 09:30 PM", phone: "+8801952700500" },
+  { id: "mirpur-12", name: "DEEN Mirpur 12 (Flagship Outlet)", tag: "CENTRAL STUDIO & STORE PICKUP", address: "Level 3, Ramzannesa Super Market, Mirpur 12 Bus Stand, Dhaka-1216", hours: "Open Daily: 10:00 AM – 09:30 PM", phone: "01972-627981" },
+  { id: "wari-outlet", name: "DEEN Wari Outlet", tag: "DHAKA SOUTH SHOWROOM", address: "Ground Floor, 41 A.K Famous Tower, Rankin Street, Wari, Dhaka-1203", hours: "Open Daily: 10:30 AM – 09:30 PM", phone: "01972-627983" },
+  { id: "cumilla-outlet", name: "DEEN Cumilla Outlet", tag: "CUMILLA REGIONAL SHOWROOM", address: "4th Floor, QR Tower, Badurtola (Dharmasagor Side), Kandirpar, Cumilla-3500", hours: "Open Daily: 10:30 AM – 09:00 PM", phone: "01972-627984" },
+  { id: "sylhet-outlet", name: "DEEN Sylhet Outlet", tag: "SYLHET REGIONAL SHOWROOM", address: "54/A, Level 2, Block-A, Kumarpara, Zindabazar, Sylhet", hours: "Open Daily: 10:30 AM – 09:30 PM", phone: "01972-627985" },
 ];
 
 export const StoreSection: React.FC<StoreSectionProps> = ({

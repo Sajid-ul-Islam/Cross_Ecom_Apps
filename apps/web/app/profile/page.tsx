@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { BD_DISTRICTS } from "@/lib/districts";
-import { API_URL, fetchOrders, fetchDistricts, loginCustomer, registerCustomer, loginWithGoogle, loginWithFacebook, fetchOutlets, fetchAppSettings, changePassword, updateCustomerProfile, type OrderResult, type BdDistrict, type Outlet, type AuthResult } from "@/lib/api";
+import { API_URL, fetchOrders, fetchDistricts, loginCustomer, registerCustomer, loginWithGoogle, loginWithFacebook, fetchOutlets, fetchAppSettings, changePassword, updateCustomerProfile, DEFAULT_OUTLETS, type OrderResult, type BdDistrict, type Outlet, type AuthResult } from "@/lib/api";
 import AdminAnalyticsModal, { AdminAnalyticsView } from "@/components/AdminAnalyticsModal";
 import SocialAuthModal from "@/components/SocialAuthModal";
 
@@ -968,11 +968,11 @@ export default function ProfilePage() {
 }
 
 function ProfileOutletsSection() {
-  const [outlets, setOutlets] = useState<Outlet[]>([]);
+  const [outlets, setOutlets] = useState<Outlet[]>(DEFAULT_OUTLETS);
   const [whatsapp, setWhatsapp] = useState("01952-700500");
 
   useEffect(() => {
-    fetchOutlets().then((o) => { if (o.length > 0) setOutlets(o); });
+    fetchOutlets().then((o) => { if (o && o.length > 0) setOutlets(o); });
     fetchAppSettings().then((s) => { if (s?.contact?.whatsapp) setWhatsapp(s.contact.whatsapp); });
   }, []);
 
@@ -981,16 +981,51 @@ function ProfileOutletsSection() {
   return (
     <div className="profile-section-card">
       <div className="profile-section-header">
-        <h3 className="profile-section-title">🏬 DEEN RETAIL OUTLETS</h3>
+        <h3 className="profile-section-title">🏬 DEEN RETAIL OUTLETS & SHOWROOMS</h3>
       </div>
 
       <div className="outlets-grid">
-        {outlets.map((outlet) => (
-          <div key={outlet.id} className="outlet-box">
-            <strong>📍 {outlet.name}</strong>
-            <p>{outlet.address}</p>
-          </div>
-        ))}
+        {outlets.map((outlet) => {
+          const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(outlet.mapQuery || outlet.address)}`;
+          return (
+            <div key={outlet.id} className="outlet-box" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 10, padding: 14 }}>
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <span style={{ fontSize: 9, fontWeight: 900, background: outlet.pickup ? "var(--indigo-light)" : "var(--surface)", color: outlet.pickup ? "var(--indigo)" : "var(--sub)", padding: "2px 6px", borderRadius: 4 }}>
+                    {outlet.tag || (outlet.pickup ? "FLAGSHIP STORE" : "SHOWROOM")}
+                  </span>
+                  {outlet.pickup && (
+                    <span style={{ fontSize: 10, color: "var(--emerald)", fontWeight: 800 }}>✓ Store Pickup</span>
+                  )}
+                </div>
+                <strong style={{ fontSize: 13, color: "var(--ink)", marginBottom: 4, display: "block" }}>📍 {outlet.name}</strong>
+                <p style={{ fontSize: 12, color: "var(--sub)", lineHeight: 1.4, marginBottom: 6 }}>{outlet.address}</p>
+                <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 4 }}>🕒 {outlet.hours}</p>
+                <p style={{ fontSize: 11, color: "var(--indigo)", fontWeight: 700 }}>📞 Hotline: <a href={`tel:${outlet.phone}`} style={{ color: "var(--indigo)", textDecoration: "none" }}>{outlet.phone}</a></p>
+              </div>
+
+              <a
+                href={mapUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn--secondary"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 4,
+                  fontSize: 10,
+                  fontWeight: 800,
+                  padding: "6px 10px",
+                  textDecoration: "none",
+                  marginTop: 6,
+                }}
+              >
+                📍 VIEW ON GOOGLE MAPS
+              </a>
+            </div>
+          );
+        })}
       </div>
 
       <a
@@ -1002,7 +1037,7 @@ function ProfileOutletsSection() {
         <div style={{ fontSize: 24 }}>💬</div>
         <div>
           <div style={{ fontWeight: 800, fontSize: 13 }}>Customer Hotline & WhatsApp: +880 {whatsapp}</div>
-          <div style={{ fontSize: 11, color: "var(--sub)" }}>Tap to Chat on WhatsApp</div>
+          <div style={{ fontSize: 11, color: "var(--sub)" }}>Tap to Chat with DEEN Concierge on WhatsApp</div>
         </div>
       </a>
     </div>

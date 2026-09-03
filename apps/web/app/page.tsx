@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { fetchProducts, fetchCampaigns, fetchCategoryCovers, fetchCategories, bdt } from "@/lib/api";
+import { fetchProducts, fetchCampaigns, fetchCategoryCovers, fetchCategories, fetchOutlets, bdt } from "@/lib/api";
 import { getCategoryInfo } from "@/lib/categories";
 import ProductCard from "@/components/ProductCard";
 
@@ -12,12 +12,13 @@ const HERO_IMAGE =
   "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg";
 
 export default async function HomePage() {
-  const [featured, newArrivals, campaign, remoteCovers, categoriesList] = await Promise.all([
+  const [featured, newArrivals, campaign, remoteCovers, categoriesList, outletsList] = await Promise.all([
     fetchProducts({ per_page: 8, sort: "price-desc" }),
     fetchProducts({ per_page: 4, sort: "new" }),
     fetchCampaigns(),
     fetchCategoryCovers(),
     fetchCategories(),
+    fetchOutlets(),
   ]);
 
   const isCashback = campaign?.cashback?.enabled;
@@ -296,86 +297,78 @@ export default async function HomePage() {
               gap: 20,
             }}
           >
-            {[
-              {
-                name: "Mirpur 12 Flagship Outlet",
-                badge: "FLAGSHIP SHOWROOM & STORE PICKUP",
-                address: "House 12, Road 3, Block D, Section 12, Mirpur, Dhaka-1216",
-                hours: "Open Daily: 10:00 AM – 9:30 PM",
-                phone: "01952-700500",
-                pickup: true,
-              },
-              {
-                name: "Uttara Sector 7 Branch",
-                badge: "RETAIL OUTLET",
-                address: "Plot 24, Rabindra Sarani, Sector 7, Uttara, Dhaka-1230",
-                hours: "Open Daily: 10:30 AM – 10:00 PM",
-                phone: "01952-700500",
-                pickup: false,
-              },
-              {
-                name: "Dhanmondi 27 Branch",
-                badge: "PREMIUM STUDIO",
-                address: "House 38, Road 27 (Old), Dhanmondi, Dhaka-1209",
-                hours: "Open Daily: 11:00 AM – 10:00 PM",
-                phone: "01952-700500",
-                pickup: false,
-              },
-              {
-                name: "Chattogram GEC Circle Outlet",
-                badge: "REGIONAL HUB",
-                address: "Sanmar Ocean City, Level 3, GEC Circle, Chattogram",
-                hours: "Open Daily: 10:30 AM – 9:30 PM",
-                phone: "01952-700500",
-                pickup: false,
-              },
-            ].map((outlet) => (
-              <div
-                key={outlet.name}
-                style={{
-                  background: "var(--surface-2)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "var(--radius)",
-                  padding: 20,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                }}
-              >
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                    <span
-                      style={{
-                        fontSize: 9,
-                        fontWeight: 900,
-                        letterSpacing: 0.5,
-                        background: outlet.pickup ? "var(--indigo-light)" : "var(--border)",
-                        color: outlet.pickup ? "var(--indigo)" : "var(--sub)",
-                        padding: "2px 8px",
-                        borderRadius: 4,
-                      }}
-                    >
-                      {outlet.badge}
-                    </span>
-                    {outlet.pickup && (
-                      <span style={{ fontSize: 11, color: "var(--emerald)", fontWeight: 800 }}>✓ Free Pickup</span>
-                    )}
+            {outletsList.map((outlet) => {
+              const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(outlet.mapQuery || outlet.address)}`;
+              return (
+                <div
+                  key={outlet.id || outlet.name}
+                  style={{
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "var(--radius)",
+                    padding: 20,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    gap: 14,
+                  }}
+                >
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, gap: 8, flexWrap: "wrap" }}>
+                      <span
+                        style={{
+                          fontSize: 9,
+                          fontWeight: 900,
+                          letterSpacing: 0.5,
+                          background: outlet.pickup ? "var(--indigo-light)" : "var(--border)",
+                          color: outlet.pickup ? "var(--indigo)" : "var(--sub)",
+                          padding: "3px 8px",
+                          borderRadius: 4,
+                        }}
+                      >
+                        {outlet.tag || (outlet.pickup ? "FLAGSHIP SHOWROOM & STORE PICKUP" : "REGIONAL SHOWROOM")}
+                      </span>
+                      {outlet.pickup && (
+                        <span style={{ fontSize: 11, color: "var(--emerald)", fontWeight: 800 }}>✓ Free Pickup</span>
+                      )}
+                    </div>
+                    <h3 style={{ fontSize: 16, fontWeight: 900, color: "var(--ink)", marginBottom: 8 }}>
+                      {outlet.name}
+                    </h3>
+                    <p style={{ fontSize: 13, color: "var(--sub)", lineHeight: 1.5, marginBottom: 10 }}>
+                      📍 {outlet.address}
+                    </p>
+                    <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>
+                      🕒 {outlet.hours}
+                    </p>
+                    <p style={{ fontSize: 12, color: "var(--indigo)", fontWeight: 700 }}>
+                      📞 Hotline: <a href={`tel:${outlet.phone}`} style={{ color: "var(--indigo)", textDecoration: "none" }}>{outlet.phone}</a>
+                    </p>
                   </div>
-                  <h3 style={{ fontSize: 16, fontWeight: 900, color: "var(--ink)", marginBottom: 6 }}>
-                    {outlet.name}
-                  </h3>
-                  <p style={{ fontSize: 13, color: "var(--sub)", lineHeight: 1.5, marginBottom: 12 }}>
-                    📍 {outlet.address}
-                  </p>
-                  <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>
-                    🕒 {outlet.hours}
-                  </p>
-                  <p style={{ fontSize: 12, color: "var(--indigo)", fontWeight: 700 }}>
-                    📞 Hotline: {outlet.phone}
-                  </p>
+
+                  <a
+                    href={mapUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn--secondary"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                      fontSize: 11,
+                      fontWeight: 800,
+                      padding: "8px 12px",
+                      textDecoration: "none",
+                      width: "100%",
+                      textAlign: "center",
+                    }}
+                  >
+                    📍 GET DIRECTIONS (GOOGLE MAPS)
+                  </a>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       </div>
