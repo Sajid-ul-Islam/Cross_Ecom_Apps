@@ -108,23 +108,31 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (!bestDeals || bestDeals.length <= 1) return;
-    const cardStep = Math.round(width * 0.46) + 12;
-    const maxScroll = cardStep * (bestDeals.length - 1);
+    // Duplicate list renders 2× items; loop resets at the halfway mark
+    const cardWidth = Math.round(width * 0.46) + 12;
+    const halfTotal = cardWidth * bestDeals.length; // midpoint = 1 full copy
+
+    // Smooth ticker: advance 1 px every 20 ms ≈ 50 px / s (slow & glide-like)
+    const STEP = 1;
+    const INTERVAL_MS = 20;
 
     const timer = setInterval(() => {
       if (isUserScrollingBestSellers.current) return;
-      bestSellerScrollPos.current += cardStep;
-      if (bestSellerScrollPos.current > maxScroll) {
+      bestSellerScrollPos.current += STEP;
+      // Seamless loop: silently jump back to 0 when halfway through duplicated list
+      if (bestSellerScrollPos.current >= halfTotal) {
         bestSellerScrollPos.current = 0;
+        bestSellerScrollRef.current?.scrollTo({ x: 0, animated: false });
+        return;
       }
       bestSellerScrollRef.current?.scrollTo({
         x: bestSellerScrollPos.current,
-        animated: true,
+        animated: false, // animated:false keeps it pixel-smooth (no spring easing per frame)
       });
-    }, 3500);
+    }, INTERVAL_MS);
 
     return () => clearInterval(timer);
-  }, [bestDeals.length]);
+  }, [bestDeals.length, width]);
 
   return (
     <ScreenShell>
@@ -337,6 +345,7 @@ export default function HomeScreen() {
               ref={bestSellerScrollRef}
               horizontal
               showsHorizontalScrollIndicator={false}
+              scrollEventThrottle={16}
               contentContainerStyle={styles.horizontalProductList}
               onScrollBeginDrag={() => {
                 isUserScrollingBestSellers.current = true;
@@ -344,17 +353,18 @@ export default function HomeScreen() {
               onScrollEndDrag={() => {
                 setTimeout(() => {
                   isUserScrollingBestSellers.current = false;
-                }, 3000);
+                }, 2000);
               }}
               onMomentumScrollEnd={(e) => {
                 bestSellerScrollPos.current = e.nativeEvent.contentOffset.x;
                 setTimeout(() => {
                   isUserScrollingBestSellers.current = false;
-                }, 1500);
+                }, 1000);
               }}
             >
-              {bestDeals.map((product) => (
-                <View key={product.id} style={styles.horizontalCardWrapper}>
+              {/* Render list twice for seamless infinite loop */}
+              {[...bestDeals, ...bestDeals].map((product, idx) => (
+                <View key={`${product.id}-${idx}`} style={styles.horizontalCardWrapper}>
                   <ProductCard product={product} />
                 </View>
               ))}
