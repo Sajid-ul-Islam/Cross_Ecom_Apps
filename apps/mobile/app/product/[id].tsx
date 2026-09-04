@@ -18,20 +18,15 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ShoppingBag,
   Heart,
-  Truck,
   Sparkles,
-  Shield,
   Layers,
   ChevronDown,
   ChevronUp,
   Ruler,
   Maximize2,
-  CheckCircle2,
-  Check,
   Star,
   Store,
   BookOpen,
-  MessageCircle,
   Minus,
   Plus,
   Bell,
@@ -129,6 +124,10 @@ export default function ProductDetailScreen() {
           setSelectedSize(initial);
           const v = vars.find((x) => x.size === initial);
           setSelectedVariationId(v?.id);
+
+          fetchProducts().then(prods => {
+            if (isMounted) setAllProducts(prods);
+          });
         } else {
           setProduct(null);
         }

@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 
-import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, Gift, ShieldCheck, Clock } from "../../src/components/Icons";
+import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, ShieldCheck, Clock } from "../../src/components/Icons";
 import { ScreenShell } from "../../src/components/ScreenShell";
 import { CashbackBanner } from "../../src/components/Banner";
 import { useTheme } from "../../src/context/ThemeContext";
@@ -383,40 +383,6 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
     itemLineTotal: {
       fontSize: 13,
       fontWeight: "800",
-    },
-    giftCard: {
-      flexDirection: "row",
-      alignItems: "center",
-      padding: 12,
-      borderRadius: 8,
-      borderWidth: 1,
-      gap: 12,
-    },
-    giftIcon: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: "#FFFFFF",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    giftInfo: {
-      flex: 1,
-    },
-    giftTitle: {
-      fontSize: 10,
-      fontWeight: "800",
-      letterSpacing: 0.8,
-    },
-    giftName: {
-      fontSize: 12,
-      fontWeight: "600",
-      marginTop: 2,
-    },
-    giftPrice: {
-      fontSize: 11,
-      fontWeight: "800",
-      marginTop: 2,
     },
     areaSelectorCard: {
       borderRadius: 8,

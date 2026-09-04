@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 
-import { CheckCircle2, Package, ArrowRight, Home, PhoneCall } from "../src/components/Icons";
+import { Package, ArrowRight, Home } from "../src/components/Icons";
 import { LottieAnimation } from "../src/components/LottieAnimation";
 import { useTheme } from "../src/context/ThemeContext";
 import { ScreenShell } from "../src/components/ScreenShell";

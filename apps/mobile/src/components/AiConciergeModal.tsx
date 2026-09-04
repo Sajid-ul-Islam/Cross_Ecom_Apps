@@ -14,7 +14,7 @@ import {
   Linking,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { X, Sparkles, Send, ShoppingBag, Truck, MapPin, PhoneCall } from "./Icons";
+import { X, Sparkles, Send } from "./Icons";
 import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useCart } from "../context/CartContext";

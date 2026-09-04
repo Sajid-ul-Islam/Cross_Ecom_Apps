@@ -56,6 +56,12 @@ export default function CheckoutScreen() {
   const insets = useSafeAreaInsets();
   const styles = createStyles(colors, s);
 
+  const scrollViewRef = React.useRef<ScrollView>(null);
+
+  useEffect(() => {
+    if (cart.length === 0) router.replace('/(tabs)/cart');
+  }, [cart.length]);
+
   const [name, setName] = useState(profile.name || "");
   const [phone, setPhone] = useState(profile.phone || "");
   const [email, setEmail] = useState(profile.email || "");
@@ -162,6 +168,7 @@ export default function CheckoutScreen() {
   const handlePlaceOrder = async () => {
     if (!name.trim()) {
       setErrorMsg("Please provide your full name");
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       return;
     }
     let digits = phone.replace(/[^0-9]/g, "");
@@ -170,10 +177,12 @@ export default function CheckoutScreen() {
     }
     if (digits.length !== 11 || !digits.startsWith("0") || !/^01[3-9]\d{8}$/.test(digits)) {
       setErrorMsg("Phone number must be an 11-digit Bangladeshi mobile number starting with 0 (e.g. 01XXXXXXXXX)");
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       return;
     }
     if (selectedArea !== "store_pickup" && (!address.trim() || address.trim().length < 8)) {
       setErrorMsg("Please enter full delivery address (house/flat, road, area)");
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       return;
     }
 
@@ -197,6 +206,7 @@ export default function CheckoutScreen() {
       if (isManualMfs) {
         if (!bkashNumber.trim() || !trxId.trim()) {
           setErrorMsg("Please enter your bKash mobile number and Transaction ID (TrxID).");
+          scrollViewRef.current?.scrollTo({ y: 0, animated: true });
           setLoading(false);
           return;
         }
@@ -264,6 +274,7 @@ export default function CheckoutScreen() {
       });
     } catch (e: any) {
       setErrorMsg(e?.message || "Failed to process order. Please check your network and try again.");
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     } finally {
       setLoading(false);
     }
@@ -290,7 +301,7 @@ export default function CheckoutScreen() {
 
   return (
     <ScreenShell renderNav={checkoutNav}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {errorMsg ? (
           <View style={[styles.errorBanner, { backgroundColor: colors.crimsonLight, borderColor: colors.crimson }]}>
             <Text style={[styles.errorText, { color: colors.crimson }]}>{errorMsg}</Text>

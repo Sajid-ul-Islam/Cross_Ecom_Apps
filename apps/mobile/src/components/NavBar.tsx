@@ -66,6 +66,7 @@ export const NavBar: React.FC<NavBarProps> = ({
         <TouchableOpacity
           style={[styles.bagBtn, { backgroundColor: colors.cardSecondary }]}
           onPress={() => router.push("/(tabs)/cart")}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <ShoppingBag size={20} color={colors.ink} />
           {totalItems > 0 && (

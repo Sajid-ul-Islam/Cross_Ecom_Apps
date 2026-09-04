@@ -56,12 +56,12 @@ import { CourierTrackingModal } from "../../src/components/CourierTrackingModal"
  */
 export function ErrorBoundary({ error, retry }: { error: Error; retry: () => void }) {
   return (
-    <View style={{ flex: 1, backgroundColor: "#0D111A", justifyContent: "center", alignItems: "center", padding: 24 }}>
+    <View style={{ flex: 1, backgroundColor: "#F8F9FA", justifyContent: "center", alignItems: "center", padding: 24 }}>
       <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: "rgba(239, 68, 68, 0.15)", justifyContent: "center", alignItems: "center", marginBottom: 16 }}>
         <AlertCircle size={32} color="#EF4444" />
       </View>
-      <Text style={{ fontSize: 18, fontWeight: "900", color: "#F4F6FC", marginBottom: 8 }}>Profile Screen Recovery</Text>
-      <Text style={{ fontSize: 13, color: "#8C96B2", textAlign: "center", marginBottom: 20 }}>
+      <Text style={{ fontSize: 18, fontWeight: "900", color: "#1A1A2E", marginBottom: 8 }}>Profile Screen Recovery</Text>
+      <Text style={{ fontSize: 13, color: "#1A1A2E", textAlign: "center", marginBottom: 20 }}>
         An unexpected error occurred while rendering the profile. Tap reload to restore normal operation.
       </Text>
       <TouchableOpacity
@@ -188,6 +188,8 @@ export default function ProfileScreen() {
       }).catch(() => {});
 
       showToast("✓ Profile & shopping preferences saved successfully!");
+    } catch (e: any) {
+      Alert.alert("Error", e.message || "Failed to save profile.");
     } finally {
       setSaving(false);
     }
