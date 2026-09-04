@@ -100,8 +100,9 @@ export default function ProductCard({ product }: Props) {
         )}
 
         {/* Wishlist Heart Button - positioned at bottom right corner */}
-        <button
-          type="button"
+        <div
+          role="button"
+          tabIndex={0}
           onClick={handleToggleWishlist}
           aria-label={isSaved ? "Remove from wishlist" : "Add to wishlist"}
           title={isSaved ? "Saved in Wishlist" : "Save to Wishlist"}
@@ -134,11 +135,13 @@ export default function ProductCard({ product }: Props) {
           >
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
           </svg>
-        </button>
+        </div>
 
         {/* Quick add overlay */}
         {product.stockStatus !== "outofstock" && (
-          <button
+          <div
+            role="button"
+            tabIndex={0}
             onClick={handleAddToCart}
             style={{
               position: "absolute",
@@ -156,11 +159,12 @@ export default function ProductCard({ product }: Props) {
               cursor: "pointer",
               opacity: 0,
               transition: "opacity 0.2s, background 0.2s",
+              textAlign: "center"
             }}
             className="product-card__quick-add"
           >
             {added ? "✓ ADDED" : "+ QUICK ADD"}
-          </button>
+          </div>
         )}
       </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { API_URL, bdt, resolveProductImage } from "@/lib/api";
@@ -35,6 +36,15 @@ export default function AiConciergeDrawer() {
   const [loading, setLoading] = useState(false);
   const { addItem } = useCart();
   const [addedIds, setAddedIds] = useState<Record<string, boolean>>({});
+  const router = useRouter();
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const [messages, setMessages] = useState<AiMessage[]>([
     {
@@ -216,6 +226,9 @@ export default function AiConciergeDrawer() {
         >
           {/* Drawer Body */}
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="DEEN Assistant"
             style={{
               width: "100%",
               maxWidth: 420,
@@ -268,6 +281,7 @@ export default function AiConciergeDrawer() {
               </div>
               <button
                 type="button"
+                aria-label="Close DEEN Assistant"
                 onClick={() => setIsOpen(false)}
                 style={{
                   background: "none",
@@ -427,11 +441,11 @@ export default function AiConciergeDrawer() {
                             } else if (act.action === "open_whatsapp") {
                               window.open("https://wa.me/8801952700500", "_blank");
                             } else if (act.action === "navigate_shop") {
-                              window.location.href = "/shop";
+                              router.push("/shop");
                             } else if (act.action === "navigate_orders") {
-                              window.location.href = "/orders";
+                              router.push("/orders");
                             } else if (act.action === "navigate_checkout") {
-                              window.location.href = "/checkout";
+                              router.push("/checkout");
                             }
                           }}
                           style={{
@@ -510,6 +524,7 @@ export default function AiConciergeDrawer() {
             >
               <input
                 type="text"
+                aria-label="Type your message"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Ask in Bengali or English…"

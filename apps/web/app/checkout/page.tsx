@@ -1234,9 +1234,9 @@ function CheckoutContent() {
             {loading ? (
               "Placing…"
             ) : payment === "cod" ? (
-              `PLACE COD ORDER · ${bdt(total)}`
+              `PLACE CASH ON DELIVERY ORDER · ${bdt(total)}`
             ) : (
-              `PAY NOW · ${bdt(total)}`
+              `PROCEED TO PAYMENT · ${bdt(total)}`
             )}
           </button>
         </div>

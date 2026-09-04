@@ -2,10 +2,12 @@
    DEEN Commerce — Global Design System
    Midnight Slate (dark) · Japanese Parchment (light)
    ================================================================ */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap");
 
 :root {
   /* Brand */
+  --brand: var(--indigo);
+  --muted: var(--sub);
+  --emerald-light: #ecfdf5;
   --indigo: #2a3680;
   --indigo-hover: #1e265c;
   --indigo-light: #eef0f8;
@@ -38,6 +40,9 @@
 }
 
 [data-theme="dark"] {
+  --brand: var(--indigo);
+  --muted: var(--sub);
+  --emerald-light: #064e3b;
   --indigo: #5b6ee1;
   --indigo-hover: #7384ea;
   --indigo-light: #1f2848;
@@ -1973,7 +1978,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .mobile-sticky-checkout-bar {
   display: none;
   position: fixed;
-  bottom: 60px;
+  bottom: 0px;
   left: 0;
   right: 0;
   z-index: 999;

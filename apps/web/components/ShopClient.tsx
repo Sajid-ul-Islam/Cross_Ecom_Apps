@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { fetchProducts, CATEGORIES, type Product, type Category } from "@/lib/api";
@@ -67,9 +67,14 @@ export default function ShopClient({
     handleFilterChange(c, search, sort);
   };
 
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleSearchChange = (val: string) => {
     setSearch(val);
-    handleFilterChange(category, val, sort);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => {
+      handleFilterChange(category, val, sort);
+    }, 300);
   };
 
   const handleSortChange = (val: string) => {

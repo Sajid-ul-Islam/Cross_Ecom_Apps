@@ -92,9 +92,9 @@ export default async function Footer() {
             <p className="footer__col-title">Information</p>
             <ul className="footer__links">
               <li><Link href="/shop">All Products</Link></li>
-              <li><a href="#">Size Guide</a></li>
-              <li><a href="#">Return Policy</a></li>
-              <li><a href="#">Delivery Info</a></li>
+              <li><Link href="/shop#size-guide">Size Guide</Link></li>
+              <li><Link href="/orders#returns">Return Policy</Link></li>
+              <li><Link href="/cart#delivery">Delivery Info</Link></li>
             </ul>
           </div>
 

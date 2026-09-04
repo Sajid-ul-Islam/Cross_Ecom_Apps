@@ -373,6 +373,16 @@ export default async function HomePage() {
                 gap: 12px;
               }
             }
+            @media (prefers-reduced-motion: reduce) {
+              .cat-moving-track {
+                animation: none;
+                overflow-x: auto;
+              }
+              .bestseller-slider-track {
+                animation: none;
+                overflow-x: auto;
+              }
+            }
           `}</style>
 
           <div className="bestseller-slider-container">

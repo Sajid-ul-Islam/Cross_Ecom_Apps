@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
+
+const inter = Inter({ subsets: ["latin"], display: "swap" });
 import { CartProvider } from "@/lib/cart";
 import { WishlistProvider } from "@/lib/wishlist";
 import Header from "@/components/Header";
@@ -11,6 +14,7 @@ import AiConciergeDrawer from "@/components/AiConciergeDrawer";
 import FestivalGreetingModal from "@/components/FestivalGreetingModal";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://deencommerce.com"),
   title: {
     default: "DEEN - দেশের প্রথম ডেনিম ব্র্যান্ড",
     template: "%s | DEEN - দেশের প্রথম ডেনিম ব্র্যান্ড",
@@ -80,7 +84,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body>
+      <body className={inter.className}>
         <CartProvider>
           <WishlistProvider>
             <div className="site-header-wrapper">

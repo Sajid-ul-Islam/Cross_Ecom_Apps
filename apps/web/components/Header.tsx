@@ -152,8 +152,8 @@ export default function Header() {
               aria-label="Search catalog"
               title="Search products"
               style={{
-                width: 38,
-                height: 38,
+                width: 44,
+                height: 44,
                 borderRadius: "50%",
                 display: "flex",
                 alignItems: "center",
@@ -179,8 +179,8 @@ export default function Header() {
               title="Store Notifications &amp; Bank Offers"
               style={{
                 position: "relative",
-                width: 38,
-                height: 38,
+                width: 44,
+                height: 44,
                 borderRadius: "50%",
                 display: "flex",
                 alignItems: "center",
@@ -225,8 +225,8 @@ export default function Header() {
               aria-label="Toggle theme"
               title={isDark ? "Switch to light" : "Switch to dark"}
               style={{
-                width: 38,
-                height: 38,
+                width: 44,
+                height: 44,
                 borderRadius: "50%",
                 display: "flex",
                 alignItems: "center",
@@ -261,8 +261,8 @@ export default function Header() {
               title="Saved Wishlist Items"
               style={{
                 position: "relative",
-                width: 38,
-                height: 38,
+                width: 44,
+                height: 44,
                 borderRadius: "50%",
                 display: "flex",
                 alignItems: "center",
@@ -307,8 +307,8 @@ export default function Header() {
               aria-label="Cart"
               style={{
                 position: "relative",
-                width: 38,
-                height: 38,
+                width: 44,
+                height: 44,
                 borderRadius: "50%",
                 display: "flex",
                 alignItems: "center",
@@ -355,8 +355,8 @@ export default function Header() {
               aria-label="Account Profile"
               title={profile && !profile.isGuest ? `Account: ${profile.name || "Member"}` : "Account & Profile"}
               style={{
-                width: 38,
-                height: 38,
+                width: 44,
+                height: 44,
                 borderRadius: "50%",
                 alignItems: "center",
                 justifyContent: "center",
