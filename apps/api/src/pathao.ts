@@ -250,7 +250,7 @@ export interface CachedPathaoTracking {
   cachedAt: number;
 }
 
-const TRACKING_CACHE_MS = 60_000; // 1 minute cache
+const TRACKING_CACHE_MS = config.ttl.pathaoTrackingMs; // S1 env-overridable (default 1 min)
 const trackingCache = new Map<string, CachedPathaoTracking>();
 
 export function getCachedPathaoTracking(consignmentId: string): PathaoTrackingInfo | null {

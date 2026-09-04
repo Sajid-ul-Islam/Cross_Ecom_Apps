@@ -170,6 +170,9 @@ build()
   .then((app) =>
     app.listen({ port: config.port, host: "0.0.0.0" }).then(() => {
       console.log(`[gateway] listening on :${config.port} (mode=${config.woo.consumerKey ? "live" : "seed"})`);
+      if (config.dataDir.startsWith("/tmp")) {
+        console.warn(`[gateway] DATA_DIR=${config.dataDir} is ephemeral (S1 scalability scope: set DATA_DIR to a persistent disk or Redis-backed store before horizontal scaling; sessions/orders in /tmp are lost on deploy/restart).`);
+      }
     })
   )
   .catch((err) => {

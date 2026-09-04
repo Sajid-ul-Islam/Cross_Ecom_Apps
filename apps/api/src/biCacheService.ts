@@ -10,6 +10,7 @@
 
 import { promises as fs } from "fs";
 import path from "path";
+import { config } from "./config.js";
 
 export interface CacheEntry<T> {
   data: T;
@@ -19,7 +20,7 @@ export interface CacheEntry<T> {
 }
 
 const DATA_DIR = process.env.DATA_DIR || "/tmp/deen_gateway_data";
-const DEFAULT_TTL_MS = 10 * 60 * 1000; // 10 minutes cache validity
+const DEFAULT_TTL_MS = config.ttl.biMs; // S1 env-overridable (default 10 min)
 
 class BiCacheService {
   private memoryCache = new Map<string, CacheEntry<any>>();

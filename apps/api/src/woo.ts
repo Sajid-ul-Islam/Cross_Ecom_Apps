@@ -190,9 +190,9 @@ function mapStoreProductToDeen(p: any): DeenProduct {
 }
 
 /* ----------------------------- caching ----------------------------- */
-/* Woo rate-limits; cache the catalog for 5 min so stats + listings    */
-/* are cheap after the first warm-up.                                  */
-const CACHE_TTL_MS = 5 * 60 * 1000;
+/* Woo rate-limits; cache the catalog for CACHE_CATALOG_TTL_MS so stats + listings    */
+/* are cheap after the first warm-up. S1: env-overridable via config.ttl.                                  */
+const CACHE_TTL_MS = config.ttl.catalogMs;
 let catalogCache: { at: number; data: DeenProduct[] } | null = null;
 let catalogWarming: Promise<DeenProduct[]> | null = null;
 let coverCache: { at: number; data: Record<string, string> } | null = null;
@@ -206,7 +206,7 @@ export function wooHealthy(): boolean {
    ok | degraded | down without a live call. */
 let lastWooSuccessAt = 0;
 let lastWooErrorAt = 0;
-const WOO_DEGRADED_AFTER_MS = 5 * 60 * 1000; // no success in 5 min -> degraded
+const WOO_DEGRADED_AFTER_MS = config.ttl.wooDegradedAfterMs; // S1 env-overridable
 
 export function wooStatus(): "ok" | "degraded" | "down" {
   if (!wooHealthy()) return "down";

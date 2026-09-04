@@ -154,6 +154,19 @@ export const config = {
     } catch {}
     return DEFAULT_DEEN_OUTLETS;
   })(),
+  /** Scalability TTLs (S1) — env-overridable so Render/Vercel can tune
+      without a rebuild. Defaults preserve current behavior. */
+  ttl: {
+    catalogMs: Number(process.env.CACHE_CATALOG_TTL_MS ?? String(5 * 60 * 1000)),
+    pathaoTrackingMs: Number(process.env.CACHE_PATHAO_TTL_MS ?? String(60_000)),
+    webhookDedupeMs: Number(process.env.WEBHOOK_DEDUPE_TTL_MS ?? String(10 * 60 * 1000)),
+    biMs: Number(process.env.BI_CACHE_TTL_MS ?? String(10 * 60 * 1000)),
+    authSessionMs: Number(process.env.AUTH_SESSION_TTL_MS ?? String(30 * 24 * 60 * 60 * 1000)),
+    guestSessionMs: Number(process.env.GUEST_SESSION_TTL_MS ?? String(7 * 24 * 60 * 60 * 1000)),
+    wooDegradedAfterMs: Number(process.env.WOO_DEGRADED_AFTER_MS ?? String(5 * 60 * 1000)),
+  },
+  /** Persistence dir — S1 warns on /tmp (ephemeral on Render). */
+  dataDir: process.env.DATA_DIR ?? "/tmp/deen_gateway_data",
 };
 
 function parseStores(raw?: string): StoreConfig[] {

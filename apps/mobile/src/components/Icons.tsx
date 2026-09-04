@@ -197,10 +197,6 @@ export const MapPin = make(
   </>,
 );
 
-export const MessageCircle = make(
-  <Path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />,
-);
-
 export const Minus = make(<Path d="M5 12h14" />);
 
 export const Package = make(

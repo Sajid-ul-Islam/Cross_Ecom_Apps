@@ -253,7 +253,7 @@ function _recordOrder(key: string, order: any) {
 /*  downstream events on retried WooCommerce/Payment webhook deliveries. */
 /* ------------------------------------------------------------------ */
 const _webhookIdempotencyStore = new Map<string, number>();
-const _WEBHOOK_IDEMPOTENCY_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const _WEBHOOK_IDEMPOTENCY_TTL_MS = config.ttl.webhookDedupeMs; // S1 env-overridable (default 10 min)
 
 function _isWebhookDuplicate(eventKey: string): boolean {
   const now = Date.now();
@@ -604,7 +604,7 @@ async function sendExpoPushNotifications(messages: Array<{
 /*  Auth session store — persisted to disk (survives restarts).         */
 /*  TTL: 30 days. Pruned on every load so stale tokens self-expire.     */
 /* ------------------------------------------------------------------ */
-const AUTH_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const AUTH_SESSION_TTL_MS = config.ttl.authSessionMs; // S1 env-overridable (default 30 days)
 const authSessions = new Map<string, any>();
 
 async function loadAuthSessions(): Promise<void> {
@@ -685,7 +685,7 @@ function isRegisteredCustomer(phone: string): boolean {
 /*  Anonymous guest sessions — persisted to disk.                       */
 /*  TTL: 7 days. Pruned on load so old anonymous tokens self-expire.    */
 /* ------------------------------------------------------------------ */
-const GUEST_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const GUEST_SESSION_TTL_MS = config.ttl.guestSessionMs; // S1 env-overridable (default 7 days)
 const guestSessions: Array<{
   token: string;
   phone: string;
