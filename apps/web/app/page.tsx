@@ -64,36 +64,69 @@ export default async function HomePage() {
         {activePromo ? (
           <div
             style={{
-              background: "linear-gradient(135deg, #181124 0%, #2a1b4e 50%, #3e1f47 100%)",
-              borderRadius: "var(--radius)",
-              padding: "22px 30px",
+              background: "linear-gradient(135deg, #140d21 0%, #251645 50%, #351a3d 100%)",
+              borderRadius: "14px",
+              padding: "24px 32px",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
               flexWrap: "wrap",
               gap: 16,
               marginBottom: 48,
-              border: "1px solid rgba(244, 95, 92, 0.4)",
+              border: "1.5px solid rgba(244, 95, 92, 0.45)",
+              boxShadow: "0 8px 30px rgba(0, 0, 0, 0.25), 0 0 20px rgba(225, 29, 72, 0.15)",
+              position: "relative",
+              overflow: "hidden",
             }}
           >
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                <span style={{ background: "var(--crimson)", color: "#fff", padding: "2px 8px", borderRadius: 4, fontSize: 10, fontWeight: 900, letterSpacing: 0.5 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <span
+                  style={{
+                    background: "linear-gradient(135deg, #e11d48, #be123c)",
+                    color: "#fff",
+                    padding: "3px 10px",
+                    borderRadius: 999,
+                    fontSize: 10,
+                    fontWeight: 900,
+                    letterSpacing: 0.6,
+                    boxShadow: "0 2px 8px rgba(225, 29, 72, 0.35)",
+                  }}
+                >
                   {activePromo.badge}
                 </span>
-                <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 11, fontWeight: 800, letterSpacing: 1 }}>
+                <span style={{ color: "rgba(255, 255, 255, 0.75)", fontSize: 11, fontWeight: 800, letterSpacing: 1 }}>
                   OFFICIAL STORE CAMPAIGN
                 </span>
               </div>
-              <p style={{ color: "#fff", fontSize: 18, fontWeight: 900, marginBottom: 2 }}>
+              <h3 style={{ color: "#ffffff", fontSize: 20, fontWeight: 900, margin: "0 0 4px", letterSpacing: "-0.01em" }}>
                 {activePromo.title}
-              </p>
-              <p style={{ color: "rgba(255,255,255,0.75)", fontSize: 13 }}>
+              </h3>
+              <p style={{ color: "rgba(255, 255, 255, 0.8)", fontSize: 13.5, margin: 0, lineHeight: 1.4 }}>
                 {activePromo.subtitle}
               </p>
             </div>
-            <Link href={activePromo.actionUrl || "/shop"} className="btn btn-sm btn-primary" style={{ fontWeight: 800, flexShrink: 0, padding: "10px 18px" }}>
-              {activePromo.actionLabel || "Explore Sale"} →
+            <Link
+              href={activePromo.actionUrl || "/shop"}
+              className="btn btn-primary"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                fontWeight: 900,
+                flexShrink: 0,
+                padding: "12px 22px",
+                borderRadius: 999,
+                fontSize: 13,
+                boxShadow: "0 4px 14px rgba(225, 41, 62, 0.35)",
+                lineHeight: 1,
+                verticalAlign: "middle",
+                textDecoration: "none",
+              }}
+            >
+              <span>{activePromo.actionLabel || "Explore Sale"}</span>
+              <span style={{ fontSize: 14, transform: "translateY(-0.5px)" }}>→</span>
             </Link>
           </div>
         ) : null}

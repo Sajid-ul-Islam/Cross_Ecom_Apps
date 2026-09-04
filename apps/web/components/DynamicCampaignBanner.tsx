@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/navigation";
+import Link from "next/link";
 import { fetchCampaigns, type ActiveCampaignState, type RotatingCampaignItem } from "@/lib/api";
 import BankOffersModal from "@/components/BankOffersModal";
 
@@ -85,6 +85,57 @@ export default function DynamicCampaignBanner() {
 
   const current = campaigns[currentIndex] || campaigns[0];
 
+  const getBannerTheme = (id: string) => {
+    switch (id) {
+      case "camp_sale":
+        return {
+          bg: "linear-gradient(90deg, #180a13 0%, #290f1d 50%, #1a0b16 100%)",
+          border: "rgba(244, 63, 94, 0.4)",
+          shadow: "0 2px 14px rgba(225, 29, 72, 0.2)",
+          badgeBg: "linear-gradient(135deg, #e11d48, #be123c)",
+          ctaBg: "rgba(225, 29, 72, 0.2)",
+          ctaBorder: "rgba(225, 29, 72, 0.5)",
+          ctaColor: "#fecdd3",
+          dotColor: "#fb7185",
+        };
+      case "camp_cards":
+        return {
+          bg: "linear-gradient(90deg, #090e24 0%, #13193a 50%, #0d122b 100%)",
+          border: "rgba(99, 102, 241, 0.4)",
+          shadow: "0 2px 14px rgba(99, 102, 241, 0.2)",
+          badgeBg: "linear-gradient(135deg, #4f46e5, #4338ca)",
+          ctaBg: "rgba(99, 102, 241, 0.2)",
+          ctaBorder: "rgba(99, 102, 241, 0.5)",
+          ctaColor: "#c7d2fe",
+          dotColor: "#818cf8",
+        };
+      case "camp_delivery":
+        return {
+          bg: "linear-gradient(90deg, #051914 0%, #0a2720 50%, #061e18 100%)",
+          border: "rgba(16, 185, 129, 0.4)",
+          shadow: "0 2px 14px rgba(16, 185, 129, 0.2)",
+          badgeBg: "linear-gradient(135deg, #059669, #047857)",
+          ctaBg: "rgba(16, 185, 129, 0.2)",
+          ctaBorder: "rgba(16, 185, 129, 0.5)",
+          ctaColor: "#a7f3d0",
+          dotColor: "#34d399",
+        };
+      default:
+        return {
+          bg: "linear-gradient(90deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)",
+          border: "rgba(99, 102, 241, 0.4)",
+          shadow: "0 2px 14px rgba(0, 0, 0, 0.2)",
+          badgeBg: "linear-gradient(135deg, #4f46e5, #4338ca)",
+          ctaBg: "rgba(255, 255, 255, 0.15)",
+          ctaBorder: "rgba(255, 255, 255, 0.35)",
+          ctaColor: "#ffffff",
+          dotColor: "#6366f1",
+        };
+    }
+  };
+
+  const theme = getBannerTheme(current.id);
+
   return (
     <>
       <div
@@ -94,60 +145,119 @@ export default function DynamicCampaignBanner() {
         style={{
           position: "relative",
           width: "100%",
-          background: "var(--surface-2)",
-          borderBottom: "1px solid var(--border)",
-          padding: "7px 36px 7px 14px",
+          background: theme.bg,
+          borderBottom: `1px solid ${theme.border}`,
+          boxShadow: theme.shadow,
+          color: "#f8fafc",
+          padding: "8px 46px 8px 16px",
           fontSize: "12px",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          minHeight: "36px",
-          transition: "background 0.3s ease",
+          minHeight: "42px",
+          transition: "all 0.35s ease",
         }}
       >
-        <div className="container campaign-banner__inner" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", flexWrap: "wrap" }}>
-          <span className="campaign-badge" style={{ background: "var(--indigo)", color: "#fff", padding: "2px 8px", borderRadius: "4px", fontSize: "10px", fontWeight: 800 }}>
+        <div
+          className="container campaign-banner__inner"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "10px",
+            flexWrap: "wrap",
+            margin: "0 auto",
+          }}
+        >
+          {/* Eye-catching Badge with micro-glow */}
+          <span
+            className="campaign-badge"
+            style={{
+              background: theme.badgeBg,
+              color: "#ffffff",
+              boxShadow: `0 2px 8px ${theme.border}`,
+            }}
+          >
             {current.badge}
           </span>
-          <span className="campaign-text" style={{ color: "var(--ink)", fontSize: "12px" }}>
-            <strong>{current.title}:</strong> {current.subtitle}
+
+          {/* Banner message */}
+          <span
+            className="campaign-text"
+            style={{
+              color: "rgba(255, 255, 255, 0.95)",
+              fontSize: "12px",
+              letterSpacing: "0.2px",
+            }}
+          >
+            <strong style={{ color: "#ffffff", fontWeight: 800 }}>{current.title}:</strong>
+            <span style={{ color: "rgba(255, 255, 255, 0.85)" }}>{current.subtitle}</span>
           </span>
+
+          {/* CTA Link / Button with precision vertical alignment */}
           {current.actionUrl === "#bank-offers" ? (
             <button
               type="button"
               onClick={() => setBankModalOpen(true)}
+              className="campaign-link-btn"
               style={{
-                background: "transparent",
-                border: "none",
-                color: "var(--indigo)",
-                fontWeight: 800,
-                fontSize: "11px",
-                cursor: "pointer",
-                textDecoration: "underline",
-                padding: "2px 4px",
+                background: theme.ctaBg,
+                border: `1px solid ${theme.ctaBorder}`,
+                color: theme.ctaColor,
               }}
             >
-              {current.actionLabel} →
+              <span>{current.actionLabel}</span>
+              <span style={{ fontSize: "12px", transform: "translateY(-0.5px)" }}>→</span>
             </button>
+          ) : current.actionUrl.startsWith("/") ? (
+            <Link
+              href={current.actionUrl}
+              className="campaign-link-btn"
+              style={{
+                background: theme.ctaBg,
+                border: `1px solid ${theme.ctaBorder}`,
+                color: theme.ctaColor,
+              }}
+            >
+              <span>{current.actionLabel}</span>
+              <span style={{ fontSize: "12px", display: "inline-block", transform: "translateY(-0.5px)" }}>→</span>
+            </Link>
           ) : (
-            <a href={current.actionUrl} className="campaign-link" style={{ color: "var(--indigo)", fontWeight: 800, fontSize: "11px", textDecoration: "underline" }}>
-              {current.actionLabel} →
+            <a
+              href={current.actionUrl}
+              className="campaign-link-btn"
+              style={{
+                background: theme.ctaBg,
+                border: `1px solid ${theme.ctaBorder}`,
+                color: theme.ctaColor,
+              }}
+            >
+              <span>{current.actionLabel}</span>
+              <span style={{ fontSize: "12px", display: "inline-block", transform: "translateY(-0.5px)" }}>→</span>
             </a>
           )}
         </div>
 
         {/* Carousel indicator dots */}
         {campaigns.length > 1 && (
-          <div style={{ position: "absolute", bottom: 2, display: "flex", gap: 3, opacity: 0.5 }}>
+          <div
+            style={{
+              position: "absolute",
+              bottom: 2,
+              display: "flex",
+              gap: 4,
+              opacity: 0.75,
+            }}
+          >
             {campaigns.map((_, idx) => (
               <span
                 key={idx}
                 style={{
-                  width: idx === currentIndex ? 12 : 4,
+                  width: idx === currentIndex ? 14 : 4,
                   height: 3,
                   borderRadius: 2,
-                  background: idx === currentIndex ? "var(--indigo)" : "var(--sub)",
-                  transition: "width 0.2s ease",
+                  background: idx === currentIndex ? theme.dotColor : "rgba(255, 255, 255, 0.25)",
+                  transition: "all 0.25s ease",
                 }}
               />
             ))}
@@ -162,20 +272,29 @@ export default function DynamicCampaignBanner() {
           title="Dismiss banner"
           style={{
             position: "absolute",
-            right: 8,
+            right: 10,
             top: "50%",
             transform: "translateY(-50%)",
-            background: "transparent",
-            border: "none",
-            color: "var(--sub)",
-            fontSize: 14,
+            background: "rgba(255, 255, 255, 0.08)",
+            border: "1px solid rgba(255, 255, 255, 0.15)",
+            color: "rgba(255, 255, 255, 0.7)",
+            fontSize: 12,
             cursor: "pointer",
-            width: 28,
-            height: 28,
+            width: 24,
+            height: 24,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             borderRadius: "50%",
+            transition: "all 0.2s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = "#ffffff";
+            e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = "rgba(255, 255, 255, 0.7)";
+            e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
           }}
         >
           ✕

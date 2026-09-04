@@ -215,13 +215,15 @@ export default function NotificationModal({ isOpen, onClose, onOpenBankOffers }:
                 key={item.id}
                 style={{
                   border: "1px solid var(--border)",
-                  borderRadius: "var(--radius)",
-                  padding: 12,
+                  borderRadius: "12px",
+                  padding: 14,
                   background: item.read ? "var(--surface)" : "var(--surface-2)",
                   borderLeft: item.read ? "1px solid var(--border)" : "4px solid var(--indigo)",
+                  boxShadow: item.read ? "none" : "0 4px 14px rgba(0, 0, 0, 0.05)",
                   display: "flex",
                   flexDirection: "column",
-                  gap: 6,
+                  gap: 8,
+                  transition: "all 0.2s ease",
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -231,17 +233,18 @@ export default function NotificationModal({ isOpen, onClose, onOpenBankOffers }:
                       fontWeight: 800,
                       color: item.type === "BANK" ? "var(--emerald)" : "var(--indigo)",
                       background: item.type === "BANK" ? "rgba(16,185,129,0.12)" : "rgba(99,102,241,0.12)",
-                      padding: "1px 6px",
-                      borderRadius: 4,
+                      padding: "2.5px 8px",
+                      borderRadius: 999,
+                      letterSpacing: 0.3,
                     }}
                   >
                     {item.badge}
                   </span>
-                  <span style={{ fontSize: 10, color: "var(--sub)" }}>{item.time}</span>
+                  <span style={{ fontSize: 10.5, color: "var(--sub)" }}>{item.time}</span>
                 </div>
 
-                <strong style={{ fontSize: 13, color: "var(--ink)" }}>{item.title}</strong>
-                <p style={{ fontSize: 12, color: "var(--sub)", margin: 0, lineHeight: 1.4 }}>{item.body}</p>
+                <strong style={{ fontSize: 13.5, color: "var(--ink)", fontWeight: 800 }}>{item.title}</strong>
+                <p style={{ fontSize: 12, color: "var(--sub)", margin: 0, lineHeight: 1.45 }}>{item.body}</p>
 
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid var(--border)", paddingTop: 8, marginTop: 4 }}>
                   {item.couponCode ? (
@@ -249,15 +252,15 @@ export default function NotificationModal({ isOpen, onClose, onOpenBankOffers }:
                       type="button"
                       onClick={() => handleCopy(item.couponCode!)}
                       style={{
-                        display: "flex",
+                        display: "inline-flex",
                         alignItems: "center",
                         gap: 4,
-                        padding: "3px 8px",
-                        borderRadius: 4,
+                        padding: "4px 10px",
+                        borderRadius: 999,
                         border: "1px dashed var(--indigo)",
                         background: copiedCode === item.couponCode ? "var(--emerald)" : "var(--surface)",
                         color: copiedCode === item.couponCode ? "#fff" : "var(--indigo)",
-                        fontSize: 10,
+                        fontSize: 10.5,
                         fontWeight: 800,
                         cursor: "pointer",
                       }}
@@ -276,15 +279,24 @@ export default function NotificationModal({ isOpen, onClose, onOpenBankOffers }:
                         router.push(item.actionUrl!);
                       }}
                       style={{
-                        background: "transparent",
-                        border: "none",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 5,
+                        background: "rgba(99, 102, 241, 0.1)",
+                        border: "1px solid rgba(99, 102, 241, 0.25)",
+                        borderRadius: 999,
                         color: "var(--indigo)",
                         fontSize: 11,
                         fontWeight: 800,
+                        padding: "4px 12px",
+                        lineHeight: 1,
                         cursor: "pointer",
+                        transition: "all 0.18s ease",
                       }}
                     >
-                      {item.actionLabel || "View Details →"}
+                      <span>{item.actionLabel || "View Details"}</span>
+                      <span style={{ fontSize: 12, transform: "translateY(-0.5px)" }}>→</span>
                     </button>
                   )}
                 </div>
