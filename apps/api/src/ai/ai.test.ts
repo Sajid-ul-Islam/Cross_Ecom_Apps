@@ -226,6 +226,69 @@ describe("DEEN AI Commerce Concierge & RAG Tests", () => {
     assert.match(res.reply, /২,?৫০০/);
     assert.match(res.reply, /৫০০/);
     assert.match(res.reply, /৭০০/);
-    assert.match(res.reply, /AMEXDEEN/);
+  });
+
+  it("Suggested Prompt 1: answers 'What is the current offer & discount?'", async () => {
+    const res = await processAiCommerceQuery(
+      "What is the current offer & discount?",
+      MOCK_CATALOG
+    );
+
+    assert.equal(res.intent, "policy_qa");
+    assert.match(res.reply, /Flat Up to 50% Off|Cashback/i);
+    assert.match(res.reply, /500|700/);
+    assert.ok(res.suggestedActions && res.suggestedActions.length > 0);
+  });
+
+  it("Suggested Prompt 2: answers 'What are the new products?'", async () => {
+    const res = await processAiCommerceQuery(
+      "What are the new products?",
+      MOCK_CATALOG
+    );
+
+    assert.equal(res.intent, "product_recommendation");
+    assert.ok(res.suggestedProducts && res.suggestedProducts.length > 0);
+    assert.match(res.reply, /latest new arrivals|seasonal drops/i);
+  });
+
+  it("Suggested Prompt 3: answers 'Suggest selvedge jeans under ৳2500'", async () => {
+    const res = await processAiCommerceQuery(
+      "Suggest selvedge jeans under ৳2500",
+      MOCK_CATALOG
+    );
+
+    assert.equal(res.intent, "product_recommendation");
+    assert.ok(res.suggestedProducts && res.suggestedProducts.length > 0);
+    assert.ok(res.suggestedProducts.every((p) => (p.salePrice ?? p.price) <= 2500));
+  });
+
+  it("Suggested Prompt 4: answers 'Chittagong delivery charge & time?'", async () => {
+    const res = await processAiCommerceQuery(
+      "Chittagong delivery charge & time?",
+      MOCK_CATALOG
+    );
+
+    assert.equal(res.intent, "delivery_calc");
+    assert.match(res.reply, /90|৳90/);
+  });
+
+  it("Suggested Prompt 5: answers 'How does the 7-day size exchange work?'", async () => {
+    const res = await processAiCommerceQuery(
+      "How does the 7-day size exchange work?",
+      MOCK_CATALOG
+    );
+
+    assert.equal(res.intent, "policy_qa");
+    assert.match(res.reply, /7-day|exchange/i);
+  });
+
+  it("Suggested Prompt 6: answers 'Where are your retail showrooms in Dhaka?'", async () => {
+    const res = await processAiCommerceQuery(
+      "Where are your retail showrooms in Dhaka?",
+      MOCK_CATALOG
+    );
+
+    assert.equal(res.intent, "store_locator");
+    assert.match(res.reply, /Mirpur|Wari/i);
   });
 });

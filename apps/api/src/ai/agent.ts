@@ -388,16 +388,62 @@ export async function processAiCommerceQuery(
   }
 
   // ------------------------------------------------------------------
-  // 2. Dynamic Campaigns, Offers, Cashback & Bank Card Savings
+  // 2A. New Products & Latest Arrivals Intent
   // ------------------------------------------------------------------
-  if (/offer|campaign|cashback|discount|coupon|promo|bank offer|অফার|ক্যাম্পেইন|ক্যাশব্যাক|ডিসকাউন্ট|কুপন|প্রোমো|ছাড়/i.test(lower)) {
-    const cashbackKb = COMMERCE_KNOWLEDGE.find((k) => k.id === "kb_campaigns_cashback")!;
+  if (/new product|new arrival|new drop|latest drop|latest product|recent drop|new collection|latest collection|what's new|what is the new|নতুন প্রোডাক্ট|নতুন কি|নতুন কালেকশন|নতুন আইটেম|নতুন ড্রপ|নতুন কালেকশন/i.test(lower)) {
+    const inStock = catalog.filter((p) => p.stockStatus !== "outofstock");
+    const topNew = inStock.slice(0, 4);
+
+    const reply = isBn
+      ? `DEEN-এর লেটেস্ট ও নতুন কালেকশন থেকে সেরা ${topNew.length}টি প্রোডাক্ট নিচে উপস্থাপন করা হলো। প্রতিটি আইটেম প্রিমিয়াম ফেব্রিক এবং নিখুঁত ফিনিশিংয়ে তৈরি:\n\n` +
+        topNew.map((p, i) => `${i + 1}. **${p.name}** — ৳${p.salePrice ?? p.price}${p.salePrice ? ` ~~(মূল্য: ৳${p.price})~~` : ""}\n   • ক্যাটাগরি: ${p.category || "Menswear"}\n   • ফেব্রিক: ${p.fabric || "Premium Finish"}`).join("\n\n") +
+        `\n\nআপনি সাইজ সিলেক্ট করে সরাসরি ব্যাগে যোগ করতে পারেন। ৭ দিনের ফ্রি ডোরস্টেপ সাইজ এক্সচেঞ্জ সুবিধা রয়েছে!`
+      : `Here are the latest new arrivals and fresh seasonal drops from DEEN Commerce:\n\n` +
+        topNew.map((p, i) => `${i + 1}. **${p.name}** — ৳${p.salePrice ?? p.price}${p.salePrice ? ` ~~(Regular: ৳${p.price})~~` : ""}\n   • Category: ${p.category || "Menswear"}\n   • Fabric: ${p.fabric || "Artisanal Finish"}`).join("\n\n") +
+        `\n\nTap any product card below to view details, select your size, and add to bag!`;
+
     return {
-      reply: isBn ? cashbackKb.contentBn : cashbackKb.contentEn,
-      intent: "policy_qa",
+      reply,
+      intent: "product_recommendation",
+      suggestedProducts: topNew,
       suggestedActions: [
-        { label: isBn ? "🛍️ কেনাকাটা শুরু করুন" : "🛍️ Shop Collection", action: "navigate_shop" },
+        { label: isBn ? "🛍️ সম্পূর্ণ কালেকশন দেখুন" : "🛍️ Browse All New Drops", action: "navigate_shop" },
+        { label: isBn ? "🔥 বর্তমান অফার দেখুন" : "🔥 View Active Offers", action: "search_delivery" },
+        { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" },
+      ],
+    };
+  }
+
+  // ------------------------------------------------------------------
+  // 2B. Dynamic Campaigns, Offers, Cashback & Bank Card Savings
+  // ------------------------------------------------------------------
+  if (/offer|campaign|cashback|discount|coupon|promo|bank offer|current offer|deals|sale|অফার|ক্যাম্পেইন|ক্যাশব্যাক|ডিসকাউন্ট|কুপন|প্রোমো|ছাড়|ডিল/i.test(lower)) {
+    const saleItems = catalog
+      .filter((p) => p.stockStatus !== "outofstock" && p.salePrice && p.salePrice < p.price)
+      .slice(0, 4);
+
+    const reply = isBn
+      ? `DEEN-এ বর্তমানে চলমান স্পেশাল অফার ও ডিসকাউন্টসমূহ:\n\n` +
+        `🔥 **ফ্ল্যাট আপ টু ৫০% ছাড়**: সিলেক্টেড সেলভেজ জিন্স ও প্রিমিয়াম শার্টে ৪০%-৫০% পর্যন্ত মূল্যছাড় চলছে।\n` +
+        `💸 **ইনস্ট্যান্ট ক্যাশব্যাক**: ৳২৫০০+ অর্ডারে ৳৫০০ এবং ৳৩০০০+ অর্ডারে ৳৭০০ ইনস্ট্যান্ট ক্যাশব্যাক চেকআউটে স্বয়ংক্রিয়ভাবে প্রযোজ্য।\n` +
+        `🚚 **ডেলিভারি অফার**: ঢাকা মেট্রোয় মাত্র ৳৫০ এবং ঢাকার বাইরে ৳৯০। যেকোনো শোরুম থেকে সেলফ-পিকআপ সম্পূর্ণ ফ্রি (৳০)।\n` +
+        `💳 **০% ইএমআই ও ব্যাংক ছাড়**: সিলেক্টেড ক্রেডিট কার্ডে ৩, ৬ ও ১২ মাসের ০% ইএমআই সুবিধা।\n\n` +
+        (saleItems.length > 0 ? `নিচে বর্তমান অফারের সেরা কয়েকটি প্রোডাক্ট দেওয়া হলো:` : `চেকআউটে ডিসকাউন্ট স্বয়ংক্রিয়ভাবে যুক্ত হয়ে যাবে!`)
+      : `Here are the active campaigns, offers, and discounts currently live at DEEN Commerce:\n\n` +
+        `🔥 **Flat Up to 50% Off**: Season Clearance discount on selected selvedge denim & artisanal shirts.\n` +
+        `💸 **Instant Tiered Cashback**: Get ৳500 instant cashback on orders ৳2500+, and ৳700 cashback on orders ৳3000+ (applied automatically at checkout).\n` +
+        `🚚 **Affordable Delivery**: ৳50 inside Dhaka Metro, ৳90 across all 64 districts nationwide. Showroom pickup is 100% FREE.\n` +
+        `💳 **0% EMI & Bank Discounts**: 3, 6, and 12-month 0% EMI available on major credit cards via SSLCommerz.\n\n` +
+        (saleItems.length > 0 ? `Check out these featured deal items from our live catalog below:` : `All discounts apply automatically at checkout!`);
+
+    return {
+      reply,
+      intent: "policy_qa",
+      suggestedProducts: saleItems.length > 0 ? saleItems : undefined,
+      suggestedActions: [
+        { label: isBn ? "🛍️ অফার কালেকশন দেখুন" : "🛍️ Shop Deal Items", action: "navigate_shop" },
         { label: isBn ? "💳 ব্যাংক অফার দেখুন" : "💳 Bank Card Offers", action: "open_bank_offers" },
+        { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" },
       ],
     };
   }

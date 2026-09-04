@@ -14,7 +14,7 @@ import {
   Linking,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { X, Sparkles, Send } from "./Icons";
+import { X, Sparkles, Send, Phone, MessageCircle } from "./Icons";
 import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useCart } from "../context/CartContext";
@@ -40,6 +40,8 @@ interface AiMessage {
 }
 
 const QUICK_PROMPTS = [
+  "🔥 What is the current offer & discount?",
+  "✨ What are the new products?",
   "👖 Suggest selvedge jeans under ৳2500",
   "🚚 Chittagong delivery charge & time?",
   "🔄 How does the 7-day size exchange work?",
@@ -165,25 +167,25 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
           </View>
         </View>
 
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <TouchableOpacity
-            style={styles.headerContactBtn}
+            style={styles.headerIconCircle}
             onPress={() => Linking.openURL("https://wa.me/8801952700500")}
             accessibilityRole="button"
             accessibilityLabel="Direct WhatsApp Support"
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={{ fontSize: 11, fontWeight: "800", color: "#25D366" }}>💬 WA</Text>
+            <Phone size={15} color="#25D366" />
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.headerContactBtn, { backgroundColor: "rgba(0, 132, 255, 0.12)", borderColor: "rgba(0, 132, 255, 0.35)" }]}
+            style={[styles.headerIconCircle, { backgroundColor: "rgba(0, 132, 255, 0.12)", borderColor: "rgba(0, 132, 255, 0.35)" }]}
             onPress={() => Linking.openURL("https://m.me/deencommerce")}
             accessibilityRole="button"
             accessibilityLabel="Direct Facebook Messenger Support"
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Text style={{ fontSize: 11, fontWeight: "800", color: "#0084FF" }}>⚡ MSG</Text>
+            <MessageCircle size={15} color="#0084FF" />
           </TouchableOpacity>
 
           {!isEmbedded && onClose && (
@@ -439,12 +441,12 @@ function createStyles(colors: ThemeColors) {
       color: colors.emerald,
       marginTop: 2,
     },
-    headerContactBtn: {
-      flexDirection: "row",
+    headerIconCircle: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
       alignItems: "center",
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 12,
+      justifyContent: "center",
       backgroundColor: "rgba(37, 211, 102, 0.12)",
       borderWidth: 1,
       borderColor: "rgba(37, 211, 102, 0.35)",
