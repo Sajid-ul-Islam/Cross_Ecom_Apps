@@ -135,16 +135,6 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.notifButton, { backgroundColor: colors.cardSecondary }]}
-            onPress={() => setAiVisible(true)}
-            accessibilityRole="button"
-            accessibilityLabel="AI Concierge Chat"
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Sparkles size={20} color={colors.indigo} />
-          </TouchableOpacity>
-
           {showBag && (
             <TouchableOpacity
               style={[styles.bagButton, { backgroundColor: colors.cardSecondary }]}

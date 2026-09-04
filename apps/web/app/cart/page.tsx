@@ -218,6 +218,22 @@ export default function CartPage() {
               📦 Track Existing Orders
             </button>
           </div>
+
+          {/* Orders Directly Under Empty Bag */}
+          <div style={{ marginTop: 48, borderTop: "1px solid var(--border)", paddingTop: 32, textAlign: "left" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+              <span style={{ fontSize: 22 }}>📦</span>
+              <div>
+                <h3 style={{ fontSize: 18, fontWeight: 900, color: "var(--ink)", margin: 0 }}>
+                  Track Your Past Orders
+                </h3>
+                <p style={{ color: "var(--sub)", margin: "2px 0 0 0", fontSize: 13 }}>
+                  Enter your mobile number to view shipment status, delivery charges, and live Pathao courier tracking.
+                </p>
+              </div>
+            </div>
+            <OrdersLookupView embedded onBrowseProducts={() => {}} />
+          </div>
         </div>
       ) : (
         <>
@@ -533,6 +549,22 @@ export default function CartPage() {
             </span>
           </div>
         </div>
+      </div>
+
+      {/* Orders Directly Under the Cart */}
+      <div style={{ marginTop: 48, borderTop: "1px solid var(--border)", paddingTop: 32 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+          <span style={{ fontSize: 22 }}>📦</span>
+          <div>
+            <h2 style={{ fontSize: 20, fontWeight: 900, color: "var(--ink)", margin: 0 }}>
+              My Orders & Live Logistics Tracking
+            </h2>
+            <p style={{ color: "var(--sub)", margin: "3px 0 0 0", fontSize: 13 }}>
+              Check recent parcel status, Pathao courier tracking, and size exchange tickets
+            </p>
+          </div>
+        </div>
+        <OrdersLookupView embedded onBrowseProducts={() => {}} />
       </div>
         </>
       )}

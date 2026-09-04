@@ -9,11 +9,12 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 
-import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, ShieldCheck, Clock } from "../../src/components/Icons";
+import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, ShieldCheck, Clock, Package, Truck } from "../../src/components/Icons";
 import { ScreenShell } from "../../src/components/ScreenShell";
 import { CashbackBanner } from "../../src/components/Banner";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useCart } from "../../src/context/CartContext";
+import { useOrders } from "../../src/context/OrderContext";
 import { bdt, DELIVERY_OPTIONS } from "../../src/services/gateway";
 import { DeliveryArea, DeliveryOptionKey } from "../../src/types";
 import { ThemeColors } from "../../src/theme/colors";
@@ -31,6 +32,7 @@ export default function BagScreen() {
     getDeliveryFee,
     calculateTotal,
   } = useCart();
+  const { orders } = useOrders();
   const [selectedArea, setSelectedArea] = useState<DeliveryArea>("dhaka_standard");
   const styles = createStyles(colors, s);
 
@@ -38,31 +40,125 @@ export default function BagScreen() {
   const total = calculateTotal(selectedArea);
 
   const emptyContent = (
-    <View style={[styles.emptyContainer, { flex: 1 }]}>
-      <View style={[styles.emptyIconCircle, { backgroundColor: colors.indigoLight }]}>
-        <ShoppingBag size={36} color={colors.indigo} />
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, { flexGrow: 1 }]}>
+      <View style={[styles.emptyContainer, { paddingTop: 40 }]}>
+        <View style={[styles.emptyIconCircle, { backgroundColor: colors.indigoLight }]}>
+          <ShoppingBag size={36} color={colors.indigo} />
+        </View>
+        <Text style={[styles.emptyTitle, { color: colors.ink }]}>Your Cart is Empty</Text>
+        <Text style={[styles.emptySub, { color: colors.sub }]}>
+          Explore our artisanal selvedge jeans, dobby panjabis, and heavyweight tees.
+        </Text>
+        <TouchableOpacity
+          style={[styles.shopBtn, { backgroundColor: colors.indigo }]}
+          activeOpacity={0.85}
+          onPress={() => router.push("/(tabs)/shop")}
+        >
+          <Text style={styles.shopBtnText}>CONTINUE SHOPPING</Text>
+          <ArrowRight size={16} color="#FFFFFF" />
+        </TouchableOpacity>
       </View>
-      <Text style={[styles.emptyTitle, { color: colors.ink }]}>Your Cart is Empty</Text>
-      <Text style={[styles.emptySub, { color: colors.sub }]}>
-        Explore our artisanal selvedge jeans, dobby panjabis, and heavyweight tees.
-      </Text>
-      <TouchableOpacity
-        style={[styles.shopBtn, { backgroundColor: colors.indigo }]}
-        activeOpacity={0.85}
-        onPress={() => router.push("/(tabs)/shop")}
-      >
-        <Text style={styles.shopBtnText}>CONTINUE SHOPPING</Text>
-        <ArrowRight size={16} color="#FFFFFF" />
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={[styles.trackOrdersEmptyBtn, { borderColor: colors.border, backgroundColor: colors.cardSecondary }]}
-        activeOpacity={0.85}
-        onPress={() => router.push("/(tabs)/orders")}
-      >
-        <Clock size={16} color={colors.ink} />
-        <Text style={[styles.trackOrdersEmptyBtnText, { color: colors.ink }]}>TRACK MY ORDERS & LOGISTICS</Text>
-      </TouchableOpacity>
-    </View>
+
+      {/* Orders Under Empty Cart */}
+      <View style={styles.recentOrdersSection}>
+        <View style={styles.recentOrdersHeader}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Package size={18} color={colors.indigo} />
+            <Text style={[styles.recentOrdersTitle, { color: colors.ink }]}>YOUR RECENT ORDERS</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => router.push("/(tabs)/orders")}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={[styles.viewAllOrdersText, { color: colors.indigo }]}>
+              {orders.length > 0 ? `View All (${orders.length}) →` : "Track Orders →"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {orders.length > 0 ? (
+          orders.slice(0, 3).map((order) => {
+            const hasPathao = Boolean(order.pathaoConsignmentId);
+            return (
+              <TouchableOpacity
+                key={order.id}
+                style={[styles.miniOrderCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                activeOpacity={0.88}
+                onPress={() => router.push("/(tabs)/orders")}
+              >
+                <View style={styles.miniOrderTop}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Text style={[styles.miniOrderNumber, { color: colors.indigo }]}>
+                      #{order.wooNumber || order.number}
+                    </Text>
+                    {order.wooNumber && order.number && order.wooNumber !== order.number && (
+                      <View style={{ backgroundColor: colors.indigoLight, paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 3 }}>
+                        <Text style={{ fontSize: 9, fontWeight: "800", color: colors.indigo }}>
+                          APP {order.number}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={[styles.miniStatusBadge, { backgroundColor: colors.indigoLight }]}>
+                    <Text style={[styles.miniStatusText, { color: colors.indigo }]}>
+                      {order.status.toUpperCase()}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.miniOrderBottom}>
+                  <Text style={[styles.miniOrderDate, { color: colors.sub }]}>
+                    {new Date(order.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {order.lines?.length || 1} item{order.lines?.length === 1 ? "" : "s"}
+                  </Text>
+                  <Text style={[styles.miniOrderTotal, { color: colors.ink }]}>
+                    {bdt(order.total || 0)}
+                  </Text>
+                </View>
+
+                {hasPathao ? (
+                  <View style={[styles.miniPathaoBar, { backgroundColor: colors.cardSecondary }]}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      <Truck size={12} color={colors.indigo} />
+                      <Text style={[styles.miniPathaoText, { color: colors.sub }]}>
+                        Pathao: <Text style={{ color: colors.indigo, fontWeight: "700" }}>{order.pathaoConsignmentId}</Text>
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 11, fontWeight: "800", color: colors.indigo }}>Track →</Text>
+                  </View>
+                ) : (
+                  <View style={[styles.miniPathaoBar, { backgroundColor: colors.cardSecondary }]}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      <Clock size={12} color={colors.sub} />
+                      <Text style={[styles.miniPathaoText, { color: colors.sub }]}>Preparing Dispatch</Text>
+                    </View>
+                    <Text style={{ fontSize: 11, fontWeight: "700", color: colors.sub }}>View →</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })
+        ) : (
+          <TouchableOpacity
+            style={[styles.ordersCard, { backgroundColor: colors.cardSecondary, borderColor: colors.border }]}
+            activeOpacity={0.85}
+            onPress={() => router.push("/(tabs)/orders")}
+            accessibilityRole="button"
+            accessibilityLabel="Track my existing orders"
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+              <View style={[styles.ordersIconCircle, { backgroundColor: colors.indigoLight }]}>
+                <Clock size={18} color={colors.indigo} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.ordersCardTitle, { color: colors.ink }]}>Looking for past orders?</Text>
+                <Text style={[styles.ordersCardSub, { color: colors.sub }]}>Track live shipments & Pathao courier status</Text>
+              </View>
+            </View>
+            <ArrowRight size={16} color={colors.sub} />
+          </TouchableOpacity>
+        )}
+      </View>
+    </ScrollView>
   );
 
   return (
@@ -75,26 +171,6 @@ export default function BagScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         <CashbackBanner />
-
-        {/* Orders & Logistics Quick Access Card */}
-        <TouchableOpacity
-          style={[styles.ordersCard, { backgroundColor: colors.cardSecondary, borderColor: colors.border }]}
-          activeOpacity={0.85}
-          onPress={() => router.push("/(tabs)/orders")}
-          accessibilityRole="button"
-          accessibilityLabel="Track my existing orders"
-        >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
-            <View style={[styles.ordersIconCircle, { backgroundColor: colors.indigoLight }]}>
-              <Clock size={18} color={colors.indigo} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.ordersCardTitle, { color: colors.ink }]}>Looking for past orders?</Text>
-              <Text style={[styles.ordersCardSub, { color: colors.sub }]}>Track live shipments & Pathao courier status</Text>
-            </View>
-          </View>
-          <ArrowRight size={16} color={colors.sub} />
-        </TouchableOpacity>
 
         {/* Cart Item Cards */}
         <View style={styles.itemsList}>
@@ -245,6 +321,106 @@ export default function BagScreen() {
           <Text style={[styles.securityNoteText, { color: colors.sub }]}>
             Official DEEN checkout · Cash on delivery & bKash / Card accepted.
           </Text>
+        </View>
+
+        {/* Orders Under the Cart */}
+        <View style={styles.recentOrdersSection}>
+          <View style={styles.recentOrdersHeader}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Package size={18} color={colors.indigo} />
+              <Text style={[styles.recentOrdersTitle, { color: colors.ink }]}>YOUR RECENT ORDERS</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => router.push("/(tabs)/orders")}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={[styles.viewAllOrdersText, { color: colors.indigo }]}>
+                {orders.length > 0 ? `View All (${orders.length}) →` : "Track Orders →"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {orders.length > 0 ? (
+            orders.slice(0, 3).map((order) => {
+              const hasPathao = Boolean(order.pathaoConsignmentId);
+              return (
+                <TouchableOpacity
+                  key={order.id}
+                  style={[styles.miniOrderCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                  activeOpacity={0.88}
+                  onPress={() => router.push("/(tabs)/orders")}
+                >
+                  <View style={styles.miniOrderTop}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      <Text style={[styles.miniOrderNumber, { color: colors.indigo }]}>
+                        #{order.wooNumber || order.number}
+                      </Text>
+                      {order.wooNumber && order.number && order.wooNumber !== order.number && (
+                        <View style={{ backgroundColor: colors.indigoLight, paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 3 }}>
+                          <Text style={{ fontSize: 9, fontWeight: "800", color: colors.indigo }}>
+                            APP {order.number}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <View style={[styles.miniStatusBadge, { backgroundColor: colors.indigoLight }]}>
+                      <Text style={[styles.miniStatusText, { color: colors.indigo }]}>
+                        {order.status.toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.miniOrderBottom}>
+                    <Text style={[styles.miniOrderDate, { color: colors.sub }]}>
+                      {new Date(order.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · {order.lines?.length || 1} item{order.lines?.length === 1 ? "" : "s"}
+                    </Text>
+                    <Text style={[styles.miniOrderTotal, { color: colors.ink }]}>
+                      {bdt(order.total || 0)}
+                    </Text>
+                  </View>
+
+                  {hasPathao ? (
+                    <View style={[styles.miniPathaoBar, { backgroundColor: colors.cardSecondary }]}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                        <Truck size={12} color={colors.indigo} />
+                        <Text style={[styles.miniPathaoText, { color: colors.sub }]}>
+                          Pathao: <Text style={{ color: colors.indigo, fontWeight: "700" }}>{order.pathaoConsignmentId}</Text>
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: 11, fontWeight: "800", color: colors.indigo }}>Track →</Text>
+                    </View>
+                  ) : (
+                    <View style={[styles.miniPathaoBar, { backgroundColor: colors.cardSecondary }]}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                        <Clock size={12} color={colors.sub} />
+                        <Text style={[styles.miniPathaoText, { color: colors.sub }]}>Preparing Dispatch</Text>
+                      </View>
+                      <Text style={{ fontSize: 11, fontWeight: "700", color: colors.sub }}>View →</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })
+          ) : (
+            <TouchableOpacity
+              style={[styles.ordersCard, { backgroundColor: colors.cardSecondary, borderColor: colors.border }]}
+              activeOpacity={0.85}
+              onPress={() => router.push("/(tabs)/orders")}
+              accessibilityRole="button"
+              accessibilityLabel="Track my existing orders"
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+                <View style={[styles.ordersIconCircle, { backgroundColor: colors.indigoLight }]}>
+                  <Clock size={18} color={colors.indigo} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.ordersCardTitle, { color: colors.ink }]}>Looking for past orders?</Text>
+                  <Text style={[styles.ordersCardSub, { color: colors.sub }]}>Track live shipments & Pathao courier status</Text>
+                </View>
+              </View>
+              <ArrowRight size={16} color={colors.sub} />
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
 
@@ -562,6 +738,82 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
     ordersCardSub: {
       fontSize: 11,
       marginTop: 2,
+    },
+    recentOrdersSection: {
+      marginTop: 20,
+      marginHorizontal: 16,
+      marginBottom: 20,
+    },
+    recentOrdersHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 10,
+    },
+    recentOrdersTitle: {
+      fontSize: 12,
+      fontWeight: "800",
+      letterSpacing: 0.8,
+    },
+    viewAllOrdersText: {
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    miniOrderCard: {
+      borderRadius: 8,
+      borderWidth: 1,
+      padding: 12,
+      marginBottom: 10,
+    },
+    miniOrderTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 6,
+    },
+    miniOrderNumber: {
+      fontSize: 13,
+      fontWeight: "800",
+    },
+    miniStatusBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 4,
+    },
+    miniStatusText: {
+      fontSize: 9,
+      fontWeight: "800",
+    },
+    miniOrderBottom: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    miniOrderDate: {
+      fontSize: 11,
+    },
+    miniOrderTotal: {
+      fontSize: 13,
+      fontWeight: "800",
+    },
+    miniPathaoBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginTop: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 5,
+      borderRadius: 4,
+    },
+    miniPathaoText: {
+      fontSize: 10,
+    },
+    emptyRecentOrdersWrap: {
+      width: "100%",
+      marginTop: 28,
+      paddingTop: 20,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
     },
   });
 }

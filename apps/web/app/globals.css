@@ -330,6 +330,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 .nav__icon-btn:hover { background: var(--indigo-light); }
 .nav__profile-desktop { display: flex; }
+.nav__orders-desktop-only { display: flex; }
 .nav__cart-badge {
   position: absolute; top: -4px; right: -4px;
   width: 18px; height: 18px; border-radius: 50%;
@@ -659,6 +660,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   body { padding-bottom: 70px; }
   .mobile-bottom-nav { display: flex; }
   .nav__profile-desktop { display: none !important; }
+  .nav__orders-desktop-only { display: none !important; }
   .page-content { padding-bottom: 80px; }
 }
 
