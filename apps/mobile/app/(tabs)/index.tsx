@@ -106,6 +106,12 @@ export default function HomeScreen() {
   const bestSellerScrollPos = React.useRef(0);
   const isUserScrollingBestSellers = React.useRef(false);
 
+  // --- Category marquee auto-scroll ---
+  const catScrollRef = React.useRef<ScrollView>(null);
+  const catScrollPos = React.useRef(0);
+  const isUserScrollingCat = React.useRef(false);
+  const categories = CATEGORIES.filter((c) => c !== "ALL");
+
   useEffect(() => {
     if (!bestDeals || bestDeals.length <= 1) return;
     // Duplicate list renders 2× items; loop resets at the halfway mark
@@ -133,6 +139,28 @@ export default function HomeScreen() {
 
     return () => clearInterval(timer);
   }, [bestDeals.length, width]);
+
+  // Category marquee: smooth pixel ticker at ~40 px/s, seamless by doubling the list
+  useEffect(() => {
+    if (categories.length <= 1) return;
+    const CAT_CARD_W = 130 + 12; // card width + gap
+    const halfTotal = CAT_CARD_W * categories.length;
+    const STEP = 1;
+    const INTERVAL_MS = 25; // 40 px/s — slightly slower than best sellers
+
+    const timer = setInterval(() => {
+      if (isUserScrollingCat.current) return;
+      catScrollPos.current += STEP;
+      if (catScrollPos.current >= halfTotal) {
+        catScrollPos.current = 0;
+        catScrollRef.current?.scrollTo({ x: 0, animated: false });
+        return;
+      }
+      catScrollRef.current?.scrollTo({ x: catScrollPos.current, animated: false });
+    }, INTERVAL_MS);
+
+    return () => clearInterval(timer);
+  }, [categories.length]);
 
   return (
     <ScreenShell>
@@ -301,16 +329,25 @@ export default function HomeScreen() {
         />
 
         <ScrollView
+          ref={catScrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
+          scrollEventThrottle={16}
           contentContainerStyle={styles.categoryCardScroll}
+          onScrollBeginDrag={() => { isUserScrollingCat.current = true; }}
+          onScrollEndDrag={() => { setTimeout(() => { isUserScrollingCat.current = false; }, 2000); }}
+          onMomentumScrollEnd={(e) => {
+            catScrollPos.current = e.nativeEvent.contentOffset.x;
+            setTimeout(() => { isUserScrollingCat.current = false; }, 1000);
+          }}
         >
-          {CATEGORIES.filter((c) => c !== "ALL").map((cat) => {
+          {/* Doubled for seamless infinite loop */}
+          {[...categories, ...categories].map((cat, idx) => {
             const info = getCategoryInfo(cat);
             const count = products.filter((p) => p.category.toUpperCase() === cat.toUpperCase()).length;
             return (
               <TouchableOpacity
-                key={cat}
+                key={`${cat}-${idx}`}
                 style={styles.catCard}
                 activeOpacity={0.88}
                 onPress={() => handleCategoryPress(cat)}
