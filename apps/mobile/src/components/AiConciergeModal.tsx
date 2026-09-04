@@ -18,6 +18,7 @@ import { X, Sparkles, Send, ShoppingBag, Truck, MapPin, PhoneCall } from "./Icon
 import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useCart } from "../context/CartContext";
+import { useProfile } from "../context/ProfileContext";
 import { bdt, GATEWAY_URL } from "../services/gateway";
 
 const { width, height } = Dimensions.get("window");
@@ -35,7 +36,7 @@ interface AiMessage {
     image: string;
     sizes: string[];
   }>;
-  actions?: Array<{ label: string; action: string }>;
+  actions?: Array<{ label: string; action: string; payload?: any }>;
 }
 
 const QUICK_PROMPTS = [
@@ -63,6 +64,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
   const { colors, isDark } = useTheme();
   const styles = createStyles(colors);
   const { addToCart } = useCart();
+  const { profile } = useProfile();
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -106,6 +108,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: text,
+          phone: profile?.phone,
           history: messages.slice(-4).map((m) => ({
             role: m.sender === "user" ? "user" : "assistant",
             content: m.text,
@@ -257,7 +260,9 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
                         activeOpacity={0.8}
                         onPress={() => {
                           onClose?.();
-                          if (act.action === "open_whatsapp") {
+                          if (act.action === "open_url" && act.payload?.url) {
+                            Linking.openURL(act.payload.url);
+                          } else if (act.action === "open_whatsapp") {
                             Linking.openURL("https://wa.me/8801952700500");
                           } else if (act.action === "navigate_shop") {
                             router.push("/(tabs)/shop");

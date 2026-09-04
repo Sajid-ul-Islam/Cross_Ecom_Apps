@@ -1855,9 +1855,63 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     "/v1/deen/ai/chat",
     { schema: AI_CHAT_SCHEMA },
     async (req, reply) => {
-      const { message, history = [] } = req.body;
+      const { message, history = [], phone } = req.body;
       const catalog = await getCatalog();
-      const response = await processAiCommerceQuery(message, catalog, history);
+      const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
+      const session = authHeader ? (resolveAuthSession(authHeader) || resolveGuestSession(authHeader)) : null;
+      const effectivePhone = phone || session?.phone;
+
+      const response = await processAiCommerceQuery(message, catalog, history, {
+        phone: effectivePhone,
+        orders,
+        orderLookup: async ({ orderNumber, consignmentId, phone: searchPhone }) => {
+          let match: any = null;
+
+          if (orderNumber) {
+            const numClean = orderNumber.replace(/^#/, "").trim().toLowerCase();
+            match = orders.find(
+              (o) =>
+                (o.number && String(o.number).toLowerCase() === numClean) ||
+                (o.id && String(o.id).toLowerCase() === numClean) ||
+                (o.wooId && String(o.wooId) === numClean) ||
+                (o.wooNumber && String(o.wooNumber) === numClean)
+            );
+          }
+
+          if (!match && consignmentId) {
+            const consClean = consignmentId.trim().toLowerCase();
+            match = orders.find(
+              (o) => o.pathaoConsignmentId && String(o.pathaoConsignmentId).toLowerCase() === consClean
+            );
+          }
+
+          if (!match && searchPhone) {
+            const digits = searchPhone.replace(/[^0-9]/g, "");
+            const userOrders = orders.filter((o) => o.phone === digits);
+            if (userOrders.length > 0) {
+              match = [...userOrders].sort((a, b) =>
+                String(b.createdAt || "").localeCompare(String(a.createdAt || ""))
+              )[0];
+            }
+          }
+
+          if (match && match.pathaoConsignmentId) {
+            const cached = getCachedPathaoTracking(match.pathaoConsignmentId);
+            const fresh = cached || (await getFreshPathaoTracking(match.pathaoConsignmentId));
+            if (fresh) {
+              return { ...match, pathaoTrackingInfo: fresh };
+            }
+          }
+
+          return match || null;
+        },
+        activeCampaigns: {
+          cashbackEnabled: Boolean(config.campaigns?.cashbackEnabled),
+          saleEnabled: Boolean(config.campaigns?.saleEnabled),
+          saleTitle: config.campaigns?.saleTitle,
+          bankOffers: BANK_CARD_OFFERS,
+        },
+      });
       return reply.send(response);
     }
   );

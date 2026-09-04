@@ -19,7 +19,7 @@ interface AiMessage {
     image: string;
     sizes: string[];
   }>;
-  actions?: Array<{ label: string; action: string }>;
+  actions?: Array<{ label: string; action: string; payload?: any }>;
 }
 
 const QUICK_PROMPTS = [
@@ -62,6 +62,14 @@ export default function AiConciergeDrawer() {
     const text = userText.trim();
     if (!text || loading) return;
 
+    let userPhone: string | undefined;
+    try {
+      const savedProfile = typeof window !== "undefined" ? localStorage.getItem("deen_web_user_profile") : null;
+      if (savedProfile) {
+        userPhone = JSON.parse(savedProfile)?.phone;
+      }
+    } catch {}
+
     const userMsg: AiMessage = {
       id: `user_${Date.now()}`,
       sender: "user",
@@ -78,6 +86,7 @@ export default function AiConciergeDrawer() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: text,
+          phone: userPhone,
           history: messages.slice(-4).map((m) => ({
             role: m.sender === "user" ? "user" : "assistant",
             content: m.text,
@@ -411,7 +420,9 @@ export default function AiConciergeDrawer() {
                           key={act.action}
                           type="button"
                           onClick={() => {
-                            if (act.action === "open_whatsapp") {
+                            if (act.action === "open_url" && act.payload?.url) {
+                              window.open(act.payload.url, "_blank");
+                            } else if (act.action === "open_whatsapp") {
                               window.open("https://wa.me/8801952700500", "_blank");
                             } else if (act.action === "navigate_shop") {
                               window.location.href = "/shop";
