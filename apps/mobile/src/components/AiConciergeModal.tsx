@@ -153,6 +153,32 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
     }, 2000);
   };
 
+  const openWhatsApp = async () => {
+    const appUrl = "whatsapp://send?phone=8801952700500";
+    const webUrl = "https://wa.me/8801952700500";
+    try {
+      const canOpen = await Linking.canOpenURL(appUrl);
+      if (canOpen) {
+        await Linking.openURL(appUrl);
+        return;
+      }
+    } catch {}
+    await Linking.openURL(webUrl);
+  };
+
+  const openMessenger = async () => {
+    const appUrl = "fb-messenger://user-thread/100981575058964";
+    const webUrl = "https://m.me/deencommerce";
+    try {
+      const canOpen = await Linking.canOpenURL(appUrl);
+      if (canOpen) {
+        await Linking.openURL(appUrl);
+        return;
+      }
+    } catch {}
+    await Linking.openURL(webUrl);
+  };
+
   const content = (
     <View style={isEmbedded ? styles.sheetEmbedded : styles.sheet}>
       {/* Header with DEEN Assistant, WhatsApp and Messenger buttons */}
@@ -163,14 +189,14 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
           </View>
           <View>
             <Text style={styles.title}>DEEN ASSISTANT</Text>
-            <Text style={styles.sub}>● Live Assistant</Text>
+            <Text style={styles.sub}>● Online</Text>
           </View>
         </View>
 
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <TouchableOpacity
             style={styles.headerIconCircle}
-            onPress={() => Linking.openURL("https://wa.me/8801952700500")}
+            onPress={openWhatsApp}
             accessibilityRole="button"
             accessibilityLabel="Direct WhatsApp Support"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -180,7 +206,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
 
           <TouchableOpacity
             style={[styles.headerIconCircle, { backgroundColor: "rgba(0, 132, 255, 0.12)", borderColor: "rgba(0, 132, 255, 0.35)" }]}
-            onPress={() => Linking.openURL("https://m.me/deencommerce")}
+            onPress={openMessenger}
             accessibilityRole="button"
             accessibilityLabel="Direct Facebook Messenger Support"
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

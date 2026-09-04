@@ -277,7 +277,7 @@ export default function AiConciergeDrawer() {
                     DEEN Assistant
                   </h3>
                   <span style={{ fontSize: 11, color: "var(--emerald)", fontWeight: 700 }}>
-                    ● RAG Knowledge &amp; Live Catalog Active
+                    ● Online
                   </span>
                 </div>
               </div>
@@ -528,7 +528,7 @@ export default function AiConciergeDrawer() {
                 <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 8 }}>
                   <span style={{ fontSize: 14 }}>✨</span>
                   <span style={{ fontSize: 12, color: "var(--sub)", fontStyle: "italic" }}>
-                    Retrieving catalog &amp; knowledge base…
+                    DEEN Assistant is typing…
                   </span>
                 </div>
               )}
