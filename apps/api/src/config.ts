@@ -83,6 +83,8 @@ export const config = {
   catalogRateLimit: Number(process.env.CATALOG_RATE_LIMIT ?? 120),
   orderRateLimit: Number(process.env.ORDER_RATE_LIMIT ?? 6),
   logLevel: (process.env.LOG_LEVEL as "info" | "debug" | "warn" | "error") ?? "info",
+  /** Google Gemini API key for DEEN Assistant hybrid LLM fallback. */
+  geminiApiKey: process.env.GEMINI_API_KEY ?? "",
   /** Multi-tenant store registry (SaaS). JSON array in STORES env.
       When set, each store is keyed by its own apiKey and carries its own
       Woo credentials + branding. The default (legacy) store uses the top-level

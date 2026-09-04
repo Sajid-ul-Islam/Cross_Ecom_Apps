@@ -6,6 +6,8 @@
  */
 
 import { COMMERCE_KNOWLEDGE, KnowledgeItem } from "./knowledge.js";
+import { callGemini, buildCatalogSummary, toGeminiHistory } from "./gemini.js";
+import { config } from "../config.js";
 
 export interface AiChatMessage {
   role: "user" | "assistant";
@@ -202,6 +204,12 @@ export async function processAiCommerceQuery(
   const extractedConsignment = extractConsignmentId(trimmed);
   const extractedPhone = extractBangladeshiPhone(trimmed);
   const effectivePhone = extractedPhone || options?.phone;
+
+  // Conversation memory: merge last 4 history messages for follow-up context
+  const historyContext = history.slice(-4).map((h) => h.content).join(" ");
+  const extendedLower = (historyContext + " " + lower).toLowerCase();
+  const historyBudget = budget === null ? extractBudget(historyContext) : budget;
+  const historySize = requestedSize || extractRequestedSize(historyContext);
 
   // ------------------------------------------------------------------
   // 1. Real-Time Order Tracking & Logistics Query
@@ -659,6 +667,7 @@ export async function processAiCommerceQuery(
   }
 
   // ------------------------------------------------------------------
+  // ------------------------------------------------------------------
   // 11. Generic Knowledge Base Retrieval (RAG)
   // ------------------------------------------------------------------
   const bestKb = findBestKnowledge(trimmed);
@@ -668,23 +677,50 @@ export async function processAiCommerceQuery(
       intent: "policy_qa",
       suggestedActions: [
         { label: isBn ? "🛍️ কালেকশন দেখুন" : "🛍️ Shop Collection", action: "navigate_shop" },
-        { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" }, { label: isBn ? "💬 মেসেঞ্জার" : "💬 Messenger", action: "open_messenger" },
+        { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" },
+        { label: isBn ? "💬 মেসেঞ্জার" : "💬 Messenger", action: "open_messenger" },
       ],
     };
   }
 
   // ------------------------------------------------------------------
-  // 12. Default General Brand Concierge Greeting
+  // 12. Gemini 1.5 Flash LLM Fallback (hybrid — fires only when no rule matches)
+  // ------------------------------------------------------------------
+  if (config.geminiApiKey) {
+    try {
+      const catalogSummary = buildCatalogSummary(catalog);
+      const campaignSummary = "No active campaigns.";
+      const geminiHistory = toGeminiHistory(history);
+      const llmReply = await callGemini(trimmed, catalogSummary, campaignSummary, geminiHistory);
+      if (llmReply) {
+        return {
+          reply: llmReply,
+          intent: "general",
+          suggestedActions: [
+            { label: isBn ? "🛍️ কালেকশন দেখুন" : "🛍️ Browse Shop", action: "navigate_shop" },
+            { label: isBn ? "📦 অর্ডার ট্র্যাক করুন" : "📦 Track Order", action: "navigate_orders" },
+            { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" },
+            { label: isBn ? "💬 মেসেঞ্জার" : "💬 Messenger", action: "open_messenger" },
+          ],
+        };
+      }
+    } catch (err) {
+      console.error("[agent] Gemini fallback failed:", (err as Error).message);
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // 13. Static Greeting (Gemini unavailable)
   // ------------------------------------------------------------------
   return {
     reply: isBn
-      ? "স্বাগতম DEEN AI শপিং কনসিয়ার্জে! আপনি যেকোনো প্রশ্ন করতে পারেন—যেমন:\n• 'আমার অর্ডার #১০৪১ এর খবর কি?'\n• 'আমার জন্য ৩০০০ টাকার মধ্যে ৩২ সাইজের সেলভেজ জিন্স দেখাও'\n• 'চট্টগ্রামে ডেলিভারি চার্জ কত এবং কত দিন লাগবে?'\n• 'সাইজ না মিললে ৭ দিনের ফ্রি ডোরস্টেপ এক্সচেঞ্জ কীভাবে কাজ করে?'\n• 'বর্তমানে কি কি ক্যাশব্যাক বা ব্যাংক ডিসকাউন্ট অফার আছে?'\n\nআপনাকে কীভাবে সহযোগিতা করতে পারি?"
-      : "Welcome to DEEN Assistant! You can ask me anything about our collections, live orders, or policies—for example:\n• 'Where is my order #1041?'\n• 'Suggest selvedge jeans in size 32 under ৳3000'\n• 'What is the delivery charge and timeframe for Chittagong?'\n• 'How does the 7-day doorstep size exchange work?'\n• 'What active cashback or bank card offers are available?'\n\nHow may I assist your style journey today?",
+      ? "স্বাগতম DEEN Assistant-এ! আমাকে জিজ্ঞেস করুন:\n• অর্ডার ট্র্যাকিং\n• সাইজ ও কালেকশন\n• ডেলিভারি চার্জ\n• এক্সচেঞ্জ পলিসি"
+      : "Welcome to DEEN Assistant! Ask me about:\n• Order tracking\n• Sizes & collections\n• Delivery charges\n• Exchange policy",
     intent: "general",
     suggestedActions: [
       { label: isBn ? "📦 অর্ডার ট্র্যাক করুন" : "📦 Track My Order", action: "navigate_orders" },
       { label: isBn ? "👖 সেলভেজ জিন্স" : "👖 Best Seller Jeans", action: "search_jeans" },
-      { label: isBn ? "🚚 ডেলিভারি ও পলিসি" : "🚚 Shipping Policies", action: "search_delivery" },
+      { label: isBn ? "🚚 ডেলিভারি পলিসি" : "🚚 Shipping Policies", action: "search_delivery" },
       { label: isBn ? "📍 শোরুম লোকেশন" : "📍 Store Locations", action: "open_outlets" },
     ],
   };
