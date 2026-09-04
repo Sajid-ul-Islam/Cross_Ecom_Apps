@@ -1,14 +1,35 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  Linking,
+} from "react-native";
 import { useRouter } from "expo-router";
 
-import { Save, RotateCcw, AlertCircle, TrendingUp, ArrowRight } from "../../src/components/Icons";
+import {
+  RotateCcw,
+  AlertCircle,
+  TrendingUp,
+  ArrowRight,
+  Package,
+  MapPin,
+  Ruler,
+  ShieldCheck,
+  SlidersHorizontal,
+  Store,
+  ChevronRight,
+} from "../../src/components/Icons";
 import { ScreenShell } from "../../src/components/ScreenShell";
 import { ThemeColors } from "../../src/theme/colors";
 import { sharedStyles } from "../../src/theme/sharedStyles";
 import { DeliveryOptionKey } from "../../src/types";
 import { useProfile } from "../../src/context/ProfileContext";
 import { useTheme } from "../../src/context/ThemeContext";
+import { useOrders } from "../../src/context/OrderContext";
 
 import { reportBug, fetchDistricts, updateProfileAPI, type BdDistrict } from "../../src/services/gateway";
 import { BD_DISTRICTS } from "../../src/data/districts";
@@ -20,8 +41,8 @@ import { ContactDetailsForm } from "../../src/components/profile/ContactDetailsF
 import { SizingPreferences } from "../../src/components/profile/SizingPreferences";
 import { ThemeAndNotifications } from "../../src/components/profile/ThemeAndNotifications";
 import { SecuritySection } from "../../src/components/profile/SecuritySection";
-import { StoreSection } from "../../src/components/profile/StoreSection";
 import { ScreenErrorBoundary } from "../../src/components/ScreenErrorBoundary";
+import { ProfileDrawerModal } from "../../src/components/ProfileDrawerModal";
 
 // Modals
 import { AdminBroadcastModal } from "../../src/components/AdminBroadcastModal";
@@ -32,7 +53,6 @@ import { CourierTrackingModal } from "../../src/components/CourierTrackingModal"
 
 /**
  * Expo Router Error Boundary for Profile route.
- * Automatically catches any unexpected render errors and provides graceful recovery.
  */
 export function ErrorBoundary({ error, retry }: { error: Error; retry: () => void }) {
   return (
@@ -60,12 +80,12 @@ export default function ProfileScreen() {
   const {
     profile,
     updateProfile,
-    registerCustomer,
     addSavedAddress,
     removeSavedAddress,
   } = useProfile();
 
-  const { themeMode, isDark, setThemeMode, colors } = useTheme();
+  const { orders } = useOrders();
+  const { isDark, colors } = useTheme();
   const s = sharedStyles(colors);
   const styles = createStyles(colors, s);
   const isAdmin = profile?.role === "admin" || profile?.accountType === "admin";
@@ -89,9 +109,15 @@ export default function ProfileScreen() {
   const [pushPromos, setPushPromos] = useState(profile?.pushPromos ?? false);
   const [savedMessage, setSavedMessage] = useState("");
   const [saving, setSaving] = useState(false);
-  const [showAdminShipping, setShowAdminShipping] = useState(false);
 
-  // Modal visibility
+  // Drawer / Bottom-sheet states
+  const [ordersModalVisible, setOrdersModalVisible] = useState(false);
+  const [addressModalVisible, setAddressModalVisible] = useState(false);
+  const [sizingModalVisible, setSizingModalVisible] = useState(false);
+  const [securityModalVisible, setSecurityModalVisible] = useState(false);
+  const [preferencesModalVisible, setPreferencesModalVisible] = useState(false);
+
+  // Other Modal visibility
   const [broadcastModalVisible, setBroadcastModalVisible] = useState(false);
   const [customersModalVisible, setCustomersModalVisible] = useState(false);
   const [loginModalVisible, setLoginModalVisible] = useState(false);
@@ -101,10 +127,11 @@ export default function ProfileScreen() {
   const [selectedOrderForTracking, setSelectedOrderForTracking] = useState<any>(null);
 
   useEffect(() => {
-    // Fetch districts from API (single source of truth)
-    fetchDistricts().then((data) => {
-      if (Array.isArray(data) && data.length > 0) setDistricts(data);
-    }).catch(() => {});
+    fetchDistricts()
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) setDistricts(data);
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -126,19 +153,6 @@ export default function ProfileScreen() {
   const showToast = (msg: string) => {
     setSavedMessage(msg);
     setTimeout(() => setSavedMessage(""), 3500);
-  };
-
-  const handleReport = async () => {
-    try {
-      await reportBug({
-        severity: "low",
-        route: "profile",
-        message: "User-initiated problem report from Profile tab.",
-      });
-      Alert.alert("Report Sent", "Thank you! Our engineering team will review your feedback.");
-    } catch {
-      Alert.alert("Notice", "Thank you! Our team has received your report.");
-    }
   };
 
   const handleSave = async () => {
@@ -164,7 +178,6 @@ export default function ProfileScreen() {
         pushPromos,
       });
 
-      // Background sync to backend gateway
       updateProfileAPI({
         name: name.trim(),
         phone: cleanPhone,
@@ -190,7 +203,7 @@ export default function ProfileScreen() {
             </View>
           ) : null}
 
-          {/* 1. Account Identity Header */}
+          {/* 1. Account Identity Header with Quick Stat Pills */}
           <AccountHeader
             onLoginPress={() => {
               setAuthModalMode("signin");
@@ -200,6 +213,8 @@ export default function ProfileScreen() {
               setAuthModalMode("signup");
               setLoginModalVisible(true);
             }}
+            onOrdersPress={() => setOrdersModalVisible(true)}
+            onAddressPress={() => setAddressModalVisible(true)}
           />
 
           {/* Priority 1 for Admin: Executive BI Control Hub */}
@@ -238,7 +253,7 @@ export default function ProfileScreen() {
                       BUSINESS INTELLIGENCE (BI)
                     </Text>
                     <Text style={{ fontSize: 10, color: colors.sub, fontWeight: "700" }}>
-                      Executive Operations & Real-Time Analytics
+                      Executive Operations &amp; Real-Time Analytics
                     </Text>
                   </View>
                 </View>
@@ -319,118 +334,275 @@ export default function ProfileScreen() {
             </View>
           )}
 
-          {/* 2. My Orders & Live Pathao Tracking Hub (De-emphasized if admin) */}
+          {/* ── 2. Minimal Profile Drawer Menu Rows (Simple, Clean & Fast) ── */}
+          <View style={styles.menuList}>
+            {/* 1. My Orders & Logistics Tracking */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.75}
+              onPress={() => setOrdersModalVisible(true)}
+            >
+              <View style={[styles.menuItemIcon, { backgroundColor: "rgba(99, 102, 241, 0.12)" }]}>
+                <Package size={20} color={colors.indigo} />
+              </View>
+              <View style={styles.menuItemContent}>
+                <View style={styles.menuItemTitleRow}>
+                  <Text style={styles.menuItemTitle}>My Orders &amp; Logistics Tracking</Text>
+                  {orders.length > 0 && (
+                    <View style={styles.menuItemBadge}>
+                      <Text style={styles.menuItemBadgeText}>{orders.length}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.menuItemSub} numberOfLines={1}>
+                  {orders.length > 0
+                    ? `${orders.length} orders · Live Pathao tracking`
+                    : "View order history & live logistics dispatch"}
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.sub} />
+            </TouchableOpacity>
+
+            {/* 2. Saved Delivery Address */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.75}
+              onPress={() => setAddressModalVisible(true)}
+            >
+              <View style={[styles.menuItemIcon, { backgroundColor: "rgba(16, 185, 129, 0.12)" }]}>
+                <MapPin size={20} color={colors.emerald} />
+              </View>
+              <View style={styles.menuItemContent}>
+                <Text style={styles.menuItemTitle}>Saved Delivery Address</Text>
+                <Text style={styles.menuItemSub} numberOfLines={1}>
+                  {address
+                    ? `${district?.name || "Dhaka"} · ${address}`
+                    : `${district?.name || "Dhaka"} · Tap to set shipping address`}
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.sub} />
+            </TouchableOpacity>
+
+            {/* 3. Fit & Sizing Preferences */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.75}
+              onPress={() => setSizingModalVisible(true)}
+            >
+              <View style={[styles.menuItemIcon, { backgroundColor: "rgba(245, 158, 11, 0.12)" }]}>
+                <Ruler size={20} color={colors.amber} />
+              </View>
+              <View style={styles.menuItemContent}>
+                <Text style={styles.menuItemTitle}>Fit &amp; Sizing Preferences</Text>
+                <Text style={styles.menuItemSub} numberOfLines={1}>
+                  Jeans Waist {jeansSize}&quot; · Top {topSize} · Tap to adjust
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.sub} />
+            </TouchableOpacity>
+
+            {/* 4. Account Security & Password */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.75}
+              onPress={() => setSecurityModalVisible(true)}
+            >
+              <View style={[styles.menuItemIcon, { backgroundColor: "rgba(239, 68, 68, 0.12)" }]}>
+                <ShieldCheck size={20} color={colors.crimson} />
+              </View>
+              <View style={styles.menuItemContent}>
+                <Text style={styles.menuItemTitle}>Account Security &amp; Password</Text>
+                <Text style={styles.menuItemSub} numberOfLines={1}>
+                  {profile?.isGuest
+                    ? "Guest user · Set password & protect account"
+                    : "Change password & login protection"}
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.sub} />
+            </TouchableOpacity>
+
+            {/* 5. Appearance & Notifications */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.75}
+              onPress={() => setPreferencesModalVisible(true)}
+            >
+              <View style={[styles.menuItemIcon, { backgroundColor: "rgba(99, 102, 241, 0.12)" }]}>
+                <SlidersHorizontal size={20} color={colors.indigo} />
+              </View>
+              <View style={styles.menuItemContent}>
+                <Text style={styles.menuItemTitle}>Appearance &amp; Notifications</Text>
+                <Text style={styles.menuItemSub} numberOfLines={1}>
+                  Theme: {isDark ? "DARK" : "LIGHT"} · Notification alerts active
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.sub} />
+            </TouchableOpacity>
+
+            {/* 6. About DEEN & Showrooms */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.75}
+              onPress={() => setAboutModalVisible(true)}
+            >
+              <View style={[styles.menuItemIcon, { backgroundColor: "rgba(59, 130, 246, 0.12)" }]}>
+                <Store size={20} color={colors.indigo} />
+              </View>
+              <View style={styles.menuItemContent}>
+                <Text style={styles.menuItemTitle}>About DEEN &amp; Showrooms</Text>
+                <Text style={styles.menuItemSub} numberOfLines={1}>
+                  4 retail stores, Dhaka denim heritage, careers &amp; wholesale
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.sub} />
+            </TouchableOpacity>
+
+            {/* 7. WhatsApp Concierge */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.75}
+              onPress={() => Linking.openURL("https://wa.me/8801952700500?text=Hello%20DEEN%20Commerce%2C%20I%20need%20assistance.")}
+            >
+              <View style={[styles.menuItemIcon, { backgroundColor: "rgba(16, 185, 129, 0.15)" }]}>
+                <Text style={{ fontSize: 18 }}>💬</Text>
+              </View>
+              <View style={styles.menuItemContent}>
+                <Text style={styles.menuItemTitle}>WhatsApp Concierge Hotline</Text>
+                <Text style={styles.menuItemSub} numberOfLines={1}>
+                  Instant customer support: +880 1952-700500
+                </Text>
+              </View>
+              <ArrowRight size={16} color={colors.emerald} />
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+
+        {/* ── 3. Bottom-Sheet Drawers ── */}
+
+        {/* Orders Drawer Modal */}
+        <ProfileDrawerModal
+          visible={ordersModalVisible}
+          onClose={() => setOrdersModalVisible(false)}
+          title="MY ORDERS & TRACKING"
+          subtitle="Order status & live Pathao courier tracking"
+          icon={<Package size={20} color={colors.indigo} />}
+        >
           <RecentOrderPreview
             onTrackingPress={(order) => {
               setSelectedOrderForTracking(order);
               setTrackingModalVisible(true);
             }}
           />
+          <TouchableOpacity
+            style={styles.fullOrdersBtn}
+            activeOpacity={0.85}
+            onPress={() => {
+              setOrdersModalVisible(false);
+              router.push("/(tabs)/orders");
+            }}
+          >
+            <Text style={styles.fullOrdersBtnText}>VIEW FULL ORDERS TAB →</Text>
+          </TouchableOpacity>
+        </ProfileDrawerModal>
 
-          {/* 3. Customer Details & Delivery Address (Secondary/Collapsed for Admin) */}
-          {isAdmin ? (
-            <View
-              style={{
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-                borderWidth: 1,
-                borderRadius: 14,
-                marginBottom: 16,
-                padding: 16,
-              }}
-            >
-              <TouchableOpacity
-                style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
-                onPress={() => setShowAdminShipping(!showAdminShipping)}
-                activeOpacity={0.8}
-              >
-                <View>
-                  <Text style={{ fontSize: 12, fontWeight: "800", color: colors.sub, letterSpacing: 0.5 }}>
-                    📦 PERSONAL DELIVERY & SHIPPING ADDRESS
-                  </Text>
-                  <Text style={{ fontSize: 11, color: colors.faint, marginTop: 2 }}>
-                    {showAdminShipping ? "Tap to hide personal shipping info" : "Secondary for store administrators (Tap to expand)"}
-                  </Text>
-                </View>
-                <Text style={{ fontSize: 18, fontWeight: "900", color: colors.indigo }}>
-                  {showAdminShipping ? "−" : "+"}
-                </Text>
-              </TouchableOpacity>
-              {showAdminShipping && (
-                <View style={{ marginTop: 14 }}>
-                  <ContactDetailsForm
-                    name={name}
-                    phone={phone}
-                    email={email}
-                    address={address}
-                    city={city}
-                    district={district}
-                    onNameChange={setName}
-                    onPhoneChange={setPhone}
-                    onEmailChange={setEmail}
-                    onAddressChange={setAddress}
-                    onCityChange={setCity}
-                    onDistrictChange={setDistrict}
-                    onSaveProfile={handleSave}
-                    onAddAddress={addSavedAddress}
-                    onRemoveAddress={removeSavedAddress}
-                  />
-                </View>
-              )}
-            </View>
-          ) : (
-            <ContactDetailsForm
-              name={name}
-              phone={phone}
-              email={email}
-              address={address}
-              city={city}
-              district={district}
-              onNameChange={setName}
-              onPhoneChange={setPhone}
-              onEmailChange={setEmail}
-              onAddressChange={setAddress}
-              onCityChange={setCity}
-              onDistrictChange={setDistrict}
-              onSaveProfile={handleSave}
-              onAddAddress={addSavedAddress}
-              onRemoveAddress={removeSavedAddress}
-            />
-          )}
+        {/* Saved Delivery Address Drawer Modal */}
+        <ProfileDrawerModal
+          visible={addressModalVisible}
+          onClose={() => setAddressModalVisible(false)}
+          title="SAVED DELIVERY ADDRESS"
+          subtitle="Default shipping address for 1-tap checkout"
+          icon={<MapPin size={20} color={colors.emerald} />}
+        >
+          <ContactDetailsForm
+            name={name}
+            phone={phone}
+            email={email}
+            address={address}
+            city={city}
+            district={district}
+            onNameChange={setName}
+            onPhoneChange={setPhone}
+            onEmailChange={setEmail}
+            onAddressChange={setAddress}
+            onCityChange={setCity}
+            onDistrictChange={setDistrict}
+            onSaveProfile={async () => {
+              await handleSave();
+              setAddressModalVisible(false);
+            }}
+            onAddAddress={addSavedAddress}
+            onRemoveAddress={removeSavedAddress}
+          />
+        </ProfileDrawerModal>
 
-          {/* 4. Saved Sizing Profile */}
+        {/* Fit & Sizing Preferences Drawer Modal */}
+        <ProfileDrawerModal
+          visible={sizingModalVisible}
+          onClose={() => setSizingModalVisible(false)}
+          title="FIT & SIZING PREFERENCES"
+          subtitle="Save sizes for tailored recommendations"
+          icon={<Ruler size={20} color={colors.amber} />}
+        >
           <SizingPreferences
             jeansSize={jeansSize}
             topSize={topSize}
             onJeansSizeChange={setJeansSize}
             onTopSizeChange={setTopSize}
-            onSave={handleSave}
+            onSave={async () => {
+              await handleSave();
+              setSizingModalVisible(false);
+            }}
           />
+        </ProfileDrawerModal>
 
-          {/* 5. Appearance & Theme + Notification Preferences */}
+        {/* Account Security Drawer Modal */}
+        <ProfileDrawerModal
+          visible={securityModalVisible}
+          onClose={() => setSecurityModalVisible(false)}
+          title="ACCOUNT SECURITY & PASSWORD"
+          subtitle="Update password and account protection"
+          icon={<ShieldCheck size={20} color={colors.crimson} />}
+        >
+          <SecuritySection
+            onRegisterPress={() => {
+              setSecurityModalVisible(false);
+              setAuthModalMode("signup");
+              setLoginModalVisible(true);
+            }}
+            onSuccessNotice={(msg) => {
+              showToast(msg);
+              setSecurityModalVisible(false);
+            }}
+          />
+        </ProfileDrawerModal>
+
+        {/* Appearance & Notifications Preferences Drawer Modal */}
+        <ProfileDrawerModal
+          visible={preferencesModalVisible}
+          onClose={() => setPreferencesModalVisible(false)}
+          title="APPEARANCE & PREFERENCES"
+          subtitle="Customize theme and notification alerts"
+          icon={<SlidersHorizontal size={20} color={colors.indigo} />}
+        >
           <ThemeAndNotifications
             pushOrders={pushOrders}
             pushPromos={pushPromos}
             onPushOrdersChange={setPushOrders}
             onPushPromosChange={setPushPromos}
           />
-
-          {/* 6. Top-Notch Account Security & Password Update */}
-          <SecuritySection
-            onRegisterPress={() => {
-              setAuthModalMode("signup");
-              setLoginModalVisible(true);
+          <TouchableOpacity
+            style={[styles.fullOrdersBtn, { marginTop: 16 }]}
+            activeOpacity={0.88}
+            onPress={async () => {
+              await handleSave();
+              setPreferencesModalVisible(false);
             }}
-            onSuccessNotice={showToast}
-          />
+          >
+            <Text style={styles.fullOrdersBtnText}>✓ APPLY PREFERENCES</Text>
+          </TouchableOpacity>
+        </ProfileDrawerModal>
 
-          {/* 7. Store Outlets & Customer Concierge */}
-          <StoreSection
-            onAboutPress={() => setAboutModalVisible(true)}
-            onReportPress={handleReport}
-          />
-        </ScrollView>
-
+        {/* ── 4. Global Modals ── */}
         {isAdmin && customersModalVisible && (
           <AdminCustomersModal
             visible={customersModalVisible}
@@ -490,11 +662,83 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
       borderRadius: 8,
       padding: 12,
       alignItems: "center",
-      marginBottom: 6,
+      marginBottom: 8,
     },
     alertSuccessText: {
       fontSize: 12,
       fontWeight: "800",
+    },
+    menuList: {
+      gap: 10,
+      marginBottom: 30,
+      marginTop: 4,
+    },
+    menuItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.card,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      gap: 14,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.04,
+      shadowRadius: 6,
+      elevation: 1,
+    },
+    menuItemIcon: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    menuItemContent: {
+      flex: 1,
+    },
+    menuItemTitleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 3,
+    },
+    menuItemTitle: {
+      fontSize: 13.5,
+      fontWeight: "800",
+      color: colors.ink,
+      letterSpacing: 0.1,
+    },
+    menuItemBadge: {
+      backgroundColor: colors.indigo,
+      paddingHorizontal: 7,
+      paddingVertical: 1.5,
+      borderRadius: 999,
+    },
+    menuItemBadgeText: {
+      color: "#FFFFFF",
+      fontSize: 9.5,
+      fontWeight: "900",
+    },
+    menuItemSub: {
+      fontSize: 11,
+      color: colors.sub,
+    },
+    fullOrdersBtn: {
+      backgroundColor: colors.indigo,
+      paddingVertical: 13,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 10,
+    },
+    fullOrdersBtnText: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      fontWeight: "900",
+      letterSpacing: 0.5,
     },
     saveBtn: s.saveBtn,
     saveBtnText: s.saveBtnText,

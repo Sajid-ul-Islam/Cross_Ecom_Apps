@@ -12,9 +12,16 @@ import { useWishlist } from "../../context/WishlistContext";
 interface AccountHeaderProps {
   onLoginPress: () => void;
   onRegister: () => void;
+  onOrdersPress?: () => void;
+  onAddressPress?: () => void;
 }
 
-export const AccountHeader: React.FC<AccountHeaderProps> = ({ onLoginPress, onRegister }) => {
+export const AccountHeader: React.FC<AccountHeaderProps> = ({
+  onLoginPress,
+  onRegister,
+  onOrdersPress,
+  onAddressPress,
+}) => {
   const router = useRouter();
   const { colors } = useTheme();
   const { profile, isLoggedIn, logout } = useProfile();
@@ -168,7 +175,7 @@ export const AccountHeader: React.FC<AccountHeaderProps> = ({ onLoginPress, onRe
               <TouchableOpacity
                 style={styles.statItem}
                 activeOpacity={0.75}
-                onPress={() => router.push("/(tabs)/orders")}
+                onPress={() => (onOrdersPress ? onOrdersPress() : router.push("/(tabs)/orders"))}
               >
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                   <Package size={14} color={colors.indigo} />
@@ -179,7 +186,11 @@ export const AccountHeader: React.FC<AccountHeaderProps> = ({ onLoginPress, onRe
 
               <View style={[styles.statDivider, { backgroundColor: colors.borderLight }]} />
 
-              <View style={styles.statItem}>
+              <TouchableOpacity
+                style={styles.statItem}
+                activeOpacity={0.75}
+                onPress={() => onAddressPress && onAddressPress()}
+              >
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                   <MapPin size={14} color={colors.emerald} />
                   <Text style={[styles.statValue, { color: colors.ink }]}>
@@ -187,7 +198,7 @@ export const AccountHeader: React.FC<AccountHeaderProps> = ({ onLoginPress, onRe
                   </Text>
                 </View>
                 <Text style={[styles.statLabel, { color: colors.sub }]}>District</Text>
-              </View>
+              </TouchableOpacity>
 
               <View style={[styles.statDivider, { backgroundColor: colors.borderLight }]} />
 

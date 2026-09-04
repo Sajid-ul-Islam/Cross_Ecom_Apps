@@ -1025,6 +1025,90 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   border-color: var(--indigo);
 }
 
+/* ── Minimal Profile Drawer Menu Rows ──────────────── */
+.profile-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.profile-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: left;
+  width: 100%;
+  text-decoration: none;
+  color: inherit;
+}
+.profile-menu-item:hover {
+  background: var(--surface-2);
+  border-color: var(--indigo);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+.profile-menu-item:active {
+  transform: scale(0.985);
+}
+.profile-menu-item__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(99, 102, 241, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  color: var(--indigo);
+}
+.profile-menu-item__content {
+  flex: 1;
+  min-width: 0;
+}
+.profile-menu-item__title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--ink);
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.profile-menu-item__subtitle {
+  font-size: 11.5px;
+  color: var(--sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+.profile-menu-item__badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--indigo);
+  color: #fff;
+}
+.profile-menu-item__chevron {
+  font-size: 14px;
+  color: var(--sub);
+  font-weight: 800;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+.profile-menu-item:hover .profile-menu-item__chevron {
+  transform: translateX(2px);
+  color: var(--indigo);
+}
+
 .outlets-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
