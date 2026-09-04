@@ -1,10 +1,9 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { useRouter } from "expo-router";
-import { ShoppingBag, ArrowLeft, Search, Bell, Heart, Sparkles } from "./Icons";
+import { ArrowLeft, Search, Bell, Heart, Sparkles } from "./Icons";
 import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
-import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import { useNotifications } from "../context/NotificationContext";
 import { NotificationModal } from "./NotificationModal";
@@ -33,7 +32,6 @@ export const Header: React.FC<HeaderProps> = ({
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const styles = createStyles(colors);
-  const { totalItems } = useCart();
   const { wishlist } = useWishlist();
   const { unreadCount } = useNotifications();
   const [notifVisible, setNotifVisible] = useState(false);
@@ -134,23 +132,6 @@ export const Header: React.FC<HeaderProps> = ({
               </View>
             )}
           </TouchableOpacity>
-
-          {showBag && (
-            <TouchableOpacity
-              style={[styles.bagButton, { backgroundColor: colors.cardSecondary }]}
-              onPress={() => router.push("/(tabs)/cart")}
-              accessibilityRole="button"
-              accessibilityLabel={`Shopping Bag, ${totalItems} items`}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <ShoppingBag size={20} color={colors.ink} />
-              {totalItems > 0 && (
-                <View style={[styles.badge, { backgroundColor: colors.indigo }]}>
-                  <Text style={styles.badgeText}>{totalItems}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          )}
         </View>
       </View>
 

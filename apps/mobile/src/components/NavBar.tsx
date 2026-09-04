@@ -22,7 +22,7 @@ export const NavBar: React.FC<NavBarProps> = ({
   title,
   subtitle,
   showBack = true,
-  showBag = true,
+  showBag = false,
 }) => {
   const router = useRouter();
   const { colors } = useTheme();

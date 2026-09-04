@@ -224,6 +224,143 @@ export default function AboutDeenDrawer({ isOpen, onClose }: AboutDeenDrawerProp
             </p>
           </div>
 
+          {/* Official Brand Social Community */}
+          <div
+            style={{
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
+              borderRadius: 12,
+              padding: 16,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <span style={{ fontSize: 16 }}>🌐</span>
+              <h5 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "var(--ink)", textTransform: "uppercase" }}>
+                Official Brand Community &amp; Socials
+              </h5>
+            </div>
+            <p style={{ margin: "0 0 12px", fontSize: 12, lineHeight: 1.6, color: "var(--sub)" }}>
+              Follow our official channels for new arrivals, styling masterclasses, and denim drops:
+            </p>
+
+            {/* Social Link Handles */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
+              <div style={{ fontSize: 11.5, color: "var(--sub)" }}>
+                📱 WhatsApp: <strong>01952-700500</strong>
+              </div>
+              <div style={{ fontSize: 11.5, color: "var(--sub)" }}>
+                📘 Facebook: <strong>facebook.com/deencommerce</strong>
+              </div>
+              <div style={{ fontSize: 11.5, color: "var(--sub)" }}>
+                📸 Instagram: <strong>instagram.com/deencommerce</strong>
+              </div>
+              <div style={{ fontSize: 11.5, color: "var(--sub)" }}>
+                💼 LinkedIn: <strong>linkedin.com/company/deencommerce</strong>
+              </div>
+            </div>
+
+            {/* Round Social Icon Buttons */}
+            <div style={{ display: "flex", justifyContent: "center", gap: 16 }}>
+              <a
+                href={`https://wa.me/88${waDigits}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Official DEEN WhatsApp"
+                title="WhatsApp Concierge"
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: "50%",
+                  backgroundColor: "#25D366",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textDecoration: "none",
+                  boxShadow: "0 2px 8px rgba(37, 211, 102, 0.35)",
+                }}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 11.5a8.5 8.5 0 0 1-12.2 7.7L3 21l1.8-5.8A8.5 8.5 0 1 1 21 11.5z" />
+                  <path d="M8.8 8.6c0 3 2.5 5.5 5.5 5.5l1-1.5c.3-.4.9-.4 1.3-.1l1.7 1c.4.3.5.9.2 1.3-1 1.3-2.6 1.2-3.8.2" />
+                </svg>
+              </a>
+
+              <a
+                href="https://www.instagram.com/deencommerce/?hl=en"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Official DEEN Instagram"
+                title="Instagram @deencommerce"
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: "50%",
+                  backgroundColor: "#E1306C",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textDecoration: "none",
+                  boxShadow: "0 2px 8px rgba(225, 48, 108, 0.35)",
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="5" />
+                  <circle cx="12" cy="12" r="4" />
+                  <circle cx="17" cy="7" r="1.2" fill="#fff" stroke="none" />
+                </svg>
+              </a>
+
+              <a
+                href="https://www.facebook.com/deencommerce"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Official DEEN Facebook"
+                title="Facebook @deencommerce"
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: "50%",
+                  backgroundColor: "#1877F2",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textDecoration: "none",
+                  boxShadow: "0 2px 8px rgba(24, 119, 242, 0.35)",
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="4" />
+                  <path d="M14 8h-2c-1.1 0-2 .9-2 2v1.5H8v2h2V19h2v-5.5h2l.5-2H12V10c0-.3.2-.5.5-.5H14V8z" />
+                </svg>
+              </a>
+
+              <a
+                href="https://www.linkedin.com/company/deencommerce"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Official DEEN LinkedIn"
+                title="LinkedIn DEEN Commerce Ltd"
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: "50%",
+                  backgroundColor: "#0A66C2",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textDecoration: "none",
+                  boxShadow: "0 2px 8px rgba(10, 102, 194, 0.35)",
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+                  <rect x="2" y="9" width="4" height="12" />
+                  <circle cx="4" cy="4" r="2" />
+                </svg>
+              </a>
+            </div>
+          </div>
+
           {/* Section 3: Career & Wholesale Opportunities */}
           <div
             style={{
@@ -283,6 +420,26 @@ export default function AboutDeenDrawer({ isOpen, onClose }: AboutDeenDrawerProp
                 <span>Wholesale: <strong>wholesale@deencommerce.com</strong></span>
               </a>
             </div>
+          </div>
+
+          {/* Corporate Responsibility */}
+          <div
+            style={{
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
+              borderRadius: 12,
+              padding: 16,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <span style={{ fontSize: 16 }}>🤝</span>
+              <h5 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "var(--ink)", textTransform: "uppercase" }}>
+                Corporate Responsibility
+              </h5>
+            </div>
+            <p style={{ margin: 0, fontSize: 12, lineHeight: 1.6, color: "var(--sub)" }}>
+              We support fashion that is produced, consumed and sold in a responsible manner. DEEN Commerce Ltd. donates 5% of profit to the DEEN Foundation to serve the underprivileged and support community welfare.
+            </p>
           </div>
 
           {/* Section 4: Flagship Retail Showrooms */}

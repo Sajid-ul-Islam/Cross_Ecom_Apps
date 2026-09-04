@@ -627,9 +627,9 @@ export default function ProfilePage() {
         >
           <div className="profile-menu-item__icon">🏢</div>
           <div className="profile-menu-item__content">
-            <div className="profile-menu-item__title">About DEEN &amp; Showrooms</div>
+            <div className="profile-menu-item__title">About DEEN, Showrooms &amp; Socials</div>
             <p className="profile-menu-item__subtitle">
-              4 retail stores, ethical denim heritage, careers &amp; wholesale
+              4 retail outlets, official brand socials &amp; heritage
             </p>
           </div>
           <div className="profile-menu-item__chevron">→</div>

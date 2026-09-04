@@ -1,12 +1,10 @@
 import Link from "next/link";
-import { fetchProducts, fetchCampaigns, fetchCategoryCovers, fetchCategories, fetchOutlets, fetchHeroBanner, fetchSectionBanners, bdt } from "@/lib/api";
+import { fetchProducts, fetchCampaigns, fetchCategoryCovers, fetchCategories, fetchHeroBanner, fetchSectionBanners, bdt } from "@/lib/api";
 import { getCategoryInfo } from "@/lib/categories";
 import ProductCard from "@/components/ProductCard";
 import HeroSlider from "@/components/HeroSlider";
 import SectionOfferBanner from "@/components/SectionOfferBanner";
 import BrandStorySection from "@/components/BrandStorySection";
-import SocialReelsSection from "@/components/SocialReelsSection";
-import { fetchSocialFeed } from "@/lib/socialContent";
 
 export const metadata = {
   title: "DEEN - দেশের প্রথম ডেনিম ব্র্যান্ড",
@@ -23,10 +21,8 @@ export default async function HomePage() {
     campaign,
     remoteCovers,
     categoriesList,
-    outletsList,
     heroBanner,
     sectionBanners,
-    socialData,
   ] = await Promise.all([
     fetchProducts({ per_page: 8 }),
     fetchProducts({ per_page: 4, sort: "new" }),
@@ -36,10 +32,8 @@ export default async function HomePage() {
     fetchCampaigns(),
     fetchCategoryCovers(),
     fetchCategories(),
-    fetchOutlets(),
     fetchHeroBanner(),
     fetchSectionBanners(),
-    fetchSocialFeed(),
   ]);
 
   const activePromo = campaign?.activeCampaign;
@@ -479,9 +473,6 @@ export default async function HomePage() {
         {/* ── Brand Heritage Story & Craftsmanship ─────── */}
         <BrandStorySection />
 
-        {/* ── Brand Social Feed & Tagged Commerce Reels ──── */}
-        <SocialReelsSection reels={socialData.reels} />
-
         {/* ── Trust Bar ────────────────────────────────── */}
         <section style={{ marginBottom: 40, marginTop: 20 }}>
           <div className="trust-bar">
@@ -515,7 +506,7 @@ export default async function HomePage() {
 
         {/* ── New Arrivals ──────────────────────────────── */}
         {newArrivals.length > 0 && (
-          <section className="section">
+          <section className="section" style={{ marginBottom: 60 }}>
             <div className="section__header">
               <div>
                 <h2 className="section__title">New Arrivals</h2>
@@ -529,110 +520,6 @@ export default async function HomePage() {
             </div>
           </section>
         )}
-
-        {/* ── 4 Physical Outlets Section ─────────────────── */}
-        <section
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius)",
-            padding: "40px 36px",
-            marginBottom: 60,
-          }}
-        >
-          <div style={{ marginBottom: 28, textAlign: "center" }}>
-            <p style={{ color: "var(--brand)", fontSize: 11, fontWeight: 800, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6 }}>
-              VISIT DEEN IN PERSON
-            </p>
-            <h2 style={{ fontSize: 24, fontWeight: 900, color: "var(--ink)", marginBottom: 8 }}>
-              Our 4 Physical Outlets & Showrooms
-            </h2>
-            <p style={{ color: "var(--sub)", fontSize: 14, maxWidth: 600, margin: "0 auto" }}>
-              Experience the fabric, try on selvedge denim, and get free store pickup from any of our 4 official retail locations across Bangladesh.
-            </p>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-              gap: 20,
-            }}
-          >
-            {outletsList.map((outlet) => {
-              const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(outlet.mapQuery || outlet.address)}`;
-              return (
-                <div
-                  key={outlet.id || outlet.name}
-                  style={{
-                    background: "var(--surface-2)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "var(--radius)",
-                    padding: 20,
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    gap: 14,
-                  }}
-                >
-                  <div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, gap: 8, flexWrap: "wrap" }}>
-                      <span
-                        style={{
-                          fontSize: 9,
-                          fontWeight: 900,
-                          letterSpacing: 0.5,
-                          background: outlet.pickup ? "var(--indigo-light)" : "var(--border)",
-                          color: outlet.pickup ? "var(--indigo)" : "var(--sub)",
-                          padding: "3px 8px",
-                          borderRadius: 4,
-                        }}
-                      >
-                        {outlet.tag || (outlet.pickup ? "FLAGSHIP SHOWROOM & STORE PICKUP" : "REGIONAL SHOWROOM")}
-                      </span>
-                      {outlet.pickup && (
-                        <span style={{ fontSize: 11, color: "var(--emerald)", fontWeight: 800 }}>✓ Free Pickup</span>
-                      )}
-                    </div>
-                    <h3 style={{ fontSize: 16, fontWeight: 900, color: "var(--ink)", marginBottom: 8 }}>
-                      {outlet.name}
-                    </h3>
-                    <p style={{ fontSize: 13, color: "var(--sub)", lineHeight: 1.5, marginBottom: 10 }}>
-                      📍 {outlet.address}
-                    </p>
-                    <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>
-                      🕒 {outlet.hours}
-                    </p>
-                    <p style={{ fontSize: 12, color: "var(--indigo)", fontWeight: 700 }}>
-                      📞 Hotline: <a href={`tel:${outlet.phone}`} style={{ color: "var(--indigo)", textDecoration: "none" }}>{outlet.phone}</a>
-                    </p>
-                  </div>
-
-                  <a
-                    href={mapUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="btn btn--secondary"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 6,
-                      fontSize: 11,
-                      fontWeight: 800,
-                      padding: "8px 12px",
-                      textDecoration: "none",
-                      width: "100%",
-                      textAlign: "center",
-                    }}
-                  >
-                    📍 GET DIRECTIONS (GOOGLE MAPS)
-                  </a>
-                </div>
-              );
-            })}
-          </div>
-        </section>
       </div>
     </>
   );

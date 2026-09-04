@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCart } from "@/lib/cart";
 import { useWishlist } from "@/lib/wishlist";
 import { useEffect, useState } from "react";
 import SearchModal from "@/components/SearchModal";
@@ -12,7 +11,6 @@ import WishlistModal from "@/components/WishlistModal";
 
 export default function Header() {
   const pathname = usePathname();
-  const { totalItems } = useCart();
   const { totalWishlist } = useWishlist();
   const [isDark, setIsDark] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -58,6 +56,7 @@ export default function Header() {
     { href: "/", label: "Home" },
     { href: "/shop", label: "Shop" },
     { href: "/categories", label: "Categories" },
+    { href: "/cart", label: "Cart" },
     { href: "/orders", label: "Track Order" },
     { href: "/profile", label: "Profile" },
   ];
@@ -325,54 +324,6 @@ export default function Header() {
                 <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
                 <line x1="12" y1="22.08" x2="12" y2="12" />
               </svg>
-            </Link>
-
-            {/* Cart Button (Desktop only — mobile view uses bottom nav cart) */}
-            <Link
-              href="/cart"
-              className="nav__icon-btn nav__cart-desktop-only"
-              aria-label="Cart"
-              style={{
-                position: "relative",
-                width: 44,
-                height: 44,
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "var(--surface-2)",
-                border: "1px solid var(--border)",
-                color: "var(--ink)",
-                textDecoration: "none",
-              }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <path d="M16 10a4 4 0 0 1-8 0" />
-              </svg>
-              {totalItems > 0 && (
-                <span
-                  style={{
-                    position: "absolute",
-                    top: 4,
-                    right: 4,
-                    minWidth: 16,
-                    height: 16,
-                    borderRadius: 8,
-                    background: "var(--indigo)",
-                    color: "#fff",
-                    fontSize: 9,
-                    fontWeight: 900,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "0 4px",
-                  }}
-                >
-                  {totalItems > 99 ? "99+" : totalItems}
-                </span>
-              )}
             </Link>
 
             {/* Dedicated Profile Action (Desktop Only - Mobile uses bottom nav) */}

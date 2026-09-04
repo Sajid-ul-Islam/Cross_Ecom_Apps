@@ -465,9 +465,9 @@ export default function ProfileScreen() {
                 <Store size={20} color={colors.indigo} />
               </View>
               <View style={styles.menuItemContent}>
-                <Text style={styles.menuItemTitle}>About DEEN &amp; Showrooms</Text>
+                <Text style={styles.menuItemTitle}>About DEEN, Showrooms &amp; Socials</Text>
                 <Text style={styles.menuItemSub} numberOfLines={1}>
-                  4 retail stores, Dhaka denim heritage, careers &amp; wholesale
+                  4 retail outlets, official brand socials &amp; heritage
                 </Text>
               </View>
               <ChevronRight size={18} color={colors.sub} />

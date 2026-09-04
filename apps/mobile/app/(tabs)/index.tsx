@@ -17,13 +17,9 @@ import {
   ArrowRight,
   Sparkles,
   ShieldCheck,
-  MapPin,
   Award,
   TrendingUp,
-  Facebook,
-  Instagram,
-  LinkedIn,
-  WhatsApp,
+  MapPin,
 } from "../../src/components/Icons";
 import { SectionHeader } from "../../src/components/SectionHeader";
 import { ScreenShell } from "../../src/components/ScreenShell";
@@ -42,10 +38,8 @@ import { getCategoryInfo } from "../../src/data/categories";
 import { AdminBroadcastModal } from "../../src/components/AdminBroadcastModal";
 import { FestivalGreetingModal } from "../../src/components/FestivalGreetingModal";
 import { MotionHero } from "../../src/components/MotionHero";
-import { SocialReelsCarousel } from "../../src/components/SocialReelsCarousel";
 import { BrandStorySection } from "../../src/components/BrandStorySection";
 import { NotificationOptInModal, NOTIF_OPT_IN_DISMISSED_KEY } from "../../src/components/NotificationOptInModal";
-import { OFFICIAL_BRAND_SOCIALS } from "../../src/services/socialContent";
 
 const { width } = Dimensions.get("window");
 
@@ -382,12 +376,6 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
-        {/* Artisanal Heritage Craftsmanship Narrative */}
-        <BrandStorySection />
-
-        {/* Brand Social Discovery & Tagged Reels Carousel */}
-        <SocialReelsCarousel />
-
         {/* Section Offer Banner 1: Selvedge Denim Campaign */}
         <TouchableOpacity
           activeOpacity={0.9}
@@ -459,111 +447,8 @@ export default function HomeScreen() {
           />
         </TouchableOpacity>
 
-        {/* Official Brand Social Community Card */}
-        <View
-          style={{
-            marginHorizontal: 16,
-            marginBottom: 16,
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: colors.border,
-            backgroundColor: colors.card,
-            padding: 16,
-          }}
-        >
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Sparkles size={16} color={colors.indigo} />
-              <Text style={{ fontSize: 13, fontWeight: "900", color: colors.ink, letterSpacing: 0.5 }}>
-                JOIN THE DEEN COMMUNITY
-              </Text>
-            </View>
-            <Text style={{ fontSize: 11, fontWeight: "700", color: colors.sub }}>
-              @deencommerce
-            </Text>
-          </View>
-          <Text style={{ fontSize: 12, color: colors.sub, lineHeight: 17, marginBottom: 14 }}>
-            Over 125,000+ patrons connect with us daily across Bangladesh for style advice, drop announcements, and concierge support.
-          </Text>
-
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <TouchableOpacity
-              style={{
-                flex: 1,
-                backgroundColor: "#1877F2",
-                paddingVertical: 9,
-                borderRadius: 8,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 5,
-              }}
-              activeOpacity={0.85}
-              onPress={() => Linking.openURL(OFFICIAL_BRAND_SOCIALS.facebook)}
-              accessibilityRole="button"
-              accessibilityLabel="Facebook"
-            >
-              <Facebook size={16} color="#FFFFFF" />
-              <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "800" }}>Facebook</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{
-                flex: 1,
-                backgroundColor: "#E1306C",
-                paddingVertical: 9,
-                borderRadius: 8,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 5,
-              }}
-              activeOpacity={0.85}
-              onPress={() => Linking.openURL(OFFICIAL_BRAND_SOCIALS.instagram)}
-              accessibilityRole="button"
-              accessibilityLabel="Instagram"
-            >
-              <Instagram size={16} color="#FFFFFF" />
-              <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "800" }}>Instagram</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{
-                flex: 1,
-                backgroundColor: "#0A66C2",
-                paddingVertical: 9,
-                borderRadius: 8,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 5,
-              }}
-              activeOpacity={0.85}
-              onPress={() => Linking.openURL(OFFICIAL_BRAND_SOCIALS.linkedin)}
-              accessibilityRole="button"
-              accessibilityLabel="LinkedIn"
-            >
-              <LinkedIn size={15} color="#FFFFFF" />
-              <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "800" }}>LinkedIn</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{
-                width: 38,
-                backgroundColor: "#25D366",
-                borderRadius: 8,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-              activeOpacity={0.85}
-              onPress={() => Linking.openURL(OFFICIAL_BRAND_SOCIALS.whatsapp)}
-              accessibilityRole="button"
-              accessibilityLabel="WhatsApp"
-            >
-              <WhatsApp size={18} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        </View>
+        {/* Artisanal Heritage Craftsmanship Narrative */}
+        <BrandStorySection />
 
         {/* Brand Authenticity Footer Card */}
         <View style={styles.brandTrustCard}>

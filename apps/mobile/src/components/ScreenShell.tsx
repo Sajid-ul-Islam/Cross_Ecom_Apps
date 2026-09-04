@@ -51,7 +51,7 @@ export const ScreenShell: React.FC<ScreenShellProps> = ({
   title,
   showBack = false,
   showSearch = true,
-  showBag = true,
+  showBag = false,
   showNotif = true,
   renderNav,
   loading = false,
