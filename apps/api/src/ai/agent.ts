@@ -323,8 +323,12 @@ export async function processAiCommerceQuery(
         action: "navigate_orders",
       });
       actions.push({
-        label: isBn ? "💬 হোয়াটসঅ্যাপ সাপোর্ট" : "💬 WhatsApp Support",
+        label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp",
         action: "open_whatsapp",
+      });
+      actions.push({
+        label: isBn ? "💬 মেসেঞ্জার" : "💬 Messenger",
+        action: "open_messenger",
       });
 
       return {
@@ -343,7 +347,7 @@ export async function processAiCommerceQuery(
         intent: "order_track",
         suggestedActions: [
           { label: isBn ? "📦 আমার অর্ডার দেখুন" : "📦 My Orders", action: "navigate_orders" },
-          { label: isBn ? "💬 হোয়াটসঅ্যাপ হেল্পলাইন" : "💬 WhatsApp Helpline", action: "open_whatsapp" },
+          { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" }, { label: isBn ? "💬 মেসেঞ্জার" : "💬 Messenger", action: "open_messenger" },
         ],
       };
     }
@@ -415,7 +419,7 @@ export async function processAiCommerceQuery(
       intent: "store_locator",
       suggestedActions: [
         { label: isBn ? "📍 শোরুম লোকেশন দেখুন" : "📍 View Showroom Locations", action: "open_outlets" },
-        { label: isBn ? "💬 হোয়াটসঅ্যাপে যোগাযোগ" : "💬 WhatsApp Support", action: "open_whatsapp" },
+        { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" }, { label: isBn ? "💬 মেসেঞ্জার" : "💬 Messenger", action: "open_messenger" },
       ],
     };
   }
@@ -648,7 +652,7 @@ export async function processAiCommerceQuery(
         suggestedProducts: summaries,
         suggestedActions: [
           { label: isBn ? "🛒 শপ ক্যাটালগ দেখুন" : "🛒 Browse Full Shop", action: "navigate_shop" },
-          { label: isBn ? "💬 স্টাইলিস্টের সাথে কথা বলুন" : "💬 WhatsApp Stylist", action: "open_whatsapp" },
+          { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" }, { label: isBn ? "💬 মেসেঞ্জার" : "💬 Messenger", action: "open_messenger" },
         ],
       };
     }
@@ -664,7 +668,7 @@ export async function processAiCommerceQuery(
       intent: "policy_qa",
       suggestedActions: [
         { label: isBn ? "🛍️ কালেকশন দেখুন" : "🛍️ Shop Collection", action: "navigate_shop" },
-        { label: isBn ? "💬 হোয়াটসঅ্যাপে কথা বলুন" : "💬 WhatsApp Support", action: "open_whatsapp" },
+        { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" }, { label: isBn ? "💬 মেসেঞ্জার" : "💬 Messenger", action: "open_messenger" },
       ],
     };
   }
@@ -675,7 +679,7 @@ export async function processAiCommerceQuery(
   return {
     reply: isBn
       ? "স্বাগতম DEEN AI শপিং কনসিয়ার্জে! আপনি যেকোনো প্রশ্ন করতে পারেন—যেমন:\n• 'আমার অর্ডার #১০৪১ এর খবর কি?'\n• 'আমার জন্য ৩০০০ টাকার মধ্যে ৩২ সাইজের সেলভেজ জিন্স দেখাও'\n• 'চট্টগ্রামে ডেলিভারি চার্জ কত এবং কত দিন লাগবে?'\n• 'সাইজ না মিললে ৭ দিনের ফ্রি ডোরস্টেপ এক্সচেঞ্জ কীভাবে কাজ করে?'\n• 'বর্তমানে কি কি ক্যাশব্যাক বা ব্যাংক ডিসকাউন্ট অফার আছে?'\n\nআপনাকে কীভাবে সহযোগিতা করতে পারি?"
-      : "Welcome to DEEN AI Shopping Concierge! You can ask me anything about our collections, live orders, or policies—for example:\n• 'Where is my order #1041?'\n• 'Suggest selvedge jeans in size 32 under ৳3000'\n• 'What is the delivery charge and timeframe for Chittagong?'\n• 'How does the 7-day doorstep size exchange work?'\n• 'What active cashback or bank card offers are available?'\n\nHow may I assist your style journey today?",
+      : "Welcome to DEEN Assistant! You can ask me anything about our collections, live orders, or policies—for example:\n• 'Where is my order #1041?'\n• 'Suggest selvedge jeans in size 32 under ৳3000'\n• 'What is the delivery charge and timeframe for Chittagong?'\n• 'How does the 7-day doorstep size exchange work?'\n• 'What active cashback or bank card offers are available?'\n\nHow may I assist your style journey today?",
     intent: "general",
     suggestedActions: [
       { label: isBn ? "📦 অর্ডার ট্র্যাক করুন" : "📦 Track My Order", action: "navigate_orders" },

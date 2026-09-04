@@ -40,7 +40,7 @@ export default function AiConciergeDrawer() {
     {
       id: "welcome",
       sender: "ai",
-      text: "👋 Welcome to **DEEN AI Concierge**! I can recommend menswear outfits from our live catalog, calculate Bangladesh delivery charges, explain our 7-day doorstep size exchange, or locate our 4 retail showrooms.\n\nHow can I help you today?",
+      text: "👋 Welcome to **DEEN Assistant**! I can recommend menswear outfits from our live catalog, calculate Bangladesh delivery charges, explain our 7-day doorstep size exchange, or locate our 4 retail showrooms.\n\nHow can I help you today?",
     },
   ]);
 
@@ -259,7 +259,7 @@ export default function AiConciergeDrawer() {
                 </div>
                 <div>
                   <h3 style={{ margin: 0, fontSize: 15, fontWeight: 900, color: "var(--ink)" }}>
-                    DEEN AI Concierge
+                    DEEN Assistant
                   </h3>
                   <span style={{ fontSize: 11, color: "var(--emerald)", fontWeight: 700 }}>
                     ● RAG Knowledge &amp; Live Catalog Active
@@ -422,6 +422,8 @@ export default function AiConciergeDrawer() {
                           onClick={() => {
                             if (act.action === "open_url" && act.payload?.url) {
                               window.open(act.payload.url, "_blank");
+                            } else if (act.action === "open_messenger") {
+                              window.open("https://m.me/deencommerce", "_blank");
                             } else if (act.action === "open_whatsapp") {
                               window.open("https://wa.me/8801952700500", "_blank");
                             } else if (act.action === "navigate_shop") {

@@ -74,7 +74,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
     {
       id: "welcome",
       sender: "ai",
-      text: "👋 Welcome to **DEEN AI Concierge**! I can recommend menswear outfits from our live catalog, calculate Bangladesh delivery charges, explain our 7-day doorstep size exchange, or locate our 4 retail showrooms.\n\nHow can I help you today?",
+      text: "👋 Welcome to **DEEN Assistant**! I can recommend menswear outfits from our live catalog, calculate Bangladesh delivery charges, explain our 7-day doorstep size exchange, or locate our 4 retail showrooms.\n\nHow can I help you today?",
     },
   ]);
 
@@ -161,7 +161,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
               <Sparkles size={18} color="#FFFFFF" />
             </View>
             <View>
-              <Text style={styles.title}>DEEN AI CONCIERGE</Text>
+              <Text style={styles.title}>DEEN ASSISTANT</Text>
               <Text style={styles.sub}>● RAG Knowledge & Live Catalog Active</Text>
             </View>
           </View>
@@ -262,6 +262,8 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
                           onClose?.();
                           if (act.action === "open_url" && act.payload?.url) {
                             Linking.openURL(act.payload.url);
+                          } else if (act.action === "open_messenger") {
+                            Linking.openURL("https://m.me/deencommerce");
                           } else if (act.action === "open_whatsapp") {
                             Linking.openURL("https://wa.me/8801952700500");
                           } else if (act.action === "navigate_shop") {
