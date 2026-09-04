@@ -206,42 +206,6 @@ export const AccountHeader: React.FC<AccountHeaderProps> = ({ onLoginPress, onRe
           )}
         </View>
 
-        {/* Priority 1 for Admin: Dedicated GO TO BI Button */}
-        {isAdmin && (
-          <TouchableOpacity
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "space-between",
-              backgroundColor: colors.indigo,
-              paddingVertical: 12,
-              paddingHorizontal: 16,
-              borderRadius: 10,
-              marginTop: 12,
-              shadowColor: colors.indigo,
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 6,
-              elevation: 4,
-            }}
-            activeOpacity={0.88}
-            onPress={() => router.push("/admin")}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-              <TrendingUp size={20} color="#FFFFFF" />
-              <View>
-                <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "900", letterSpacing: 0.5 }}>
-                  GO TO BI DASHBOARD
-                </Text>
-                <Text style={{ color: "rgba(255, 255, 255, 0.85)", fontSize: 10, fontWeight: "600" }}>
-                  Live Revenue, Margins & Order Operations
-                </Text>
-              </View>
-            </View>
-            <ArrowRight size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-        )}
-
         {/* Authentication Actions */}
         <View style={[styles.authActionsRow, { borderTopColor: colors.borderLight }]}>
           {isLoggedIn ? (

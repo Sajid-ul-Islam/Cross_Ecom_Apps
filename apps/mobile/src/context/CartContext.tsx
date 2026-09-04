@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CartItem, Product, DeliveryArea } from "../types";
 import { DELIVERY_FEES, fetchCashback, fetchPricing, CASHBACK_TIERS } from "../services/gateway";
+import { Analytics } from "../services/analytics";
 
 interface CartContextType {
   cart: CartItem[];
@@ -49,6 +50,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [cart, loaded]);
 
   const addToCart = (product: Product, size: string, qty = 1, variationId?: number) => {
+    Analytics.logAddToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      quantity: qty,
+      size,
+    });
     setCart((prev) => {
       const existingIdx = prev.findIndex(
         (item) => item.productId === product.id && item.size === size

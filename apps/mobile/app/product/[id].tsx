@@ -53,6 +53,7 @@ import { StoreStockModal } from "../../src/components/StoreStockModal";
 import { ProductReviewsModal } from "../../src/components/ProductReviewsModal";
 import { DenimCareGuideModal } from "../../src/components/DenimCareGuideModal";
 import { WhatsAppConciergeButton } from "../../src/components/WhatsAppConciergeButton";
+import { Analytics } from "../../src/services/analytics";
 
 const { width } = Dimensions.get("window");
 const IMAGE_HEIGHT = Math.round(width * 1.16);
@@ -106,6 +107,12 @@ export default function ProductDetailScreen() {
         if (!isMounted) return;
         if (p) {
           setProduct(p);
+          Analytics.logViewItem({
+            id: p.id,
+            name: p.name,
+            price: p.price,
+            category: p.category,
+          });
           const vars: Variation[] = p.variations ?? [];
           setVariations(vars);
           const rawSizes = vars.length > 0 ? vars.map((v) => v.size) : (p.sizes?.length ? p.sizes : ["Standard"]);

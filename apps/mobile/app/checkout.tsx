@@ -31,6 +31,7 @@ import { useRewards } from "../src/context/RewardsContext";
 import { bdt, DELIVERY_OPTIONS, createGuestSession, getGuestSession, fetchPaymentMethods, fetchCoupon, getCashbackAmount, fetchDistricts, type BdDistrict } from "../src/services/gateway";
 
 import { BD_DISTRICTS } from "../src/data/districts";
+import { Analytics } from "../src/services/analytics";
 import {
   DeliveryOptionKey,
   DeliverySlot,
@@ -238,6 +239,14 @@ export default function CheckoutScreen() {
         await redeemCoins(coinDiscountBDT * 2);
       }
       await earnCoins(total, `Order #${created.number}`);
+
+      // Dispatch Google Analytics 4 Purchase Event
+      Analytics.logPurchase({
+        id: String(created.wooNumber || created.number || created.id),
+        total: Number(created.total || total),
+        deliveryFee: deliveryFee,
+        paymentMethod: payment,
+      });
 
       clearCart();
       router.replace({

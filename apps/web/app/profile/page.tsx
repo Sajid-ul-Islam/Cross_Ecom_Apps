@@ -388,35 +388,6 @@ export default function ProfilePage() {
                 🔑 SIGN IN
               </button>
             </>
-          ) : profile.role === "admin" ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
-              <Link
-                href="/admin"
-                className="btn btn--primary"
-                style={{
-                  width: "100%",
-                  padding: "12px 16px",
-                  fontSize: 13,
-                  fontWeight: 900,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  textDecoration: "none",
-                  letterSpacing: "0.02em",
-                }}
-              >
-                📊 GO TO BI DASHBOARD →
-              </Link>
-              <button
-                type="button"
-                className="btn btn--outline"
-                style={{ width: "100%", borderColor: "var(--crimson)", color: "var(--crimson)", fontSize: 12, fontWeight: 800 }}
-                onClick={handleLogout}
-              >
-                LOG OUT
-              </button>
-            </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
               <button
