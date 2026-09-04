@@ -869,26 +869,38 @@ export interface DeenPaymentMethod {
   type: "cod" | "redirect";
 }
 
+let _cachedPaymentMethods: { data: DeenPaymentMethod[]; expiresAt: number } | null = null;
+let _cachedShippingFees: { data: ShippingFees; expiresAt: number } | null = null;
+
 /** Source of truth: real, ENABLED payment gateways from WooCommerce.
     The app MUST render exactly these — never hardcode payment options. */
 export async function fetchWooPaymentMethods(): Promise<DeenPaymentMethod[]> {
-  if (!wooHealthy()) return [];
-  const list = (await wooFetch("payment_gateways", { per_page: "50" })) as any[];
-  const out: DeenPaymentMethod[] = [];
-  for (const g of list || []) {
-    if (!g.enabled) continue;
-    const id = String(g.id || "");
-    if (!id) continue;
-    // Map known methods to a type the app understands.
-    const type: "cod" | "redirect" = id === "cod" ? "cod" : "redirect";
-    out.push({
-      id,
-      title: String(g.title || g.method_title || id),
-      description: String(g.description || ""),
-      type,
-    });
+  const now = Date.now();
+  if (_cachedPaymentMethods && _cachedPaymentMethods.expiresAt > now) {
+    return _cachedPaymentMethods.data;
   }
-  return out;
+  if (!wooHealthy()) return _cachedPaymentMethods?.data || [];
+  try {
+    const list = (await wooFetch("payment_gateways", { per_page: "50" })) as any[];
+    const out: DeenPaymentMethod[] = [];
+    for (const g of list || []) {
+      if (!g.enabled) continue;
+      const id = String(g.id || "");
+      if (!id) continue;
+      // Map known methods to a type the app understands.
+      const type: "cod" | "redirect" = id === "cod" ? "cod" : "redirect";
+      out.push({
+        id,
+        title: String(g.title || g.method_title || id),
+        description: String(g.description || ""),
+        type,
+      });
+    }
+    _cachedPaymentMethods = { data: out, expiresAt: now + 15 * 60 * 1000 };
+    return out;
+  } catch {
+    return _cachedPaymentMethods?.data || [];
+  }
 }
 
 /**
@@ -905,7 +917,11 @@ export interface ShippingFees {
 
 export async function getShippingFees(): Promise<ShippingFees> {
   const fallback: ShippingFees = { insideDhaka: 50, outsideDhaka: 90, storePickup: 0 };
-  if (!wooHealthy()) return fallback;
+  const now = Date.now();
+  if (_cachedShippingFees && _cachedShippingFees.expiresAt > now) {
+    return _cachedShippingFees.data;
+  }
+  if (!wooHealthy()) return _cachedShippingFees?.data || fallback;
   try {
     const zones = (await wooFetch("shipping/zones", { per_page: "50" })) as any[];
     let insideDhaka = fallback.insideDhaka;
@@ -920,9 +936,11 @@ export async function getShippingFees(): Promise<ShippingFees> {
       if (name.includes("inside dhaka") || name.includes("dhaka")) insideDhaka = num;
       else if (name.includes("outside")) outsideDhaka = num;
     }
-    return { insideDhaka, outsideDhaka, storePickup: 0 };
+    const result = { insideDhaka, outsideDhaka, storePickup: 0 };
+    _cachedShippingFees = { data: result, expiresAt: now + 15 * 60 * 1000 };
+    return result;
   } catch {
-    return fallback;
+    return _cachedShippingFees?.data || fallback;
   }
 }
 
@@ -1260,6 +1278,11 @@ export async function updateWooCustomer(
 
 /* -------------------- WordPress / store sourcing -------------------- */
 
+let _cachedStoreSettings: {
+  data: { address: string; city: string; postcode: string; country: string; currency: string };
+  expiresAt: number;
+} | null = null;
+
 /** Store address + basic settings from Woo (WP source of truth).
     Admin edits these in WP → app reflects them with no rebuild. */
 export async function getStoreSettings(): Promise<{
@@ -1269,10 +1292,14 @@ export async function getStoreSettings(): Promise<{
   country: string;
   currency: string;
 }> {
+  const now = Date.now();
+  if (_cachedStoreSettings && _cachedStoreSettings.expiresAt > now) {
+    return _cachedStoreSettings.data;
+  }
   try {
     const settings = (await wooFetch("settings/general")) as Array<{ id: string; value: string }>;
     const pick = (id: string) => settings.find((s) => s.id === id)?.value ?? "";
-    return {
+    const result = {
       address: [pick("woocommerce_store_address"), pick("woocommerce_store_address_2")]
         .filter(Boolean)
         .join(", "),
@@ -1281,8 +1308,10 @@ export async function getStoreSettings(): Promise<{
       country: pick("woocommerce_default_country"),
       currency: pick("woocommerce_currency") || "BDT",
     };
+    _cachedStoreSettings = { data: result, expiresAt: now + 30 * 60 * 1000 };
+    return result;
   } catch {
-    return { address: "", city: "", postcode: "", country: "BD", currency: "BDT" };
+    return _cachedStoreSettings?.data || { address: "", city: "", postcode: "", country: "BD", currency: "BDT" };
   }
 }
 

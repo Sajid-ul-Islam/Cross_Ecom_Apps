@@ -8,6 +8,7 @@ async function build() {
     logger: { level: config.logLevel },
     bodyLimit: 524_288, // 512 KB
     connectionTimeout: 10_000,
+    trustProxy: true,
   });
 
   // Align HTTP keep-alive with cloud reverse proxies / load balancers
@@ -31,7 +32,7 @@ async function build() {
       ) {
         return cb(null, true);
       }
-      return cb(null, true); // Permissive CORS for e-commerce client storefronts
+      return cb(new Error("CORS origin not allowed: " + origin), false);
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: [
@@ -129,7 +130,7 @@ function _rateLimitHook() {
     const path = req.url.split("?")[0] || "";
     if (path === "/" || path === "/health" || path.startsWith("/v1/health")) return;
 
-    const ip = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
+    const ip = req.ip || (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() || req.socket.remoteAddress || "unknown";
 
     // Tier 1: Auth routes (10 req/min/IP)
     if (path.startsWith("/v1/auth/") || path.startsWith("/v1/deen/auth/")) {
@@ -149,8 +150,18 @@ function _rateLimitHook() {
       return;
     }
 
+    // Tier 2B: AI Assistant & RAG Chat (30 req/min/IP)
+    if (path === "/v1/deen/ai/chat") {
+      const limit = 30;
+      if (!_checkRateLimit(`aichat:${ip}`, limit)) {
+        return reply.code(429).send({ error: "RATE_LIMITED", message: "Too many AI assistant messages. Please wait a moment." });
+      }
+      return;
+    }
+
     // Tier 3: General public browsing (120 req/min/IP when unauthenticated)
-    if (!req.headers["x-api-key"]) {
+    const hasValidApiKey = Boolean(config.apiKey && req.headers["x-api-key"] === config.apiKey);
+    if (!hasValidApiKey) {
       const limit = config.catalogRateLimit || 120;
       if (!_checkRateLimit(`catalog:${ip}`, limit)) {
         return reply.code(429).send({ error: "RATE_LIMITED", message: "Too many requests. Please slow down." });

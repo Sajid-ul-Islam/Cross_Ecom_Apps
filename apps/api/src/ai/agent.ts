@@ -553,10 +553,13 @@ export async function processAiCommerceQuery(
   // ------------------------------------------------------------------
   // 9. Sizing & Fit Guide (when not directly requesting product listing)
   // ------------------------------------------------------------------
+  const effectiveBudget = budget !== null ? budget : historyBudget;
+  const effectiveSize = requestedSize || historySize;
+
   const isSizeInquiry = /size|fit|waist|inches|chest|সাইজ|ফিট|কোমর|বুক|মাপ|tight|loose/i.test(lower);
   const isShoppingIntent =
     /suggest|recommend|সাজেস্ট|দেখাও|খুঁজছি|কিনতে|কালেকশন|collection|buy|shop|চাই|দাও|অ্যাভেইলেবল|available|stock|স্টক/i.test(lower) ||
-    budget !== null;
+    effectiveBudget !== null;
 
   if (isSizeInquiry && !isShoppingIntent) {
     let chosenKb = COMMERCE_KNOWLEDGE.find((k) => k.id === "kb_sizing_jeans")!;
@@ -590,7 +593,7 @@ export async function processAiCommerceQuery(
   else if (isShirt) targetCategory = "SHIRT";
   else if (isTee) targetCategory = "T-SHIRT";
 
-  if (targetCategory || isShoppingIntent || requestedSize) {
+  if (targetCategory || isShoppingIntent || effectiveSize) {
     let filtered = catalog.filter((p) => p.stockStatus !== "outofstock");
 
     // 10A. Category filter
@@ -600,17 +603,17 @@ export async function processAiCommerceQuery(
     }
 
     // 10B. Budget filter
-    if (budget) {
-      const budgetMatches = filtered.filter((p) => (p.salePrice ?? p.price) <= budget);
+    if (effectiveBudget) {
+      const budgetMatches = filtered.filter((p) => (p.salePrice ?? p.price) <= effectiveBudget);
       if (budgetMatches.length > 0) filtered = budgetMatches;
     }
 
     // 10C. Specific size availability check
     let sizeMatchedCount = 0;
-    if (requestedSize) {
+    if (effectiveSize) {
       const sizeMatches = filtered.filter((p) => {
         const sizes: string[] = p.sizes || [];
-        return sizes.some((s) => s.toUpperCase() === requestedSize.toUpperCase());
+        return sizes.some((s) => s.toUpperCase() === effectiveSize.toUpperCase());
       });
       if (sizeMatches.length > 0) {
         filtered = sizeMatches;
@@ -669,8 +672,8 @@ export async function processAiCommerceQuery(
       if (isBn) {
         reply =
           `আপনার রিকোয়েস্ট অনুযায়ী লাইভ ক্যাটালগ থেকে সেরা ${topPicks.length}টি প্রোডাক্ট উপস্থাপন করা হলো` +
-          `${requestedSize ? ` (সাইজ ${requestedSize} স্টকে উপলব্ধ ✅)` : ""}` +
-          `${budget ? ` (বাজেট ৳${budget}-এর মধ্যে)` : ""}:\n\n` +
+          `${effectiveSize ? ` (সাইজ ${effectiveSize} স্টকে উপলব্ধ ✅)` : ""}` +
+          `${effectiveBudget ? ` (বাজেট ৳${effectiveBudget}-এর মধ্যে)` : ""}:\n\n` +
           topPicks
             .map(
               (p, i) =>
@@ -685,8 +688,8 @@ export async function processAiCommerceQuery(
       } else {
         reply =
           `Here are our top recommended picks from our live catalog` +
-          `${requestedSize ? ` (Size ${requestedSize} in stock ✅)` : ""}` +
-          `${budget ? ` (under ৳${budget})` : ""}:\n\n` +
+          `${effectiveSize ? ` (Size ${effectiveSize} in stock ✅)` : ""}` +
+          `${effectiveBudget ? ` (under ৳${effectiveBudget})` : ""}:\n\n` +
           topPicks
             .map(
               (p, i) =>

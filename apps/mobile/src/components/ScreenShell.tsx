@@ -77,13 +77,84 @@ export const ScreenShell: React.FC<ScreenShellProps> = ({
       )}
 
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.indigo} />
-          {loadingMessage ? (
-            <Text style={[styles.loadingMessage, { color: colors.sub }]}>
-              {loadingMessage}
-            </Text>
-          ) : null}
+        <View style={{ flex: 1, padding: 16 }}>
+          {/* Top Banner Skeleton */}
+          <View
+            style={{
+              width: "100%",
+              height: 130,
+              backgroundColor: colors.card,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: colors.borderLight,
+              marginBottom: 16,
+              justifyContent: "center",
+              alignItems: "center",
+            }}
+          >
+            <ActivityIndicator size="small" color={colors.indigo} />
+            {loadingMessage ? (
+              <Text style={{ marginTop: 8, fontSize: 12, color: colors.sub, fontWeight: "600" }}>
+                {loadingMessage}
+              </Text>
+            ) : null}
+          </View>
+
+          {/* 2-column Grid Skeletons */}
+          <View style={{ flexDirection: "row", gap: 12, marginBottom: 12 }}>
+            <View
+              style={{
+                flex: 1,
+                height: 190,
+                backgroundColor: colors.card,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: colors.borderLight,
+                padding: 10,
+              }}
+            >
+              <View style={{ width: "100%", height: 110, backgroundColor: colors.cardSecondary, borderRadius: 8, marginBottom: 10 }} />
+              <View style={{ width: "80%", height: 14, backgroundColor: colors.cardSecondary, borderRadius: 4, marginBottom: 6 }} />
+              <View style={{ width: "40%", height: 12, backgroundColor: colors.cardSecondary, borderRadius: 4 }} />
+            </View>
+            <View
+              style={{
+                flex: 1,
+                height: 190,
+                backgroundColor: colors.card,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: colors.borderLight,
+                padding: 10,
+              }}
+            >
+              <View style={{ width: "100%", height: 110, backgroundColor: colors.cardSecondary, borderRadius: 8, marginBottom: 10 }} />
+              <View style={{ width: "70%", height: 14, backgroundColor: colors.cardSecondary, borderRadius: 4, marginBottom: 6 }} />
+              <View style={{ width: "50%", height: 12, backgroundColor: colors.cardSecondary, borderRadius: 4 }} />
+            </View>
+          </View>
+
+          {/* Bottom Card Skeleton */}
+          <View
+            style={{
+              width: "100%",
+              height: 76,
+              backgroundColor: colors.card,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: colors.borderLight,
+              padding: 12,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <View style={{ width: 52, height: 52, backgroundColor: colors.cardSecondary, borderRadius: 8 }} />
+            <View style={{ flex: 1 }}>
+              <View style={{ width: "60%", height: 14, backgroundColor: colors.cardSecondary, borderRadius: 4, marginBottom: 6 }} />
+              <View style={{ width: "40%", height: 12, backgroundColor: colors.cardSecondary, borderRadius: 4 }} />
+            </View>
+          </View>
         </View>
       ) : empty && emptyContent ? (
         emptyContent

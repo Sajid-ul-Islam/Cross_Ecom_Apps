@@ -3210,11 +3210,11 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   app.post("/v1/deen/returns", async (req, reply) => {
     const b = (req.body as any) || {};
 
-    // ── 3-Day Exchange Policy Enforcement ──
+    // ── 7-Day Doorstep Exchange Policy Enforcement ──
     // Per deencommerce.com company policy: exchange/return requests must be
-    // submitted within 3 days (72 hours) after product delivery.
+    // submitted within 7 days after product delivery.
     // Only enforce for orders that have actually been delivered.
-    const RETENTION_DAYS = 3;
+    const RETENTION_DAYS = 7;
     const RETENTION_MS = RETENTION_DAYS * 24 * 60 * 60 * 1000;
 
     const order = orders.find(
@@ -3325,8 +3325,8 @@ export async function registerDeenRoutes(app: FastifyInstance) {
         if (phone) list = list.filter((r) => r.contactPhone.includes(phone.replace(/[^0-9]/g, "")));
       } else {
         // Regular users/guests: scope to their own phone only.
-        const sessionPhone = guestSess?.phone ?? "";
-        list = list.filter((r) => r.contactPhone === sessionPhone);
+        const sessionPhone = guestSess?.phone || authSess?.phone || "";
+        list = list.filter((r) => (sessionPhone ? r.contactPhone === sessionPhone : false));
         if (orderNumber) list = list.filter((r) => r.orderNumber === orderNumber);
       }
     } else if (orderNumber) {
@@ -3567,6 +3567,10 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const fallbackEmail = String(b.email || "").trim().toLowerCase();
     const fallbackName = String(b.name || "").trim();
 
+    const isProd = process.env.NODE_ENV === "production";
+    if (isProd && !idToken) {
+      return reply.code(422).send({ success: false, message: "Google idToken is required in production." });
+    }
     if (!idToken && !fallbackEmail) {
       return reply.code(422).send({ success: false, message: "Google idToken or email is required." });
     }
@@ -3653,6 +3657,10 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const fallbackEmail = String(b.email || "").trim().toLowerCase();
     const fallbackName = String(b.name || "").trim();
 
+    const isProd = process.env.NODE_ENV === "production";
+    if (isProd && !accessToken) {
+      return reply.code(422).send({ success: false, message: "Facebook accessToken is required in production." });
+    }
     if (!accessToken && !fallbackEmail) {
       return reply.code(422).send({ success: false, message: "Facebook accessToken or email is required." });
     }
@@ -3782,6 +3790,13 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const b = (req.body as any) || {};
     const token = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
     const session = token ? resolveAuthSession(token) : null;
+
+    if (!session) {
+      return reply.code(401).send({
+        success: false,
+        message: "Authentication required to change password. Please log in first.",
+      });
+    }
 
     const identifier = String(b.identifier || b.username || b.phone || session?.username || "").trim();
     const currentPassword = String(b.currentPassword || b.oldPassword || "").trim();

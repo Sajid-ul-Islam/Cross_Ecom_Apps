@@ -19,7 +19,7 @@ import {
   type BdDistrict,
   type AuthResult,
 } from "@/lib/api";
-import { BD_DISTRICTS } from "@/lib/districts";
+import { BD_DISTRICTS, getDistrictPostcode } from "@/lib/districts";
 import BankOffersModal from "@/components/BankOffersModal";
 import SocialAuthModal from "@/components/SocialAuthModal";
 
@@ -410,7 +410,7 @@ function CheckoutContent() {
         city: selectedArea === "store_pickup" ? "Dhaka" : isGift ? (giftCity.trim() || giftDistrict.name) : (city.trim() || district.name),
         district: isGift ? giftDistrict.code : district.code,
         state: isGift ? giftDistrict.code : district.code,
-        postcode: "1200",
+        postcode: getDistrictPostcode(isGift ? giftDistrict.code : district.code),
         area: selectedArea,
         payment,
         trxId: trxId.trim() || undefined,
