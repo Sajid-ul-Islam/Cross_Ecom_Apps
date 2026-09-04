@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { BD_DISTRICTS } from "@/lib/districts";
 import { API_URL, fetchOrders, fetchDistricts, loginCustomer, registerCustomer, loginWithGoogle, loginWithFacebook, fetchOutlets, fetchAppSettings, changePassword, updateCustomerProfile, DEFAULT_OUTLETS, type OrderResult, type BdDistrict, type Outlet, type AuthResult } from "@/lib/api";
 import SocialAuthModal from "@/components/SocialAuthModal";
@@ -36,11 +37,13 @@ const DEFAULT_PROFILE: UserProfile = {
 };
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
   const [orders, setOrders] = useState<OrderResult[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [savedMessage, setSavedMessage] = useState("");
   const [districts, setDistricts] = useState<BdDistrict[]>(BD_DISTRICTS);
+  const [showAdminShipping, setShowAdminShipping] = useState(false);
 
   // Auth modal
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -188,11 +191,20 @@ export default function ProfilePage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token: data.token, profile: updated }),
         }).catch(() => {});
-        setAuthNotice({ type: "success", text: `Welcome back, ${updated.name}!` });
-        setTimeout(() => {
-          setAuthSubmitting(false);
-          setAuthModalOpen(false);
-        }, 600);
+        if (role === "admin") {
+          setAuthNotice({ type: "success", text: "👑 Welcome back, Store Administrator! Opening BI Control Room..." });
+          setTimeout(() => {
+            setAuthSubmitting(false);
+            setAuthModalOpen(false);
+            router.push("/admin");
+          }, 400);
+        } else {
+          setAuthNotice({ type: "success", text: `Welcome back, ${updated.name}!` });
+          setTimeout(() => {
+            setAuthSubmitting(false);
+            setAuthModalOpen(false);
+          }, 600);
+        }
       } else {
         setAuthSubmitting(false);
         setAuthNotice({ type: "error", text: data.message || "Invalid credentials. Please try again." });
@@ -310,20 +322,41 @@ export default function ProfilePage() {
 
         {/* Quick Stats Bar */}
         <div className="profile-stats-bar">
-          <Link href="/orders" className="profile-stat-item">
-            <span className="profile-stat-val">📦 {orders.length}</span>
-            <span className="profile-stat-lbl">Orders</span>
-          </Link>
-          <div className="profile-stat-divider" />
-          <div className="profile-stat-item">
-            <span className="profile-stat-val">📍 {profile.city || "Dhaka"}</span>
-            <span className="profile-stat-lbl">District</span>
-          </div>
-          <div className="profile-stat-divider" />
-          <Link href="/shop" className="profile-stat-item">
-            <span className="profile-stat-val">⚡ Fast</span>
-            <span className="profile-stat-lbl">1-Tap Checkout</span>
-          </Link>
+          {profile.role === "admin" ? (
+            <>
+              <Link href="/admin" className="profile-stat-item">
+                <span className="profile-stat-val">📊 Control</span>
+                <span className="profile-stat-lbl">BI Hub</span>
+              </Link>
+              <div className="profile-stat-divider" />
+              <div className="profile-stat-item">
+                <span className="profile-stat-val">👑 Store Admin</span>
+                <span className="profile-stat-lbl">Full Privileges</span>
+              </div>
+              <div className="profile-stat-divider" />
+              <Link href="/admin" className="profile-stat-item">
+                <span className="profile-stat-val">● Live</span>
+                <span className="profile-stat-lbl">Analytics</span>
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link href="/orders" className="profile-stat-item">
+                <span className="profile-stat-val">📦 {orders.length}</span>
+                <span className="profile-stat-lbl">Orders</span>
+              </Link>
+              <div className="profile-stat-divider" />
+              <div className="profile-stat-item">
+                <span className="profile-stat-val">📍 {profile.city || "Dhaka"}</span>
+                <span className="profile-stat-lbl">District</span>
+              </div>
+              <div className="profile-stat-divider" />
+              <Link href="/shop" className="profile-stat-item">
+                <span className="profile-stat-val">⚡ Fast</span>
+                <span className="profile-stat-lbl">1-Tap Checkout</span>
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Auth CTA Buttons */}
@@ -355,6 +388,35 @@ export default function ProfilePage() {
                 🔑 SIGN IN
               </button>
             </>
+          ) : profile.role === "admin" ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
+              <Link
+                href="/admin"
+                className="btn btn--primary"
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  fontSize: 13,
+                  fontWeight: 900,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  textDecoration: "none",
+                  letterSpacing: "0.02em",
+                }}
+              >
+                📊 GO TO BI DASHBOARD →
+              </Link>
+              <button
+                type="button"
+                className="btn btn--outline"
+                style={{ width: "100%", borderColor: "var(--crimson)", color: "var(--crimson)", fontSize: 12, fontWeight: 800 }}
+                onClick={handleLogout}
+              >
+                LOG OUT
+              </button>
+            </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%" }}>
               <button
@@ -369,6 +431,117 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
+
+      {/* Priority 1 for Admin: Executive BI Control Hub */}
+      {profile.role === "admin" && (
+        <div
+          className="profile-section-card"
+          style={{
+            borderColor: "var(--indigo)",
+            borderWidth: 2,
+            boxShadow: "0 4px 16px rgba(79, 70, 229, 0.12)",
+            marginBottom: 20,
+          }}
+        >
+          <div className="profile-section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  background: "rgba(99, 102, 241, 0.12)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 18,
+                }}
+              >
+                📊
+              </div>
+              <div>
+                <h3 className="profile-section-title" style={{ margin: 0, color: "var(--indigo)" }}>
+                  BUSINESS INTELLIGENCE (BI) COMMAND HUB
+                </h3>
+                <p style={{ margin: 0, fontSize: 11, color: "var(--text-sub)", fontWeight: 600 }}>
+                  Store Operations, Executive Margins & Real-Time Analytics
+                </p>
+              </div>
+            </div>
+            <span
+              style={{
+                background: "rgba(16, 185, 129, 0.15)",
+                color: "var(--emerald)",
+                fontSize: 11,
+                fontWeight: 800,
+                padding: "4px 8px",
+                borderRadius: 6,
+              }}
+            >
+              ● LIVE BI
+            </span>
+          </div>
+
+          <p style={{ fontSize: 13, color: "var(--text-sub)", lineHeight: 1.5, margin: "12px 0 16px" }}>
+            Real-time tracking of net revenues, gross margins, return intelligence, and Pathao logistics dispatch.
+          </p>
+
+          <Link
+            href="/admin"
+            className="btn btn--primary"
+            style={{
+              width: "100%",
+              padding: "13px 18px",
+              fontSize: 13,
+              fontWeight: 900,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              textDecoration: "none",
+              letterSpacing: "0.03em",
+              marginBottom: 10,
+            }}
+          >
+            OPEN DEDICATED BI PAGE →
+          </Link>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <Link
+              href="/admin"
+              className="btn btn--secondary"
+              style={{
+                padding: "10px 12px",
+                fontSize: 12,
+                fontWeight: 800,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                textDecoration: "none",
+                textAlign: "center",
+              }}
+            >
+              📈 Live Financials
+            </Link>
+            <Link
+              href="/orders"
+              className="btn btn--secondary"
+              style={{
+                padding: "10px 12px",
+                fontSize: 12,
+                fontWeight: 800,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                textDecoration: "none",
+                textAlign: "center",
+              }}
+            >
+              🚚 Orders & Logistics
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* 2. Recent Orders & Live Pathao Tracking */}
       <div className="profile-section-card">
@@ -414,19 +587,57 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* 3. Contact & Delivery Address Form */}
-      <form onSubmit={handleSave} className="profile-section-card">
-        <div className="profile-section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h3 className="profile-section-title">👤 CONTACT & DEFAULT DELIVERY ADDRESS</h3>
-          <button
-            type="button"
-            className="btn btn--secondary"
-            style={{ padding: "6px 14px", fontSize: 11, fontWeight: 800 }}
-            onClick={() => setEditingContact(!editingContact)}
+      {/* 3. Contact & Delivery Address Form (Secondary / Collapsible for Admin) */}
+      <div className="profile-section-card">
+        {profile.role === "admin" ? (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              cursor: "pointer",
+              paddingBottom: showAdminShipping ? 14 : 0,
+              borderBottom: showAdminShipping ? "1px solid var(--border-light)" : "none",
+            }}
+            onClick={() => setShowAdminShipping(!showAdminShipping)}
           >
-            {editingContact ? "✕ CANCEL" : "✏️ EDIT INFO"}
-          </button>
-        </div>
+            <div>
+              <h3 className="profile-section-title" style={{ margin: 0, fontSize: 13, color: "var(--text-sub)" }}>
+                📦 PERSONAL DELIVERY & SHIPPING ADDRESS
+              </h3>
+              <p style={{ margin: "3px 0 0", fontSize: 11, color: "var(--text-faint)" }}>
+                {showAdminShipping ? "Click to collapse personal shipping info" : "Secondary for store administrators (Click to expand)"}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn btn--outline"
+              style={{ padding: "4px 10px", fontSize: 12, fontWeight: 800 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowAdminShipping(!showAdminShipping);
+              }}
+            >
+              {showAdminShipping ? "− HIDE" : "+ EXPAND"}
+            </button>
+          </div>
+        ) : null}
+
+        {(!profile.role || profile.role !== "admin" || showAdminShipping) && (
+          <form onSubmit={handleSave} style={{ marginTop: profile.role === "admin" ? 14 : 0 }}>
+            <div className="profile-section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 className="profile-section-title">
+                {profile.role === "admin" ? "⚙️ PERSONAL ADDRESS & CONTACT" : "👤 CONTACT & DEFAULT DELIVERY ADDRESS"}
+              </h3>
+              <button
+                type="button"
+                className="btn btn--secondary"
+                style={{ padding: "6px 14px", fontSize: 11, fontWeight: 800 }}
+                onClick={() => setEditingContact(!editingContact)}
+              >
+                {editingContact ? "✕ CANCEL" : "✏️ EDIT INFO"}
+              </button>
+            </div>
 
         {!editingContact ? (
           <div style={{ display: "grid", gap: "12px", marginTop: 8 }}>
@@ -594,6 +805,8 @@ export default function ProfilePage() {
           </>
         )}
       </form>
+    )}
+  </div>
 
       {/* 4.5. Account Security & Password Management */}
       <div className="profile-section-card" style={{ marginTop: 24 }}>
@@ -812,11 +1025,12 @@ export default function ProfilePage() {
                           localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
                           if (data.token) localStorage.setItem("deen_web_guest_token", data.token);
                           if (typeof window !== "undefined") window.dispatchEvent(new Event("deen_profile_updated"));
-                          setAuthNotice({ type: "success", text: "Logged in as Store Administrator!" });
+                          setAuthNotice({ type: "success", text: "👑 Welcome back, Store Administrator! Opening BI Control Room..." });
                           setTimeout(() => {
                             setAuthSubmitting(false);
                             setAuthModalOpen(false);
-                          }, 500);
+                            router.push("/admin");
+                          }, 400);
                         } else {
                           setAuthSubmitting(false);
                           setAuthNotice({ type: "error", text: data.message || "Admin login failed." });

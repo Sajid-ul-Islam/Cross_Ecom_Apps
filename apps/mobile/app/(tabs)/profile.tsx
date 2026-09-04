@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { useRouter } from "expo-router";
 
-import { Save, RotateCcw, AlertCircle } from "../../src/components/Icons";
+import { Save, RotateCcw, AlertCircle, TrendingUp, ArrowRight } from "../../src/components/Icons";
 import { ScreenShell } from "../../src/components/ScreenShell";
 import { ThemeColors } from "../../src/theme/colors";
 import { sharedStyles } from "../../src/theme/sharedStyles";
@@ -89,6 +89,7 @@ export default function ProfileScreen() {
   const [pushPromos, setPushPromos] = useState(profile?.pushPromos ?? false);
   const [savedMessage, setSavedMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [showAdminShipping, setShowAdminShipping] = useState(false);
 
   // Modal visibility
   const [broadcastModalVisible, setBroadcastModalVisible] = useState(false);
@@ -201,7 +202,124 @@ export default function ProfileScreen() {
             }}
           />
 
-          {/* 2. My Orders & Live Pathao Tracking Hub */}
+          {/* Priority 1 for Admin: Executive BI Control Hub */}
+          {isAdmin && (
+            <View
+              style={{
+                backgroundColor: colors.card,
+                borderRadius: 14,
+                borderWidth: 1.5,
+                borderColor: colors.indigo,
+                padding: 16,
+                marginBottom: 16,
+                shadowColor: colors.indigo,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.18,
+                shadowRadius: 8,
+                elevation: 3,
+              }}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <View
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 16,
+                      backgroundColor: colors.indigoLight,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <TrendingUp size={18} color={colors.indigo} />
+                  </View>
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: "900", color: colors.ink, letterSpacing: 0.5 }}>
+                      BUSINESS INTELLIGENCE (BI)
+                    </Text>
+                    <Text style={{ fontSize: 10, color: colors.sub, fontWeight: "700" }}>
+                      Executive Operations & Real-Time Analytics
+                    </Text>
+                  </View>
+                </View>
+                <View
+                  style={{
+                    backgroundColor: "rgba(16, 185, 129, 0.15)",
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                    borderRadius: 6,
+                  }}
+                >
+                  <Text style={{ fontSize: 9.5, fontWeight: "900", color: colors.emerald }}>
+                    ● LIVE BI
+                  </Text>
+                </View>
+              </View>
+
+              <Text style={{ fontSize: 12, color: colors.sub, lineHeight: 18, marginBottom: 14 }}>
+                Real-time tracking of net revenues, gross margins, return intelligence, and Pathao logistics dispatch.
+              </Text>
+
+              {/* Primary BI Action */}
+              <TouchableOpacity
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  backgroundColor: colors.indigo,
+                  paddingVertical: 12,
+                  borderRadius: 8,
+                  marginBottom: 10,
+                }}
+                activeOpacity={0.88}
+                onPress={() => router.push("/admin")}
+              >
+                <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "900", letterSpacing: 0.5 }}>
+                  OPEN DEDICATED BI PAGE →
+                </Text>
+              </TouchableOpacity>
+
+              {/* Admin Shortcuts Grid */}
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: colors.cardSecondary,
+                    paddingVertical: 10,
+                    borderRadius: 8,
+                    alignItems: "center",
+                    borderWidth: 1,
+                    borderColor: colors.borderLight,
+                  }}
+                  onPress={() => setCustomersModalVisible(true)}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: "800", color: colors.ink }}>
+                    👥 Customers
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: colors.cardSecondary,
+                    paddingVertical: 10,
+                    borderRadius: 8,
+                    alignItems: "center",
+                    borderWidth: 1,
+                    borderColor: colors.borderLight,
+                  }}
+                  onPress={() => setBroadcastModalVisible(true)}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: "800", color: colors.ink }}>
+                    📢 Push Alert
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* 2. My Orders & Live Pathao Tracking Hub (De-emphasized if admin) */}
           <RecentOrderPreview
             onTrackingPress={(order) => {
               setSelectedOrderForTracking(order);
@@ -209,24 +327,76 @@ export default function ProfileScreen() {
             }}
           />
 
-          {/* 3. Customer Details & Delivery Address Management */}
-          <ContactDetailsForm
-            name={name}
-            phone={phone}
-            email={email}
-            address={address}
-            city={city}
-            district={district}
-            onNameChange={setName}
-            onPhoneChange={setPhone}
-            onEmailChange={setEmail}
-            onAddressChange={setAddress}
-            onCityChange={setCity}
-            onDistrictChange={setDistrict}
-            onSaveProfile={handleSave}
-            onAddAddress={addSavedAddress}
-            onRemoveAddress={removeSavedAddress}
-          />
+          {/* 3. Customer Details & Delivery Address (Secondary/Collapsed for Admin) */}
+          {isAdmin ? (
+            <View
+              style={{
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                borderWidth: 1,
+                borderRadius: 14,
+                marginBottom: 16,
+                padding: 16,
+              }}
+            >
+              <TouchableOpacity
+                style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}
+                onPress={() => setShowAdminShipping(!showAdminShipping)}
+                activeOpacity={0.8}
+              >
+                <View>
+                  <Text style={{ fontSize: 12, fontWeight: "800", color: colors.sub, letterSpacing: 0.5 }}>
+                    📦 PERSONAL DELIVERY & SHIPPING ADDRESS
+                  </Text>
+                  <Text style={{ fontSize: 11, color: colors.faint, marginTop: 2 }}>
+                    {showAdminShipping ? "Tap to hide personal shipping info" : "Secondary for store administrators (Tap to expand)"}
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 18, fontWeight: "900", color: colors.indigo }}>
+                  {showAdminShipping ? "−" : "+"}
+                </Text>
+              </TouchableOpacity>
+              {showAdminShipping && (
+                <View style={{ marginTop: 14 }}>
+                  <ContactDetailsForm
+                    name={name}
+                    phone={phone}
+                    email={email}
+                    address={address}
+                    city={city}
+                    district={district}
+                    onNameChange={setName}
+                    onPhoneChange={setPhone}
+                    onEmailChange={setEmail}
+                    onAddressChange={setAddress}
+                    onCityChange={setCity}
+                    onDistrictChange={setDistrict}
+                    onSaveProfile={handleSave}
+                    onAddAddress={addSavedAddress}
+                    onRemoveAddress={removeSavedAddress}
+                  />
+                </View>
+              )}
+            </View>
+          ) : (
+            <ContactDetailsForm
+              name={name}
+              phone={phone}
+              email={email}
+              address={address}
+              city={city}
+              district={district}
+              onNameChange={setName}
+              onPhoneChange={setPhone}
+              onEmailChange={setEmail}
+              onAddressChange={setAddress}
+              onCityChange={setCity}
+              onDistrictChange={setDistrict}
+              onSaveProfile={handleSave}
+              onAddAddress={addSavedAddress}
+              onRemoveAddress={removeSavedAddress}
+            />
+          )}
 
           {/* 4. Saved Sizing Profile */}
           <SizingPreferences
@@ -280,6 +450,13 @@ export default function ProfileScreen() {
             visible={loginModalVisible}
             initialMode={authModalMode}
             onClose={() => setLoginModalVisible(false)}
+            onSuccess={(role) => {
+              setLoginModalVisible(false);
+              showToast("✓ Authenticated successfully!");
+              if (role === "admin" || profile?.role === "admin") {
+                router.push("/admin");
+              }
+            }}
           />
         )}
 

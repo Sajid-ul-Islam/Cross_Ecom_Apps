@@ -56,8 +56,8 @@ interface ProfileContextType {
   registerCustomer: (data: { name: string; phone: string; email?: string; password?: string; address?: string; district?: string; city?: string }) => Promise<void>;
   addSavedAddress: (addr: Omit<SavedAddress, "id">) => Promise<void>;
   removeSavedAddress: (id: string) => Promise<void>;
-  login: (username: string, password: string) => Promise<{ success: boolean; message?: string }>;
-  loginAsAdmin: (passcode?: string) => Promise<{ success: boolean; message?: string }>;
+  login: (username: string, password: string) => Promise<{ success: boolean; message?: string; role?: string }>;
+  loginAsAdmin: (passcode?: string) => Promise<{ success: boolean; message?: string; role?: string }>;
   loginWithGoogle: (idToken?: string, email?: string, name?: string) => Promise<{ success: boolean; message?: string }>;
   loginWithFacebook: (accessToken?: string, email?: string, name?: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
@@ -171,8 +171,9 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         accountType: me.accountType,
         isGuest: false,
       });
+      return { success: true, message: res.message, role: me.role };
     }
-    return { success: res.success, message: res.message };
+    return { success: res.success, message: res.message, role: undefined };
   };
 
   const loginAsAdmin = async (passcode: string = "admin") => {

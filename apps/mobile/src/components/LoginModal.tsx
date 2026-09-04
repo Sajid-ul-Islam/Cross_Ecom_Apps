@@ -13,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { useRouter } from "expo-router";
 import {
   X,
   Lock,
@@ -37,7 +38,7 @@ const { width, height } = Dimensions.get("window");
 interface LoginModalProps {
   visible: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (role?: string) => void;
   initialMode?: "signin" | "signup";
 }
 
@@ -48,6 +49,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   initialMode = "signin",
 }) => {
   if (!visible) return null;
+  const router = useRouter();
   const { colors, isDark } = useTheme();
   const { login, loginAsAdmin, loginWithGoogle, loginWithFacebook, registerCustomer, profile } = useProfile();
   const styles = createStyles(colors);
@@ -144,12 +146,21 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     try {
       const res = await login(username, password);
       if (res.success) {
-        setNotice({ type: "success", text: `Welcome back, ${username.trim()}!` });
+        const isAdminUser = res.role === "admin" || username.trim().toLowerCase() === "admin";
+        setNotice({
+          type: "success",
+          text: isAdminUser
+            ? "👑 Logged in as Store Administrator! Opening BI Dashboard..."
+            : `Welcome back, ${username.trim()}!`,
+        });
         setTimeout(() => {
           setSubmitting(false);
           onClose();
-          if (onSuccess) onSuccess();
-        }, 600);
+          if (onSuccess) onSuccess(isAdminUser ? "admin" : "customer");
+          if (isAdminUser) {
+            router.push("/admin");
+          }
+        }, 500);
       } else {
         setSubmitting(false);
         setNotice({ type: "error", text: res.message || "Invalid credentials. Please verify and try again." });
@@ -463,11 +474,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                       try {
                         const res = await loginAsAdmin("admin");
                         if (res.success) {
-                          setNotice({ type: "success", text: "Logged in as Store Administrator!" });
+                          setNotice({ type: "success", text: "👑 Logged in as Store Administrator! Opening BI Dashboard..." });
                           setTimeout(() => {
                             setSubmitting(false);
                             onClose();
-                            if (onSuccess) onSuccess();
+                            if (onSuccess) onSuccess("admin");
+                            router.push("/admin");
                           }, 500);
                         } else {
                           setSubmitting(false);

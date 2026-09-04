@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import { LogOut, CheckCircle2, Key, Sparkles, Package, Heart, MapPin, User } from "../Icons";
+import { LogOut, CheckCircle2, Key, Sparkles, Package, Heart, MapPin, User, TrendingUp, ArrowRight } from "../Icons";
 import { ThemeColors } from "../../theme/colors";
 import { sharedStyles } from "../../theme/sharedStyles";
 import { useTheme } from "../../context/ThemeContext";
@@ -126,44 +126,121 @@ export const AccountHeader: React.FC<AccountHeaderProps> = ({ onLoginPress, onRe
 
         {/* Quick Stats Bar */}
         <View style={[styles.statsRow, { backgroundColor: colors.paper, borderColor: colors.borderLight }]}>
-          <TouchableOpacity
-            style={styles.statItem}
-            activeOpacity={0.75}
-            onPress={() => router.push("/(tabs)/orders")}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Package size={14} color={colors.indigo} />
-              <Text style={[styles.statValue, { color: colors.ink }]}>{orders?.length || 0}</Text>
-            </View>
-            <Text style={[styles.statLabel, { color: colors.sub }]}>Orders</Text>
-          </TouchableOpacity>
+          {isAdmin ? (
+            <>
+              <TouchableOpacity
+                style={styles.statItem}
+                activeOpacity={0.75}
+                onPress={() => router.push("/admin")}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <TrendingUp size={14} color={colors.indigo} />
+                  <Text style={[styles.statValue, { color: colors.indigo }]}>Control</Text>
+                </View>
+                <Text style={[styles.statLabel, { color: colors.sub }]}>BI Hub</Text>
+              </TouchableOpacity>
 
-          <View style={[styles.statDivider, { backgroundColor: colors.borderLight }]} />
+              <View style={[styles.statDivider, { backgroundColor: colors.borderLight }]} />
 
-          <View style={styles.statItem}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <MapPin size={14} color={colors.emerald} />
-              <Text style={[styles.statValue, { color: colors.ink }]}>
-                {profile?.city || "Dhaka"}
-              </Text>
-            </View>
-            <Text style={[styles.statLabel, { color: colors.sub }]}>District</Text>
-          </View>
+              <View style={styles.statItem}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <Text style={[styles.statValue, { color: colors.amber }]}>Admin</Text>
+                </View>
+                <Text style={[styles.statLabel, { color: colors.sub }]}>Privileges</Text>
+              </View>
 
-          <View style={[styles.statDivider, { backgroundColor: colors.borderLight }]} />
+              <View style={[styles.statDivider, { backgroundColor: colors.borderLight }]} />
 
-          <TouchableOpacity
-            style={styles.statItem}
-            activeOpacity={0.75}
-            onPress={() => router.push("/(tabs)/shop")}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Heart size={14} color={colors.crimson} />
-              <Text style={[styles.statValue, { color: colors.ink }]}>{wishlist?.length || 0}</Text>
-            </View>
-            <Text style={[styles.statLabel, { color: colors.sub }]}>Saved</Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.statItem}
+                activeOpacity={0.75}
+                onPress={() => router.push("/admin")}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <Package size={14} color={colors.emerald} />
+                  <Text style={[styles.statValue, { color: colors.emerald }]}>Live</Text>
+                </View>
+                <Text style={[styles.statLabel, { color: colors.sub }]}>Analytics</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={styles.statItem}
+                activeOpacity={0.75}
+                onPress={() => router.push("/(tabs)/orders")}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <Package size={14} color={colors.indigo} />
+                  <Text style={[styles.statValue, { color: colors.ink }]}>{orders?.length || 0}</Text>
+                </View>
+                <Text style={[styles.statLabel, { color: colors.sub }]}>Orders</Text>
+              </TouchableOpacity>
+
+              <View style={[styles.statDivider, { backgroundColor: colors.borderLight }]} />
+
+              <View style={styles.statItem}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <MapPin size={14} color={colors.emerald} />
+                  <Text style={[styles.statValue, { color: colors.ink }]}>
+                    {profile?.city || "Dhaka"}
+                  </Text>
+                </View>
+                <Text style={[styles.statLabel, { color: colors.sub }]}>District</Text>
+              </View>
+
+              <View style={[styles.statDivider, { backgroundColor: colors.borderLight }]} />
+
+              <TouchableOpacity
+                style={styles.statItem}
+                activeOpacity={0.75}
+                onPress={() => router.push("/(tabs)/shop")}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <Heart size={14} color={colors.crimson} />
+                  <Text style={[styles.statValue, { color: colors.ink }]}>{wishlist?.length || 0}</Text>
+                </View>
+                <Text style={[styles.statLabel, { color: colors.sub }]}>Saved</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
+
+        {/* Priority 1 for Admin: Dedicated GO TO BI Button */}
+        {isAdmin && (
+          <TouchableOpacity
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              backgroundColor: colors.indigo,
+              paddingVertical: 12,
+              paddingHorizontal: 16,
+              borderRadius: 10,
+              marginTop: 12,
+              shadowColor: colors.indigo,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 6,
+              elevation: 4,
+            }}
+            activeOpacity={0.88}
+            onPress={() => router.push("/admin")}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <TrendingUp size={20} color="#FFFFFF" />
+              <View>
+                <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "900", letterSpacing: 0.5 }}>
+                  GO TO BI DASHBOARD
+                </Text>
+                <Text style={{ color: "rgba(255, 255, 255, 0.85)", fontSize: 10, fontWeight: "600" }}>
+                  Live Revenue, Margins & Order Operations
+                </Text>
+              </View>
+            </View>
+            <ArrowRight size={18} color="#FFFFFF" />
+          </TouchableOpacity>
+        )}
 
         {/* Authentication Actions */}
         <View style={[styles.authActionsRow, { borderTopColor: colors.borderLight }]}>
