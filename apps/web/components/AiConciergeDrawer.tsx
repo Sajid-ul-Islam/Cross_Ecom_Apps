@@ -279,21 +279,72 @@ export default function AiConciergeDrawer() {
                   </span>
                 </div>
               </div>
-              <button
-                type="button"
-                aria-label="Close DEEN Assistant"
-                onClick={() => setIsOpen(false)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  fontSize: 20,
-                  color: "var(--sub)",
-                  cursor: "pointer",
-                  padding: 4,
-                }}
-              >
-                ✕
-              </button>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <a
+                  href="https://wa.me/8801952700500"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Direct WhatsApp Support"
+                  title="Direct WhatsApp Support"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    padding: "5px 10px",
+                    borderRadius: 16,
+                    background: "rgba(37, 211, 102, 0.12)",
+                    border: "1px solid rgba(37, 211, 102, 0.35)",
+                    color: "#25D366",
+                    fontSize: 11.5,
+                    fontWeight: 800,
+                    textDecoration: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  <span>💬</span> WhatsApp
+                </a>
+
+                <a
+                  href="https://m.me/deencommerce"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Direct Facebook Messenger Support"
+                  title="Direct Facebook Messenger Support"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    padding: "5px 10px",
+                    borderRadius: 16,
+                    background: "rgba(0, 132, 255, 0.12)",
+                    border: "1px solid rgba(0, 132, 255, 0.35)",
+                    color: "#0084FF",
+                    fontSize: 11.5,
+                    fontWeight: 800,
+                    textDecoration: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  <span>⚡</span> Messenger
+                </a>
+
+                <button
+                  type="button"
+                  aria-label="Close DEEN Assistant"
+                  onClick={() => setIsOpen(false)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    fontSize: 20,
+                    color: "var(--sub)",
+                    cursor: "pointer",
+                    padding: 4,
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
             {/* Chat Body */}

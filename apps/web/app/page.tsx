@@ -353,7 +353,7 @@ export default async function HomePage() {
               flex-wrap: nowrap;
               gap: 18px;
               width: max-content;
-              animation: bestSellerMarquee 70s linear infinite;
+              animation: bestSellerMarquee 120s linear infinite;
             }
             .bestseller-slider-track:hover {
               animation-play-state: paused;
@@ -369,7 +369,7 @@ export default async function HomePage() {
                 width: 185px;
               }
               .bestseller-slider-track {
-                animation-duration: 52s;
+                animation-duration: 110s;
                 gap: 12px;
               }
             }

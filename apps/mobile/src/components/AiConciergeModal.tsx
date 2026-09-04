@@ -153,19 +153,40 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
 
   const content = (
     <View style={isEmbedded ? styles.sheetEmbedded : styles.sheet}>
-      {/* Header */}
-      {!isEmbedded && (
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View style={styles.aiAvatar}>
-              <Sparkles size={18} color="#FFFFFF" />
-            </View>
-            <View>
-              <Text style={styles.title}>DEEN ASSISTANT</Text>
-              <Text style={styles.sub}>● RAG Knowledge & Live Catalog Active</Text>
-            </View>
+      {/* Header with DEEN Assistant, WhatsApp and Messenger buttons */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <View style={styles.aiAvatar}>
+            <Sparkles size={18} color="#FFFFFF" />
           </View>
-          {onClose && (
+          <View>
+            <Text style={styles.title}>DEEN ASSISTANT</Text>
+            <Text style={styles.sub}>● Live Assistant</Text>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <TouchableOpacity
+            style={styles.headerContactBtn}
+            onPress={() => Linking.openURL("https://wa.me/8801952700500")}
+            accessibilityRole="button"
+            accessibilityLabel="Direct WhatsApp Support"
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            <Text style={{ fontSize: 11, fontWeight: "800", color: "#25D366" }}>💬 WA</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.headerContactBtn, { backgroundColor: "rgba(0, 132, 255, 0.12)", borderColor: "rgba(0, 132, 255, 0.35)" }]}
+            onPress={() => Linking.openURL("https://m.me/deencommerce")}
+            accessibilityRole="button"
+            accessibilityLabel="Direct Facebook Messenger Support"
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            <Text style={{ fontSize: 11, fontWeight: "800", color: "#0084FF" }}>⚡ MSG</Text>
+          </TouchableOpacity>
+
+          {!isEmbedded && onClose && (
             <TouchableOpacity
               style={styles.closeBtn}
               onPress={onClose}
@@ -177,7 +198,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
             </TouchableOpacity>
           )}
         </View>
-      )}
+      </View>
 
           {/* Messages Scroll Area */}
           <ScrollView
@@ -417,6 +438,16 @@ function createStyles(colors: ThemeColors) {
       fontWeight: "700",
       color: colors.emerald,
       marginTop: 2,
+    },
+    headerContactBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
+      backgroundColor: "rgba(37, 211, 102, 0.12)",
+      borderWidth: 1,
+      borderColor: "rgba(37, 211, 102, 0.35)",
     },
     closeBtn: {
       padding: 6,

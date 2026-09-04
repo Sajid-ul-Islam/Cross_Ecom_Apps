@@ -118,9 +118,9 @@ export default function HomeScreen() {
     const cardWidth = Math.round(width * 0.46) + 12;
     const halfTotal = cardWidth * bestDeals.length; // midpoint = 1 full copy
 
-    // Smooth ticker: advance 1 px every 20 ms ≈ 50 px / s (slow & glide-like)
+    // Smooth ticker: advance 1 px every 45 ms ≈ 22 px / s (gentle & slow glide)
     const STEP = 1;
-    const INTERVAL_MS = 20;
+    const INTERVAL_MS = 45;
 
     const timer = setInterval(() => {
       if (isUserScrollingBestSellers.current) return;
@@ -140,13 +140,13 @@ export default function HomeScreen() {
     return () => clearInterval(timer);
   }, [bestDeals.length, width]);
 
-  // Category marquee: smooth pixel ticker at ~40 px/s, seamless by doubling the list
+  // Category marquee: gentle pixel ticker at ~20 px/s, seamless by doubling the list
   useEffect(() => {
     if (categories.length <= 1) return;
     const CAT_CARD_W = 130 + 12; // card width + gap
     const halfTotal = CAT_CARD_W * categories.length;
     const STEP = 1;
-    const INTERVAL_MS = 25; // 40 px/s — slightly slower than best sellers
+    const INTERVAL_MS = 50; // 20 px/s — slow and gentle glide
 
     const timer = setInterval(() => {
       if (isUserScrollingCat.current) return;
