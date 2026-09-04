@@ -9,8 +9,6 @@ import SearchModal from "@/components/SearchModal";
 import NotificationModal from "@/components/NotificationModal";
 import BankOffersModal from "@/components/BankOffersModal";
 import WishlistModal from "@/components/WishlistModal";
-import { getCurrentFestival, type FestivalTheme } from "@/lib/festivals";
-import { fetchCampaigns } from "@/lib/api";
 
 export default function Header() {
   const pathname = usePathname();
@@ -22,7 +20,6 @@ export default function Header() {
   const [bankOffersOpen, setBankOffersOpen] = useState(false);
   const [wishlistOpen, setWishlistOpen] = useState(false);
   const [profile, setProfile] = useState<{ role?: string; isGuest?: boolean; name?: string } | null>(null);
-  const [festival, setFestival] = useState<FestivalTheme | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("deen_theme");
@@ -43,16 +40,6 @@ export default function Header() {
     readProfile();
     window.addEventListener("storage", readProfile);
     window.addEventListener("deen_profile_updated", readProfile);
-    // Initialize active festival
-    const localFest = getCurrentFestival();
-    if (localFest) setFestival(localFest);
-    fetchCampaigns()
-      .then((data) => {
-        if (data?.festivalGreeting?.active) {
-          setFestival(data.festivalGreeting as FestivalTheme);
-        }
-      })
-      .catch(() => {});
 
     return () => {
       window.removeEventListener("storage", readProfile);
@@ -85,7 +72,7 @@ export default function Header() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/logo.png"
-                alt="DEEN Commerce"
+                alt="DEEN"
                 style={{
                   height: 26,
                   width: "auto",
@@ -94,34 +81,6 @@ export default function Header() {
                 }}
               />
             </Link>
-
-            {/* Titlebar Festival Motif Badge */}
-            {festival && (
-              <button
-                type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent("deen_open_festival_greeting"))}
-                title={festival.title}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 5,
-                  padding: "3px 9px",
-                  borderRadius: 20,
-                  backgroundColor: isDark ? "rgba(255, 255, 255, 0.08)" : "var(--surface-2)",
-                  border: `1.5px solid ${festival.themePrimary || "var(--indigo)"}`,
-                  color: "var(--ink)",
-                  cursor: "pointer",
-                  fontSize: 11,
-                  fontWeight: 800,
-                  letterSpacing: 0.2,
-                  transition: "transform 0.15s ease",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                <span style={{ fontSize: 13 }}>{festival.motif}</span>
-                <span style={{ fontSize: 10.5, fontWeight: 900 }}>{festival.titlebarText}</span>
-              </button>
-            )}
           </div>
 
           {/* Desktop links */}

@@ -49,7 +49,7 @@ export const CATEGORY_CARE_GUIDES: Record<string, CategoryCareGuide> = {
   PANJABI: {
     title: "HERITAGE PANJABI CARE GUIDE",
     subtitle: "Embroidery, Jacquard & Silk-Cotton Handbook",
-    badge: "FESTIVE APPAREL CARE",
+    badge: "HERITAGE APPAREL CARE",
     philosophyTitle: "Preserving Artisanal Weaves & Embroidery",
     philosophyText:
       "DEEN Panjabis are crafted from 100% Egyptian Giza cotton, breathable dobby jacquards, and detailed artisanal thread embroidery. Gentle care keeps the plackets sharp and fabric lustrous for years.",

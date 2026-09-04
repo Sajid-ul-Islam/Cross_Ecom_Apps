@@ -25,7 +25,7 @@ const AMOUNTS = [1000, 2500, 5000, 10000];
 const CARD_THEMES = [
   {
     id: "eid",
-    name: "Eid Festive",
+    name: "Eid Special",
     bg: "#16281F",
     accent: "#D4AF37",
     sub: "Joyous Eid Celebrations",
@@ -84,7 +84,7 @@ export const GiftCardModal: React.FC<GiftCardModalProps> = ({ visible, onClose }
       await Share.share({
         message: `🎁 ${recipientName}, you received a ${bdt(
           amount
-        )} DEEN Digital Gift Card from ${senderName}!\n\nUse voucher code: ${generatedCode}\n\nShop authentic raw denim & festive menswear at: https://cross-ecom-apps.onrender.com/`,
+        )} DEEN Digital Gift Card from ${senderName}!\n\nUse voucher code: ${generatedCode}\n\nShop authentic raw denim & celebration menswear at: https://cross-ecom-apps.onrender.com/`,
       });
     } catch {}
   };

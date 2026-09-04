@@ -144,7 +144,7 @@ export default function FestivalGreetingModal() {
               marginBottom: 6,
             }}
           >
-            FESTIVAL GREETINGS
+            WARM GREETINGS
           </span>
 
           <h2
@@ -194,7 +194,7 @@ export default function FestivalGreetingModal() {
                 borderRadius: 8,
               }}
             >
-              {festival.actionLabel || "Explore Festive Collection"} →
+              {festival.actionLabel || "Explore Collection"} →
             </Link>
 
             <button

@@ -21,12 +21,12 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
   },
   PANJABI: {
     slug: "PANJABI",
-    title: "Heritage Dobby & Festive Panjabi",
+    title: "Heritage Dobby Panjabi",
     subtitle: "Luxurious Hand-Loom Cotton, Silk & Jacquard Weaves",
     description:
-      "Crafted for Friday prayers, weddings, and Eid festivals. Tailored with modern minimalist plackets, mother-of-pearl buttons, and structured band collars.",
+      "Crafted for Friday prayers, weddings, and Eid celebrations. Tailored with modern minimalist plackets, mother-of-pearl buttons, and structured band collars.",
     coverImage: "https://deencommerce.com/wp-content/uploads/2026/02/Category.jpg",
-    metaBadge: "EID & FESTIVE",
+    metaBadge: "EID & CELEBRATION",
     highlights: ["100% Egyptian Giza & Organic Cotton", "Artisanal Thread Embroidery", "Slim & Traditional Relaxed Cuts"],
   },
   SHIRT: {

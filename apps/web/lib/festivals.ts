@@ -1,8 +1,8 @@
 /**
- * DEEN Commerce — Festival Greeting & Theme Engine
+ * DEEN Web — Occasion Greeting & Theme Engine
  * Automatically detects and formats greetings for:
- * 1. Muslim Festivals: Eid-ul-Fitr, Eid-ul-Adha, Ramadan, Jummah Mubarak
- * 2. Bangladesh National Festivals: Pohela Boishakh, Independence Day, Victory Day, Ekushey
+ * 1. Muslim Occasions: Eid-ul-Fitr, Eid-ul-Adha, Ramadan, Jummah Mubarak
+ * 2. Bangladesh National Days: Pohela Boishakh, Independence Day, Victory Day, Ekushey
  */
 
 export interface FestivalTheme {
@@ -26,7 +26,7 @@ export const FESTIVALS: Record<string, FestivalTheme> = {
     motif: "🌙✨",
     titlebarText: "🌙 Eid Mubarak",
     title: "Eid Mubarak!",
-    subtitle: "Joyous blessings, festive elegance & peace",
+    subtitle: "Joyous blessings, timeless elegance & peace",
     greeting: "DEEN wishes you and your family a blessed Eid full of peace, happiness & prosperity. Explore our celebratory menswear crafted with care.",
     themePrimary: "#10B981",
     themeSecondary: "#F59E0B",
@@ -39,11 +39,11 @@ export const FESTIVALS: Record<string, FestivalTheme> = {
     motif: "🕋✨",
     titlebarText: "🕋 Eid-ul-Adha Mubarak",
     title: "Eid-ul-Adha Mubarak!",
-    subtitle: "Sacrifice, generosity & timeless festive craftsmanship",
+    subtitle: "Sacrifice, generosity & timeless craftsmanship",
     greeting: "May your Eid-ul-Adha be blessed with happiness, purity of heart, and memorable celebrations.",
     themePrimary: "#2A3680",
     themeSecondary: "#F59E0B",
-    actionLabel: "Shop Festive Attire",
+    actionLabel: "Shop Eid Collection",
     actionUrl: "/shop?category=PANJABI",
   },
   ramadan: {

@@ -90,7 +90,7 @@ export default function HomeScreen() {
 
   const newDrops = products.filter((p) => p.isNew || (p.salePct && p.salePct > 0)).slice(0, 10);
   const jeansCollection = products.filter((p) => p.category === "JEANS").slice(0, 10);
-  const festivePanjabi = products.filter((p) => p.category === "PANJABI").slice(0, 10);
+  const heritagePanjabi = products.filter((p) => p.category === "PANJABI").slice(0, 10);
   const bestDeals = [...products].filter((p) => (p.salePct || 0) > 0).sort((a, b) => (b.salePct ?? 0) - (a.salePct ?? 0)).slice(0, 8);
 
   const handleCategoryPress = (cat: DeenCategory | string) => {
@@ -324,7 +324,7 @@ export default function HomeScreen() {
         {/* New Drops Carousel */}
         <SectionHeader
           title="NEW & TRENDING"
-          subtitle="Fresh denim cuts & festive kurta silhouettes"
+          subtitle="Fresh denim cuts & heritage kurta silhouettes"
           actionText="View All"
           onActionPress={() => router.push("/(tabs)/shop")}
         />
@@ -383,7 +383,7 @@ export default function HomeScreen() {
           />
         </TouchableOpacity>
 
-        {/* Festive Panjabi Section */}
+        {/* Heritage Panjabi Section */}
         <SectionHeader
           title="HERITAGE PANJABI & KURTA"
           subtitle="Indigo dyed pure dobby cottons"
@@ -392,7 +392,7 @@ export default function HomeScreen() {
         />
 
         <View style={styles.grid}>
-          {festivePanjabi.map((product) => (
+          {heritagePanjabi.map((product) => (
             <View key={product.id} style={styles.gridItem}>
               <ProductCard product={product} />
             </View>

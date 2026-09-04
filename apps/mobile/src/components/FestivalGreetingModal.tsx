@@ -91,14 +91,14 @@ export const FestivalGreetingModal: React.FC<FestivalGreetingModalProps> = ({
               onPress={handleClose}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessibilityRole="button"
-              accessibilityLabel="Close festival greeting"
+              accessibilityLabel="Close greeting"
             >
               <X size={18} color="#FFFFFF" />
             </TouchableOpacity>
 
             <Text style={styles.motifIcon}>{festival.motif}</Text>
             <View style={styles.badgePill}>
-              <Text style={styles.badgePillText}>FESTIVAL GREETINGS</Text>
+              <Text style={styles.badgePillText}>WARM GREETINGS</Text>
             </View>
             <Text style={styles.headerTitle}>{festival.title}</Text>
             <Text style={styles.headerSub}>{festival.subtitle}</Text>
@@ -119,7 +119,7 @@ export const FestivalGreetingModal: React.FC<FestivalGreetingModalProps> = ({
               }}
             >
               <Text style={styles.actionBtnText}>
-                {festival.actionLabel || "Explore Festive Collection"} →
+                {festival.actionLabel || "Explore Collection"} →
               </Text>
             </TouchableOpacity>
 

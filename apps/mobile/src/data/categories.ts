@@ -30,12 +30,12 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     slug: "PANJABI",
     name: "PANJABI",
     title: "HERITAGE DOBBY PANJABIS",
-    subtitle: "Festive Geometric Textures with Antique Metallic Buttons",
+    subtitle: "Geometric Textures with Antique Metallic Buttons",
     description:
       "A seamless fusion of cultural heritage and contemporary menswear. Tailored from breathable dobby cotton jacquard weaves with subtle indigo geometry.",
     coverImage:
       "https://deencommerce.com/wp-content/uploads/2026/02/Category.jpg",
-    badge: "EID & FESTIVE",
+    badge: "EID & CELEBRATION",
     craftNote: "Pure cotton jacquard weave with self-textured indigo geometric motifs.",
     filterTags: ["All", "Dobby Weave", "Semi-Slim", "Mandarin Collar", "Casual Classic"],
   },

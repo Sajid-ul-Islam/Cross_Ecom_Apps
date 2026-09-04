@@ -140,7 +140,7 @@ export const PRODUCTS_CATALOG: Product[] = [
       "https://image.qwenlm.ai/generated-images/81f855d0-9d0d-4560-bf6c-c9d300fbba41/_result.png",
     ],
     fabric: "Pure Indigo Dobby Jacquard Weave",
-    blurb: "Festive & casual hybrid panjabi with subtle self-textured indigo geometric weave and engraved buttons.",
+    blurb: "Celebration & casual hybrid panjabi with subtle self-textured indigo geometric weave and engraved buttons.",
     isNew: true,
   },
   {

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { useRouter } from "expo-router";
-import { ShoppingBag, ArrowLeft, Search, Bell, Heart, Sparkles } from "./Icons";
+import { ShoppingBag, ArrowLeft, Search, Bell, Heart } from "./Icons";
 import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useCart } from "../context/CartContext";
@@ -9,10 +9,6 @@ import { useWishlist } from "../context/WishlistContext";
 import { useNotifications } from "../context/NotificationContext";
 import { NotificationModal } from "./NotificationModal";
 import { WishlistModal } from "./WishlistModal";
-import { AiConciergeModal } from "./AiConciergeModal";
-import { FestivalGreetingModal } from "./FestivalGreetingModal";
-import { getCurrentFestival, type FestivalTheme } from "../services/festivals";
-import { fetchActiveCampaigns } from "../services/gateway";
 
 interface HeaderProps {
   title?: string;
@@ -41,19 +37,6 @@ export const Header: React.FC<HeaderProps> = ({
   const { unreadCount } = useNotifications();
   const [notifVisible, setNotifVisible] = useState(false);
   const [wishlistVisible, setWishlistVisible] = useState(false);
-  const [aiVisible, setAiVisible] = useState(false);
-  const [festival, setFestival] = useState<FestivalTheme | null>(null);
-  const [festivalModalVisible, setFestivalModalVisible] = useState(false);
-
-  useEffect(() => {
-    const local = getCurrentFestival();
-    if (local) setFestival(local);
-    fetchActiveCampaigns().then((data) => {
-      if (data?.festivalGreeting?.active) {
-        setFestival(data.festivalGreeting as FestivalTheme);
-      }
-    }).catch(() => {});
-  }, []);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.paper, borderBottomColor: colors.border }]}>
@@ -77,37 +60,10 @@ export const Header: React.FC<HeaderProps> = ({
               <Text style={[styles.brandTitle, { color: isDark ? colors.indigo : colors.indigoDark }]}>
                 DEEN
               </Text>
-              {festival && (
-                <TouchableOpacity
-                  onPress={() => setFestivalModalVisible(true)}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 3,
-                    paddingHorizontal: 6,
-                    paddingVertical: 2,
-                    borderRadius: 12,
-                    backgroundColor: colors.cardSecondary,
-                    borderWidth: 1,
-                    borderColor: festival.themePrimary || colors.indigo,
-                    marginLeft: 2,
-                  }}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  accessibilityRole="button"
-                  accessibilityLabel={festival.title}
-                >
-                  <Text style={{ fontSize: 11 }}>{festival.motif}</Text>
-                  <Text style={{ fontSize: 9.5, fontWeight: "900", color: colors.ink }}>
-                    {festival.name}
-                  </Text>
-                </TouchableOpacity>
-              )}
             </View>
             {subtitle ? (
               <Text style={[styles.brandSubtitle, { color: colors.sub }]}>{subtitle}</Text>
-            ) : (
-              <Text style={[styles.brandTag, { color: colors.denimStitch }]}>COMMERCE · DHAKA</Text>
-            )}
+            ) : null}
           </View>
         )}
 
@@ -161,17 +117,6 @@ export const Header: React.FC<HeaderProps> = ({
             </TouchableOpacity>
           )}
 
-          {/* AI Concierge Assistant */}
-          <TouchableOpacity
-            style={[styles.notifButton, { backgroundColor: colors.indigoLight }]}
-            onPress={() => setAiVisible(true)}
-            accessibilityRole="button"
-            accessibilityLabel="DEEN AI Shopping Concierge"
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Sparkles size={19} color={colors.indigo} />
-          </TouchableOpacity>
-
           {/* Wishlist Heart Button */}
           <TouchableOpacity
             style={[styles.notifButton, { backgroundColor: colors.cardSecondary }]}
@@ -207,12 +152,6 @@ export const Header: React.FC<HeaderProps> = ({
         </View>
       </View>
 
-      {/* AI Concierge Modal */}
-      <AiConciergeModal
-        visible={aiVisible}
-        onClose={() => setAiVisible(false)}
-      />
-
       {/* In-App Notifications Modal */}
       <NotificationModal
         visible={notifVisible}
@@ -223,13 +162,6 @@ export const Header: React.FC<HeaderProps> = ({
       <WishlistModal
         visible={wishlistVisible}
         onClose={() => setWishlistVisible(false)}
-      />
-
-      {/* Festival Greeting Modal */}
-      <FestivalGreetingModal
-        visible={festivalModalVisible}
-        onClose={() => setFestivalModalVisible(false)}
-        festivalOverride={festival}
       />
     </View>
   );
@@ -266,24 +198,6 @@ function createStyles(colors: ThemeColors) {
       width: 26,
       height: 26,
       borderRadius: 6,
-    },
-    brandTag: {
-      fontSize: 9,
-      letterSpacing: 1.2,
-      fontWeight: "700",
-    },
-    connDot: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 4,
-    },
-    connText: {
-      fontSize: 8,
-      fontWeight: "800",
-      color: "#FFFFFF",
-      letterSpacing: 0.5,
     },
     brandSubtitle: {
       fontSize: 11,

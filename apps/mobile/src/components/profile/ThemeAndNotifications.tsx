@@ -81,7 +81,7 @@ export const ThemeAndNotifications: React.FC<ThemeAndNotificationsProps> = ({
 
         <View style={styles.toggleRow}>
           <View style={styles.toggleText}>
-            <Text style={[styles.toggleLabel, { color: colors.ink }]}>Festive Sales & Raw Denim Drops</Text>
+            <Text style={[styles.toggleLabel, { color: colors.ink }]}>Exclusive Sales & Raw Denim Drops</Text>
             <Text style={[styles.toggleSub, { color: colors.sub }]}>Exclusive selvedge alerts and discounts</Text>
           </View>
           <Switch
