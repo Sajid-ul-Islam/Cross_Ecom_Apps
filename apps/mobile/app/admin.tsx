@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import { ArrowLeft, Shield, Lock } from "../src/components/Icons";
+import { ArrowLeft } from "../src/components/Icons";
 import { useTheme } from "../src/context/ThemeContext";
 import { useProfile } from "../src/context/ProfileContext";
 import { ScreenShell } from "../src/components/ScreenShell";
@@ -13,6 +13,16 @@ export default function AdminScreen() {
   const { profile } = useProfile();
 
   const isAdmin = profile?.role === "admin";
+
+  React.useEffect(() => {
+    if (!isAdmin) {
+      router.replace("/(tabs)/profile");
+    }
+  }, [isAdmin]);
+
+  if (!isAdmin) {
+    return null;
+  }
 
   return (
     <ScreenShell>
@@ -56,60 +66,15 @@ export default function AdminScreen() {
           }}
         >
           <Text style={{ fontSize: 10, fontWeight: "900", color: colors.emerald }}>
-            {isAdmin ? "ADMIN" : "GUEST"}
+            ADMIN
           </Text>
         </View>
       </View>
 
       {/* Screen Body */}
-      {isAdmin ? (
-        <View style={{ flex: 1, backgroundColor: colors.paper }}>
-          <AdminAnalyticsView isStandalone={true} />
-        </View>
-      ) : (
-        <View
-          style={{
-            flex: 1,
-            justifyContent: "center",
-            alignItems: "center",
-            padding: 24,
-            backgroundColor: colors.paper,
-          }}
-        >
-          <View
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: 32,
-              backgroundColor: "rgba(239, 68, 68, 0.12)",
-              alignItems: "center",
-              justifyContent: "center",
-              marginBottom: 16,
-            }}
-          >
-            <Lock size={28} color={colors.crimson} />
-          </View>
-          <Text style={{ fontSize: 18, fontWeight: "900", color: colors.ink, marginBottom: 8, textAlign: "center" }}>
-            Administrator Access Required
-          </Text>
-          <Text style={{ fontSize: 13, color: colors.sub, textAlign: "center", marginBottom: 24, maxWidth: 300 }}>
-            This operations dashboard is restricted to authenticated DEEN store executives. Please sign in with an admin account from Profile.
-          </Text>
-          <TouchableOpacity
-            style={{
-              backgroundColor: colors.indigo,
-              paddingHorizontal: 20,
-              paddingVertical: 12,
-              borderRadius: 8,
-            }}
-            onPress={() => router.push("/(tabs)/profile")}
-          >
-            <Text style={{ color: "#FFFFFF", fontWeight: "900", fontSize: 13 }}>
-              GO TO PROFILE SIGN IN
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <View style={{ flex: 1, backgroundColor: colors.paper }}>
+        <AdminAnalyticsView isStandalone={true} />
+      </View>
     </ScreenShell>
   );
 }

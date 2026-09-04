@@ -8,10 +8,23 @@ import {
   StyleSheet,
   Dimensions,
   ActivityIndicator,
+  Linking,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 
-import { ArrowRight, Sparkles, ShieldCheck, MapPin, Award, TrendingUp } from "../../src/components/Icons";
+import {
+  ArrowRight,
+  Sparkles,
+  ShieldCheck,
+  MapPin,
+  Award,
+  TrendingUp,
+  Facebook,
+  Instagram,
+  LinkedIn,
+  WhatsApp,
+} from "../../src/components/Icons";
 import { SectionHeader } from "../../src/components/SectionHeader";
 import { ScreenShell } from "../../src/components/ScreenShell";
 import { DeliveryNoticeBanner } from "../../src/components/Banner";
@@ -28,6 +41,11 @@ import { useProfile } from "../../src/context/ProfileContext";
 import { getCategoryInfo } from "../../src/data/categories";
 import { AdminBroadcastModal } from "../../src/components/AdminBroadcastModal";
 import { FestivalGreetingModal } from "../../src/components/FestivalGreetingModal";
+import { MotionHero } from "../../src/components/MotionHero";
+import { SocialReelsCarousel } from "../../src/components/SocialReelsCarousel";
+import { BrandStorySection } from "../../src/components/BrandStorySection";
+import { NotificationOptInModal, NOTIF_OPT_IN_DISMISSED_KEY } from "../../src/components/NotificationOptInModal";
+import { OFFICIAL_BRAND_SOCIALS } from "../../src/services/socialContent";
 
 const { width } = Dimensions.get("window");
 
@@ -42,28 +60,15 @@ export default function HomeScreen() {
   const [stats, setStats] = useState<Stats | null>(null);
 
   const [broadcastModalVisible, setBroadcastModalVisible] = useState(false);
-  const [activeHeroSlide, setActiveHeroSlide] = useState(0);
-
-  const HERO_SLIDES = [
-    {
-      id: "slide_denim",
-      image: "https://deencommerce.com/wp-content/uploads/2026/08/Mobile-Hero-Banner.jpg",
-    },
-    {
-      id: "slide_shirt",
-      image: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-1.jpg",
-    },
-    {
-      id: "slide_tailoring",
-      image: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
-    },
-  ];
+  const [notifOptInVisible, setNotifOptInVisible] = useState(false);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setActiveHeroSlide((prev) => (prev + 1) % 3);
-    }, 5500);
-    return () => clearInterval(timer);
+    AsyncStorage.getItem(NOTIF_OPT_IN_DISMISSED_KEY).then((val) => {
+      if (!val) {
+        const t = setTimeout(() => setNotifOptInVisible(true), 7000);
+        return () => clearTimeout(t);
+      }
+    });
   }, []);
 
   const loadData = useCallback(async () => {
@@ -173,60 +178,8 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         refreshControl={refreshControl}
       >
-        {/* Auto-Slide Pure Photography Hero Banner (Dynamic Mobile 16:9 Screen Ratio) */}
-        <TouchableOpacity
-          activeOpacity={0.92}
-          onPress={() => router.push("/(tabs)/shop")}
-          style={{
-            marginHorizontal: 16,
-            marginTop: 8,
-            marginBottom: 22,
-            borderRadius: 14,
-            overflow: "hidden",
-            position: "relative",
-            height: Math.round((width - 32) * (9 / 16)),
-            backgroundColor: "#000",
-            shadowColor: "#000",
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.15,
-            shadowRadius: 10,
-            elevation: 4,
-          }}
-        >
-          <Image
-            source={{ uri: HERO_SLIDES[activeHeroSlide].image }}
-            style={{ width: "100%", height: "100%" }}
-            resizeMode="cover"
-          />
-
-          {/* Minimal Floating Indicator Dots */}
-          <View
-            style={{
-              position: "absolute",
-              bottom: 12,
-              left: 0,
-              right: 0,
-              flexDirection: "row",
-              gap: 6,
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-          >
-            {HERO_SLIDES.map((_, i) => (
-              <TouchableOpacity
-                key={i}
-                onPress={() => setActiveHeroSlide(i)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={{
-                  width: i === activeHeroSlide ? 22 : 6,
-                  height: 5,
-                  borderRadius: 3,
-                  backgroundColor: i === activeHeroSlide ? "#FFFFFF" : "rgba(255,255,255,0.4)",
-                }}
-              />
-            ))}
-          </View>
-        </TouchableOpacity>
+        {/* Interactive Motion Brand Hero Experience */}
+        <MotionHero />
 
         {/* ADMIN ONLY — Store Insights / BI dashboard.
             Customers never see sales data. Gated by role. */}
@@ -429,6 +382,12 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
+        {/* Artisanal Heritage Craftsmanship Narrative */}
+        <BrandStorySection />
+
+        {/* Brand Social Discovery & Tagged Reels Carousel */}
+        <SocialReelsCarousel />
+
         {/* Section Offer Banner 1: Selvedge Denim Campaign */}
         <TouchableOpacity
           activeOpacity={0.9}
@@ -500,6 +459,112 @@ export default function HomeScreen() {
           />
         </TouchableOpacity>
 
+        {/* Official Brand Social Community Card */}
+        <View
+          style={{
+            marginHorizontal: 16,
+            marginBottom: 16,
+            borderRadius: 14,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.card,
+            padding: 16,
+          }}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Sparkles size={16} color={colors.indigo} />
+              <Text style={{ fontSize: 13, fontWeight: "900", color: colors.ink, letterSpacing: 0.5 }}>
+                JOIN THE DEEN COMMUNITY
+              </Text>
+            </View>
+            <Text style={{ fontSize: 11, fontWeight: "700", color: colors.sub }}>
+              @deencommerce
+            </Text>
+          </View>
+          <Text style={{ fontSize: 12, color: colors.sub, lineHeight: 17, marginBottom: 14 }}>
+            Over 125,000+ patrons connect with us daily across Bangladesh for style advice, drop announcements, and concierge support.
+          </Text>
+
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                backgroundColor: "#1877F2",
+                paddingVertical: 9,
+                borderRadius: 8,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 5,
+              }}
+              activeOpacity={0.85}
+              onPress={() => Linking.openURL(OFFICIAL_BRAND_SOCIALS.facebook)}
+              accessibilityRole="button"
+              accessibilityLabel="Facebook"
+            >
+              <Facebook size={16} color="#FFFFFF" />
+              <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "800" }}>Facebook</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                backgroundColor: "#E1306C",
+                paddingVertical: 9,
+                borderRadius: 8,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 5,
+              }}
+              activeOpacity={0.85}
+              onPress={() => Linking.openURL(OFFICIAL_BRAND_SOCIALS.instagram)}
+              accessibilityRole="button"
+              accessibilityLabel="Instagram"
+            >
+              <Instagram size={16} color="#FFFFFF" />
+              <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "800" }}>Instagram</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                backgroundColor: "#0A66C2",
+                paddingVertical: 9,
+                borderRadius: 8,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 5,
+              }}
+              activeOpacity={0.85}
+              onPress={() => Linking.openURL(OFFICIAL_BRAND_SOCIALS.linkedin)}
+              accessibilityRole="button"
+              accessibilityLabel="LinkedIn"
+            >
+              <LinkedIn size={15} color="#FFFFFF" />
+              <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "800" }}>LinkedIn</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                width: 38,
+                backgroundColor: "#25D366",
+                borderRadius: 8,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              activeOpacity={0.85}
+              onPress={() => Linking.openURL(OFFICIAL_BRAND_SOCIALS.whatsapp)}
+              accessibilityRole="button"
+              accessibilityLabel="WhatsApp"
+            >
+              <WhatsApp size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Brand Authenticity Footer Card */}
         <View style={styles.brandTrustCard}>
           <View style={styles.trustItem}>
@@ -511,7 +576,7 @@ export default function HomeScreen() {
           <View style={styles.trustItem}>
             <ShieldCheck size={20} color={colors.emerald} />
             <Text style={styles.trustTitle}>e-CAB Registered</Text>
-            <Text style={styles.trustDesc}>Trusted e-commerce brand with official registration & COD nationwide.</Text>
+            <Text style={styles.trustDesc}>Trusted e-commerce brand with official registration &amp; COD nationwide.</Text>
           </View>
           <View style={styles.trustDivider} />
           <View style={styles.trustItem}>
@@ -526,6 +591,12 @@ export default function HomeScreen() {
       <AdminBroadcastModal
         visible={broadcastModalVisible}
         onClose={() => setBroadcastModalVisible(false)}
+      />
+
+      {/* Notification Value-First Opt-In Modal */}
+      <NotificationOptInModal
+        visible={notifOptInVisible}
+        onClose={() => setNotifOptInVisible(false)}
       />
     </ScreenShell>
   );

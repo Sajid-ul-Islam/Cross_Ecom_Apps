@@ -194,6 +194,8 @@ export interface UserProfile {
   topSize: string;
   pushOrders: boolean;
   pushPromos: boolean;
+  pushDrops?: boolean;
+  pushPersonalized?: boolean;
   memberSince?: string;
   savedAddresses?: SavedAddress[];
 }

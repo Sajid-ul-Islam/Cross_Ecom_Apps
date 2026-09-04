@@ -8,15 +8,23 @@ import { useTheme } from "../../context/ThemeContext";
 interface ThemeAndNotificationsProps {
   pushOrders: boolean;
   pushPromos: boolean;
+  pushDrops?: boolean;
+  pushPersonalized?: boolean;
   onPushOrdersChange: (value: boolean) => void;
   onPushPromosChange: (value: boolean) => void;
+  onPushDropsChange?: (value: boolean) => void;
+  onPushPersonalizedChange?: (value: boolean) => void;
 }
 
 export const ThemeAndNotifications: React.FC<ThemeAndNotificationsProps> = ({
   pushOrders,
   pushPromos,
+  pushDrops = true,
+  pushPersonalized = true,
   onPushOrdersChange,
   onPushPromosChange,
+  onPushDropsChange,
+  onPushPersonalizedChange,
 }) => {
   const { colors, themeMode, setThemeMode } = useTheme();
   const s = sharedStyles(colors);
@@ -61,12 +69,13 @@ export const ThemeAndNotifications: React.FC<ThemeAndNotificationsProps> = ({
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.cardHeader}>
           <Bell size={17} color={colors.indigo} />
-          <Text style={[styles.cardTitle, { color: colors.ink }]}>NOTIFICATION PREFERENCES</Text>
+          <Text style={[styles.cardTitle, { color: colors.ink }]}>NOTIFICATION CATEGORIES</Text>
         </View>
 
+        {/* 1. Orders & Tracking */}
         <View style={styles.toggleRow}>
           <View style={styles.toggleText}>
-            <Text style={[styles.toggleLabel, { color: colors.ink }]}>Order & Parcel Tracking</Text>
+            <Text style={[styles.toggleLabel, { color: colors.ink }]}>Order &amp; Parcel Tracking</Text>
             <Text style={[styles.toggleSub, { color: colors.sub }]}>Live Pathao dispatch and delivery alerts</Text>
           </View>
           <Switch
@@ -79,14 +88,47 @@ export const ThemeAndNotifications: React.FC<ThemeAndNotificationsProps> = ({
 
         <View style={[styles.toggleDivider, { backgroundColor: colors.borderLight }]} />
 
+        {/* 2. Promotions & Campaigns */}
         <View style={styles.toggleRow}>
           <View style={styles.toggleText}>
-            <Text style={[styles.toggleLabel, { color: colors.ink }]}>Exclusive Sales & Raw Denim Drops</Text>
-            <Text style={[styles.toggleSub, { color: colors.sub }]}>Exclusive selvedge alerts and discounts</Text>
+            <Text style={[styles.toggleLabel, { color: colors.ink }]}>Campaigns &amp; Cashback Offers</Text>
+            <Text style={[styles.toggleSub, { color: colors.sub }]}>Exclusive flash sales and voucher discounts</Text>
           </View>
           <Switch
             value={pushPromos}
             onValueChange={onPushPromosChange}
+            trackColor={{ false: colors.border, true: colors.indigo }}
+            thumbColor="#FFFFFF"
+          />
+        </View>
+
+        <View style={[styles.toggleDivider, { backgroundColor: colors.borderLight }]} />
+
+        {/* 3. New Arrivals */}
+        <View style={styles.toggleRow}>
+          <View style={styles.toggleText}>
+            <Text style={[styles.toggleLabel, { color: colors.ink }]}>New Drops &amp; Shuttle-Loom Denim</Text>
+            <Text style={[styles.toggleSub, { color: colors.sub }]}>Instant alert when new seasonal cuts arrive</Text>
+          </View>
+          <Switch
+            value={pushDrops}
+            onValueChange={onPushDropsChange || (() => {})}
+            trackColor={{ false: colors.border, true: colors.indigo }}
+            thumbColor="#FFFFFF"
+          />
+        </View>
+
+        <View style={[styles.toggleDivider, { backgroundColor: colors.borderLight }]} />
+
+        {/* 4. Personalized & Wishlist */}
+        <View style={styles.toggleRow}>
+          <View style={styles.toggleText}>
+            <Text style={[styles.toggleLabel, { color: colors.ink }]}>Personalized &amp; Wishlist Restocks</Text>
+            <Text style={[styles.toggleSub, { color: colors.sub }]}>Tailored sizing alerts and restock notices</Text>
+          </View>
+          <Switch
+            value={pushPersonalized}
+            onValueChange={onPushPersonalizedChange || (() => {})}
             trackColor={{ false: colors.border, true: colors.indigo }}
             thumbColor="#FFFFFF"
           />

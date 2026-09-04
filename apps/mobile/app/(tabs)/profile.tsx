@@ -22,7 +22,13 @@ import {
   SlidersHorizontal,
   Store,
   ChevronRight,
+  Facebook,
+  Instagram,
+  LinkedIn,
+  WhatsApp,
+  Sparkles,
 } from "../../src/components/Icons";
+import * as Updates from "expo-updates";
 import { ScreenShell } from "../../src/components/ScreenShell";
 import { ThemeColors } from "../../src/theme/colors";
 import { sharedStyles } from "../../src/theme/sharedStyles";
@@ -33,6 +39,7 @@ import { useOrders } from "../../src/context/OrderContext";
 
 import { reportBug, fetchDistricts, updateProfileAPI, type BdDistrict } from "../../src/services/gateway";
 import { BD_DISTRICTS } from "../../src/data/districts";
+import { OFFICIAL_BRAND_SOCIALS } from "../../src/services/socialContent";
 
 // Extracted sub-components
 import { AccountHeader } from "../../src/components/profile/AccountHeader";
@@ -107,6 +114,9 @@ export default function ProfileScreen() {
   const [topSize, setTopSize] = useState(profile?.topSize || "L");
   const [pushOrders, setPushOrders] = useState(profile?.pushOrders ?? true);
   const [pushPromos, setPushPromos] = useState(profile?.pushPromos ?? false);
+  const [pushDrops, setPushDrops] = useState(profile?.pushDrops ?? true);
+  const [pushPersonalized, setPushPersonalized] = useState(profile?.pushPersonalized ?? true);
+  const [otaChecking, setOtaChecking] = useState(false);
   const [savedMessage, setSavedMessage] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -148,6 +158,8 @@ export default function ProfileScreen() {
     setTopSize(profile.topSize || "L");
     setPushOrders(profile.pushOrders ?? true);
     setPushPromos(profile.pushPromos ?? false);
+    setPushDrops(profile.pushDrops ?? true);
+    setPushPersonalized(profile.pushPersonalized ?? true);
   }, [profile]);
 
   const showToast = (msg: string) => {
@@ -176,6 +188,8 @@ export default function ProfileScreen() {
         topSize,
         pushOrders,
         pushPromos,
+        pushDrops,
+        pushPersonalized,
       });
 
       updateProfileAPI({
@@ -477,9 +491,160 @@ export default function ProfileScreen() {
               <ArrowRight size={16} color={colors.emerald} />
             </TouchableOpacity>
           </View>
+
+          {/* ── 3. Official Brand Community & Social Links ── */}
+          <View
+            style={{
+              backgroundColor: colors.card,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: colors.border,
+              padding: 16,
+              marginBottom: 16,
+            }}
+          >
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Sparkles size={16} color={colors.indigo} />
+                <Text style={{ fontSize: 12.5, fontWeight: "900", color: colors.ink, letterSpacing: 0.5 }}>
+                  OFFICIAL BRAND CHANNELS
+                </Text>
+              </View>
+              <Text style={{ fontSize: 10.5, fontWeight: "700", color: colors.sub }}>
+                @deencommerce
+              </Text>
+            </View>
+
+            <Text style={{ fontSize: 12, color: colors.sub, lineHeight: 17, marginBottom: 14 }}>
+              Join 125,000+ patrons across Bangladesh. Connect directly on our official verified social channels.
+            </Text>
+
+            <View style={{ flexDirection: "row", gap: 10, marginBottom: 10 }}>
+              {/* Facebook */}
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  backgroundColor: "#1877F2",
+                  paddingVertical: 10,
+                  paddingHorizontal: 8,
+                  borderRadius: 10,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                }}
+                activeOpacity={0.85}
+                onPress={() => Linking.openURL(OFFICIAL_BRAND_SOCIALS.facebook)}
+                accessibilityRole="button"
+                accessibilityLabel="Open DEEN Facebook page"
+              >
+                <Facebook size={18} color="#FFFFFF" />
+                <Text style={{ color: "#FFFFFF", fontSize: 11.5, fontWeight: "800" }}>Facebook</Text>
+              </TouchableOpacity>
+
+              {/* Instagram */}
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  backgroundColor: "#E1306C",
+                  paddingVertical: 10,
+                  paddingHorizontal: 8,
+                  borderRadius: 10,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                }}
+                activeOpacity={0.85}
+                onPress={() => Linking.openURL(OFFICIAL_BRAND_SOCIALS.instagram)}
+                accessibilityRole="button"
+                accessibilityLabel="Open DEEN Instagram profile"
+              >
+                <Instagram size={18} color="#FFFFFF" />
+                <Text style={{ color: "#FFFFFF", fontSize: 11.5, fontWeight: "800" }}>Instagram</Text>
+              </TouchableOpacity>
+
+              {/* LinkedIn */}
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  backgroundColor: "#0A66C2",
+                  paddingVertical: 10,
+                  paddingHorizontal: 8,
+                  borderRadius: 10,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                }}
+                activeOpacity={0.85}
+                onPress={() => Linking.openURL(OFFICIAL_BRAND_SOCIALS.linkedin)}
+                accessibilityRole="button"
+                accessibilityLabel="Open DEEN LinkedIn corporate page"
+              >
+                <LinkedIn size={16} color="#FFFFFF" />
+                <Text style={{ color: "#FFFFFF", fontSize: 11.5, fontWeight: "800" }}>LinkedIn</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* ── 4. App Info & OTA Updates Card ── */}
+          <View
+            style={{
+              backgroundColor: colors.cardSecondary,
+              borderRadius: 12,
+              padding: 14,
+              marginBottom: 20,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <View>
+              <Text style={{ fontSize: 12, fontWeight: "800", color: colors.ink }}>DEEN Commerce App</Text>
+              <Text style={{ fontSize: 10.5, color: colors.sub, marginTop: 2 }}>v1.0.1 (Production · OTA Enabled)</Text>
+            </View>
+
+            <TouchableOpacity
+              style={{
+                backgroundColor: colors.card,
+                borderWidth: 1,
+                borderColor: colors.border,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 8,
+              }}
+              onPress={async () => {
+                setOtaChecking(true);
+                try {
+                  if (__DEV__ || !Updates.isEmbeddedLaunch) {
+                    Alert.alert("App Updates", "You are running in development client. Production builds receive instant OTA updates seamlessly.");
+                    return;
+                  }
+                  const res = await Updates.checkForUpdateAsync();
+                  if (res.isAvailable) {
+                    await Updates.fetchUpdateAsync();
+                    await Updates.reloadAsync();
+                  } else {
+                    Alert.alert("Up to Date", "Your DEEN Commerce app is running the latest version.");
+                  }
+                } catch {
+                  Alert.alert("Update Status", "Up to date with latest published bundle.");
+                } finally {
+                  setOtaChecking(false);
+                }
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Check for app updates"
+            >
+              <Text style={{ fontSize: 11, fontWeight: "800", color: colors.indigo }}>
+                {otaChecking ? "Checking..." : "Check Updates"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
 
-        {/* ── 3. Bottom-Sheet Drawers ── */}
+        {/* ── 5. Bottom-Sheet Drawers ── */}
 
         {/* Orders Drawer Modal */}
         <ProfileDrawerModal
@@ -589,8 +754,12 @@ export default function ProfileScreen() {
           <ThemeAndNotifications
             pushOrders={pushOrders}
             pushPromos={pushPromos}
+            pushDrops={pushDrops}
+            pushPersonalized={pushPersonalized}
             onPushOrdersChange={setPushOrders}
             onPushPromosChange={setPushPromos}
+            onPushDropsChange={setPushDrops}
+            onPushPersonalizedChange={setPushPersonalized}
           />
           <TouchableOpacity
             style={[styles.fullOrdersBtn, { marginTop: 16 }]}

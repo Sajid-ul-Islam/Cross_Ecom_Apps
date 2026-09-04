@@ -39,6 +39,8 @@ function normalizeProfile(p: Partial<UserProfile> | null): UserProfile {
     topSize: p.topSize ?? "L",
     pushOrders: p.pushOrders ?? true,
     pushPromos: p.pushPromos ?? (isGuest ? false : true),
+    pushDrops: p.pushDrops ?? true,
+    pushPersonalized: p.pushPersonalized ?? true,
     memberSince: p.memberSince ?? (isGuest ? undefined : "Aug 2024"),
     savedAddresses: p.savedAddresses ?? (isGuest ? [] : DEFAULT_PROFILE.savedAddresses),
   };

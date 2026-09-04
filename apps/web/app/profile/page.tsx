@@ -655,6 +655,148 @@ export default function ProfilePage() {
         </a>
       </div>
 
+      {/* ── Official Brand Channels Community Card ── */}
+      <div
+        style={{
+          marginTop: 20,
+          marginBottom: 20,
+          background: "var(--card, #161C2A)",
+          borderRadius: 16,
+          border: "1px solid var(--border, rgba(255, 255, 255, 0.08))",
+          padding: 20,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 16 }}>✨</span>
+            <span style={{ fontSize: 13, fontWeight: 900, color: "var(--ink, #F4F6FC)", letterSpacing: "0.05em" }}>
+              OFFICIAL BRAND CHANNELS
+            </span>
+          </div>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "var(--sub, #8C96B2)" }}>
+            @deencommerce
+          </span>
+        </div>
+
+        <p style={{ fontSize: 12.5, color: "var(--sub, #8C96B2)", lineHeight: 1.5, margin: "0 0 16px" }}>
+          Join 125,000+ patrons across Bangladesh. Connect directly on our official verified social channels.
+        </p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10 }}>
+          {/* Facebook */}
+          <a
+            href="https://www.facebook.com/deencommerce"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              backgroundColor: "#1877F2",
+              color: "#FFFFFF",
+              padding: "10px 12px",
+              borderRadius: 10,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              fontSize: 12,
+              fontWeight: 800,
+              textDecoration: "none",
+              transition: "opacity 0.15s ease",
+            }}
+            aria-label="DEEN Facebook"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+            </svg>
+            <span>Facebook</span>
+          </a>
+
+          {/* Instagram */}
+          <a
+            href="https://www.instagram.com/deencommerce/?hl=en"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              background: "linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%)",
+              color: "#FFFFFF",
+              padding: "10px 12px",
+              borderRadius: 10,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              fontSize: 12,
+              fontWeight: 800,
+              textDecoration: "none",
+              transition: "opacity 0.15s ease",
+            }}
+            aria-label="DEEN Instagram"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+            </svg>
+            <span>Instagram</span>
+          </a>
+
+          {/* LinkedIn */}
+          <a
+            href="https://www.linkedin.com/company/deencommerce"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              backgroundColor: "#0A66C2",
+              color: "#FFFFFF",
+              padding: "10px 12px",
+              borderRadius: 10,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              fontSize: 12,
+              fontWeight: 800,
+              textDecoration: "none",
+              transition: "opacity 0.15s ease",
+            }}
+            aria-label="DEEN LinkedIn"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+              <rect x="2" y="9" width="4" height="12" />
+              <circle cx="4" cy="4" r="2" />
+            </svg>
+            <span>LinkedIn</span>
+          </a>
+
+          {/* WhatsApp */}
+          <a
+            href="https://wa.me/8801952700500"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              backgroundColor: "#25D366",
+              color: "#FFFFFF",
+              padding: "10px 12px",
+              borderRadius: 10,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              fontSize: 12,
+              fontWeight: 800,
+              textDecoration: "none",
+              transition: "opacity 0.15s ease",
+            }}
+            aria-label="DEEN WhatsApp"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+            </svg>
+            <span>WhatsApp</span>
+          </a>
+        </div>
+      </div>
+
       {/* ── 3. The Modular Slide-out Drawers ── */}
 
       {/* Drawer: Orders & Tracking */}

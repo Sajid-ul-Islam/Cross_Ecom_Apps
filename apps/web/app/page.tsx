@@ -4,6 +4,9 @@ import { getCategoryInfo } from "@/lib/categories";
 import ProductCard from "@/components/ProductCard";
 import HeroSlider from "@/components/HeroSlider";
 import SectionOfferBanner from "@/components/SectionOfferBanner";
+import BrandStorySection from "@/components/BrandStorySection";
+import SocialReelsSection from "@/components/SocialReelsSection";
+import { fetchSocialFeed } from "@/lib/socialContent";
 
 export const metadata = {
   title: "DEEN - দেশের প্রথম ডেনিম ব্র্যান্ড",
@@ -23,6 +26,7 @@ export default async function HomePage() {
     outletsList,
     heroBanner,
     sectionBanners,
+    socialData,
   ] = await Promise.all([
     fetchProducts({ per_page: 8 }),
     fetchProducts({ per_page: 4, sort: "new" }),
@@ -35,6 +39,7 @@ export default async function HomePage() {
     fetchOutlets(),
     fetchHeroBanner(),
     fetchSectionBanners(),
+    fetchSocialFeed(),
   ]);
 
   const activePromo = campaign?.activeCampaign;
@@ -471,6 +476,12 @@ export default async function HomePage() {
           <SectionOfferBanner banner={sectionBanners[3]} />
         )}
 
+        {/* ── Brand Heritage Story & Craftsmanship ─────── */}
+        <BrandStorySection />
+
+        {/* ── Brand Social Feed & Tagged Commerce Reels ──── */}
+        <SocialReelsSection reels={socialData.reels} />
+
         {/* ── Trust Bar ────────────────────────────────── */}
         <section style={{ marginBottom: 40, marginTop: 20 }}>
           <div className="trust-bar">
@@ -487,8 +498,8 @@ export default async function HomePage() {
               },
               {
                 icon: "🔄",
-                title: "Easy Returns",
-                desc: "Not satisfied? Return within 3 days — no questions asked",
+                title: "Doorstep Exchange",
+                desc: "Doorstep size exchange or return within 7 days nationwide",
               },
             ].map((t) => (
               <div key={t.title} className="trust-item">

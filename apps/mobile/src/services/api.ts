@@ -231,6 +231,8 @@ export const GUEST_PROFILE: UserProfile = {
   topSize: "L",
   pushOrders: true,
   pushPromos: false,
+  pushDrops: true,
+  pushPersonalized: true,
 };
 
 export const DEFAULT_PROFILE: UserProfile = {
@@ -248,6 +250,8 @@ export const DEFAULT_PROFILE: UserProfile = {
   topSize: "L",
   pushOrders: true,
   pushPromos: false,
+  pushDrops: true,
+  pushPersonalized: true,
   savedAddresses: [],
 };
 
