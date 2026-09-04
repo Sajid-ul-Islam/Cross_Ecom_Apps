@@ -156,6 +156,35 @@ export default async function HomePage() {
                 transform: translateX(-50%);
               }
             }
+            @keyframes liveKenBurns {
+              0% {
+                transform: scale(1);
+              }
+              50% {
+                transform: scale(1.07);
+              }
+              100% {
+                transform: scale(1);
+              }
+            }
+            @keyframes liveSheen {
+              0% {
+                transform: translateX(-150%) skewX(-20deg);
+              }
+              22%, 100% {
+                transform: translateX(250%) skewX(-20deg);
+              }
+            }
+            @keyframes livePulseDot {
+              0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+              }
+              50% {
+                transform: scale(1.35);
+                opacity: 0.55;
+              }
+            }
             .cat-moving-container {
               width: 100%;
               overflow-x: auto;
@@ -196,6 +225,35 @@ export default async function HomePage() {
               transform: translateY(-4px);
               box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
             }
+            .cat-moving-card::after {
+              content: '';
+              position: absolute;
+              inset: 0;
+              background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 50%, transparent 100%);
+              animation: liveSheen 6s ease-in-out infinite;
+              pointer-events: none;
+            }
+            .cat-img {
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+              display: block;
+              animation: liveKenBurns 9s ease-in-out infinite;
+              transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), filter 0.4s ease;
+            }
+            .cat-moving-card:hover .cat-img {
+              transform: scale(1.12) !important;
+              filter: brightness(1.08) contrast(1.02);
+            }
+            .cat-live-dot {
+              display: inline-block;
+              width: 5px;
+              height: 5px;
+              border-radius: 50%;
+              background-color: #10b981;
+              margin-right: 5px;
+              animation: livePulseDot 1.8s ease-in-out infinite;
+            }
             @media (max-width: 768px) {
               .cat-moving-card {
                 flex: 0 0 170px;
@@ -222,7 +280,6 @@ export default async function HomePage() {
                   <img
                     src={cat.img}
                     alt={cat.label}
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     className="cat-img"
                   />
                   <div
@@ -233,10 +290,12 @@ export default async function HomePage() {
                       display: "flex",
                       alignItems: "flex-end",
                       padding: 14,
+                      zIndex: 2,
                     }}
                   >
                     <div>
-                      <span style={{ color: "var(--denim-stitch)", fontSize: 9, fontWeight: 800, letterSpacing: 0.8, background: "rgba(0,0,0,0.5)", padding: "2px 6px", borderRadius: 4, display: "inline-block", marginBottom: 4 }}>
+                      <span style={{ color: "var(--denim-stitch)", fontSize: 9, fontWeight: 800, letterSpacing: 0.8, background: "rgba(0,0,0,0.6)", padding: "2px 6px", borderRadius: 4, display: "inline-flex", alignItems: "center", marginBottom: 4 }}>
+                        <span className="cat-live-dot" />
                         {cat.badge}
                       </span>
                       <p style={{ color: "#fff", fontSize: 15, fontWeight: 900, letterSpacing: 0.3, lineHeight: 1.2, margin: 0 }}>{cat.label}</p>
@@ -251,19 +310,79 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* ── Featured Products / Best Sellers ──────────── */}
-        <section className="section">
+        {/* ── Featured Products / Best Sellers (Auto-Scroll Right-to-Left Slider Mode) ──────────── */}
+        <section className="section" style={{ overflow: "hidden" }}>
           <div className="section__header">
             <div>
-              <h2 className="section__title">Best Sellers & High Demand</h2>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <h2 className="section__title">Best Sellers & High Demand</h2>
+                <span style={{ fontSize: 10, fontWeight: 900, background: "rgba(225, 29, 72, 0.12)", color: "var(--crimson)", padding: "2px 8px", borderRadius: 10, letterSpacing: 0.5 }}>
+                  HOT & TRENDING
+                </span>
+              </div>
               <p className="section__sub">Our most-loved pieces, deeply stocked and tailored for comfort</p>
             </div>
             <Link href="/shop" className="section__link">View all →</Link>
           </div>
-          <div className="product-grid">
-            {featured.slice(0, 4).map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
+
+          <style>{`
+            @keyframes bestSellerMarquee {
+              0% {
+                transform: translateX(0);
+              }
+              100% {
+                transform: translateX(-50%);
+              }
+            }
+            .bestseller-slider-container {
+              width: 100%;
+              overflow-x: auto;
+              overflow-y: hidden;
+              scrollbar-width: none;
+              -ms-overflow-style: none;
+              position: relative;
+              padding: 6px 0 16px;
+              mask-image: linear-gradient(to right, transparent, black 1.5%, black 98.5%, transparent);
+              -webkit-mask-image: linear-gradient(to right, transparent, black 1.5%, black 98.5%, transparent);
+            }
+            .bestseller-slider-container::-webkit-scrollbar {
+              display: none;
+            }
+            .bestseller-slider-track {
+              display: flex;
+              flex-wrap: nowrap;
+              gap: 18px;
+              width: max-content;
+              animation: bestSellerMarquee 36s linear infinite;
+            }
+            .bestseller-slider-track:hover {
+              animation-play-state: paused;
+            }
+            .bestseller-card-wrap {
+              flex: 0 0 250px;
+              width: 250px;
+              display: block;
+            }
+            @media (max-width: 768px) {
+              .bestseller-card-wrap {
+                flex: 0 0 185px;
+                width: 185px;
+              }
+              .bestseller-slider-track {
+                animation-duration: 26s;
+                gap: 12px;
+              }
+            }
+          `}</style>
+
+          <div className="bestseller-slider-container">
+            <div className="bestseller-slider-track">
+              {[...featured, ...featured].map((p, idx) => (
+                <div key={`${p.id}-${idx}`} className="bestseller-card-wrap">
+                  <ProductCard product={p} />
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 

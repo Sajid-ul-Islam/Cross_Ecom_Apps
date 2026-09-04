@@ -90,9 +90,9 @@ export default function ProductCard({ product }: Props) {
         {product.isNew && (
           <span className="product-card__badge product-card__badge--new">NEW</span>
         )}
-        {product.salePct && product.salePct > 0 && (
+        {discountPct > 0 && (
           <span className="product-card__badge product-card__badge--sale">
-            -{product.salePct}%
+            -{discountPct}%
           </span>
         )}
         {product.stockStatus === "outofstock" && (
@@ -171,12 +171,7 @@ export default function ProductCard({ product }: Props) {
         <div className="product-card__price-row">
           <span className="product-card__price">{bdt(currentPrice)}</span>
           {hasDiscount && originalPrice && (
-            <>
-              <span className="product-card__original">{bdt(originalPrice)}</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#e11d48", background: "rgba(225, 29, 72, 0.08)", padding: "1px 5px", borderRadius: 3 }}>
-                -{discountPct}%
-              </span>
-            </>
+            <span className="product-card__original">{bdt(originalPrice)}</span>
           )}
         </div>
         {product.sizes.length > 0 && (

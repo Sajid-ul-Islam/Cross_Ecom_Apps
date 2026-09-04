@@ -102,6 +102,30 @@ export default function HomeScreen() {
 
   const salesSeries = stats?.sales.series.map((d) => d.sales) ?? [];
 
+  const bestSellerScrollRef = React.useRef<ScrollView>(null);
+  const bestSellerScrollPos = React.useRef(0);
+  const isUserScrollingBestSellers = React.useRef(false);
+
+  useEffect(() => {
+    if (!bestDeals || bestDeals.length <= 1) return;
+    const cardStep = Math.round(width * 0.46) + 12;
+    const maxScroll = cardStep * (bestDeals.length - 1);
+
+    const timer = setInterval(() => {
+      if (isUserScrollingBestSellers.current) return;
+      bestSellerScrollPos.current += cardStep;
+      if (bestSellerScrollPos.current > maxScroll) {
+        bestSellerScrollPos.current = 0;
+      }
+      bestSellerScrollRef.current?.scrollTo({
+        x: bestSellerScrollPos.current,
+        animated: true,
+      });
+    }, 3500);
+
+    return () => clearInterval(timer);
+  }, [bestDeals.length]);
+
   return (
     <ScreenShell>
       <StoreNoticeBanner />
@@ -113,17 +137,18 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         refreshControl={refreshControl}
       >
-        {/* Auto-Slide Pure Photography Hero Banner (Optimized Portrait Ratio) */}
+        {/* Auto-Slide Pure Photography Hero Banner (Dynamic Mobile 16:9 Screen Ratio) */}
         <TouchableOpacity
           activeOpacity={0.92}
           onPress={() => router.push("/(tabs)/shop")}
           style={{
             marginHorizontal: 16,
-            marginVertical: 10,
+            marginTop: 8,
+            marginBottom: 22,
             borderRadius: 14,
             overflow: "hidden",
             position: "relative",
-            height: Math.min(Math.round((width - 32) * 1.2), 440),
+            height: Math.round((width - 32) * (9 / 16)),
             backgroundColor: "#000",
             shadowColor: "#000",
             shadowOffset: { width: 0, height: 4 },
@@ -287,6 +312,7 @@ export default function HomeScreen() {
                 <View style={styles.catCardContent}>
                   {info.badge && (
                     <View style={styles.catCardBadge}>
+                      <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: "#10B981", marginRight: 4 }} />
                       <Text style={styles.catCardBadgeText}>{info.badge}</Text>
                     </View>
                   )}
@@ -298,19 +324,34 @@ export default function HomeScreen() {
           })}
         </ScrollView>
 
-        {/* Best Deals */}
+        {/* Best Sellers & High Demand */}
         {bestDeals.length > 0 && (
           <>
             <SectionHeader
-              title="BEST DEALS"
-              subtitle="Highest discount live right now"
+              title="BEST SELLERS & HIGH DEMAND"
+              subtitle="Hot picks & highest demand pieces live right now"
               actionText="View All"
               onActionPress={() => router.push("/(tabs)/shop")}
             />
             <ScrollView
+              ref={bestSellerScrollRef}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalProductList}
+              onScrollBeginDrag={() => {
+                isUserScrollingBestSellers.current = true;
+              }}
+              onScrollEndDrag={() => {
+                setTimeout(() => {
+                  isUserScrollingBestSellers.current = false;
+                }, 3000);
+              }}
+              onMomentumScrollEnd={(e) => {
+                bestSellerScrollPos.current = e.nativeEvent.contentOffset.x;
+                setTimeout(() => {
+                  isUserScrollingBestSellers.current = false;
+                }, 1500);
+              }}
             >
               {bestDeals.map((product) => (
                 <View key={product.id} style={styles.horizontalCardWrapper}>

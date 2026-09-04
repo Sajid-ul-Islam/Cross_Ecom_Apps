@@ -70,28 +70,31 @@ export default function HeroSlider({ bannerData }: HeroSliderProps) {
           width: 100%;
           overflow: hidden;
           background-color: #080c14;
+          margin-bottom: 28px;
         }
-        /* Desktop aspect ratio */
+        /* Desktop aspect ratio: dynamic responsive widescreen that scales gracefully across screens */
         @media (min-width: 769px) {
           .hero-slider-clean {
-            aspect-ratio: 1920 / 720;
-            min-height: 360px;
-            max-height: 640px;
+            aspect-ratio: 21 / 9;
+            min-height: 280px;
+            max-height: 480px;
           }
           .hero-slider-clean img {
-            object-position: center 25%;
+            object-fit: cover;
+            object-position: center 30%;
           }
         }
-        /* Optimized Mobile fashion portrait framing */
+        /* Dynamic Mobile screen ratio: 16:9 ratio prevents taking over the whole screen and prevents cut-offs */
         @media (max-width: 768px) {
           .hero-slider-clean {
-            aspect-ratio: 4 / 5;
-            min-height: 440px;
-            max-height: 560px;
+            aspect-ratio: 16 / 9;
+            min-height: 190px;
+            max-height: 280px;
+            margin-bottom: 18px;
           }
           .hero-slider-clean img {
             object-fit: cover !important;
-            object-position: center top !important;
+            object-position: center center !important;
           }
           .hero-slider-nav-btn {
             display: none !important; /* On mobile, touch swipe provides a cleaner, full-bleed experience */

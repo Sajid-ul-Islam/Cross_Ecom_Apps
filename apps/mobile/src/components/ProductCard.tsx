@@ -111,12 +111,7 @@ function ProductCardBase({ product, style }: ProductCardProps) {
             {bdt(currentPrice)}
           </Text>
           {hasDiscount && origPrice && (
-            <>
-              <Text style={[styles.originalPrice, { color: colors.faint }]}>{bdt(origPrice)}</Text>
-              <Text style={{ fontSize: 11, fontWeight: "800", color: "#e11d48", marginLeft: 4 }}>
-                -{pct}%
-              </Text>
-            </>
+            <Text style={[styles.originalPrice, { color: colors.faint }]}>{bdt(origPrice)}</Text>
           )}
         </View>
 
