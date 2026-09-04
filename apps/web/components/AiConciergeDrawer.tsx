@@ -211,10 +211,12 @@ export default function AiConciergeDrawer() {
               width: "100%",
               maxWidth: 420,
               height: "100%",
-              background: "var(--surface-1)",
+              background: "var(--surface)",
+              backgroundColor: "var(--surface)",
               display: "flex",
               flexDirection: "column",
-              boxShadow: "-8px 0 32px rgba(0, 0, 0, 0.3)",
+              boxShadow: "-8px 0 32px rgba(0, 0, 0, 0.4)",
+              position: "relative",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -227,6 +229,7 @@ export default function AiConciergeDrawer() {
                 justifyContent: "space-between",
                 alignItems: "center",
                 background: "var(--surface-2)",
+                backgroundColor: "var(--surface-2)",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -246,7 +249,7 @@ export default function AiConciergeDrawer() {
                   ✨
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 900, color: "var(--text-main)" }}>
+                  <h3 style={{ margin: 0, fontSize: 15, fontWeight: 900, color: "var(--ink)" }}>
                     DEEN AI Concierge
                   </h3>
                   <span style={{ fontSize: 11, color: "var(--emerald)", fontWeight: 700 }}>
@@ -261,7 +264,7 @@ export default function AiConciergeDrawer() {
                   background: "none",
                   border: "none",
                   fontSize: 20,
-                  color: "var(--text-sub)",
+                  color: "var(--sub)",
                   cursor: "pointer",
                   padding: 4,
                 }}
@@ -280,6 +283,8 @@ export default function AiConciergeDrawer() {
                 display: "flex",
                 flexDirection: "column",
                 gap: 14,
+                background: "var(--surface)",
+                backgroundColor: "var(--surface)",
               }}
             >
               {messages.map((m) => (
@@ -299,7 +304,7 @@ export default function AiConciergeDrawer() {
                       borderBottomRightRadius: m.sender === "user" ? 2 : 14,
                       borderBottomLeftRadius: m.sender === "ai" ? 2 : 14,
                       background: m.sender === "user" ? "var(--indigo)" : "var(--surface-2)",
-                      color: m.sender === "user" ? "#FFFFFF" : "var(--text-main)",
+                      color: m.sender === "user" ? "#FFFFFF" : "var(--ink)",
                       fontSize: 13,
                       lineHeight: 1.6,
                       whiteSpace: "pre-wrap",
@@ -356,14 +361,14 @@ export default function AiConciergeDrawer() {
                               />
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
-                              <span style={{ fontSize: 10, fontWeight: 800, color: "var(--text-sub)", textTransform: "uppercase" }}>
+                              <span style={{ fontSize: 10, fontWeight: 800, color: "var(--sub)", textTransform: "uppercase" }}>
                                 {p.category}
                               </span>
                               <div
                                 style={{
                                   fontSize: 12,
                                   fontWeight: 700,
-                                  color: "var(--text-main)",
+                                  color: "var(--ink)",
                                   whiteSpace: "nowrap",
                                   overflow: "hidden",
                                   textOverflow: "ellipsis",
@@ -420,7 +425,7 @@ export default function AiConciergeDrawer() {
                             padding: "4px 10px",
                             borderRadius: 14,
                             border: "1px solid var(--border)",
-                            background: "var(--surface-1)",
+                            background: "var(--surface)",
                             color: "var(--indigo)",
                             fontSize: 11,
                             fontWeight: 700,
@@ -438,7 +443,7 @@ export default function AiConciergeDrawer() {
               {loading && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, padding: 8 }}>
                   <span style={{ fontSize: 14 }}>✨</span>
-                  <span style={{ fontSize: 12, color: "var(--text-sub)", fontStyle: "italic" }}>
+                  <span style={{ fontSize: 12, color: "var(--sub)", fontStyle: "italic" }}>
                     Retrieving catalog &amp; knowledge base…
                   </span>
                 </div>
@@ -448,7 +453,7 @@ export default function AiConciergeDrawer() {
             {/* Quick Prompt Suggestions */}
             {messages.length <= 2 && (
               <div style={{ padding: "0 16px 10px", display: "flex", flexDirection: "column", gap: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 800, color: "var(--text-sub)", letterSpacing: 0.5 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, color: "var(--sub)", letterSpacing: 0.5 }}>
                   SUGGESTED QUESTIONS:
                 </span>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -462,7 +467,7 @@ export default function AiConciergeDrawer() {
                         borderRadius: 8,
                         border: "1px solid var(--border)",
                         background: "var(--surface-2)",
-                        color: "var(--text-main)",
+                        color: "var(--ink)",
                         fontSize: 11,
                         fontWeight: 600,
                         cursor: "pointer",
@@ -500,8 +505,8 @@ export default function AiConciergeDrawer() {
                   padding: "10px 14px",
                   borderRadius: 8,
                   border: "1px solid var(--border)",
-                  background: "var(--surface-1)",
-                  color: "var(--text-main)",
+                  background: "var(--surface)",
+                  color: "var(--ink)",
                   fontSize: 13,
                   outline: "none",
                 }}

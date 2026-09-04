@@ -27,6 +27,7 @@ import { Product, DeenCategory, Stats } from "../../src/types";
 import { useProfile } from "../../src/context/ProfileContext";
 import { getCategoryInfo } from "../../src/data/categories";
 import { AdminBroadcastModal } from "../../src/components/AdminBroadcastModal";
+import { FestivalGreetingModal } from "../../src/components/FestivalGreetingModal";
 
 const { width } = Dimensions.get("window");
 
@@ -105,6 +106,7 @@ export default function HomeScreen() {
     <ScreenShell>
       <StoreNoticeBanner />
       <DeliveryNoticeBanner />
+      <FestivalGreetingModal />
 
       <ScrollView
         showsVerticalScrollIndicator={false}

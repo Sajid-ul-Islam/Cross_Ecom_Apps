@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BD_DISTRICTS } from "@/lib/districts";
 import { API_URL, fetchOrders, fetchDistricts, loginCustomer, registerCustomer, loginWithGoogle, loginWithFacebook, fetchOutlets, fetchAppSettings, changePassword, updateCustomerProfile, DEFAULT_OUTLETS, type OrderResult, type BdDistrict, type Outlet, type AuthResult } from "@/lib/api";
 import SocialAuthModal from "@/components/SocialAuthModal";
+import AboutDeenDrawer from "@/components/AboutDeenDrawer";
 
 const PROFILE_STORAGE_KEY = "deen_web_user_profile";
 
@@ -62,6 +63,7 @@ export default function ProfilePage() {
   const [passNotice, setPassNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [editingContact, setEditingContact] = useState(false);
+  const [aboutDrawerOpen, setAboutDrawerOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -688,7 +690,7 @@ export default function ProfilePage() {
       </div>
 
       {/* 5. DEEN Retail Outlets & WhatsApp Concierge */}
-      <ProfileOutletsSection />
+      <ProfileOutletsSection onOpenAbout={() => setAboutDrawerOpen(true)} />
 
       {/* Auth Modal */}
       {authModalOpen && (
@@ -955,11 +957,17 @@ export default function ProfilePage() {
         currentEmailHint={signupEmail || profile.email}
         currentNameHint={signupName || profile.name}
       />
+
+      {/* About DEEN Sliding Drawer (Ethos, Showrooms, Careers) */}
+      <AboutDeenDrawer
+        isOpen={aboutDrawerOpen}
+        onClose={() => setAboutDrawerOpen(false)}
+      />
     </div>
   );
 }
 
-function ProfileOutletsSection() {
+function ProfileOutletsSection({ onOpenAbout }: { onOpenAbout: () => void }) {
   const [outlets, setOutlets] = useState<Outlet[]>(DEFAULT_OUTLETS);
   const [whatsapp, setWhatsapp] = useState("01952-700500");
 
@@ -973,7 +981,54 @@ function ProfileOutletsSection() {
   return (
     <div className="profile-section-card">
       <div className="profile-section-header">
-        <h3 className="profile-section-title">🏬 DEEN RETAIL OUTLETS & SHOWROOMS</h3>
+        <h3 className="profile-section-title">🏬 STORE OUTLETS &amp; CUSTOMER CONCIERGE</h3>
+      </div>
+
+      {/* Action Row: ABOUT DEEN & REPORT ISSUE (Exact Android App Parity) */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+        <button
+          type="button"
+          onClick={onOpenAbout}
+          className="btn btn--secondary"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            padding: "10px 14px",
+            fontSize: 12,
+            fontWeight: 800,
+            cursor: "pointer",
+            border: "1px solid var(--border)",
+            backgroundColor: "var(--surface-2)",
+            color: "var(--indigo)",
+          }}
+        >
+          <span>🏪</span> ABOUT DEEN
+        </button>
+
+        <a
+          href={`https://wa.me/88${waDigits}?text=${encodeURIComponent("Hello DEEN Support, I would like to report an issue or get assistance.")}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn--secondary"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            padding: "10px 14px",
+            fontSize: 12,
+            fontWeight: 800,
+            cursor: "pointer",
+            border: "1px solid var(--border)",
+            backgroundColor: "var(--surface-2)",
+            color: "var(--indigo)",
+            textDecoration: "none",
+          }}
+        >
+          <span>🛠️</span> REPORT ISSUE
+        </a>
       </div>
 
       <div className="outlets-grid">
@@ -1025,6 +1080,7 @@ function ProfileOutletsSection() {
         target="_blank"
         rel="noopener noreferrer"
         className="whatsapp-hotline-card"
+        style={{ marginTop: 14 }}
       >
         <div style={{ fontSize: 24 }}>💬</div>
         <div>

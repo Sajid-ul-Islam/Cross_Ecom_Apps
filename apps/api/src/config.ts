@@ -119,6 +119,7 @@ export const config = {
     saleSubtitle: process.env.CAMPAIGN_SALE_SUBTITLE ?? "Season Clearance: 40%–50% discount on selected artisanal denim & apparel",
     saleBadge: process.env.CAMPAIGN_SALE_BADGE ?? "LIMITED TIME SALE",
     discountRange: "40%–50%",
+    activeFestival: process.env.CAMPAIGN_FESTIVAL ?? "", // e.g. eid_ul_fitr, jumma, pohela_boishakh
   },
   /** Store contact details (source of truth = gateway env, falls back to the
       real DEEN numbers). Admin can change via env without an app rebuild. */

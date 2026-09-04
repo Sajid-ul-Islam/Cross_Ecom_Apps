@@ -8,6 +8,7 @@ import DynamicCampaignBanner from "@/components/DynamicCampaignBanner";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import ScrollToTop from "@/components/ScrollToTop";
 import AiConciergeDrawer from "@/components/AiConciergeDrawer";
+import FestivalGreetingModal from "@/components/FestivalGreetingModal";
 
 export const metadata: Metadata = {
   title: {
@@ -91,6 +92,7 @@ export default function RootLayout({
             <MobileBottomNav />
             <ScrollToTop />
             <AiConciergeDrawer />
+            <FestivalGreetingModal />
           </WishlistProvider>
         </CartProvider>
       </body>

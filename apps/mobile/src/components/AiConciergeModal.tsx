@@ -417,6 +417,7 @@ function createStyles(colors: ThemeColors) {
     messagesContainer: {
       flex: 1,
       paddingHorizontal: 14,
+      backgroundColor: colors.paper,
     },
     messagesContent: {
       paddingVertical: 14,

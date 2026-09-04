@@ -1547,12 +1547,146 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     },
   ];
 
+  function resolveFestivalGreeting(overrideId?: string) {
+    const festivals: Record<string, any> = {
+      eid_ul_fitr: {
+        id: "eid_ul_fitr",
+        name: "Eid-ul-Fitr",
+        motif: "🌙✨",
+        titlebarText: "🌙 Eid Mubarak",
+        title: "Eid Mubarak!",
+        subtitle: "Joyous blessings, festive elegance & peace",
+        greeting: "DEEN wishes you and your family a blessed Eid full of peace, happiness & prosperity. Explore our celebratory menswear crafted with care.",
+        themePrimary: "#10B981",
+        themeSecondary: "#F59E0B",
+        actionLabel: "Explore Eid Collection",
+        actionUrl: "/shop?category=PANJABI",
+      },
+      eid_ul_adha: {
+        id: "eid_ul_adha",
+        name: "Eid-ul-Adha",
+        motif: "🕋✨",
+        titlebarText: "🕋 Eid-ul-Adha Mubarak",
+        title: "Eid-ul-Adha Mubarak!",
+        subtitle: "Sacrifice, generosity & timeless festive craftsmanship",
+        greeting: "May your Eid-ul-Adha be blessed with happiness, purity of heart, and memorable celebrations.",
+        themePrimary: "#2A3680",
+        themeSecondary: "#F59E0B",
+        actionLabel: "Shop Festive Attire",
+        actionUrl: "/shop?category=PANJABI",
+      },
+      ramadan: {
+        id: "ramadan",
+        name: "Ramadan Mubarak",
+        motif: "🌙",
+        titlebarText: "🌙 Ramadan Mubarak",
+        title: "Ramadan Kareem",
+        subtitle: "A blessed month of spiritual reflection & barakah",
+        greeting: "Wishing you a serene and spiritually uplifting Ramadan. May this sacred month bring peace and blessings to your home.",
+        themePrimary: "#059669",
+        themeSecondary: "#D97706",
+        actionLabel: "Explore Ramadan Collection",
+        actionUrl: "/shop",
+      },
+      jumma: {
+        id: "jumma",
+        name: "Jummah Mubarak",
+        motif: "🕌",
+        titlebarText: "🕌 Jumma Mubarak",
+        title: "Jummah Mubarak!",
+        subtitle: "Have a serene & blessed Friday",
+        greeting: "DEEN wishes you and your loved ones a peaceful and rewarding Friday. Check out our pure cotton Friday Panjabis.",
+        themePrimary: "#059669",
+        themeSecondary: "#D49439",
+        actionLabel: "Shop Heritage Panjabis",
+        actionUrl: "/shop?category=PANJABI",
+      },
+      pohela_boishakh: {
+        id: "pohela_boishakh",
+        name: "Pohela Boishakh",
+        motif: "🌸🎨",
+        titlebarText: "🌸 শুভ নববর্ষ",
+        title: "শুভ নববর্ষ ১৪৩২!",
+        subtitle: "Celebrating Bengali heritage, art & new beginnings",
+        greeting: "নতুন বছরের নতুন আলোয় উদ্ভাসিত হোক প্রতিটি দিন। DEEN পরিবারের পক্ষ থেকে আপনাকে ও আপনার পরিবারকে শুভ নববর্ষের আন্তরিক শুভেচ্ছা!",
+        themePrimary: "#E11D48",
+        themeSecondary: "#F59E0B",
+        actionLabel: "Explore Boishakhi Collection",
+        actionUrl: "/shop",
+      },
+      independence_day: {
+        id: "independence_day",
+        name: "Independence Day",
+        motif: "🇧🇩",
+        titlebarText: "🇧🇩 স্বাধীনতা দিবস",
+        title: "মহান স্বাধীনতা দিবস",
+        subtitle: "২৬শে মার্চ · বীর মুক্তিযোদ্ধাদের প্রতি বিনম্র শ্রদ্ধা",
+        greeting: "স্বাধীনতার চেতনায় সমুন্নত থাকুক প্রতিটি পদক্ষেপ। DEEN পরিবারের পক্ষ থেকে মহান স্বাধীনতা দিবসের রক্তিম শুভেচ্ছা ও সশ্রদ্ধ সালাম।",
+        themePrimary: "#006A4E",
+        themeSecondary: "#F42A41",
+        actionLabel: "Explore Bangladeshi Denim",
+        actionUrl: "/shop?category=JEANS",
+      },
+      victory_day: {
+        id: "victory_day",
+        name: "Victory Day",
+        motif: "🇧🇩",
+        titlebarText: "🇧🇩 বিজয় দিবস",
+        title: "মহান বিজয় দিবস",
+        subtitle: "১৬ই ডিসেম্বর · বীর শহীদদের প্রতি সশ্রদ্ধ সালাম",
+        greeting: "বিজয়ের গৌরবে উজ্জ্বল হোক প্রতিটি দিন। আত্মত্যাগী সকল বীর শহীদ ও বীরাঙ্গনাদের প্রতি DEEN পরিবারের বিনম্র শ্রদ্ধাঞ্জলি।",
+        themePrimary: "#006A4E",
+        themeSecondary: "#F42A41",
+        actionLabel: "Proudly Crafted in Dhaka",
+        actionUrl: "/shop",
+      },
+      language_day: {
+        id: "language_day",
+        name: "Ekushey February",
+        motif: "🌺",
+        titlebarText: "🌺 অমর একুশে",
+        title: "অমর একুশে ফেব্রুয়ারি",
+        subtitle: "আন্তর্জাতিক মাতৃভাষা দিবস · ভাষা শহীদদের স্মরণে",
+        greeting: "রক্তে রাঙানো একুশে ফেব্রুয়ারি। বাংলা ভাষার আত্মমর্যাদা প্রতিষ্ঠায় আত্মোৎসর্গকারী সকল ভাষা শহীদদের প্রতি গভীর শ্রদ্ধা।",
+        themePrimary: "#DC2626",
+        themeSecondary: "#1F2937",
+        actionLabel: "Explore Heritage Collection",
+        actionUrl: "/shop",
+      },
+    };
+
+    const choice = overrideId || config.campaigns?.activeFestival;
+    if (choice && festivals[choice]) return { active: true, ...festivals[choice] };
+
+    const now = new Date();
+    const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+    const bdTime = new Date(utc + 3600000 * 6);
+    const m = bdTime.getMonth() + 1;
+    const d = bdTime.getDate();
+    const dow = bdTime.getDay();
+
+    if (m === 2 && (d === 20 || d === 21 || d === 22)) return { active: true, ...festivals.language_day };
+    if (m === 3 && d >= 25 && d <= 27) return { active: true, ...festivals.independence_day };
+    if (m === 4 && d >= 13 && d <= 16) return { active: true, ...festivals.pohela_boishakh };
+    if (m === 12 && d >= 15 && d <= 17) return { active: true, ...festivals.victory_day };
+    if ((m === 2 && d >= 18) || (m === 3 && d <= 18)) return { active: true, ...festivals.ramadan };
+    if (m === 3 && d >= 19 && d <= 23) return { active: true, ...festivals.eid_ul_fitr };
+    if (m === 5 && d >= 26 && d <= 30) return { active: true, ...festivals.eid_ul_adha };
+    if (dow === 5) return { active: true, ...festivals.jumma };
+
+    return { active: true, ...festivals.eid_ul_fitr };
+  }
+
   /* ---- active campaigns & offers (dynamic source of truth) ---- */
-  app.get("/v1/deen/campaigns", async (_req, reply) => {
+  app.get("/v1/deen/campaigns", async (req, reply) => {
     const isCashback = Boolean(config.campaigns?.cashbackEnabled);
     const isSale = Boolean(config.campaigns?.saleEnabled);
+    const queryFestival = (req.query as any)?.festival as string | undefined;
+    const festivalGreeting = resolveFestivalGreeting(queryFestival);
+
     return reply.send({
       success: true,
+      festivalGreeting,
       activeCampaign: isSale
         ? {
             type: "sale",

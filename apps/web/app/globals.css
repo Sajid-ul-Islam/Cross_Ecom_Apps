@@ -14,13 +14,16 @@
   /* Backgrounds */
   --bg: #f7f6f0;
   --surface: #ffffff;
+  --surface-1: #ffffff;
   --surface-2: #f0efe8;
   --border: #e5e2d8;
   --border-light: #f0ede4;
 
   /* Typography */
   --ink: #151a2c;
+  --text-main: #151a2c;
   --sub: #636b7f;
+  --text-sub: #636b7f;
   --faint: #9da3b4;
 
   /* Status */
@@ -42,12 +45,15 @@
 
   --bg: #0d111a;
   --surface: #161c2a;
+  --surface-1: #161c2a;
   --surface-2: #1f273b;
   --border: #2a344d;
   --border-light: #1e2638;
 
   --ink: #f4f6fc;
+  --text-main: #f4f6fc;
   --sub: #a2abc3;
+  --text-sub: #a2abc3;
   --faint: #6c7691;
 
   --crimson: #f25f5c;

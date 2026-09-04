@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { ShoppingBag, ArrowLeft, Search, Bell, Heart, Sparkles } from "./Icons";
@@ -10,6 +10,9 @@ import { useNotifications } from "../context/NotificationContext";
 import { NotificationModal } from "./NotificationModal";
 import { WishlistModal } from "./WishlistModal";
 import { AiConciergeModal } from "./AiConciergeModal";
+import { FestivalGreetingModal } from "./FestivalGreetingModal";
+import { getCurrentFestival, type FestivalTheme } from "../services/festivals";
+import { fetchActiveCampaigns } from "../services/gateway";
 
 interface HeaderProps {
   title?: string;
@@ -39,6 +42,18 @@ export const Header: React.FC<HeaderProps> = ({
   const [notifVisible, setNotifVisible] = useState(false);
   const [wishlistVisible, setWishlistVisible] = useState(false);
   const [aiVisible, setAiVisible] = useState(false);
+  const [festival, setFestival] = useState<FestivalTheme | null>(null);
+  const [festivalModalVisible, setFestivalModalVisible] = useState(false);
+
+  useEffect(() => {
+    const local = getCurrentFestival();
+    if (local) setFestival(local);
+    fetchActiveCampaigns().then((data) => {
+      if (data?.festivalGreeting?.active) {
+        setFestival(data.festivalGreeting as FestivalTheme);
+      }
+    }).catch(() => {});
+  }, []);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.paper, borderBottomColor: colors.border }]}>
@@ -62,6 +77,31 @@ export const Header: React.FC<HeaderProps> = ({
               <Text style={[styles.brandTitle, { color: isDark ? colors.indigo : colors.indigoDark }]}>
                 DEEN
               </Text>
+              {festival && (
+                <TouchableOpacity
+                  onPress={() => setFestivalModalVisible(true)}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 3,
+                    paddingHorizontal: 6,
+                    paddingVertical: 2,
+                    borderRadius: 12,
+                    backgroundColor: colors.cardSecondary,
+                    borderWidth: 1,
+                    borderColor: festival.themePrimary || colors.indigo,
+                    marginLeft: 2,
+                  }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={festival.title}
+                >
+                  <Text style={{ fontSize: 11 }}>{festival.motif}</Text>
+                  <Text style={{ fontSize: 9.5, fontWeight: "900", color: colors.ink }}>
+                    {festival.name}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
             {subtitle ? (
               <Text style={[styles.brandSubtitle, { color: colors.sub }]}>{subtitle}</Text>
@@ -183,6 +223,13 @@ export const Header: React.FC<HeaderProps> = ({
       <WishlistModal
         visible={wishlistVisible}
         onClose={() => setWishlistVisible(false)}
+      />
+
+      {/* Festival Greeting Modal */}
+      <FestivalGreetingModal
+        visible={festivalModalVisible}
+        onClose={() => setFestivalModalVisible(false)}
+        festivalOverride={festival}
       />
     </View>
   );

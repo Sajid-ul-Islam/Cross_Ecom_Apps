@@ -58,11 +58,11 @@ export default function DynamicCampaignBanner() {
     };
   }, []);
 
-  const isCashbackActive = Boolean(campaignState?.cashback?.enabled);
   const rawCampaigns = campaignState?.rotatingCampaigns && campaignState.rotatingCampaigns.length > 0
     ? campaignState.rotatingCampaigns
     : DEFAULT_CAMPAIGNS;
-  const campaigns = isCashbackActive ? rawCampaigns : rawCampaigns.filter((c) => c.id !== "camp_cashback");
+  // Per directive: never show cashback banner in the top rotating slideshow
+  const campaigns = rawCampaigns.filter((c) => c.id !== "camp_cashback");
 
   // Auto-cycle through campaigns every 5 seconds
   useEffect(() => {

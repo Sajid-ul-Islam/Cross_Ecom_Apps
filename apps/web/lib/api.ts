@@ -437,6 +437,20 @@ export interface ActiveCampaignState {
   };
   bankOffers?: BankOffer[];
   rotatingCampaigns?: RotatingCampaignItem[];
+  festivalGreeting?: {
+    active: boolean;
+    id: string;
+    name: string;
+    motif: string;
+    titlebarText: string;
+    title: string;
+    subtitle: string;
+    greeting: string;
+    themePrimary: string;
+    themeSecondary: string;
+    actionLabel: string;
+    actionUrl: string;
+  };
 }
 
 export interface BdDistrict {
