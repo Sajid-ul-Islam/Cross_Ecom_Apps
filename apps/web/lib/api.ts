@@ -485,22 +485,30 @@ export interface DeliveryFees {
 }
 
 /**
- * Fetches live delivery fees from REST API (/v1/deen/pricing).
- * Single source of truth — mirrors WooCommerce shipping zones.
+ * Fetches live delivery fees from REST API (GET /v1/deen/shipping).
+ * Single source of truth — mirrors WooCommerce shipping zones + express surcharge
+ * (inside-Dhaka flat rate + gateway EXPRESS_SURCHARGE). Admin fee edits in WP
+ * propagate with no app rebuild.
  */
 export async function fetchDeliveryFees(): Promise<DeliveryFees> {
   try {
-    const res = await apiFetch(`${API_URL}/v1/deen/pricing`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [], area: "dhaka_standard" }),
+    const res = await apiFetch(`${API_URL}/v1/deen/shipping`, {
       cache: "no-store",
     });
     if (res.ok) {
       const data = await res.json();
-      if (data?.deliveryFees) return data.deliveryFees;
+      const f = data?.fees;
+      if (f && typeof f.insideDhaka === "number") {
+        return {
+          insideDhaka: f.insideDhaka,
+          outsideDhaka: f.outsideDhaka,
+          express: typeof f.express === "number" ? f.express : f.insideDhaka + 70,
+          storePickup: f.storePickup ?? 0,
+        };
+      }
     }
   } catch {}
+  // Gateway unreachable — mirror the gateway's own default zone costs.
   return { insideDhaka: 50, outsideDhaka: 90, express: 120, storePickup: 0 };
 }
 

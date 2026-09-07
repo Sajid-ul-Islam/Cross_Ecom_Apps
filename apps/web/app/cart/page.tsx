@@ -2,37 +2,35 @@
 
 import Link from "next/link";
 import { useCart } from "@/lib/cart";
-import { bdt, API_URL, fetchCampaigns, validateCoupon, type ActiveCampaignState } from "@/lib/api";
+import { bdt, fetchCampaigns, fetchDeliveryFees, validateCoupon, type ActiveCampaignState, type DeliveryFees } from "@/lib/api";
 import { useState, useEffect } from "react";
 import OrdersLookupView from "@/components/OrdersLookupView";
 
+// Static metadata only — FEES come live from GET /v1/deen/shipping (Woo shipping
+// zones + express surcharge), so admin fee edits propagate with no app rebuild.
 const DELIVERY_OPTIONS = [
   {
     id: "dhaka_standard",
     label: "Home Delivery (Dhaka Standard)",
     sub: "24–48 hours",
-    fee: 50,
     icon: "🛵",
   },
   {
     id: "dhaka_express",
     label: "Dhaka Express (Same-Day / Next-Morning)",
     sub: "Delivered within 12–18 hours",
-    fee: 110,
     icon: "⚡",
   },
   {
     id: "outside",
     label: "Home Delivery (Outside Dhaka)",
     sub: "3–5 business days · 64 Districts",
-    fee: 90,
     icon: "📦",
   },
   {
     id: "pickup",
     label: "Store Pickup",
     sub: "Mirpur 12 Outlet — Ready in 2h",
-    fee: 0,
     icon: "🏪",
   },
 ];
@@ -40,7 +38,36 @@ const DELIVERY_OPTIONS = [
 export default function CartPage() {
   const { items, subtotal, updateQty, removeItem, totalItems } = useCart();
   const [deliveryArea, setDeliveryArea] = useState("dhaka_standard");
-  const delivery = DELIVERY_OPTIONS.find((d) => d.id === deliveryArea) || DELIVERY_OPTIONS[0];
+  // Live delivery fees from GET /v1/deen/shipping (Woo zones + express surcharge).
+  const [liveFees, setLiveFees] = useState<DeliveryFees>({
+    insideDhaka: 50,
+    outsideDhaka: 90,
+    express: 120,
+    storePickup: 0,
+  });
+
+  useEffect(() => {
+    fetchDeliveryFees()
+      .then((f) => setLiveFees(f))
+      .catch(() => {});
+  }, []);
+
+  const feeFor = (id: string): number => {
+    switch (id) {
+      case "dhaka_express":
+        return liveFees.express;
+      case "pickup":
+        return liveFees.storePickup;
+      case "outside":
+        return liveFees.outsideDhaka;
+      default:
+        return liveFees.insideDhaka;
+    }
+  };
+  const delivery = {
+    ...(DELIVERY_OPTIONS.find((d) => d.id === deliveryArea) || DELIVERY_OPTIONS[0]),
+    fee: feeFor(deliveryArea),
+  };
 
   // Campaign State from REST API
   const [campaign, setCampaign] = useState<ActiveCampaignState | null>(null);
@@ -470,7 +497,7 @@ export default function CartPage() {
                   <p className="delivery-option__sub">{opt.sub}</p>
                 </div>
                 <span className="delivery-option__fee">
-                  {opt.fee === 0 ? "FREE" : bdt(opt.fee)}
+                  {feeFor(opt.id) === 0 ? "FREE" : bdt(feeFor(opt.id))}
                 </span>
               </label>
             ))}

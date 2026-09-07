@@ -2,7 +2,7 @@
 
 Audited: 2026-09-07 · Scope: `apps/mobile` (Expo), `apps/web` (Next.js) against the mandatory rules in root `AGENTS.md` (§1 Operational, §3 UI/UX & Accessibility, §7 Web ⇄ Mobile Parity). Evidence = file:line references, verified by grep/reading source.
 
-**Verdict: ~85% aligned.** 3 confirmed violations, 3 partial gaps, several conforming areas worth protecting.
+**Verdict: ~99% aligned.** All 3 violations + P1 + P3 FIXED (2026-09-07); 1 partial gap remains (P2), several conforming areas worth protecting.
 
 ---
 
@@ -25,41 +25,46 @@ Audited: 2026-09-07 · Scope: `apps/mobile` (Expo), `apps/web` (Next.js) against
 
 ---
 
-## ❌ Violations (must fix)
+## ✅ Resolved (fixed 2026-09-07)
 
-### V1. §7.2 — Tab bars diverge: web has no "Orders" tab
-- **Rule:** both apps declare `[ 🏠 Home ] [ 🗂️ Categories ] [ 🛒 Cart ] [ 📦 Orders ] [ 👤 Profile ]`.
-- **Mobile:** Home · Categories · Cart · **Chat** · Profile — and `orders` is registered with `href: null` (hidden from the bar, reachable elsewhere).
-- **Web (`MobileBottomNav.tsx`):** Home · Categories · Cart · **Chat** (action button) · Profile — Orders tab is missing entirely.
-- **Impact:** the 5-tab contract is violated on both platforms in the same way (Chat replaced Orders). Orders remain reachable via profile/CTAs, so this is a deliberate design drift — but it contradicts AGENTS.md §7.2 verbatim.
-- **Fix options:** (a) update AGENTS.md to codify Chat as the 5th tab (recommended — matches shipped UX), or (b) restore Orders as the 4th/5th tab on both.
+### V1. §7.2 — Tab-bar contract reconciled: **Chat** is the 5th tab
+- **Decision (user-confirmed):** codify the shipped layout — `[ 🏠 Home ] [ 🗂️ Categories ] [ 🛒 Cart (live badge) ] [ 💬 Chat ] [ 👤 Profile ]` — instead of restoring Orders to the bar.
+- **Evidence:** AGENTS.md §7.2 now declares Chat as the 5th tab and explicitly forbids re-adding Orders to the tab bar; Orders stays reachable via Profile + order-success with live Pathao tracking (consistent with `docs/design-system.md` §5.2, which already listed Chat). `apps/mobile/app/(tabs)/_layout.tsx` and `apps/web/components/MobileBottomNav.tsx` already matched this contract — no nav code change required.
 
-### V2. §3.2 — Mobile header icon buttons are 38×38 dp (< 44 minimum)
-- `apps/mobile/src/components/Header.tsx:213-225` — `iconButton`/`notifButton` are `width: 38, height: 38` with `hitSlop={{10,10,10,10}}`. Effective touch area = 58×58 **only in the slop zone**, which does not render the pressed/focus ring; WCAG 2.2 AA (2.5.8) and the AGENTS rule require the visual target ≥ 44 dp. Icon glyph is 20 dp.
-- Also affects any screen reusing `styles.iconButton` from Header.
-- **Fix:** raise to `width: 44, height: 44, borderRadius: 22` (keep hitSlop for the glyph gap).
+### V2. §3.2 — Header icon buttons raised to 44×44 dp
+- `apps/mobile/src/components/Header.tsx` — `iconButton`, `notifButton`, `bagButton` now `width: 44, height: 44, borderRadius: 22` (was 38/38/19). hitSlop 10 retained for the glyph gap, so the visual pressed ring and touch target are both ≥ 44 dp.
 
-### V3. §3.2 — Touch-target rule is applied inconsistently across mobile
-- Only 43 `hitSlop` occurrences across ~40 screen/component files; several interactive icon chips (e.g. PDP heart chip variants, modal close buttons in some modals) have no hitSlop and no ≥44 box. A full sweep is needed; Header (V2) is the highest-traffic instance.
+### V3. §3.2 — Full interactive-icon sweep completed
+- **12 modal close buttons raised 36 → 44 dp** (`AboutModal`, `AdminBroadcastModal`, `CourierTrackingModal`, `DailyRewardsModal`, `DenimCareGuideModal`, `GiftCardModal`, `NotificationModal`, `ProductReviewsModal`, `ReturnExchangeModal`, `SizeGuideModal`, `StoreStockModal`, `WishlistModal` — `closeBtn` now 44/44/r22).
+- **PDP chips raised to 44 dp:** `product/[id].tsx` `wishlistBtn` 36→44 (r18→22) and `qtyBtn` 38→44; `ImageLightboxModal` `iconBtn` 40→44 (r20→22).
+- **Text ✕ close buttons** in `profile/ContactDetailsForm.tsx` (district + address modals) gained `hitSlop {10,10,10,10}`.
+- **Audited & left as compliant** (already ≥ 44 effective via hitSlop): ProductCard `heartBtn` (32+10), NavBar `iconBtn`/`bagBtn` (36+10), checkout back `iconBtn` (36+10), LoginModal & AdminCustomersModal close (34+8), ProfileDrawerModal & SocialReelModal close (32+10/12), FestivalGreetingModal close (28+10), AiConcierge/SocialAuth close (padding +10). Decorative inner circles (Banner chips, `ordersIconCircle`, `menuItemIcon`, `iconCircle`, `riderAvatar`) are inside larger pressable rows and are not targets.
 
 ---
 
 ## ⚠️ Partial gaps (fix or document as accepted)
 
-### P1. §7.1 — Delivery fee display parity
-- Fees are single-sourced in the gateway (`getShippingFees()` → Woo zones, fallback ৳50/৳90/৳0 — `apps/api/src/woo.ts:918-938`) ✔.
-- Mobile checkout renders fees from `DELIVERY_OPTIONS` in `gateway.ts` ✔.
-- Web `checkout/page.tsx:35` **hardcodes its own `DELIVERY_OPTIONS` table** and `lib/api.ts:504` hardcodes a fallback `{50, 90, 120, 0}` including an "express 120" tier that exists nowhere else. If an admin changes a Woo shipping zone, mobile follows but web keeps stale numbers until its fetch resolves, and the phantom express tier can render.
-- **Fix:** web should consume `GET /v1/deen/shipping` like mobile does, and drop the express tier or add it to the gateway contract.
+### P1. §7.1 — Delivery fee display parity — ✅ RESOLVED (2026-09-07)
+- **Correction to earlier audit claim:** the "express" tier is NOT phantom. `dhaka_express` is a real, customer-selectable delivery option in both apps (mobile `DELIVERY_OPTIONS.dhaka_express`, badge FASTEST) and the gateway genuinely charges it (`/v1/deen/orders` + `/v1/deen/pricing` price `dhaka_express` = inside-Dhaka flat rate + `EXPRESS_SURCHARGE`, default 70; method title "Express Home Delivery"). The actual defect was **web-only hardcoding with a stale rate**: web checkout/cart listed Express at ৳110 while the server charges ৳120, and neither web page fetched live fees at all (mobile's CartContext already does via `/v1/deen/pricing`).
+- **Fix applied:**
+  - API `GET /v1/deen/shipping` (`routes.ts`) now returns `fees.express` = inside-Dhaka + `config.expressSurcharge`, making it the complete live fee source.
+  - Web `lib/api.ts` `fetchDeliveryFees()` switched from a POST to `/v1/deen/pricing` to a `GET /v1/deen/shipping` (falls back to gateway-default costs only when the API is unreachable).
+  - Web checkout `checkout/page.tsx`: static `DELIVERY_OPTIONS` table → `DELIVERY_OPTION_META` (metadata only) + live `deliveryOptions` built from `fetchDeliveryFees()` on mount; stale ৳110 gone; admin Woo-zone / surcharge edits now propagate with no rebuild.
+  - Web cart `cart/page.tsx`: same treatment (metadata list + live `feeFor()` map); all hardcoded fees removed.
+- Remaining web fee flows are unaffected: PDP estimate + order placement already use the gateway, and the server recomputes the authoritative delivery charge on `/v1/deen/orders` regardless of client display.
 
 ### P2. §3.2 — Web floating buy-bar / PDP buttons not verified ≥44px
 - `ProductDetailClient.tsx` styles the mobile floating buy bar via CSS; only some elements carry explicit 44px sizing. Needs a one-pass CSS audit (`.mobile-floating-buy-bar` children).
 
-### P3. §3.3 — Status live-region parity
-- Mobile uses `accessibilityRole="status"` in places; web has no `aria-live` region for order-status toasts (search found none). Screen-reader users on web won't hear async status updates.
+### P3. §3.3 — Status live-region parity — ✅ RESOLVED (2026-09-07)
+- Web had zero `aria-live` / `role="status"` regions; mobile announces the per-card delivery state via `accessibilityLiveRegion="polite"` (`orders.tsx` "Preparing Dispatch" pill).
+- **Fix applied:** `role="status"` + `aria-live="polite"` added to the three async order-status surfaces on web:
+  - `OrdersLookupView.tsx` — "Preparing Dispatch at Central Studio" status line in each looked-up order card (content arrives after the async lookup fetch).
+  - `app/profile/page.tsx` — order status pill (`status-pill`) and the "Preparing Dispatch" fallback in the profile recent-orders drawer (async orders fetch).
+  - `PathaoTrackingModal.tsx` — the courier status line (`data.summary || data.status`), which populates after the async `fetchPathaoTracking` resolves.
+- Screen-reader users now hear polite announcements when a looked-up order list loads, a profile order status refreshes, or Pathao live-timeline data returns.
 
 ---
 
 ## Notes
-- The §7.2 five-tab rule text and the shipped Chat-tab UX should be reconciled **in AGENTS.md first**, then both apps — otherwise every future agent will "fix" the working nav.
-- `apps/web/tsconfig.tsbuildinfo` is tracked in git but is build noise; consider ignoring it.
+- §7.2 five-tab rule reconciled in AGENTS.md (Chat codified, Orders de-tabbed) — resolved 2026-09-07. `apps/web/tsconfig.tsbuildinfo` is tracked in git but is build noise; consider ignoring it.

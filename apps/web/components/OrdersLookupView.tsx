@@ -256,7 +256,7 @@ export default function OrdersLookupView({ embedded = false, onBrowseProducts }:
                       <p style={{ fontSize: 11, fontWeight: 800, color: "var(--indigo)", letterSpacing: 0.5, margin: 0 }}>
                         DELIVERY STATUS
                       </p>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", marginTop: 2, margin: 0 }}>
+                      <p role="status" aria-live="polite" style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)", marginTop: 2, margin: 0 }}>
                         Preparing Dispatch at Central Studio
                       </p>
                     </div>

@@ -55,7 +55,9 @@ export default function PathaoTrackingModal({
             <div style={{ background: "var(--surface-2)", padding: 14, borderRadius: "var(--radius)", marginBottom: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <span style={{ fontSize: 11, color: "var(--sub)", textTransform: "uppercase", fontWeight: 800 }}>Status</span>
-                <p style={{ fontSize: 15, fontWeight: 900, color: "var(--indigo)", margin: 0 }}>{data.summary || data.status}</p>
+                <p role="status" aria-live="polite" style={{ fontSize: 15, fontWeight: 900, color: "var(--indigo)", margin: 0 }}>
+                  {data.summary || data.status}
+                </p>
               </div>
               <a
                 href={data.trackingUrl || `https://merchant.pathao.com/tracking?consignment_id=${consignmentId}`}

@@ -10,6 +10,7 @@ import {
   bdt,
   API_URL,
   fetchCampaigns,
+  fetchDeliveryFees,
   fetchDistricts,
   fetchProduct,
   loginWithGoogle,
@@ -18,6 +19,7 @@ import {
   type ActiveCampaignState,
   type BdDistrict,
   type AuthResult,
+  type DeliveryFees,
 } from "@/lib/api";
 import { BD_DISTRICTS, getDistrictPostcode } from "@/lib/districts";
 import BankOffersModal from "@/components/BankOffersModal";
@@ -32,12 +34,13 @@ interface DeliveryOption {
   icon: string;
 }
 
-const DELIVERY_OPTIONS: Record<string, DeliveryOption> = {
+// Static metadata only — FEES come live from GET /v1/deen/shipping (Woo shipping
+// zones + express surcharge), so admin fee edits propagate with no app rebuild.
+const DELIVERY_OPTION_META: Record<string, Omit<DeliveryOption, "fee">> = {
   dhaka_standard: {
     id: "dhaka_standard",
     name: "Dhaka Standard (24–48h)",
     sub: "Standard home delivery inside Dhaka metropolitan",
-    fee: 50,
     badge: "STANDARD",
     icon: "🛵",
   },
@@ -45,7 +48,6 @@ const DELIVERY_OPTIONS: Record<string, DeliveryOption> = {
     id: "dhaka_express",
     name: "Dhaka Express (Same-Day / 12h)",
     sub: "Priority delivery within 12–18 hours inside Dhaka",
-    fee: 110,
     badge: "FAST",
     icon: "⚡",
   },
@@ -53,7 +55,6 @@ const DELIVERY_OPTIONS: Record<string, DeliveryOption> = {
     id: "outside",
     name: "Outside Dhaka (3–5 days)",
     sub: "Fast express courier across all 64 BD Districts",
-    fee: 90,
     badge: "REGIONAL",
     icon: "📦",
   },
@@ -61,7 +62,6 @@ const DELIVERY_OPTIONS: Record<string, DeliveryOption> = {
     id: "store_pickup",
     name: "Store Pickup (Mirpur 12)",
     sub: "Ready in 2h · Ramzannesa Super Market, Mirpur 12",
-    fee: 0,
     badge: "FREE",
     icon: "🏪",
   },
@@ -136,6 +136,18 @@ function CheckoutContent() {
   const [selectedArea, setSelectedArea] = useState<string>(
     searchParams.get("area") || "dhaka_standard"
   );
+  // Live delivery fees from GET /v1/deen/shipping (Woo zones + express surcharge).
+  const [liveFees, setLiveFees] = useState<DeliveryFees>({
+    insideDhaka: 50,
+    outsideDhaka: 90,
+    express: 120,
+    storePickup: 0,
+  });
+  useEffect(() => {
+    fetchDeliveryFees()
+      .then((f) => setLiveFees(f))
+      .catch(() => {});
+  }, []);
   const [deliverySlot, setDeliverySlot] = useState<string>("any");
   const [deliveryNotes, setDeliveryNotes] = useState("");
   const [payment, setPayment] = useState<string>("cod");
@@ -252,8 +264,17 @@ function CheckoutContent() {
     }
   }, [initialCoupon]);
 
-  // Delivery Option calculation
-  const deliveryOpt = DELIVERY_OPTIONS[selectedArea] || DELIVERY_OPTIONS.dhaka_standard;
+  // Delivery options = static metadata merged with LIVE gateway fees.
+  const deliveryOptions = useMemo<Record<string, DeliveryOption>>(
+    () => ({
+      dhaka_standard: { ...DELIVERY_OPTION_META.dhaka_standard, fee: liveFees.insideDhaka },
+      dhaka_express: { ...DELIVERY_OPTION_META.dhaka_express, fee: liveFees.express },
+      outside: { ...DELIVERY_OPTION_META.outside, fee: liveFees.outsideDhaka },
+      store_pickup: { ...DELIVERY_OPTION_META.store_pickup, fee: liveFees.storePickup },
+    }),
+    [liveFees]
+  );
+  const deliveryOpt = deliveryOptions[selectedArea] || deliveryOptions.dhaka_standard;
   const deliveryFee = deliveryOpt.fee;
 
   // BOGO: buy 2+ same category → cheapest is free (matches API calculateBogo)
@@ -778,7 +799,7 @@ function CheckoutContent() {
 
               {/* Delivery Speed Radio Cards */}
               <div className="delivery-method-grid">
-                {Object.values(DELIVERY_OPTIONS).map((opt) => {
+                {Object.values(deliveryOptions).map((opt) => {
                   const isSelected = selectedArea === opt.id;
                   return (
                     <div

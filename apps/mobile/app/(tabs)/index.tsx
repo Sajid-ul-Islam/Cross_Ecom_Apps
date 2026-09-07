@@ -16,10 +16,7 @@ import { useRouter } from "expo-router";
 import {
   ArrowRight,
   Sparkles,
-  ShieldCheck,
-  Award,
   TrendingUp,
-  MapPin,
 } from "../../src/components/Icons";
 import { SectionHeader } from "../../src/components/SectionHeader";
 import { ScreenShell } from "../../src/components/ScreenShell";
@@ -447,29 +444,8 @@ export default function HomeScreen() {
           />
         </TouchableOpacity>
 
-        {/* Artisanal Heritage Craftsmanship Narrative */}
+        {/* Artisanal Heritage, Craft & Authenticity — swipeable story rail */}
         <BrandStorySection />
-
-        {/* Brand Authenticity Footer Card */}
-        <View style={styles.brandTrustCard}>
-          <View style={styles.trustItem}>
-            <Award size={20} color={colors.indigo} />
-            <Text style={styles.trustTitle}>Authentic Quality</Text>
-            <Text style={styles.trustDesc}>Pre-shrunk premium indigo textiles with guaranteed dye-fastness.</Text>
-          </View>
-          <View style={styles.trustDivider} />
-          <View style={styles.trustItem}>
-            <ShieldCheck size={20} color={colors.emerald} />
-            <Text style={styles.trustTitle}>e-CAB Registered</Text>
-            <Text style={styles.trustDesc}>Trusted e-commerce brand with official registration &amp; COD nationwide.</Text>
-          </View>
-          <View style={styles.trustDivider} />
-          <View style={styles.trustItem}>
-            <MapPin size={20} color={colors.crimson} />
-            <Text style={styles.trustTitle}>Flagship Stores</Text>
-            <Text style={styles.trustDesc}>Mirpur 12 (Dhaka) · Wari (Dhaka) · Cumilla Outlets</Text>
-          </View>
-        </View>
       </ScrollView>
 
       {/* Admin Broadcast Marketing Modal */}
@@ -570,14 +546,6 @@ const createStyles = (colors: ThemeColors, s: ReturnType<typeof sharedStyles>) =
   horizontalCardWrapper: { width: width * 0.46 },
   grid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 16, justifyContent: "space-between" },
   gridItem: { width: "48%" },
-  brandTrustCard: {
-    backgroundColor: colors.card, borderRadius: 10, marginHorizontal: 16, marginTop: 20,
-    padding: 16, borderWidth: 1, borderColor: colors.border,
-  },
-  trustItem: { paddingVertical: 8 },
-  trustTitle: { fontSize: 13, fontWeight: "700", color: colors.ink, marginTop: 4, marginBottom: 2 },
-  trustDesc: { fontSize: 11, color: colors.sub, lineHeight: 16 },
-  trustDivider: { height: 1, backgroundColor: colors.borderLight, marginVertical: 4 },
   // insights
   loadingCard: { margin: 16, padding: 24, alignItems: "center", backgroundColor: colors.card, borderRadius: 10, borderWidth: 1, borderColor: colors.border },
   loadingText: { marginTop: 8, fontSize: 12, color: colors.sub },

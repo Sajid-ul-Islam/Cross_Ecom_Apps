@@ -473,8 +473,8 @@ export default async function HomePage() {
         {/* ── Brand Heritage Story & Craftsmanship ─────── */}
         <BrandStorySection />
 
-        {/* ── Trust Bar ────────────────────────────────── */}
-        <section style={{ marginBottom: 40, marginTop: 20 }}>
+        {/* ── Trust Bar (desktop; mobile mirrors the trust trio inside the story rail) ── */}
+        <section className="trust-bar-section" style={{ marginBottom: 40, marginTop: 20 }}>
           <div className="trust-bar">
             {[
               {

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { fetchOutlets, fetchAppSettings, DEFAULT_OUTLETS, type Outlet } from "@/lib/api";
+import { TRUST_ITEMS, ShieldCheckIcon } from "@/lib/storyContent";
 
 interface AboutDeenDrawerProps {
   isOpen: boolean;
@@ -181,6 +182,43 @@ export default function AboutDeenDrawer({ isOpen, onClose }: AboutDeenDrawerProp
             </p>
           </div>
 
+          {/* Why Shop With DEEN — shared trust rail (same data as native About flow) */}
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, padding: "0 2px" }}>
+              <span style={{ color: "var(--indigo)", display: "flex" }}>
+                <ShieldCheckIcon size={14} />
+              </span>
+              <h5 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "var(--ink)", textTransform: "uppercase" }}>
+                Why Shop With DEEN
+              </h5>
+            </div>
+            <div className="story-mobile-rail">
+              {TRUST_ITEMS.map((item) => (
+                <article key={item.id} className="story-card">
+                  <div className="story-card__header">
+                    <span className="story-card__icon-circle" style={{ background: "var(--surface-2)", color: item.tone }}>
+                      {item.icon}
+                    </span>
+                    <span className="story-card__right-tag">EST. DHAKA 2020</span>
+                  </div>
+                  <h3 className="story-card__title">{item.title}</h3>
+                  <p className="story-card__desc">{item.desc}</p>
+                  <div className="story-card__divider" />
+                  <div className="story-card__points">
+                    {item.points.map((point) => (
+                      <div key={point} className="story-card__point">
+                        <span className="story-card__dot" style={{ background: item.tone }} />
+                        <span>{point}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="story-card__spacer" />
+                  <span className="story-card__tag">{item.tag}</span>
+                </article>
+              ))}
+            </div>
+          </div>
+
           {/* Section 1: Who We Are */}
           <div
             style={{
@@ -236,26 +274,26 @@ export default function AboutDeenDrawer({ isOpen, onClose }: AboutDeenDrawerProp
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
               <span style={{ fontSize: 16 }}>🌐</span>
               <h5 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "var(--ink)", textTransform: "uppercase" }}>
-                Official Brand Community &amp; Socials
+                Contact &amp; Community
               </h5>
             </div>
             <p style={{ margin: "0 0 12px", fontSize: 12, lineHeight: 1.6, color: "var(--sub)" }}>
-              Follow our official channels for new arrivals, styling masterclasses, and denim drops:
+              Need help or styling advice? Connect directly with us:
             </p>
 
             {/* Social Link Handles */}
             <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
               <div style={{ fontSize: 11.5, color: "var(--sub)" }}>
-                📱 WhatsApp: <strong>01952-700500</strong>
+                WhatsApp &amp; Hotline: <strong>{whatsapp}</strong>
               </div>
               <div style={{ fontSize: 11.5, color: "var(--sub)" }}>
-                📘 Facebook: <strong>facebook.com/deencommerce</strong>
+                Facebook: <strong>facebook.com/deencommerce</strong>
               </div>
               <div style={{ fontSize: 11.5, color: "var(--sub)" }}>
-                📸 Instagram: <strong>instagram.com/deencommerce</strong>
+                Instagram: <strong>instagram.com/deencommerce</strong>
               </div>
               <div style={{ fontSize: 11.5, color: "var(--sub)" }}>
-                💼 LinkedIn: <strong>linkedin.com/company/deencommerce</strong>
+                LinkedIn: <strong>linkedin.com/company/deencommerce</strong>
               </div>
             </div>
 
@@ -422,26 +460,6 @@ export default function AboutDeenDrawer({ isOpen, onClose }: AboutDeenDrawerProp
             </div>
           </div>
 
-          {/* Corporate Responsibility */}
-          <div
-            style={{
-              background: "var(--surface-2)",
-              border: "1px solid var(--border)",
-              borderRadius: 12,
-              padding: 16,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <span style={{ fontSize: 16 }}>🤝</span>
-              <h5 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "var(--ink)", textTransform: "uppercase" }}>
-                Corporate Responsibility
-              </h5>
-            </div>
-            <p style={{ margin: 0, fontSize: 12, lineHeight: 1.6, color: "var(--sub)" }}>
-              We support fashion that is produced, consumed and sold in a responsible manner. DEEN Commerce Ltd. donates 5% of profit to the DEEN Foundation to serve the underprivileged and support community welfare.
-            </p>
-          </div>
-
           {/* Section 4: Flagship Retail Showrooms */}
           <div
             style={{
@@ -500,6 +518,52 @@ export default function AboutDeenDrawer({ isOpen, onClose }: AboutDeenDrawerProp
                 );
               })}
             </div>
+          </div>
+
+          {/* Privacy & Support */}
+          <div
+            style={{
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
+              borderRadius: 12,
+              padding: 16,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <span style={{ fontSize: 16 }}>🔒</span>
+              <h5 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "var(--ink)", textTransform: "uppercase" }}>
+                Privacy &amp; Support
+              </h5>
+            </div>
+            <p style={{ margin: "0 0 10px", fontSize: 12, lineHeight: 1.6, color: "var(--sub)" }}>
+              We protect your data. Your profile, addresses and order history are stored securely and used only to fulfil your orders and improve your experience. We never sell your personal information.
+            </p>
+            <p style={{ margin: "0 0 10px", fontSize: 12, lineHeight: 1.6, color: "var(--sub)" }}>
+              Support: <strong>support@deencommerce.com</strong> · {whatsapp}
+            </p>
+            <p style={{ margin: 0, fontSize: 12, lineHeight: 1.6, color: "var(--sub)" }}>
+              Privacy Policy: deencommerce.com/privacy-policy
+            </p>
+          </div>
+
+          {/* Corporate Responsibility */}
+          <div
+            style={{
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
+              borderRadius: 12,
+              padding: 16,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <span style={{ fontSize: 16 }}>🤝</span>
+              <h5 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "var(--ink)", textTransform: "uppercase" }}>
+                Corporate Responsibility
+              </h5>
+            </div>
+            <p style={{ margin: 0, fontSize: 12, lineHeight: 1.6, color: "var(--sub)" }}>
+              We support fashion that is produced, consumed and sold in a responsible manner. DEEN Commerce Ltd. donates 5% of profit to the DEEN Foundation to serve the underprivileged and support community welfare.
+            </p>
           </div>
 
           {/* Customer Hotline & WhatsApp Concierge */}

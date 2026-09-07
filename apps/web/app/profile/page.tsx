@@ -841,7 +841,11 @@ export default function ProfilePage() {
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                   <span style={{ fontWeight: 800, fontSize: 13 }}>Order #{o.number || o.id}</span>
-                  <span className={`status-pill status-pill--${o.status.toLowerCase()}`}>
+                  <span
+                    role="status"
+                    aria-live="polite"
+                    className={`status-pill status-pill--${o.status.toLowerCase()}`}
+                  >
                     {o.status.toUpperCase()}
                   </span>
                 </div>
@@ -858,7 +862,9 @@ export default function ProfilePage() {
                     🚚 Track Pathao: {o.pathaoConsignmentId} ↗
                   </a>
                 ) : (
-                  <span style={{ fontSize: 11, color: "var(--faint)" }}>Preparing Dispatch</span>
+                  <span role="status" aria-live="polite" style={{ fontSize: 11, color: "var(--faint)" }}>
+                    Preparing Dispatch
+                  </span>
                 )}
               </div>
             ))}

@@ -2039,7 +2039,8 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   /* ---- shipping fees (source of truth = Woo shipping zones) ---- */
   app.get("/v1/deen/shipping", async (_req, reply) => {
     const fees = await getShippingFees();
-    return reply.send({ fees });
+    // express = inside-Dhaka flat rate + gateway express surcharge (EXPRESS_SURCHARGE env).
+    return reply.send({ fees: { ...fees, express: fees.insideDhaka + config.expressSurcharge } });
   });
 
   /* ---- AI Commerce Shopping Assistant & RAG Chat ---- */

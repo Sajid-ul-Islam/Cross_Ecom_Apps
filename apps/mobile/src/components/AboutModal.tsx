@@ -13,6 +13,8 @@ import { X, Sparkles, Store, ShieldCheck, Heart, MapPin, PhoneCall, Truck, Whats
 import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useStore } from "../context/StoreContext";
+import { HorizontalStoryRail } from "./HorizontalStoryRail";
+import { TRUST_STORY_CARDS } from "../data/storyCards";
 
 const { height } = Dimensions.get("window");
 
@@ -56,7 +58,19 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
                 <Sparkles size={12} color="#FFFFFF" />
                 <Text style={styles.introBadgeText}>EST. 2020 · DHAKA, BANGLADESH</Text>
               </View>
-              <Text style={styles.introTitle}>DEEN Commerce is a fashion start-up founded with the vision of harmonising fashion and ethics.</Text>
+              <Text style={styles.introTitle}>Harmonising Fashion and Ethics</Text>
+              <Text style={styles.introBody}>
+                DEEN Commerce was founded with a clear vision: marrying contemporary artisanal fashion with responsible craftsmanship. Rooted in Dhaka manufacturing, we bring premium denim to life.
+              </Text>
+            </View>
+
+            {/* Why Shop With DEEN — shared trust/authenticity rail (same data as Home) */}
+            <View style={styles.railBlock}>
+              <View style={styles.railHeader}>
+                <ShieldCheck size={14} color={colors.indigo} />
+                <Text style={[styles.railTitle, { color: colors.ink }]}>WHY SHOP WITH DEEN</Text>
+              </View>
+              <HorizontalStoryRail cards={TRUST_STORY_CARDS} />
             </View>
 
             {/* Section 1 */}
@@ -66,10 +80,10 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
                 <Text style={styles.sectionTitle}>WHO WE ARE</Text>
               </View>
               <Text style={styles.sectionBody}>
-                The company is committed to ethical values and quality and has quickly become a leader in the sustainable fashion industry. The founders recognised the need for a paradigm shift in an industry that is often criticised for its environmental and ethical footprint. They set out to challenge conventions and establish a brand that marries style with responsibility.
+                The company is committed to ethical values and high quality, challenging industry conventions. Every selvedge denim pair and shirt is crafted with high-density cotton, rope-dyed indigo, and reinforced bar-tack stitching.
               </Text>
               <Text style={[styles.sectionBody, { marginTop: 10 }]}>
-                The company's core values are ethics and quality. These values are not mere slogans, but form the bedrock of every decision, action, and product offered by DEEN Commerce.
+                Ethics and quality are not slogans; they are the bedrock of every decision and product manufactured in our Dhaka ateliers.
               </Text>
             </View>
 
@@ -80,10 +94,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
                 <Text style={styles.sectionTitle}>WHAT DRIVES US</Text>
               </View>
               <Text style={styles.sectionBody}>
-                Right from the outset, DEEN has been reimagining the fashion market. We have never been afraid to take risks, on the contrary, with our spontaneous customer service, clean delivery and easy return, we have set new standards in customer service.
-              </Text>
-              <Text style={[styles.sectionBody, { marginTop: 10 }]}>
-                For us, the customer is the focus of our mindset and actions. This is where customers can find exactly the clothes they are looking for. It’s difficult to leave our site with an empty shopping cart.
+                Customer delight is the core of our mindset. With spontaneous concierge support, 24–48h express delivery via Pathao Logistics in Dhaka, and hassle-free 7-day doorstep size exchange across all 64 districts, we aim to provide an effortless experience.
               </Text>
             </View>
 
@@ -149,11 +160,44 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
               </View>
             </View>
 
-            {/* Outlets */}
+            {/* Careers & Opportunities */}
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <Text style={{ fontSize: 16 }}>💼</Text>
+                <Text style={styles.sectionTitle}>CAREERS &amp; OPPORTUNITIES</Text>
+              </View>
+              <Text style={styles.sectionBody}>
+                We are constantly growing! If you are passionate about apparel design, textile merchandising, web engineering, or showroom styling:
+              </Text>
+              <TouchableOpacity
+                style={styles.mailRow}
+                onPress={() => Linking.openURL("mailto:career@deencommerce.com")}
+                accessibilityRole="button"
+                accessibilityLabel="Send CV to career@deencommerce.com"
+              >
+                <Text style={{ fontSize: 15 }}>✉️</Text>
+                <Text style={[styles.mailRowText, { color: colors.indigo }]}>
+                  Send CV: <Text style={{ fontWeight: "800" }}>career@deencommerce.com</Text>
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.mailRow}
+                onPress={() => Linking.openURL("mailto:wholesale@deencommerce.com")}
+                accessibilityRole="button"
+                accessibilityLabel="Wholesale enquiries to wholesale@deencommerce.com"
+              >
+                <Text style={{ fontSize: 15 }}>📦</Text>
+                <Text style={[styles.mailRowText, { color: colors.sub }]}>
+                  Wholesale: <Text style={{ fontWeight: "800", color: colors.ink }}>wholesale@deencommerce.com</Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Retail Showrooms & Outlets */}
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>
                 <MapPin size={16} color={colors.indigo} />
-                <Text style={styles.sectionTitle}>OUR OUTLETS</Text>
+                <Text style={styles.sectionTitle}>RETAIL SHOWROOMS &amp; OUTLETS</Text>
               </View>
               
               <Text style={[styles.sectionBody, { fontWeight: "bold", color: colors.ink, marginTop: 4 }]}>Mirpur 12 Outlet</Text>
@@ -199,10 +243,27 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
                 <Text style={styles.sectionTitle}>CORPORATE RESPONSIBILITY</Text>
               </View>
               <Text style={styles.sectionBody}>
-                We support fashion that is produced, consumed and sold in a responsible manner. We are convinced that this commitment will pay off for us all in the long run. DEEN Commerce Ltd. donates 5% of the profit to the DEEN Foundation that serves the humanity.
+                We support fashion that is produced, consumed and sold in a responsible manner. DEEN Commerce Ltd. donates 5% of profit to the DEEN Foundation to serve the underprivileged and support community welfare.
               </Text>
             </View>
 
+            {/* Hotline & WhatsApp Concierge */}
+            <TouchableOpacity
+              style={[styles.conciergeCta, { backgroundColor: colors.indigoLight, borderColor: colors.border }]}
+              onPress={() => Linking.openURL(`https://wa.me/88${waNumber}`)}
+              accessibilityRole="button"
+              accessibilityLabel="Hotline and WhatsApp concierge"
+            >
+              <Text style={{ fontSize: 22 }}>💬</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.conciergeTitle, { color: colors.indigo }]}>
+                  Hotline &amp; WhatsApp: +880 {info.whatsapp}
+                </Text>
+                <Text style={[styles.conciergeSub, { color: colors.sub }]}>
+                  Tap to chat with DEEN styling concierge
+                </Text>
+              </View>
+            </TouchableOpacity>
           </ScrollView>
         </View>
       </View>
@@ -258,9 +319,9 @@ function createStyles(colors: ThemeColors) {
       marginTop: 2,
     },
     closeBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: colors.cardSecondary,
       alignItems: "center",
       justifyContent: "center",
@@ -298,6 +359,26 @@ function createStyles(colors: ThemeColors) {
       fontWeight: "700",
       lineHeight: 20,
     },
+    introBody: {
+      color: "#FFFFFF",
+      fontSize: 12,
+      lineHeight: 18,
+      opacity: 0.9,
+    },
+    railBlock: {
+      gap: 8,
+    },
+    railHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      paddingHorizontal: 2,
+    },
+    railTitle: {
+      fontSize: 12,
+      fontWeight: "900",
+      letterSpacing: 0.4,
+    },
     sectionCard: {
       backgroundColor: colors.card,
       borderRadius: 10,
@@ -334,6 +415,39 @@ function createStyles(colors: ThemeColors) {
       shadowRadius: 6,
       shadowOffset: { width: 0, height: 3 },
       elevation: 4,
+    },
+    mailRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      padding: 10,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.paper,
+      marginBottom: 8,
+    },
+    mailRowText: {
+      fontSize: 12,
+      fontWeight: "600",
+      flexShrink: 1,
+    },
+    conciergeCta: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      padding: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+    },
+    conciergeTitle: {
+      fontSize: 13,
+      fontWeight: "800",
+    },
+    conciergeSub: {
+      fontSize: 11,
+      marginTop: 2,
+      lineHeight: 16,
     },
   });
 }

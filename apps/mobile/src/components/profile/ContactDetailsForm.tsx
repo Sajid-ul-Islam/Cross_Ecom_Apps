@@ -390,7 +390,7 @@ export const ContactDetailsForm: React.FC<ContactDetailsFormProps> = ({
           <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.ink }]}>Select Bangladesh District</Text>
-              <TouchableOpacity onPress={() => setDistrictModalOpen(false)}>
+              <TouchableOpacity onPress={() => setDistrictModalOpen(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <Text style={[styles.closeBtn, { color: colors.sub }]}>✕</Text>
               </TouchableOpacity>
             </View>
@@ -438,7 +438,7 @@ export const ContactDetailsForm: React.FC<ContactDetailsFormProps> = ({
           <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.ink }]}>Save New Address</Text>
-              <TouchableOpacity onPress={() => setAddAddressModalOpen(false)}>
+              <TouchableOpacity onPress={() => setAddAddressModalOpen(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <Text style={[styles.closeBtn, { color: colors.sub }]}>✕</Text>
               </TouchableOpacity>
             </View>
