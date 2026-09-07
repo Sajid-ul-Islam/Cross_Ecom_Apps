@@ -88,6 +88,7 @@ Domain Context Boundaries:
    - District codes: `apps/mobile/src/data/districts.ts` (Mobile) / `apps/web/lib/districts.ts` (Web)
    - Currency & BDT formatting: `bdt()` in `gateway.ts` (Mobile) / `lib/api.ts` (Web)
    - Pricing & Cashback tiers: `apps/api/src/routes.ts` + `pricing.test.ts`
+   - REST API design standard: follow `docs/REST API design guidelines.md` for all endpoint work in `apps/api` — resource-based noun URLs, correct HTTP method semantics & idempotency, accurate status codes (never 200 with an error body), structured errors (code + message + failing fields), query params for filtering/sorting (no actions in URLs), explicit versioning for breaking changes. Error envelope `{ error, message, status, fields? }` is enforced by the `onSend` normalizer hook in `routes.ts` (guidelines §9).
 3. **Continuous Type Safety:** Every agent modification must compile with `npm run typecheck:all` (0 errors) before declaring a task complete.
 
 ---

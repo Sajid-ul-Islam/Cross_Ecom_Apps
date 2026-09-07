@@ -46,4 +46,17 @@ Use standard HTTP status codes to communicate the high-level result of an operat
 *   **Predictability:** Ensure that when a developer learns how one endpoint works, they can make reasonable and accurate assumptions about all other endpoints [2].
 
 **Final Directive:** Your primary goal is not just to be technically RESTful, but to generate APIs that make sense without requiring developers to constantly check documentation [2]. Ensure that resource names, HTTP methods, status codes, and error structures all behave predictably [2].
+
+---
+
+## 9. Project Adoption — DEEN Gateway (`apps/api`)
+
+The eight blueprints above are implemented across all `/v1` endpoints. Applied **additively only** — no URL, method, or client-visible field was changed (Rule 7: never break existing clients). Mobile (`apps/mobile`) and Web (`apps/web`) clients read `message` (then `error`) from error bodies and branch on `res.ok`, which the contract below preserves.
+
+*   **Uniform error envelope (Rules 4 & 5):** every response with `status >= 400` carries `{ error: "STABLE_CODE", message, status, fields? }`, enforced by the `onSend` normalizer hook in `apps/api/src/routes.ts` (`_STATUS_ERROR_DEFAULTS`). Fastify default-handler bodies (`error: "Bad Request"` / `"Internal Server Error"`) and Ajv schema-validation errors are normalized to machine codes; `fields[]` is derived from Ajv `validation`. Legacy fields (`success: false`, `valid: false`) are preserved for existing clients.
+*   **400 vs 422 rule (Rule 4):** `400` = missing/empty required field (invalid request); `422` = field present but failing business/format validation. `VALIDATION` bodies always name the offending inputs in `fields[]`.
+*   **Predictable codes (Rule 2):** only `SCREAMING_SNAKE_CASE` machine codes (`VALIDATION`, `NOT_FOUND`, `UNAUTHENTICATED`, `FORBIDDEN`, `RATE_LIMITED`, `COUPON_INVALID`, `INVALID_COUPON`, `ORDER_FAILED`, `PATHAO_UNAVAILABLE`, `UPSTREAM_FAILED`, `SERVICE_UNAVAILABLE`, `INTERNAL`). Prose codes like `"slug required"` are banned.
+*   **Method semantics (Rule 3):** GET reads / POST creates; creation endpoints return `201`; idempotent order replay honors `Idempotency-Key` and returns `200` with the existing order.
+*   **Actions in URLs (Rules 1 & 6):** a few RPC-style routes (`/payments/initiate`, `/payments/verify`, `/pathao/create-parcel`) are retained for client compatibility; replacing them is a breaking change and requires the `/v2` prefix per Rule 7.
+*   **Versioning (Rule 7):** all endpoints live under `/v1`; additive fields only; breaking changes must ship as `/v2`.
 ```

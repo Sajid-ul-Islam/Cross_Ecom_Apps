@@ -943,6 +943,72 @@ function sortProducts(list: DeenProduct[], sort: string): DeenProduct[] {
 }
 
 export async function registerDeenRoutes(app: FastifyInstance) {
+  /* ── REST Error Envelope Normalizer (docs/REST API design guidelines.md §4/§5) ──
+     Every error response (status >= 400) carries a stable machine code, a useful
+     message, and the HTTP status. Existing fields (success:false, valid:false,
+     reconciled, fields[]) are preserved for legacy clients; missing ones are
+     filled from the map below. NOTE: Fastify hands onSend the SERIALIZED JSON
+     string for object payloads, so we parse → normalize → re-stringify. Non-JSON
+     payloads (images, buffers, HTML) are untouched. */
+  const _STATUS_ERROR_DEFAULTS: Record<number, { error: string; message: string }> = {
+    400: { error: "BAD_REQUEST", message: "Invalid request." },
+    401: { error: "UNAUTHENTICATED", message: "Authentication required." },
+    403: { error: "FORBIDDEN", message: "You do not have permission to perform this action." },
+    404: { error: "NOT_FOUND", message: "Resource not found." },
+    405: { error: "METHOD_NOT_ALLOWED", message: "Method not allowed." },
+    409: { error: "CONFLICT", message: "Conflict with the current state of the resource." },
+    422: { error: "VALIDATION", message: "Validation failed." },
+    429: { error: "RATE_LIMITED", message: "Too many requests. Please slow down." },
+    500: { error: "INTERNAL", message: "Internal server error." },
+    502: { error: "UPSTREAM_FAILED", message: "Upstream service failed." },
+    503: { error: "SERVICE_UNAVAILABLE", message: "Service temporarily unavailable." },
+  };
+  const _FASTIFY_HUMAN_ERRORS = new Set([
+    "Bad Request", "Unauthorized", "Forbidden", "Not Found", "Method Not Allowed",
+    "Request Timeout", "Conflict", "Payload Too Large", "Unsupported Media Type",
+    "Unprocessable Entity", "Failed Dependency", "Too Many Requests",
+    "Request Header Fields Too Large", "Internal Server Error", "Bad Gateway",
+    "Service Unavailable", "Gateway Timeout",
+  ]);
+  app.addHook("onSend", async (_req, reply, payload) => {
+    const code = reply.statusCode;
+    if (code < 400) return payload;
+    if (typeof payload !== "string" || payload.length === 0 || payload[0] !== "{") return payload;
+    let body: any;
+    try {
+      body = JSON.parse(payload);
+    } catch {
+      return payload;
+    }
+    if (body == null || typeof body !== "object" || body.constructor !== Object) return payload;
+    const defaults = _STATUS_ERROR_DEFAULTS[code] || { error: "REQUEST_FAILED", message: "Request failed." };
+    let changed = false;
+    if (typeof body.error !== "string" || body.error.length === 0 || _FASTIFY_HUMAN_ERRORS.has(body.error)) {
+      body.error = defaults.error;
+      changed = true;
+    }
+    if (typeof body.message !== "string" || body.message.length === 0) {
+      body.message = defaults.message;
+      changed = true;
+    }
+    if (body.status === undefined) {
+      body.status = code;
+      changed = true;
+    }
+    // Fastify schema/Ajv validation errors: surface the failing fields (§5).
+    if (!Array.isArray(body.fields) && Array.isArray(body.validation)) {
+      const fields = body.validation
+        .map((v: any) => String(v.instancePath || v.dataPath || ""))
+        .map((p: string) => p.replace(/^[./]+/, "").split(/[./]/)[0])
+        .filter((f: string) => f.length > 0);
+      if (fields.length > 0) {
+        body.fields = Array.from(new Set(fields));
+        changed = true;
+      }
+    }
+    return changed ? JSON.stringify(body) : payload;
+  });
+
   /* ── Request-ID & Structured Observability Hooks (P1) ── */
   app.addHook("onRequest", async (req, reply) => {
     const incomingId = req.headers["x-request-id"] as string | undefined;
@@ -1373,7 +1439,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
 
     if (!verify()) {
       audit("woo_webhook", false, "REJECTED bad signature");
-      return reply.code(401).send({ error: "BAD_SIGNATURE" });
+      return reply.code(401).send({ error: "BAD_SIGNATURE", message: "Invalid webhook signature." });
     }
 
     // ── Webhook Idempotency / Delivery-ID Deduplication ──
@@ -1515,7 +1581,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   app.post("/v1/deen/webhook/woo/register", async (req, reply) => {
     // One-call setup: provisions the WooCommerce webhooks that keep the app real-time.
     // No need to click in WP Admin. Re-run anytime; duplicate webhooks are skipped.
-    if (!wooHealthy()) return reply.code(503).send({ error: "WOO_DISABLED" });
+    if (!wooHealthy()) return reply.code(503).send({ error: "WOO_DISABLED", message: "WooCommerce upstream is disabled or unhealthy." });
     const secret = config.webhookSecret ?? "";
     if (!secret) return reply.code(400).send({ error: "SET_WEBHOOK_SECRET", message: "Set WEBHOOK_SECRET env on the gateway first." });
 
@@ -1953,9 +2019,9 @@ export async function registerDeenRoutes(app: FastifyInstance) {
      Source of truth = the WP page. Admin edits it; the app shows it with no rebuild. */
   app.get("/v1/deen/page", async (req, reply) => {
     const slug = String((req.query as any).slug || "");
-    if (!slug) return reply.code(400).send({ error: "slug required" });
+    if (!slug) return reply.code(400).send({ error: "VALIDATION", message: "Query parameter 'slug' is required.", fields: ["slug"] });
     const page = await getPage(slug);
-    if (!page) return reply.code(404).send({ error: "not found" });
+    if (!page) return reply.code(404).send({ error: "NOT_FOUND", message: "Page not found." });
     return reply.send(page);
   });
 
@@ -1964,9 +2030,9 @@ export async function registerDeenRoutes(app: FastifyInstance) {
      and returns the discount to apply, just like deencommerce.com. */
   app.get("/v1/deen/coupon", async (req, reply) => {
     const code = String((req.query as any).code || "");
-    if (!code.trim()) return reply.code(400).send({ error: "code required" });
+    if (!code.trim()) return reply.code(400).send({ error: "VALIDATION", message: "Query parameter 'code' is required.", fields: ["code"] });
     const c = await getCouponByCode(code);
-    if (!c) return reply.code(404).send({ error: "invalid_or_expired", valid: false });
+    if (!c) return reply.code(404).send({ error: "COUPON_INVALID", message: "Coupon code is invalid or has expired.", valid: false });
     return reply.send({ valid: true, ...c });
   });
 
@@ -2052,7 +2118,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const body = (req.body ?? {}) as any;
     const { name, lastName, phone, email, address, area, city, district, state, postcode, payment, items, guestToken, trxId, coupon } = body;
     if (!name || !String(name).trim()) {
-      return reply.code(422).send({ error: "VALIDATION", message: "Name is required." });
+      return reply.code(400).send({ error: "VALIDATION", message: "Name is required.", fields: ["name"] });
     }
     let digits = String(phone ?? "").replace(/[^0-9]/g, "");
     if (digits.startsWith("880") && digits.length === 13) {
@@ -2062,14 +2128,15 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       return reply.code(422).send({
         error: "VALIDATION",
         message: "Phone number must be an 11-digit Bangladeshi mobile number starting with 0 (e.g. 01XXXXXXXXX).",
+        fields: ["phone"],
       });
     }
 
     if (!address || String(address).trim().length < 8) {
-      return reply.code(422).send({ error: "VALIDATION", message: "Full delivery address required (house, road, area)." });
+      return reply.code(422).send({ error: "VALIDATION", message: "Full delivery address required (house, road, area).", fields: ["address"] });
     }
     if (!Array.isArray(items) || items.length === 0) {
-      return reply.code(422).send({ error: "VALIDATION", message: "Your bag is empty." });
+      return reply.code(400).send({ error: "VALIDATION", message: "Your bag is empty.", fields: ["items"] });
     }
 
     const clientKey = (req.headers["idempotency-key"] || req.headers["x-idempotency-key"] || body.idempotencyKey) as string | undefined;
@@ -2371,6 +2438,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
         return reply.code(422).send({
           error: "INVALID_COUPON",
           message: err.message.replace("INVALID_COUPON: ", ""),
+          fields: ["coupon"],
         });
       }
       return reply.code(500).send({
@@ -3463,7 +3531,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const username = String(b.username || b.identifier || b.email || "").trim();
     const password = String(b.password || "");
     if (!username || !password) {
-      return reply.code(422).send({ success: false, message: "Username and password are required." });
+      return reply.code(400).send({ success: false, error: "VALIDATION", message: "Username and password are required.", fields: ["username", "password"] });
     }
 
     const wpUser = await wpLogin(username, password);
@@ -3569,10 +3637,10 @@ export async function registerDeenRoutes(app: FastifyInstance) {
 
     const isProd = process.env.NODE_ENV === "production";
     if (isProd && !idToken) {
-      return reply.code(422).send({ success: false, message: "Google idToken is required in production." });
+      return reply.code(400).send({ success: false, error: "VALIDATION", message: "Google idToken is required in production.", fields: ["idToken"] });
     }
     if (!idToken && !fallbackEmail) {
-      return reply.code(422).send({ success: false, message: "Google idToken or email is required." });
+      return reply.code(400).send({ success: false, error: "VALIDATION", message: "Google idToken or email is required.", fields: ["idToken", "email"] });
     }
 
     let verifiedEmail = fallbackEmail;
@@ -3659,10 +3727,10 @@ export async function registerDeenRoutes(app: FastifyInstance) {
 
     const isProd = process.env.NODE_ENV === "production";
     if (isProd && !accessToken) {
-      return reply.code(422).send({ success: false, message: "Facebook accessToken is required in production." });
+      return reply.code(400).send({ success: false, error: "VALIDATION", message: "Facebook accessToken is required in production.", fields: ["accessToken"] });
     }
     if (!accessToken && !fallbackEmail) {
-      return reply.code(422).send({ success: false, message: "Facebook accessToken or email is required." });
+      return reply.code(400).send({ success: false, error: "VALIDATION", message: "Facebook accessToken or email is required.", fields: ["accessToken", "email"] });
     }
 
     let verifiedEmail = fallbackEmail;
@@ -3762,7 +3830,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const b = (req.body as any) || {};
     const identifier = String(b.identifier || b.username || b.email || "").trim();
     if (!identifier) {
-      return reply.code(422).send({ success: false, message: "Username or email is required." });
+      return reply.code(400).send({ success: false, error: "VALIDATION", message: "Username or email is required.", fields: ["identifier"] });
     }
     const { site } = config.woo;
     const base = site.replace(/\/$/, "");
@@ -3807,6 +3875,8 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       return reply.code(422).send({
         success: false,
         message: "New password must be at least 6 characters long.",
+        error: "VALIDATION",
+        fields: ["newPassword"],
       });
     }
 
@@ -3814,6 +3884,8 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       return reply.code(422).send({
         success: false,
         message: "New password and confirmation password do not match.",
+        error: "VALIDATION",
+        fields: ["newPassword", "confirmPassword"],
       });
     }
 
@@ -3862,13 +3934,15 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const district = String(b.district || "BD-13").trim();
 
     if (!name) {
-      return reply.code(422).send({ success: false, message: "Full name is required." });
+      return reply.code(400).send({ success: false, error: "VALIDATION", message: "Full name is required.", fields: ["name"] });
     }
 
     if (phone && (phone.length !== 11 || !phone.startsWith("01"))) {
       return reply.code(422).send({
         success: false,
         message: "Valid 11-digit Bangladeshi mobile number required (01XXXXXXXXX).",
+        error: "VALIDATION",
+        fields: ["phone"],
       });
     }
 
