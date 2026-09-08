@@ -53,12 +53,9 @@ export default function Header() {
   };
 
   const navLinks = [
-    { href: "/", label: "Home" },
     { href: "/shop", label: "Shop" },
-    { href: "/categories", label: "Categories" },
     { href: "/cart", label: "Cart" },
     { href: "/orders", label: "Track Order" },
-    { href: "/profile", label: "Profile" },
   ];
 
   return (
@@ -216,42 +213,7 @@ export default function Header() {
               </span>
             </button>
 
-            {/* Theme toggle */}
-            <button
-              type="button"
-              className="nav__icon-btn"
-              onClick={toggleTheme}
-              aria-label="Toggle theme"
-              title={isDark ? "Switch to light" : "Switch to dark"}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: "50%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "var(--surface-2)",
-                border: "1px solid var(--border)",
-                color: "var(--ink)",
-                cursor: "pointer",
-              }}
-            >
-              {isDark ? (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" />
-                  <line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" />
-                  <line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-                </svg>
-              ) : (
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-                </svg>
-              )}
-            </button>
-
-            {/* Wishlist Heart Button */}
+            {/* Wishlist Heart Button - PRIMARY ACTION */}
             <button
               type="button"
               className="nav__icon-btn"
@@ -260,19 +222,20 @@ export default function Header() {
               title="Saved Wishlist Items"
               style={{
                 position: "relative",
-                width: 44,
-                height: 44,
+                width: 48,
+                height: 48,
                 borderRadius: "50%",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                background: "var(--surface-2)",
-                border: "1px solid var(--border)",
-                color: "var(--ink)",
+                background: "linear-gradient(135deg, var(--indigo) 0%, #3b82f6 100%)",
+                border: "none",
+                color: "#fff",
                 cursor: "pointer",
+                boxShadow: "0 4px 12px rgba(99, 102, 241, 0.3)",
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill={totalWishlist > 0 ? "rgba(225, 41, 62, 0.15)" : "none"} stroke={totalWishlist > 0 ? "var(--crimson)" : "currentColor"} strokeWidth="2">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill={totalWishlist > 0 ? "#fff" : "none"} stroke="#fff" strokeWidth="2">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
               </svg>
               {totalWishlist > 0 && (
@@ -281,17 +244,18 @@ export default function Header() {
                     position: "absolute",
                     top: 4,
                     right: 4,
-                    minWidth: 16,
-                    height: 16,
-                    borderRadius: 8,
+                    minWidth: 18,
+                    height: 18,
+                    borderRadius: 9,
                     background: "var(--crimson)",
                     color: "#fff",
-                    fontSize: 9,
+                    fontSize: 10,
                     fontWeight: 900,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     padding: "0 4px",
+                    border: "2px solid #fff",
                   }}
                 >
                   {totalWishlist > 99 ? "99+" : totalWishlist}

@@ -34,8 +34,9 @@ export default function MobileBottomNav() {
       href: "/cart",
       label: "Cart",
       badge: totalItems > 0 ? totalItems : null,
+      isPrimary: true, // Jakob's Law: Center tab is for primary action (e-commerce = Cart)
       icon: (active: boolean) => (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "var(--indigo)" : "currentColor"} strokeWidth={active ? "2.5" : "2"} strokeLinecap="round" strokeLinejoin="round">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? "var(--indigo)" : "none"} stroke={active ? "#fff" : "var(--indigo)"} strokeWidth={active ? "3" : "2.5"} strokeLinecap="round" strokeLinejoin="round">
           <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
           <line x1="3" y1="6" x2="21" y2="6" />
           <path d="M16 10a4 4 0 0 1-8 0" />
@@ -92,7 +93,7 @@ export default function MobileBottomNav() {
           <Link
             key={tab.href}
             href={tab.href}
-            className={`mobile-tab-btn ${isActive ? "mobile-tab-btn--active" : ""}`}
+            className={`mobile-tab-btn ${isActive ? "mobile-tab-btn--active" : ""} ${tab.isPrimary ? "mobile-tab-btn--primary" : ""}`}
           >
             <div className="mobile-tab-icon-wrap">
               {tab.icon(isActive)}
