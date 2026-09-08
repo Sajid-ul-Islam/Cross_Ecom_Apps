@@ -7,16 +7,34 @@
     "icon": "./assets/icon.png",
     "scheme": "deen",
     "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0D111A"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/6e5914c5-c56c-4cc7-ad0b-f9bf6cf3d7bd",
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.deencommerce.app"
+      "bundleIdentifier": "com.deencommerce.app",
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.deencommerce.app"
+      "package": "com.deencommerce.app",
+      "versionCode": 1,
+      "permissions": [],
+      "softwareKeyboardLayoutMode": "pan",
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     },
     "web": {
       "bundler": "metro",
@@ -60,6 +78,9 @@
         "projectId": "6e5914c5-c56c-4cc7-ad0b-f9bf6cf3d7bd"
       }
     },
-    "owner": "b3ngali"
+    "owner": "b3ngali",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
   }
 }

@@ -46,6 +46,7 @@ export const AdminCustomersModal: React.FC<AdminCustomersModalProps> = ({
   visible,
   onClose,
 }) => {
+  if (!visible) return null;
   const { colors, isDark } = useTheme();
   const s = sharedStyles(colors);
   const styles = createStyles(colors, s);

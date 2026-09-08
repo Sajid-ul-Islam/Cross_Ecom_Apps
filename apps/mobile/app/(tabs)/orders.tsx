@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 
-import { Package, Clock, CheckCircle2, Truck, ShoppingBag, ArrowRight, RotateCcw, Camera, FileText, ShieldCheck } from "../../src/components/Icons";
+import { Package, Clock, CheckCircle2, Truck, ArrowRight, RotateCcw } from "../../src/components/Icons";
 import { ScreenShell } from "../../src/components/ScreenShell";
 import { ThemeColors } from "../../src/theme/colors";
 import { sharedStyles } from "../../src/theme/sharedStyles";
@@ -161,6 +161,7 @@ export default function OrdersScreen() {
                         setSelectedOrderForTracking(order);
                         setTrackingModalVisible(true);
                       }}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
                       <Text style={{ fontSize: 11, fontWeight: "800", color: colors.indigo }}>
                         Track →
@@ -245,17 +246,38 @@ export default function OrdersScreen() {
 
                 {/* Action Buttons */}
                 <View style={[styles.orderActionsRow, { borderTopColor: colors.borderLight }]}>
-                  <TouchableOpacity
-                    style={[styles.trackBtn, { backgroundColor: colors.indigo }]}
-                    activeOpacity={0.8}
-                    onPress={() => {
-                      setSelectedOrderForTracking(order);
-                      setTrackingModalVisible(true);
-                    }}
-                  >
-                    <Truck size={13} color="#FFFFFF" />
-                    <Text style={styles.trackBtnText}>TRACK ON PATHAO</Text>
-                  </TouchableOpacity>
+                  {hasPathao ? (
+                    <TouchableOpacity
+                      style={[styles.trackBtn, { backgroundColor: colors.indigo }]}
+                      activeOpacity={0.8}
+                      onPress={() => {
+                        setSelectedOrderForTracking(order);
+                        setTrackingModalVisible(true);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Track parcel on Pathao, Consignment ID ${order.pathaoConsignmentId}`}
+                    >
+                      <Truck size={13} color="#FFFFFF" />
+                      <Text style={styles.trackBtnText} numberOfLines={1}>TRACK ON PATHAO</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View
+                      style={[
+                        styles.trackBtn,
+                        {
+                          backgroundColor: colors.cardSecondary,
+                          borderColor: colors.borderLight,
+                          borderWidth: 1,
+                        },
+                      ]}
+                      accessibilityRole="text"
+                      accessibilityLiveRegion="polite"
+                      accessibilityLabel="Order is preparing for dispatch"
+                    >
+                      <Clock size={13} color={colors.sub} />
+                      <Text style={[styles.trackBtnText, { color: colors.sub }]}>PREPARING DISPATCH</Text>
+                    </View>
+                  )}
 
                   <TouchableOpacity
                     style={[styles.returnBtn, { backgroundColor: colors.indigoLight, borderColor: colors.indigo }]}
@@ -264,6 +286,8 @@ export default function OrdersScreen() {
                       setSelectedOrderForReturn(order);
                       setReturnModalVisible(true);
                     }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Exchange or return order"
                   >
                     <RotateCcw size={13} color={colors.indigo} />
                     <Text style={[styles.returnBtnText, { color: colors.indigo }]}>EXCHANGE / RETURN</Text>
@@ -386,65 +410,7 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
       color: colors.indigoDark,
       letterSpacing: 0.5,
     },
-    activeReturnBox: {
-      marginTop: 10,
-      borderTopWidth: 1,
-      borderTopColor: colors.borderLight,
-      paddingTop: 10,
-      backgroundColor: colors.cardSecondary,
-      padding: 10,
-      borderRadius: 6,
-      borderWidth: 1,
-      borderColor: colors.border,
-      gap: 4,
-    },
-    activeReturnHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-    },
-    activeReturnTitle: {
-      fontSize: 11,
-      fontWeight: "900",
-      color: colors.indigoDark,
-      letterSpacing: 0.5,
-    },
-    retStatusBadge: {
-      backgroundColor: colors.amberLight,
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 4,
-    },
-    retStatusBadgeText: {
-      color: colors.amber,
-      fontSize: 8,
-      fontWeight: "900",
-      letterSpacing: 0.4,
-    },
-    retTicketLine: {
-      fontSize: 11,
-      fontWeight: "700",
-      color: colors.ink,
-    },
-    retNotes: {
-      fontSize: 10,
-      color: colors.sub,
-      fontStyle: "italic",
-    },
-    retMetaRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginTop: 4,
-      borderTopWidth: 1,
-      borderTopColor: colors.borderLight,
-      paddingTop: 4,
-    },
-    retMetaText: {
-      fontSize: 9,
-      color: colors.sub,
-      fontWeight: "600",
-    },
+
     ordersList: {
       gap: 14,
     },
@@ -485,64 +451,7 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
       color: colors.indigo,
       letterSpacing: 0.5,
     },
-    stepperContainer: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingVertical: 14,
-      paddingHorizontal: 4,
-    },
-    stepNode: {
-      alignItems: "center",
-      width: 54,
-    },
-    stepDot: {
-      width: 20,
-      height: 20,
-      borderRadius: 10,
-      backgroundColor: colors.paper,
-      borderWidth: 2,
-      borderColor: colors.border,
-      alignItems: "center",
-      justifyContent: "center",
-      marginBottom: 4,
-    },
-    stepDotDone: {
-      backgroundColor: colors.emerald,
-      borderColor: colors.emerald,
-    },
-    stepDotCurrent: {
-      borderColor: colors.indigo,
-      backgroundColor: colors.indigo,
-    },
-    stepDotInner: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: colors.border,
-    },
-    stepLabel: {
-      fontSize: 9,
-      fontWeight: "600",
-      color: colors.faint,
-    },
-    stepLabelDone: {
-      color: colors.ink,
-      fontWeight: "700",
-    },
-    stepLabelCurrent: {
-      color: colors.indigoDark,
-      fontWeight: "800",
-    },
-    stepLine: {
-      flex: 1,
-      height: 2,
-      backgroundColor: colors.borderLight,
-      marginBottom: 16,
-    },
-    stepLineDone: {
-      backgroundColor: colors.emerald,
-    },
+
     itemsSummary: {
       backgroundColor: colors.paper,
       borderRadius: 6,
@@ -580,28 +489,6 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
       fontSize: 11,
       color: colors.sub,
     },
-    delOptionBadge: {
-      backgroundColor: colors.indigoLight,
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 4,
-    },
-    delOptionBadgeText: {
-      color: colors.indigoDark,
-      fontSize: 9,
-      fontWeight: "700",
-    },
-    guestBadge: {
-      backgroundColor: colors.amberLight,
-      paddingHorizontal: 5,
-      paddingVertical: 2,
-      borderRadius: 3,
-    },
-    guestBadgeText: {
-      color: colors.amber,
-      fontSize: 8,
-      fontWeight: "800",
-    },
     addressInfo: {
       fontSize: 10,
       color: colors.faint,
@@ -611,11 +498,6 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
     bold: {
       fontWeight: "700",
       color: colors.ink,
-    },
-    orderTotal: {
-      fontSize: 16,
-      fontWeight: "900",
-      color: colors.indigoDark,
     },
   });
 }

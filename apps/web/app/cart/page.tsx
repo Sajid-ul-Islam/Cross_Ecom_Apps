@@ -2,36 +2,35 @@
 
 import Link from "next/link";
 import { useCart } from "@/lib/cart";
-import { bdt, API_URL, fetchCampaigns, validateCoupon, type ActiveCampaignState } from "@/lib/api";
+import { bdt, fetchCampaigns, fetchDeliveryFees, validateCoupon, type ActiveCampaignState, type DeliveryFees } from "@/lib/api";
 import { useState, useEffect } from "react";
+import OrdersLookupView from "@/components/OrdersLookupView";
 
+// Static metadata only — FEES come live from GET /v1/deen/shipping (Woo shipping
+// zones + express surcharge), so admin fee edits propagate with no app rebuild.
 const DELIVERY_OPTIONS = [
   {
     id: "dhaka_standard",
     label: "Home Delivery (Dhaka Standard)",
     sub: "24–48 hours",
-    fee: 50,
     icon: "🛵",
   },
   {
     id: "dhaka_express",
     label: "Dhaka Express (Same-Day / Next-Morning)",
     sub: "Delivered within 12–18 hours",
-    fee: 110,
     icon: "⚡",
   },
   {
     id: "outside",
     label: "Home Delivery (Outside Dhaka)",
     sub: "3–5 business days · 64 Districts",
-    fee: 90,
     icon: "📦",
   },
   {
     id: "pickup",
     label: "Store Pickup",
     sub: "Mirpur 12 Outlet — Ready in 2h",
-    fee: 0,
     icon: "🏪",
   },
 ];
@@ -39,7 +38,36 @@ const DELIVERY_OPTIONS = [
 export default function CartPage() {
   const { items, subtotal, updateQty, removeItem, totalItems } = useCart();
   const [deliveryArea, setDeliveryArea] = useState("dhaka_standard");
-  const delivery = DELIVERY_OPTIONS.find((d) => d.id === deliveryArea) || DELIVERY_OPTIONS[0];
+  // Live delivery fees from GET /v1/deen/shipping (Woo zones + express surcharge).
+  const [liveFees, setLiveFees] = useState<DeliveryFees>({
+    insideDhaka: 50,
+    outsideDhaka: 90,
+    express: 120,
+    storePickup: 0,
+  });
+
+  useEffect(() => {
+    fetchDeliveryFees()
+      .then((f) => setLiveFees(f))
+      .catch(() => {});
+  }, []);
+
+  const feeFor = (id: string): number => {
+    switch (id) {
+      case "dhaka_express":
+        return liveFees.express;
+      case "pickup":
+        return liveFees.storePickup;
+      case "outside":
+        return liveFees.outsideDhaka;
+      default:
+        return liveFees.insideDhaka;
+    }
+  };
+  const delivery = {
+    ...(DELIVERY_OPTIONS.find((d) => d.id === deliveryArea) || DELIVERY_OPTIONS[0]),
+    fee: feeFor(deliveryArea),
+  };
 
   // Campaign State from REST API
   const [campaign, setCampaign] = useState<ActiveCampaignState | null>(null);
@@ -48,6 +76,17 @@ export default function CartPage() {
     fetchCampaigns().then((data) => {
       if (data) setCampaign(data);
     });
+  }, []);
+
+  const [activeTab, setActiveTab] = useState<"cart" | "orders">("cart");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (url.searchParams.get("tab") === "orders" || window.location.hash === "#orders") {
+        setActiveTab("orders");
+      }
+    }
   }, []);
 
   // Coupon state
@@ -122,29 +161,115 @@ export default function CartPage() {
     }
   };
 
-  if (items.length === 0) {
-    return (
-      <div className="container">
-        <div className="empty-state" style={{ padding: "120px 24px" }}>
+  return (
+    <div className="container" style={{ paddingBottom: 80, paddingTop: 20 }}>
+      {/* View Switcher: My Bag vs Track Orders */}
+      <div
+        style={{
+          display: "inline-flex",
+          background: "var(--surface-2)",
+          padding: 4,
+          borderRadius: 12,
+          border: "1px solid var(--border)",
+          marginBottom: 24,
+          gap: 4,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setActiveTab("cart")}
+          style={{
+            padding: "8px 18px",
+            borderRadius: 8,
+            fontWeight: 800,
+            fontSize: 13,
+            border: "none",
+            cursor: "pointer",
+            background: activeTab === "cart" ? "var(--indigo)" : "transparent",
+            color: activeTab === "cart" ? "#fff" : "var(--ink)",
+            transition: "all 0.2s ease",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          🛒 My Bag {totalItems > 0 ? `(${totalItems})` : ""}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("orders")}
+          style={{
+            padding: "8px 18px",
+            borderRadius: 8,
+            fontWeight: 800,
+            fontSize: 13,
+            border: "none",
+            cursor: "pointer",
+            background: activeTab === "orders" ? "var(--indigo)" : "transparent",
+            color: activeTab === "orders" ? "#fff" : "var(--ink)",
+            transition: "all 0.2s ease",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          📦 Track Orders & Consignment
+        </button>
+      </div>
+
+      {activeTab === "orders" ? (
+        <div style={{ marginTop: 4 }}>
+          <h1 style={{ fontSize: 26, fontWeight: 900, color: "var(--ink)", marginBottom: 6 }}>
+            My Orders & Tracking
+          </h1>
+          <p style={{ color: "var(--sub)", fontSize: 13, marginBottom: 24 }}>
+            Enter your mobile number to view shipment status, delivery charges, and live Pathao courier tracking.
+          </p>
+          <OrdersLookupView embedded onBrowseProducts={() => setActiveTab("cart")} />
+        </div>
+      ) : items.length === 0 ? (
+        <div className="empty-state" style={{ padding: "80px 24px" }}>
           <div className="empty-state__icon">🛒</div>
           <h2 className="empty-state__title">Your bag is empty</h2>
           <p className="empty-state__sub">Explore our selvedge denim, shirts and new seasonal drops.</p>
-          <Link href="/shop" className="btn btn-primary btn-lg">
-            Browse Products
-          </Link>
-        </div>
-      </div>
-    );
-  }
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+            <Link href="/shop" className="btn btn-primary btn-lg">
+              Browse Products
+            </Link>
+            <button
+              type="button"
+              onClick={() => setActiveTab("orders")}
+              className="btn btn-secondary btn-lg"
+              style={{ fontWeight: 800 }}
+            >
+              📦 Track Existing Orders
+            </button>
+          </div>
 
-  return (
-    <div className="container" style={{ paddingBottom: 80 }}>
-      <h1 style={{ fontSize: 28, fontWeight: 900, color: "var(--ink)", marginBottom: 8 }}>
-        Shopping Bag
-      </h1>
-      <p style={{ color: "var(--sub)", fontSize: 14, marginBottom: 24 }}>
-        {totalItems} item{totalItems !== 1 ? "s" : ""} in your bag
-      </p>
+          {/* Orders Directly Under Empty Bag */}
+          <div style={{ marginTop: 48, borderTop: "1px solid var(--border)", paddingTop: 32, textAlign: "left" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+              <span style={{ fontSize: 22 }}>📦</span>
+              <div>
+                <h3 style={{ fontSize: 18, fontWeight: 900, color: "var(--ink)", margin: 0 }}>
+                  Track Your Past Orders
+                </h3>
+                <p style={{ color: "var(--sub)", margin: "2px 0 0 0", fontSize: 13 }}>
+                  Enter your mobile number to view shipment status, delivery charges, and live Pathao courier tracking.
+                </p>
+              </div>
+            </div>
+            <OrdersLookupView embedded onBrowseProducts={() => {}} />
+          </div>
+        </div>
+      ) : (
+        <>
+          <h1 style={{ fontSize: 28, fontWeight: 900, color: "var(--ink)", marginBottom: 8 }}>
+            Shopping Bag
+          </h1>
+          <p style={{ color: "var(--sub)", fontSize: 14, marginBottom: 24 }}>
+            {totalItems} item{totalItems !== 1 ? "s" : ""} in your bag
+          </p>
 
       {/* Dynamic Campaign Banner from REST API */}
       {isCashbackActive ? (
@@ -372,7 +497,7 @@ export default function CartPage() {
                   <p className="delivery-option__sub">{opt.sub}</p>
                 </div>
                 <span className="delivery-option__fee">
-                  {opt.fee === 0 ? "FREE" : bdt(opt.fee)}
+                  {feeFor(opt.id) === 0 ? "FREE" : bdt(feeFor(opt.id))}
                 </span>
               </label>
             ))}
@@ -419,8 +544,57 @@ export default function CartPage() {
           >
             Continue Browsing
           </Link>
+
+          {/* Quick link to past orders inside Cart */}
+          <div
+            onClick={() => setActiveTab("orders")}
+            style={{
+              marginTop: 16,
+              padding: "14px 16px",
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              cursor: "pointer",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 20 }}>📦</span>
+              <div>
+                <p style={{ fontWeight: 800, color: "var(--ink)", margin: 0, fontSize: 13 }}>
+                  Looking for past orders?
+                </p>
+                <p style={{ color: "var(--sub)", margin: 0, fontSize: 11.5 }}>
+                  Track live shipments, Pathao couriers & size swaps
+                </p>
+              </div>
+            </div>
+            <span style={{ color: "var(--indigo)", fontWeight: 800, fontSize: 12.5 }}>
+              Track →
+            </span>
+          </div>
         </div>
       </div>
+
+      {/* Orders Directly Under the Cart */}
+      <div style={{ marginTop: 48, borderTop: "1px solid var(--border)", paddingTop: 32 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+          <span style={{ fontSize: 22 }}>📦</span>
+          <div>
+            <h2 style={{ fontSize: 20, fontWeight: 900, color: "var(--ink)", margin: 0 }}>
+              My Orders & Live Logistics Tracking
+            </h2>
+            <p style={{ color: "var(--sub)", margin: "3px 0 0 0", fontSize: 13 }}>
+              Check recent parcel status, Pathao courier tracking, and size exchange tickets
+            </p>
+          </div>
+        </div>
+        <OrdersLookupView embedded onBrowseProducts={() => {}} />
+      </div>
+        </>
+      )}
     </div>
   );
 }

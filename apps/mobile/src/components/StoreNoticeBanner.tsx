@@ -54,14 +54,46 @@ export function StoreNoticeBanner() {
         flexDirection: "row",
         alignItems: "center",
         backgroundColor: colors.indigo,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        gap: 8,
+        paddingHorizontal: 14,
+        paddingVertical: 9,
+        gap: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: "rgba(255, 255, 255, 0.15)",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.12,
+        shadowRadius: 4,
+        elevation: 3,
       }}
     >
-      <Text style={{ flex: 1, color: "#fff", fontSize: 12.5, fontWeight: "700" }}>{notice}</Text>
-      <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityLabel="Dismiss notice">
-        <X size={16} color="#fff" />
+      <View
+        style={{
+          width: 24,
+          height: 24,
+          borderRadius: 12,
+          backgroundColor: "rgba(255, 255, 255, 0.2)",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Text style={{ fontSize: 12 }}>📢</Text>
+      </View>
+      <Text style={{ flex: 1, color: "#FFFFFF", fontSize: 12, fontWeight: "700", lineHeight: 16 }}>{notice}</Text>
+      <TouchableOpacity
+        onPress={onDismiss}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        accessibilityLabel="Dismiss notice"
+        accessibilityRole="button"
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: 11,
+          backgroundColor: "rgba(255, 255, 255, 0.18)",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <X size={12} color="#FFFFFF" />
       </TouchableOpacity>
     </View>
   );

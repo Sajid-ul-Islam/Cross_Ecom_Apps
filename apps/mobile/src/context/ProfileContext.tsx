@@ -39,6 +39,8 @@ function normalizeProfile(p: Partial<UserProfile> | null): UserProfile {
     topSize: p.topSize ?? "L",
     pushOrders: p.pushOrders ?? true,
     pushPromos: p.pushPromos ?? (isGuest ? false : true),
+    pushDrops: p.pushDrops ?? true,
+    pushPersonalized: p.pushPersonalized ?? true,
     memberSince: p.memberSince ?? (isGuest ? undefined : "Aug 2024"),
     savedAddresses: p.savedAddresses ?? (isGuest ? [] : DEFAULT_PROFILE.savedAddresses),
   };
@@ -53,10 +55,11 @@ interface ProfileContextType {
   isLoggedIn: boolean;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   switchToGuestMode: () => Promise<void>;
-  registerCustomer: (data: { name: string; phone: string; email?: string; address?: string; district?: string; city?: string }) => Promise<void>;
+  registerCustomer: (data: { name: string; phone: string; email?: string; password?: string; address?: string; district?: string; city?: string }) => Promise<void>;
   addSavedAddress: (addr: Omit<SavedAddress, "id">) => Promise<void>;
   removeSavedAddress: (id: string) => Promise<void>;
-  login: (username: string, password: string) => Promise<{ success: boolean; message?: string }>;
+  login: (username: string, password: string) => Promise<{ success: boolean; message?: string; role?: string }>;
+  loginAsAdmin: (passcode?: string) => Promise<{ success: boolean; message?: string; role?: string }>;
   loginWithGoogle: (idToken?: string, email?: string, name?: string) => Promise<{ success: boolean; message?: string }>;
   loginWithFacebook: (accessToken?: string, email?: string, name?: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
@@ -119,7 +122,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
-  const registerCustomer = async (data: { name: string; phone: string; email?: string; address?: string; district?: string; city?: string }) => {
+  const registerCustomer = async (data: { name: string; phone: string; email?: string; password?: string; address?: string; district?: string; city?: string }) => {
     persist({
       ...profile,
       accountType: "customer",
@@ -170,8 +173,13 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         accountType: me.accountType,
         isGuest: false,
       });
+      return { success: true, message: res.message, role: me.role };
     }
-    return { success: res.success, message: res.message };
+    return { success: res.success, message: res.message, role: undefined };
+  };
+
+  const loginAsAdmin = async (passcode: string = "admin") => {
+    return login("admin", passcode);
   };
 
   const loginWithGoogle = async (idToken?: string, email?: string, name?: string) => {
@@ -231,6 +239,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addSavedAddress,
         removeSavedAddress,
         login,
+        loginAsAdmin,
         loginWithGoogle,
         loginWithFacebook,
         logout,

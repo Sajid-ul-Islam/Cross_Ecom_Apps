@@ -69,3 +69,69 @@ export const BD_DISTRICTS: BdDistrict[] = [
   { code: "BD-63", name: "Tangail" },
   { code: "BD-64", name: "Thakurgaon" },
 ];
+
+export const DISTRICT_POSTCODES: Record<string, string> = {
+  "BD-13": "1200", // Dhaka
+  "BD-10": "4000", // Chattogram
+  "BD-18": "1700", // Gazipur
+  "BD-40": "1400", // Narayanganj
+  "BD-60": "3100", // Sylhet
+  "BD-54": "6000", // Rajshahi
+  "BD-27": "9000", // Khulna
+  "BD-06": "8200", // Barishal
+  "BD-55": "5400", // Rangpur
+  "BD-34": "2200", // Mymensingh
+  "BD-08": "3500", // Cumilla
+  "BD-11": "4700", // Cox's Bazar
+  "BD-03": "5800", // Bogura
+  "BD-05": "9300", // Bagerhat
+  "BD-01": "4600", // Bandarban
+  "BD-02": "8700", // Barguna
+  "BD-07": "8300", // Bhola
+  "BD-04": "3400", // Brahmanbaria
+  "BD-09": "3600", // Chandpur
+  "BD-12": "7200", // Chuadanga
+  "BD-14": "5200", // Dinajpur
+  "BD-15": "7800", // Faridpur
+  "BD-16": "3900", // Feni
+  "BD-19": "5700", // Gaibandha
+  "BD-17": "8100", // Gopalganj
+  "BD-20": "3300", // Habiganj
+  "BD-21": "2000", // Jamalpur
+  "BD-22": "7400", // Jashore
+  "BD-25": "8400", // Jhalokati
+  "BD-23": "7300", // Jhenaidah
+  "BD-24": "5900", // Joypurhat
+  "BD-29": "4400", // Khagrachhari
+  "BD-26": "2300", // Kishoreganj
+  "BD-28": "5600", // Kurigram
+  "BD-30": "3800", // Kushtia
+  "BD-31": "3700", // Lakshmipur
+  "BD-32": "5500", // Lalmonirhat
+  "BD-33": "1200", // Madaripur
+  "BD-35": "7600", // Magura
+  "BD-36": "1800", // Manikganj
+  "BD-37": "7100", // Meherpur
+  "BD-38": "3900", // Moulvibazar
+  "BD-39": "1500", // Munshiganj
+  "BD-41": "2400", // Netrokona
+  "BD-46": "5300", // Nilphamari
+  "BD-47": "3800", // Noakhali
+  "BD-49": "6600", // Pabna
+  "BD-52": "5000", // Panchagarh
+  "BD-51": "8600", // Patuakhali
+  "BD-50": "8500", // Pirojpur
+  "BD-53": "7700", // Rajbari
+  "BD-56": "4500", // Rangamati
+  "BD-58": "9400", // Satkhira
+  "BD-62": "8000", // Shariatpur
+  "BD-57": "2100", // Sherpur
+  "BD-59": "6700", // Sirajganj
+  "BD-61": "3000", // Sunamganj
+  "BD-63": "1900", // Tangail
+  "BD-64": "5100", // Thakurgaon
+};
+
+export function getDistrictPostcode(code: string): string {
+  return DISTRICT_POSTCODES[code] || "1200";
+}

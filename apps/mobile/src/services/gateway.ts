@@ -1007,7 +1007,8 @@ export async function clearGuestSession(): Promise<void> {
 export async function registerCustomer(
   name: string,
   phone: string,
-  email?: string
+  email?: string,
+  password?: string
 ): Promise<{ success: boolean; message: string; returning: boolean } | null> {
   try {
     const res = await request<{
@@ -1016,7 +1017,12 @@ export async function registerCustomer(
       returning: boolean;
     }>("/v1/auth/register", {
       method: "POST",
-      body: JSON.stringify({ name, phone, email: email || undefined }),
+      body: JSON.stringify({
+        name,
+        phone,
+        email: email || undefined,
+        password: password || undefined,
+      }),
     }, 6000);
     return res;
   } catch {
@@ -1179,6 +1185,65 @@ export async function forgotPassword(identifier: string): Promise<{ success: boo
   }
 }
 
+export async function changePassword(payload: {
+  currentPassword?: string;
+  newPassword: string;
+  confirmPassword?: string;
+  identifier?: string;
+}): Promise<{ success: boolean; message: string }> {
+  try {
+    const token = await getAuthToken();
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const res = await request<{ success: boolean; message: string }>("/v1/auth/change-password", {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    }, 8000);
+    return {
+      success: Boolean(res?.success),
+      message: res?.message || "Password updated successfully.",
+    };
+  } catch (e: any) {
+    return {
+      success: false,
+      message: e?.message || "Failed to update password. Please check your network.",
+    };
+  }
+}
+
+export async function updateProfileAPI(profileData: {
+  name: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  district?: string;
+}): Promise<{ success: boolean; message: string; profile?: any }> {
+  try {
+    const token = await getAuthToken();
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const res = await request<{ success: boolean; message: string; profile?: any }>("/v1/auth/update-profile", {
+      method: "POST",
+      headers,
+      body: JSON.stringify(profileData),
+    }, 8000);
+    return {
+      success: Boolean(res?.success),
+      message: res?.message || "Profile updated successfully.",
+      profile: res?.profile,
+    };
+  } catch (e: any) {
+    return {
+      success: false,
+      message: e?.message || "Failed to save profile changes.",
+    };
+  }
+}
+
 export async function exportUserData(): Promise<{ success: boolean; data?: any; message?: string }> {
   const token = await getAuthToken();
   if (!token) return { success: false, message: "Authentication required." };
@@ -1319,6 +1384,56 @@ export async function fetchAdminAnalytics(paramsOrTimeframe: string | AdminAnaly
   }
 }
 
+export interface Ga4AnalyticsData {
+  success: boolean;
+  config: {
+    measurementId: string;
+    propertyId: string;
+    streamName?: string;
+    lastSync?: string;
+  };
+  realtime: {
+    activeUsersLast30Min: number;
+    activeUsersPerMinute: number[];
+    topPages: Array<{ path: string; title: string; activeUsers: number }>;
+    topLocations: Array<{ city: string; country: string; users: number; percentage: number }>;
+    deviceBreakdown: { mobile: number; desktop: number; tablet: number };
+  };
+  ecommerceFunnel: {
+    viewItemList: number;
+    viewItem: number;
+    addToCart: number;
+    beginCheckout: number;
+    purchase: number;
+    conversionRate: number;
+    cartAbandonmentRate: number;
+  };
+  trafficSources: Array<{ source: string; medium: string; sessions: number; sharePct: number }>;
+  engagement: {
+    avgSessionDurationSec: number;
+    bounceRatePct: number;
+    pagesPerSession: number;
+    totalSessions30d: number;
+  };
+}
+
+export async function fetchGa4Analytics(): Promise<Ga4AnalyticsData | null> {
+  const token = await getAuthToken();
+  const headers: Record<string, string> = {
+    "x-gateway-key": "deen_mobile_gateway_secret_2026",
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  try {
+    const res = await request<Ga4AnalyticsData>(`/v1/deen/admin/analytics/ga4`, { headers }, 8000);
+    return res?.success ? res : null;
+  } catch {
+    return null;
+  }
+}
+
 export interface AdminCustomerOrder {
   id: string;
   orderNumber: string;
@@ -1420,6 +1535,20 @@ export interface ActiveCampaignState {
   };
   bankOffers?: BankOffer[];
   rotatingCampaigns?: RotatingCampaignItem[];
+  festivalGreeting?: {
+    active: boolean;
+    id: string;
+    name: string;
+    motif: string;
+    titlebarText: string;
+    title: string;
+    subtitle: string;
+    greeting: string;
+    themePrimary: string;
+    themeSecondary: string;
+    actionLabel: string;
+    actionUrl: string;
+  };
 }
 
 export async function fetchActiveCampaigns(): Promise<ActiveCampaignState | null> {
@@ -1497,7 +1626,7 @@ export interface PaymentInitiationResult {
 
 export async function initiatePaymentAPI(
   orderId: string,
-  paymentMethod: "bkash" | "nagad" | "card" | "online",
+  paymentMethod: "bkash" | "card" | "online",
   amount?: number
 ): Promise<PaymentInitiationResult> {
   return request<PaymentInitiationResult>("/v1/deen/payments/initiate", {
@@ -1509,7 +1638,7 @@ export async function initiatePaymentAPI(
 export async function verifyPaymentAPI(
   orderId: string,
   trxId: string,
-  paymentMethod: "bkash" | "nagad" | "card" | "online" = "bkash",
+  paymentMethod: "bkash" | "card" | "online" = "bkash",
   senderPhone?: string
 ): Promise<{ success: boolean; message: string; order?: Order }> {
   return request<{ success: boolean; message: string; order?: Order }>("/v1/deen/payments/verify", {

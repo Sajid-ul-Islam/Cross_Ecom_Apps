@@ -8,11 +8,12 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc --noEmit",
     "start": "tsx src/index.ts",
-    "test": "tsx --test src/pricing.test.ts src/idempotency.test.ts",
+    "test": "tsx --test src/pricing.test.ts src/idempotency.test.ts src/ai/ai.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@fastify/cors": "^9.0.1",
+    "@google/generative-ai": "^0.24.1",
     "dotenv": "^16.4.5",
     "fastify": "^4.28.1"
   },

@@ -12,6 +12,7 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 
 import { Modal } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   ArrowLeft,
   ShieldCheck,
@@ -30,6 +31,7 @@ import { useRewards } from "../src/context/RewardsContext";
 import { bdt, DELIVERY_OPTIONS, createGuestSession, getGuestSession, fetchPaymentMethods, fetchCoupon, getCashbackAmount, fetchDistricts, type BdDistrict } from "../src/services/gateway";
 
 import { BD_DISTRICTS } from "../src/data/districts";
+import { Analytics } from "../src/services/analytics";
 import {
   DeliveryOptionKey,
   DeliverySlot,
@@ -51,7 +53,14 @@ export default function CheckoutScreen() {
   const { placeOrder } = useOrders();
   const { profile } = useProfile();
   const { coins, tierLabel, redeemCoins, earnCoins } = useRewards();
+  const insets = useSafeAreaInsets();
   const styles = createStyles(colors, s);
+
+  const scrollViewRef = React.useRef<ScrollView>(null);
+
+  useEffect(() => {
+    if (cart.length === 0) router.replace('/(tabs)/cart');
+  }, [cart.length]);
 
   const [name, setName] = useState(profile.name || "");
   const [phone, setPhone] = useState(profile.phone || "");
@@ -61,6 +70,7 @@ export default function CheckoutScreen() {
     BD_DISTRICTS.find((d) => d.code === "BD-13") || BD_DISTRICTS[0]
   );
   const [districtModalOpen, setDistrictModalOpen] = useState(false);
+  const [districtModalTarget, setDistrictModalTarget] = useState<"billing" | "gift">("billing");
   const [districtSearch, setDistrictSearch] = useState("");
   const [city, setCity] = useState("Dhaka");
   const [address, setAddress] = useState(profile.address || "");
@@ -70,8 +80,9 @@ export default function CheckoutScreen() {
   const [deliverySlot, setDeliverySlot] = useState<DeliverySlot>(profile.deliverySlot || "any");
   const [deliveryNotes, setDeliveryNotes] = useState(profile.deliveryNotes || "");
   const [payment, setPayment] = useState<string>("cod"); // Woo gateway id (cod / bkash-for-woocommerce / sslcommerz)
-  const [paymentMethods, setPaymentMethods] = useState<{ id: string; title: string; description: string; type: "cod" | "redirect" }[]>([]);
   const [trxId, setTrxId] = useState("");
+  const [bkashNumber, setBkashNumber] = useState("");
+  const [paymentMethods, setPaymentMethods] = useState<{ id: string; title: string; description: string; type: "cod" | "redirect" }[]>([]);
   const [isGuestMode, setIsGuestMode] = useState<boolean>(profile.isGuest);
   const [guestSession, setGuestSession] = useState<null | Awaited<ReturnType<typeof getGuestSession>>>(null);
   const [redeemPoints, setRedeemPoints] = useState(false);
@@ -157,6 +168,7 @@ export default function CheckoutScreen() {
   const handlePlaceOrder = async () => {
     if (!name.trim()) {
       setErrorMsg("Please provide your full name");
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       return;
     }
     let digits = phone.replace(/[^0-9]/g, "");
@@ -165,10 +177,12 @@ export default function CheckoutScreen() {
     }
     if (digits.length !== 11 || !digits.startsWith("0") || !/^01[3-9]\d{8}$/.test(digits)) {
       setErrorMsg("Phone number must be an 11-digit Bangladeshi mobile number starting with 0 (e.g. 01XXXXXXXXX)");
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       return;
     }
     if (selectedArea !== "store_pickup" && (!address.trim() || address.trim().length < 8)) {
       setErrorMsg("Please enter full delivery address (house/flat, road, area)");
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       return;
     }
 
@@ -187,6 +201,21 @@ export default function CheckoutScreen() {
         unit: i.product.salePrice ?? i.product.price,
       }));
 
+      const isManualMfs = payment.includes("bkash");
+
+      if (isManualMfs) {
+        if (!bkashNumber.trim() || !trxId.trim()) {
+          setErrorMsg("Please enter your bKash mobile number and Transaction ID (TrxID).");
+          scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+          setLoading(false);
+          return;
+        }
+      }
+
+      const finalDeliveryNotes = isManualMfs
+        ? `[bKash Payment]\nSender Phone: ${bkashNumber.trim()}\nRef/TrxID: ${trxId.trim()}\n${deliveryNotes.trim()}`
+        : deliveryNotes.trim();
+
       const created = await placeOrder({
         name: isGift ? (giftName.trim() || name.trim()) : name.trim(),
         phone: isGift ? (giftPhone.replace(/[^0-9]/g, "").slice(-11) || digits) : digits,
@@ -199,7 +228,7 @@ export default function CheckoutScreen() {
         area: selectedArea,
         deliveryOption: selectedArea,
         deliverySlot,
-        deliveryNotes: deliveryNotes.trim() || undefined,
+        deliveryNotes: finalDeliveryNotes || undefined,
         payment,
         trxId: trxId.trim() || undefined,
         coupon: couponInfo ? couponInfo.code : undefined,
@@ -221,6 +250,14 @@ export default function CheckoutScreen() {
       }
       await earnCoins(total, `Order #${created.number}`);
 
+      // Dispatch Google Analytics 4 Purchase Event
+      Analytics.logPurchase({
+        id: String(created.wooNumber || created.number || created.id),
+        total: Number(created.total || total),
+        deliveryFee: deliveryFee,
+        paymentMethod: payment,
+      });
+
       clearCart();
       router.replace({
         pathname: "/order-success",
@@ -237,6 +274,7 @@ export default function CheckoutScreen() {
       });
     } catch (e: any) {
       setErrorMsg(e?.message || "Failed to process order. Please check your network and try again.");
+      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     } finally {
       setLoading(false);
     }
@@ -263,7 +301,7 @@ export default function CheckoutScreen() {
 
   return (
     <ScreenShell renderNav={checkoutNav}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {errorMsg ? (
           <View style={[styles.errorBanner, { backgroundColor: colors.crimsonLight, borderColor: colors.crimson }]}>
             <Text style={[styles.errorText, { color: colors.crimson }]}>{errorMsg}</Text>
@@ -496,10 +534,18 @@ export default function CheckoutScreen() {
                 <Text style={[styles.label, { color: colors.ink }]}>District *</Text>
                 <TouchableOpacity
                   style={[styles.input, { flexDirection: "row", alignItems: "center", justifyContent: "space-between", backgroundColor: colors.card, borderColor: colors.border }]}
-                  onPress={() => {}}
+                  onPress={() => {
+                    setDistrictModalTarget("gift");
+                    setDistrictModalOpen(true);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Gift Delivery District: ${giftDistrict.name}`}
                 >
                   <Text style={{ fontSize: 14, fontWeight: "700", color: colors.ink }}>
                     📍 {giftDistrict.name} ({giftDistrict.code})
+                  </Text>
+                  <Text style={{ fontSize: 12, fontWeight: "800", color: colors.indigo }}>
+                    CHANGE ▼
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -584,7 +630,12 @@ export default function CheckoutScreen() {
                       borderWidth: 1.5,
                     },
                   ]}
-                  onPress={() => setDistrictModalOpen(true)}
+                  onPress={() => {
+                    setDistrictModalTarget("billing");
+                    setDistrictModalOpen(true);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Delivery District: ${district.name}`}
                 >
                   <Text style={{ fontSize: 14, fontWeight: "700", color: colors.ink }}>
                     📍 {district.name} ({district.code})
@@ -700,10 +751,41 @@ export default function CheckoutScreen() {
                     <View style={styles.payInfo}>
                       <Text style={[styles.payTitle, { color: colors.ink }]}>{m.title}</Text>
                       {m.description ? <Text style={[styles.paySub, { color: colors.sub }]}>{m.description}</Text> : null}
-                      {!isCod && <Text style={[styles.paySub, { color: colors.sub }]}>You'll be taken to the secure {m.title} page to complete payment.</Text>}
+                      {!isCod && !m.id.includes("bkash") && (
+                        <Text style={[styles.paySub, { color: colors.sub }]}>You'll be taken to the secure {m.title} page to complete payment.</Text>
+                      )}
                     </View>
                     {isCod && <View style={[styles.payTag, { backgroundColor: colors.indigo }]}><Text style={styles.payTagText}>MOST POPULAR</Text></View>}
                   </TouchableOpacity>
+
+                  {/* Manual bKash Inputs */}
+                  {active && m.id.includes("bkash") && (
+                    <View style={{ padding: 12, backgroundColor: colors.indigoLight, borderBottomLeftRadius: 10, borderBottomRightRadius: 10, borderWidth: 1.5, borderColor: colors.indigo, borderTopWidth: 0, marginTop: -2 }}>
+                      <Text style={{ fontSize: 13, color: colors.ink, marginBottom: 10, fontWeight: "600", lineHeight: 18 }}>
+                        1. Open your bKash App & select Send Money.{"\n"}
+                        2. Send <Text style={{fontWeight: "800", color: colors.indigoDark}}>৳{total.toLocaleString("en-BD")}</Text> to <Text style={{fontWeight: "800", color: colors.indigoDark}}>01952 700 500</Text> (Personal).{"\n"}
+                        3. Enter your sender number and Transaction ID below.
+                      </Text>
+                      
+                      <View style={{ gap: 8 }}>
+                        <TextInput
+                          style={[styles.input, { backgroundColor: colors.paper, borderColor: colors.border, color: colors.ink }]}
+                          value={bkashNumber}
+                          onChangeText={setBkashNumber}
+                          placeholder="Your bKash Number (01XXXXXXXXX)"
+                          placeholderTextColor={colors.faint}
+                          keyboardType="phone-pad"
+                        />
+                        <TextInput
+                          style={[styles.input, { backgroundColor: colors.paper, borderColor: colors.border, color: colors.ink }]}
+                          value={trxId}
+                          onChangeText={setTrxId}
+                          placeholder="Transaction ID (TrxID)"
+                          placeholderTextColor={colors.faint}
+                        />
+                      </View>
+                    </View>
+                  )}
                 </View>
               );
             })
@@ -848,12 +930,27 @@ export default function CheckoutScreen() {
       </ScrollView>
 
       {/* Confirm & Place Order Footer */}
-      <View style={[styles.bottomBar, { backgroundColor: colors.paper, borderTopColor: colors.border }]}>
+      <View
+        style={[
+          styles.bottomBar,
+          {
+            backgroundColor: colors.paper,
+            borderTopColor: colors.border,
+            paddingBottom: Math.max(insets.bottom, 14),
+          },
+        ]}
+      >
         <TouchableOpacity
           style={[styles.placeOrderBtn, { backgroundColor: colors.indigo }]}
           activeOpacity={0.88}
           onPress={handlePlaceOrder}
           disabled={loading}
+          accessibilityRole="button"
+          accessibilityLabel={
+            payment === "cod"
+              ? `Place cash on delivery order for ${bdt(total)}`
+              : `Proceed to payment for ${bdt(total)}`
+          }
         >
           {loading ? (
             <ActivityIndicator color="#FFFFFF" />
@@ -890,7 +987,7 @@ export default function CheckoutScreen() {
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <View>
                 <Text style={{ fontSize: 16, fontWeight: "900", color: colors.ink }}>
-                  SELECT DISTRICT (64 DISTRICTS)
+                  {districtModalTarget === "gift" ? "GIFT RECIPIENT DISTRICT" : "SELECT DISTRICT (64 DISTRICTS)"}
                 </Text>
                 <Text style={{ fontSize: 12, color: colors.sub }}>
                   Used for WooCommerce state & Pathao delivery routing
@@ -899,6 +996,8 @@ export default function CheckoutScreen() {
               <TouchableOpacity
                 style={{ padding: 6 }}
                 onPress={() => setDistrictModalOpen(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Close district modal"
               >
                 <Text style={{ fontSize: 18, fontWeight: "800", color: colors.ink }}>✕</Text>
               </TouchableOpacity>
@@ -928,7 +1027,8 @@ export default function CheckoutScreen() {
                 d.name.toLowerCase().includes(districtSearch.toLowerCase()) ||
                 d.code.toLowerCase().includes(districtSearch.toLowerCase())
               ).map((d) => {
-                const isSelected = district.code === d.code;
+                const activeDistrict = districtModalTarget === "gift" ? giftDistrict : district;
+                const isSelected = activeDistrict.code === d.code;
                 return (
                   <TouchableOpacity
                     key={d.code}
@@ -944,13 +1044,18 @@ export default function CheckoutScreen() {
                       borderBottomColor: colors.borderLight,
                     }}
                     onPress={() => {
-                      setDistrict(d);
-                      if (d.code === "BD-13") {
-                        setSelectedArea("dhaka_standard");
-                        if (city === "Chittagong" || !city) setCity("Dhaka");
+                      if (districtModalTarget === "gift") {
+                        setGiftDistrict(d);
+                        if (!giftCity || giftCity === "Dhaka") setGiftCity(d.name);
                       } else {
-                        setSelectedArea("outside_standard");
-                        if (city === "Dhaka" || !city) setCity(d.name);
+                        setDistrict(d);
+                        if (d.code === "BD-13") {
+                          setSelectedArea("dhaka_standard");
+                          if (city === "Chittagong" || !city) setCity("Dhaka");
+                        } else {
+                          setSelectedArea("outside_standard");
+                          if (city === "Dhaka" || !city) setCity(d.name);
+                        }
                       }
                       setDistrictModalOpen(false);
                       setDistrictSearch("");

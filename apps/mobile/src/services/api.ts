@@ -79,8 +79,10 @@ export const getDeliveryFee = (area: string | DeliveryArea): number => {
   return DELIVERY_FEES[area] ?? 50;
 };
 
-export const bdt = (amount: number): string => {
-  return `৳${amount.toLocaleString("en-IN")}`;
+export const bdt = (amount: number | string | null | undefined): string => {
+  const num = typeof amount === "number" ? amount : Number(amount);
+  if (isNaN(num) || num === null || num === undefined) return "৳0";
+  return `৳${num.toLocaleString("en-IN")}`;
 };
 
 export const CATEGORIES: DeenCategory[] = [
@@ -138,7 +140,7 @@ export const PRODUCTS_CATALOG: Product[] = [
       "https://image.qwenlm.ai/generated-images/81f855d0-9d0d-4560-bf6c-c9d300fbba41/_result.png",
     ],
     fabric: "Pure Indigo Dobby Jacquard Weave",
-    blurb: "Festive & casual hybrid panjabi with subtle self-textured indigo geometric weave and engraved buttons.",
+    blurb: "Celebration & casual hybrid panjabi with subtle self-textured indigo geometric weave and engraved buttons.",
     isNew: true,
   },
   {
@@ -229,6 +231,8 @@ export const GUEST_PROFILE: UserProfile = {
   topSize: "L",
   pushOrders: true,
   pushPromos: false,
+  pushDrops: true,
+  pushPersonalized: true,
 };
 
 export const DEFAULT_PROFILE: UserProfile = {
@@ -246,6 +250,8 @@ export const DEFAULT_PROFILE: UserProfile = {
   topSize: "L",
   pushOrders: true,
   pushPromos: false,
+  pushDrops: true,
+  pushPersonalized: true,
   savedAddresses: [],
 };
 

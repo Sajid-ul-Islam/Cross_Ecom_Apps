@@ -8,13 +8,19 @@ import {
   StyleSheet,
   Dimensions,
   ActivityIndicator,
+  Linking,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 
-import { ArrowRight, Sparkles, ShieldCheck, MapPin, Award, TrendingUp, Package, Tag, Users } from "../../src/components/Icons";
+import {
+  ArrowRight,
+  Sparkles,
+  TrendingUp,
+} from "../../src/components/Icons";
 import { SectionHeader } from "../../src/components/SectionHeader";
 import { ScreenShell } from "../../src/components/ScreenShell";
-import { CashbackBanner, DeliveryNoticeBanner } from "../../src/components/Banner";
+import { DeliveryNoticeBanner } from "../../src/components/Banner";
 import { StoreNoticeBanner } from "../../src/components/StoreNoticeBanner";
 import { ProductCard } from "../../src/components/ProductCard";
 import { Sparkline, CategoryBars, Donut, KpiTile } from "../../src/components/Charts";
@@ -27,6 +33,10 @@ import { Product, DeenCategory, Stats } from "../../src/types";
 import { useProfile } from "../../src/context/ProfileContext";
 import { getCategoryInfo } from "../../src/data/categories";
 import { AdminBroadcastModal } from "../../src/components/AdminBroadcastModal";
+import { FestivalGreetingModal } from "../../src/components/FestivalGreetingModal";
+import { MotionHero } from "../../src/components/MotionHero";
+import { BrandStorySection } from "../../src/components/BrandStorySection";
+import { NotificationOptInModal, NOTIF_OPT_IN_DISMISSED_KEY } from "../../src/components/NotificationOptInModal";
 
 const { width } = Dimensions.get("window");
 
@@ -41,6 +51,16 @@ export default function HomeScreen() {
   const [stats, setStats] = useState<Stats | null>(null);
 
   const [broadcastModalVisible, setBroadcastModalVisible] = useState(false);
+  const [notifOptInVisible, setNotifOptInVisible] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(NOTIF_OPT_IN_DISMISSED_KEY).then((val) => {
+      if (!val) {
+        const t = setTimeout(() => setNotifOptInVisible(true), 7000);
+        return () => clearTimeout(t);
+      }
+    });
+  }, []);
 
   const loadData = useCallback(async () => {
     try {
@@ -66,7 +86,7 @@ export default function HomeScreen() {
 
   const newDrops = products.filter((p) => p.isNew || (p.salePct && p.salePct > 0)).slice(0, 10);
   const jeansCollection = products.filter((p) => p.category === "JEANS").slice(0, 10);
-  const festivePanjabi = products.filter((p) => p.category === "PANJABI").slice(0, 10);
+  const heritagePanjabi = products.filter((p) => p.category === "PANJABI").slice(0, 10);
   const bestDeals = [...products].filter((p) => (p.salePct || 0) > 0).sort((a, b) => (b.salePct ?? 0) - (a.salePct ?? 0)).slice(0, 8);
 
   const handleCategoryPress = (cat: DeenCategory | string) => {
@@ -78,49 +98,79 @@ export default function HomeScreen() {
 
   const salesSeries = stats?.sales.series.map((d) => d.sales) ?? [];
 
+  const bestSellerScrollRef = React.useRef<ScrollView>(null);
+  const bestSellerScrollPos = React.useRef(0);
+  const isUserScrollingBestSellers = React.useRef(false);
+
+  // --- Category marquee auto-scroll ---
+  const catScrollRef = React.useRef<ScrollView>(null);
+  const catScrollPos = React.useRef(0);
+  const isUserScrollingCat = React.useRef(false);
+  const categories = CATEGORIES.filter((c) => c !== "ALL");
+
+  useEffect(() => {
+    if (!bestDeals || bestDeals.length <= 1) return;
+    // Duplicate list renders 2× items; loop resets at the halfway mark
+    const cardWidth = Math.round(width * 0.46) + 12;
+    const halfTotal = cardWidth * bestDeals.length; // midpoint = 1 full copy
+
+    // Smooth ticker: advance 1 px every 85 ms ≈ 11.7 px / s (ultra-slow & graceful glide)
+    const STEP = 1;
+    const INTERVAL_MS = 85;
+
+    const timer = setInterval(() => {
+      if (isUserScrollingBestSellers.current) return;
+      bestSellerScrollPos.current += STEP;
+      // Seamless loop: silently jump back to 0 when halfway through duplicated list
+      if (bestSellerScrollPos.current >= halfTotal) {
+        bestSellerScrollPos.current = 0;
+        bestSellerScrollRef.current?.scrollTo({ x: 0, animated: false });
+        return;
+      }
+      bestSellerScrollRef.current?.scrollTo({
+        x: bestSellerScrollPos.current,
+        animated: false, // animated:false keeps it pixel-smooth (no spring easing per frame)
+      });
+    }, INTERVAL_MS);
+
+    return () => clearInterval(timer);
+  }, [bestDeals.length, width]);
+
+  // Category marquee: gentle pixel ticker at ~12.5 px/s, seamless by doubling the list
+  useEffect(() => {
+    if (categories.length <= 1) return;
+    const CAT_CARD_W = 130 + 12; // card width + gap
+    const halfTotal = CAT_CARD_W * categories.length;
+    const STEP = 1;
+    const INTERVAL_MS = 80; // 12.5 px/s — slow and gentle glide
+
+    const timer = setInterval(() => {
+      if (isUserScrollingCat.current) return;
+      catScrollPos.current += STEP;
+      if (catScrollPos.current >= halfTotal) {
+        catScrollPos.current = 0;
+        catScrollRef.current?.scrollTo({ x: 0, animated: false });
+        return;
+      }
+      catScrollRef.current?.scrollTo({ x: catScrollPos.current, animated: false });
+    }, INTERVAL_MS);
+
+    return () => clearInterval(timer);
+  }, [categories.length]);
+
   return (
     <ScreenShell>
       <StoreNoticeBanner />
       <DeliveryNoticeBanner />
+      <FestivalGreetingModal />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         refreshControl={refreshControl}
       >
-
-        <CashbackBanner />
-
-        {/* Hero Section */}
-        <View style={styles.heroWrapper}>
-          <Image
-            source={{
-              uri: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
-            }}
-            style={styles.heroImage}
-            resizeMode="cover"
-          />
-          <View style={styles.heroOverlay}>
-            <View style={styles.heroBadge}>
-              <Sparkles size={12} color="#FFFFFF" />
-              <Text style={styles.heroBadgeText}>EST. 2018 · DHAKA</Text>
-            </View>
-            <Text style={styles.heroTagline}>দেশের প্রথম ডেনিম ব্র্যান্ড</Text>
-            <Text style={styles.heroTitle}>ARTISANAL INDIGO & RAW SELVEDGE</Text>
-            <Text style={styles.heroSub}>
-              Engineered for Bangladesh’s climate with authentic shuttle-loom selvage & pure dobby jacquards.
-            </Text>
-
-            <TouchableOpacity
-              style={styles.heroBtn}
-              activeOpacity={0.85}
-              onPress={() => router.push("/(tabs)/shop")}
-            >
-              <Text style={styles.heroBtnText}>EXPLORE COLLECTION</Text>
-              <ArrowRight size={16} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        </View>
+        {/* Interactive Motion Brand Hero Experience */}
+        <MotionHero />
 
         {/* ADMIN ONLY — Store Insights / BI dashboard.
             Customers never see sales data. Gated by role. */}
@@ -192,6 +242,16 @@ export default function HomeScreen() {
               </>
             )}
 
+            {/* Direct Link to Dedicated Admin BI Page */}
+            <TouchableOpacity
+              style={[styles.quickBroadcastBtn, { backgroundColor: colors.indigo, marginBottom: 8 }]}
+              activeOpacity={0.88}
+              onPress={() => router.push("/admin")}
+            >
+              <Sparkles size={14} color="#FFFFFF" />
+              <Text style={styles.quickBroadcastText}>📊 OPEN DEDICATED ADMIN BI DASHBOARD →</Text>
+            </TouchableOpacity>
+
             {/* Quick Broadcast Action */}
             <TouchableOpacity
               style={styles.quickBroadcastBtn}
@@ -213,16 +273,25 @@ export default function HomeScreen() {
         />
 
         <ScrollView
+          ref={catScrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
+          scrollEventThrottle={16}
           contentContainerStyle={styles.categoryCardScroll}
+          onScrollBeginDrag={() => { isUserScrollingCat.current = true; }}
+          onScrollEndDrag={() => { setTimeout(() => { isUserScrollingCat.current = false; }, 2000); }}
+          onMomentumScrollEnd={(e) => {
+            catScrollPos.current = e.nativeEvent.contentOffset.x;
+            setTimeout(() => { isUserScrollingCat.current = false; }, 1000);
+          }}
         >
-          {CATEGORIES.filter((c) => c !== "ALL").map((cat) => {
+          {/* Doubled for seamless infinite loop */}
+          {[...categories, ...categories].map((cat, idx) => {
             const info = getCategoryInfo(cat);
             const count = products.filter((p) => p.category.toUpperCase() === cat.toUpperCase()).length;
             return (
               <TouchableOpacity
-                key={cat}
+                key={`${cat}-${idx}`}
                 style={styles.catCard}
                 activeOpacity={0.88}
                 onPress={() => handleCategoryPress(cat)}
@@ -232,6 +301,7 @@ export default function HomeScreen() {
                 <View style={styles.catCardContent}>
                   {info.badge && (
                     <View style={styles.catCardBadge}>
+                      <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: "#10B981", marginRight: 4 }} />
                       <Text style={styles.catCardBadgeText}>{info.badge}</Text>
                     </View>
                   )}
@@ -243,22 +313,39 @@ export default function HomeScreen() {
           })}
         </ScrollView>
 
-        {/* Best Deals */}
+        {/* Best Sellers & High Demand */}
         {bestDeals.length > 0 && (
           <>
             <SectionHeader
-              title="BEST DEALS"
-              subtitle="Highest discount live right now"
+              title="BEST SELLERS & HIGH DEMAND"
+              subtitle="Hot picks & highest demand pieces live right now"
               actionText="View All"
               onActionPress={() => router.push("/(tabs)/shop")}
             />
             <ScrollView
+              ref={bestSellerScrollRef}
               horizontal
               showsHorizontalScrollIndicator={false}
+              scrollEventThrottle={16}
               contentContainerStyle={styles.horizontalProductList}
+              onScrollBeginDrag={() => {
+                isUserScrollingBestSellers.current = true;
+              }}
+              onScrollEndDrag={() => {
+                setTimeout(() => {
+                  isUserScrollingBestSellers.current = false;
+                }, 2000);
+              }}
+              onMomentumScrollEnd={(e) => {
+                bestSellerScrollPos.current = e.nativeEvent.contentOffset.x;
+                setTimeout(() => {
+                  isUserScrollingBestSellers.current = false;
+                }, 1000);
+              }}
             >
-              {bestDeals.map((product) => (
-                <View key={product.id} style={styles.horizontalCardWrapper}>
+              {/* Render list twice for seamless infinite loop */}
+              {[...bestDeals, ...bestDeals].map((product, idx) => (
+                <View key={`${product.id}-${idx}`} style={styles.horizontalCardWrapper}>
                   <ProductCard product={product} />
                 </View>
               ))}
@@ -269,7 +356,7 @@ export default function HomeScreen() {
         {/* New Drops Carousel */}
         <SectionHeader
           title="NEW & TRENDING"
-          subtitle="Fresh denim cuts & festive kurta silhouettes"
+          subtitle="Fresh denim cuts & heritage kurta silhouettes"
           actionText="View All"
           onActionPress={() => router.push("/(tabs)/shop")}
         />
@@ -286,10 +373,25 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
+        {/* Section Offer Banner 1: Selvedge Denim Campaign */}
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => router.push({ pathname: "/category/[slug]", params: { slug: "JEANS" } })}
+          style={{ marginHorizontal: 16, marginVertical: 12, borderRadius: 12, overflow: "hidden", height: 160, backgroundColor: "#000" }}
+        >
+          <Image
+            source={{ uri: "https://deencommerce.com/wp-content/uploads/2026/08/Section-image.jpg" }}
+            style={{ width: "100%", height: "100%" }}
+            resizeMode="cover"
+          />
+        </TouchableOpacity>
+
         {/* Denim Masterpieces */}
         <SectionHeader
           title="SIGNATURE DENIM"
           subtitle="100% Cotton Selvedge & Comfort Stretch Jeans"
+          actionText="All Jeans →"
+          onActionPress={() => router.push({ pathname: "/category/[slug]", params: { slug: "JEANS" } })}
         />
 
         <View style={styles.grid}>
@@ -300,46 +402,62 @@ export default function HomeScreen() {
           ))}
         </View>
 
-        {/* Festive Panjabi Section */}
+        {/* Section Offer Banner 2: Summer Resort Shirts */}
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => router.push({ pathname: "/category/[slug]", params: { slug: "SHIRT" } })}
+          style={{ marginHorizontal: 16, marginVertical: 12, borderRadius: 12, overflow: "hidden", height: 160, backgroundColor: "#000" }}
+        >
+          <Image
+            source={{ uri: "https://deencommerce.com/wp-content/uploads/2026/06/Shirt-Section-Image.png" }}
+            style={{ width: "100%", height: "100%" }}
+            resizeMode="cover"
+          />
+        </TouchableOpacity>
+
+        {/* Heritage Panjabi Section */}
         <SectionHeader
           title="HERITAGE PANJABI & KURTA"
           subtitle="Indigo dyed pure dobby cottons"
+          actionText="All Panjabis →"
+          onActionPress={() => router.push({ pathname: "/category/[slug]", params: { slug: "PANJABI" } })}
         />
 
         <View style={styles.grid}>
-          {festivePanjabi.map((product) => (
+          {heritagePanjabi.map((product) => (
             <View key={product.id} style={styles.gridItem}>
               <ProductCard product={product} />
             </View>
           ))}
         </View>
 
-        {/* Brand Authenticity Footer Card */}
-        <View style={styles.brandTrustCard}>
-          <View style={styles.trustItem}>
-            <Award size={20} color={colors.indigo} />
-            <Text style={styles.trustTitle}>Authentic Quality</Text>
-            <Text style={styles.trustDesc}>Pre-shrunk premium indigo textiles with guaranteed dye-fastness.</Text>
-          </View>
-          <View style={styles.trustDivider} />
-          <View style={styles.trustItem}>
-            <ShieldCheck size={20} color={colors.emerald} />
-            <Text style={styles.trustTitle}>e-CAB Registered</Text>
-            <Text style={styles.trustDesc}>Trusted e-commerce brand with official registration & COD nationwide.</Text>
-          </View>
-          <View style={styles.trustDivider} />
-          <View style={styles.trustItem}>
-            <MapPin size={20} color={colors.crimson} />
-            <Text style={styles.trustTitle}>Flagship Stores</Text>
-            <Text style={styles.trustDesc}>Mirpur 12 (Dhaka) · Wari (Dhaka) · Cumilla Outlets</Text>
-          </View>
-        </View>
+        {/* Section Offer Banner 3: Casual Summer Drop */}
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => router.push({ pathname: "/category/[slug]", params: { slug: "T-SHIRT" } })}
+          style={{ marginHorizontal: 16, marginVertical: 12, borderRadius: 12, overflow: "hidden", height: 160, backgroundColor: "#000" }}
+        >
+          <Image
+            source={{ uri: "https://deencommerce.com/wp-content/uploads/2026/06/Half-sleeve-Section-iomage.webp" }}
+            style={{ width: "100%", height: "100%" }}
+            resizeMode="cover"
+          />
+        </TouchableOpacity>
+
+        {/* Artisanal Heritage, Craft & Authenticity — swipeable story rail */}
+        <BrandStorySection />
       </ScrollView>
 
       {/* Admin Broadcast Marketing Modal */}
       <AdminBroadcastModal
         visible={broadcastModalVisible}
         onClose={() => setBroadcastModalVisible(false)}
+      />
+
+      {/* Notification Value-First Opt-In Modal */}
+      <NotificationOptInModal
+        visible={notifOptInVisible}
+        onClose={() => setNotifOptInVisible(false)}
       />
     </ScreenShell>
   );
@@ -428,14 +546,6 @@ const createStyles = (colors: ThemeColors, s: ReturnType<typeof sharedStyles>) =
   horizontalCardWrapper: { width: width * 0.46 },
   grid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 16, justifyContent: "space-between" },
   gridItem: { width: "48%" },
-  brandTrustCard: {
-    backgroundColor: colors.card, borderRadius: 10, marginHorizontal: 16, marginTop: 20,
-    padding: 16, borderWidth: 1, borderColor: colors.border,
-  },
-  trustItem: { paddingVertical: 8 },
-  trustTitle: { fontSize: 13, fontWeight: "700", color: colors.ink, marginTop: 4, marginBottom: 2 },
-  trustDesc: { fontSize: 11, color: colors.sub, lineHeight: 16 },
-  trustDivider: { height: 1, backgroundColor: colors.borderLight, marginVertical: 4 },
   // insights
   loadingCard: { margin: 16, padding: 24, alignItems: "center", backgroundColor: colors.card, borderRadius: 10, borderWidth: 1, borderColor: colors.border },
   loadingText: { marginTop: 8, fontSize: 12, color: colors.sub },

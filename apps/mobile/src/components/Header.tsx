@@ -1,14 +1,14 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { useRouter } from "expo-router";
-import { ShoppingBag, ArrowLeft, Search, Bell, Heart } from "./Icons";
+import { ArrowLeft, Search, Bell, Heart, Sparkles } from "./Icons";
 import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
-import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import { useNotifications } from "../context/NotificationContext";
 import { NotificationModal } from "./NotificationModal";
 import { WishlistModal } from "./WishlistModal";
+import { AiConciergeModal } from "./AiConciergeModal";
 
 interface HeaderProps {
   title?: string;
@@ -24,7 +24,7 @@ export const Header: React.FC<HeaderProps> = ({
   title = "DEEN",
   showBack = false,
   showSearch = true,
-  showBag = true,
+  showBag = false,
   showNotif = true,
   subtitle,
   onSearchPress,
@@ -32,11 +32,11 @@ export const Header: React.FC<HeaderProps> = ({
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const styles = createStyles(colors);
-  const { totalItems } = useCart();
   const { wishlist } = useWishlist();
   const { unreadCount } = useNotifications();
   const [notifVisible, setNotifVisible] = useState(false);
   const [wishlistVisible, setWishlistVisible] = useState(false);
+  const [aiVisible, setAiVisible] = useState(false);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.paper, borderBottomColor: colors.border }]}>
@@ -63,17 +63,22 @@ export const Header: React.FC<HeaderProps> = ({
             </View>
             {subtitle ? (
               <Text style={[styles.brandSubtitle, { color: colors.sub }]}>{subtitle}</Text>
-            ) : (
-              <Text style={[styles.brandTag, { color: colors.denimStitch }]}>COMMERCE · DHAKA</Text>
-            )}
+            ) : null}
           </View>
         )}
 
         {showBack && (
           <View style={styles.centerTitleContainer}>
-            <Text style={[styles.headerTitle, { color: colors.ink }]} numberOfLines={1}>
-              {title}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, justifyContent: "center" }}>
+              <Image
+                source={require("../../assets/icon.png")}
+                style={{ width: 18, height: 18, borderRadius: 4 }}
+                resizeMode="cover"
+              />
+              <Text style={[styles.headerTitle, { color: colors.ink }]} numberOfLines={1}>
+                {title}
+              </Text>
+            </View>
             {subtitle && (
               <Text style={[styles.headerSubtitle, { color: colors.sub }]} numberOfLines={1}>
                 {subtitle}
@@ -127,23 +132,6 @@ export const Header: React.FC<HeaderProps> = ({
               </View>
             )}
           </TouchableOpacity>
-
-          {showBag && (
-            <TouchableOpacity
-              style={[styles.bagButton, { backgroundColor: colors.cardSecondary }]}
-              onPress={() => router.push("/(tabs)/cart")}
-              accessibilityRole="button"
-              accessibilityLabel={`Shopping Bag, ${totalItems} items`}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <ShoppingBag size={20} color={colors.ink} />
-              {totalItems > 0 && (
-                <View style={[styles.badge, { backgroundColor: colors.indigo }]}>
-                  <Text style={styles.badgeText}>{totalItems}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          )}
         </View>
       </View>
 
@@ -157,6 +145,12 @@ export const Header: React.FC<HeaderProps> = ({
       <WishlistModal
         visible={wishlistVisible}
         onClose={() => setWishlistVisible(false)}
+      />
+
+      {/* AI Concierge Drawer Modal */}
+      <AiConciergeModal
+        visible={aiVisible}
+        onClose={() => setAiVisible(false)}
       />
     </View>
   );
@@ -194,24 +188,6 @@ function createStyles(colors: ThemeColors) {
       height: 26,
       borderRadius: 6,
     },
-    brandTag: {
-      fontSize: 9,
-      letterSpacing: 1.2,
-      fontWeight: "700",
-    },
-    connDot: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 4,
-    },
-    connText: {
-      fontSize: 8,
-      fontWeight: "800",
-      color: "#FFFFFF",
-      letterSpacing: 0.5,
-    },
     brandSubtitle: {
       fontSize: 11,
       marginTop: 2,
@@ -235,18 +211,18 @@ function createStyles(colors: ThemeColors) {
       gap: 8,
     },
     iconButton: {
-      width: 38,
-      height: 38,
+      width: 44,
+      height: 44,
       alignItems: "center",
       justifyContent: "center",
-      borderRadius: 19,
+      borderRadius: 22,
     },
     notifButton: {
-      width: 38,
-      height: 38,
+      width: 44,
+      height: 44,
       alignItems: "center",
       justifyContent: "center",
-      borderRadius: 19,
+      borderRadius: 22,
       position: "relative",
     },
     notifBadge: {
@@ -266,11 +242,11 @@ function createStyles(colors: ThemeColors) {
       fontWeight: "900",
     },
     bagButton: {
-      width: 38,
-      height: 38,
+      width: 44,
+      height: 44,
       alignItems: "center",
       justifyContent: "center",
-      borderRadius: 19,
+      borderRadius: 22,
       position: "relative",
     },
     badge: {

@@ -413,12 +413,30 @@ export const Eye = make(
   </>,
 );
 
+export const EyeOff = make(
+  <>
+    <Path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+    <Path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+    <Path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+    <Line x1="2" x2="22" y1="2" y2="22" />
+  </>,
+);
+
 export const Camera = make(
   <>
     <Path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
     <Circle cx="12" cy="13" r="3" />
   </>,
 );
+
+export const Edit = make(
+  <>
+    <Path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+    <Path d="m15 5 4 4" />
+  </>,
+);
+
+export const Pencil = Edit;
 
 export const ImageIcon = make(
   <>
@@ -459,6 +477,13 @@ export const Star = make(
 
 export const MessageCircle = make(
   <Path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />,
+);
+
+export const Send = make(
+  <>
+    <Path d="m22 2-7 20-4-9-9-4Z" />
+    <Path d="M22 2 11 13" />
+  </>,
 );
 
 export const BookOpen = make(
@@ -532,6 +557,26 @@ export const Facebook = make(
     <Rect x="3" y="3" width="18" height="18" rx="4" />
     <Path d="M14 8h-2c-1.1 0-2 .9-2 2v1.5H8v2h2V19h2v-5.5h2l.5-2H12V10c0-.3.2-.5.5-.5H14V8z" />
   </>,
+);
+
+export const LinkedIn = make(
+  <>
+    <Path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+    <Rect x="2" y="9" width="4" height="12" />
+    <Circle cx="4" cy="4" r="2" />
+  </>,
+);
+
+export const ExternalLink = make(
+  <>
+    <Path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    <Polyline points="15 3 21 3 21 9" />
+    <Line x1="10" y1="14" x2="21" y2="3" />
+  </>,
+);
+
+export const Play = make(
+  <Polygon points="5 3 19 12 5 21 5 3" />,
 );
 
 

@@ -10,24 +10,18 @@ import { exportUserData, deleteUserAccount, fetchOutlets, fetchAppSettings, type
 interface StoreSectionProps {
   onAboutPress: () => void;
   onReportPress: () => void;
-  onBroadcastPress: () => void;
-  onAnalyticsPress: () => void;
-  onCustomersPress: () => void;
 }
 
 const FALLBACK_OUTLETS: Outlet[] = [
-  { id: "mirpur", name: "DEEN Mirpur 12 (Flagship Outlet)", tag: "CENTRAL STUDIO & STORE", address: "2nd Floor, Ramzannesa Super Market, Mirpur 12, Dhaka-1216", hours: "Open Daily: 10:00 AM - 09:30 PM", phone: "+8801952700500" },
-  { id: "wari", name: "DEEN Wari Outlet", tag: "DHAKA SOUTH OUTLET", address: "Ground Floor, 41 A.K Famous Tower, Rankin Street, Wari, Dhaka-1203", hours: "Open Daily: 10:30 AM - 09:30 PM", phone: "+8801952700500" },
-  { id: "cumilla", name: "DEEN Cumilla Outlet", tag: "CUMILLA SHOWROOM", address: "4th Floor, QR Tower, Badurtola, Cumilla", hours: "Open Daily: 10:30 AM - 09:00 PM", phone: "+8801952700500" },
-  { id: "sylhet", name: "DEEN Sylhet Outlet", tag: "SYLHET SHOWROOM", address: "Block-A, House-54/2, Kumar Para, Sylhet", hours: "Open Daily: 10:30 AM - 09:30 PM", phone: "+8801952700500" },
+  { id: "mirpur-12", name: "DEEN Mirpur 12 (Flagship Outlet)", tag: "CENTRAL STUDIO & STORE PICKUP", address: "Level 3, Ramzannesa Super Market, Mirpur 12 Bus Stand, Dhaka-1216", hours: "Open Daily: 10:00 AM – 09:30 PM", phone: "01972-627981" },
+  { id: "wari-outlet", name: "DEEN Wari Outlet", tag: "DHAKA SOUTH SHOWROOM", address: "Ground Floor, 41 A.K Famous Tower, Rankin Street, Wari, Dhaka-1203", hours: "Open Daily: 10:30 AM – 09:30 PM", phone: "01972-627983" },
+  { id: "cumilla-outlet", name: "DEEN Cumilla Outlet", tag: "CUMILLA REGIONAL SHOWROOM", address: "4th Floor, QR Tower, Badurtola (Dharmasagor Side), Kandirpar, Cumilla-3500", hours: "Open Daily: 10:30 AM – 09:00 PM", phone: "01972-627984" },
+  { id: "sylhet-outlet", name: "DEEN Sylhet Outlet", tag: "SYLHET REGIONAL SHOWROOM", address: "54/A, Level 2, Block-A, Kumarpara, Zindabazar, Sylhet", hours: "Open Daily: 10:30 AM – 09:30 PM", phone: "01972-627985" },
 ];
 
 export const StoreSection: React.FC<StoreSectionProps> = ({
   onAboutPress,
   onReportPress,
-  onBroadcastPress,
-  onAnalyticsPress,
-  onCustomersPress,
 }) => {
   const { colors } = useTheme();
   const { profile } = useProfile();
@@ -41,7 +35,7 @@ export const StoreSection: React.FC<StoreSectionProps> = ({
     fetchAppSettings().then((s) => { if (s?.contact?.whatsapp) setWhatsapp(s.contact.whatsapp); });
   }, []);
 
-  const waNumber = whatsapp.replace(/[^0-9]/g, "");
+  const waNumber = (whatsapp || "01952700500").replace(/[^0-9]/g, "");
 
   return (
     <>
@@ -148,45 +142,6 @@ export const StoreSection: React.FC<StoreSectionProps> = ({
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* Store Admin Portal (Gated) */}
-      {profile.role === "admin" && (
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.indigo }]}>
-          <View style={styles.cardHeader}>
-            <Store size={17} color={colors.indigo} />
-            <Text style={[styles.cardTitle, { color: colors.indigo }]}>STORE ADMIN & BI DASHBOARD</Text>
-          </View>
-          <Text style={{ fontSize: 12, color: colors.sub, marginBottom: 10 }}>
-            Logged in with full Store Admin privileges. BI Analytics are active on Home.
-          </Text>
-          <TouchableOpacity
-            style={[styles.broadcastBtn, { backgroundColor: colors.indigo, marginBottom: 8 }]}
-            activeOpacity={0.88}
-            onPress={onAnalyticsPress}
-          >
-            <Sparkles size={16} color="#FFFFFF" />
-            <Text style={styles.broadcastBtnText}>📊 VIEW DETAILED BI ANALYTICS</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.broadcastBtn, { backgroundColor: colors.emerald, marginBottom: 8 }]}
-            activeOpacity={0.88}
-            onPress={onCustomersPress}
-          >
-            <Users size={16} color="#FFFFFF" />
-            <Text style={styles.broadcastBtnText}>👥 CUSTOMER DIRECTORY & ORDER PROFILES</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.broadcastBtn, { backgroundColor: colors.cardSecondary, borderColor: colors.indigo, borderWidth: 1 }]}
-            activeOpacity={0.88}
-            onPress={onBroadcastPress}
-          >
-            <Sparkles size={16} color={colors.indigo} />
-            <Text style={[styles.broadcastBtnText, { color: colors.indigo }]}>📢 SEND MARKETING BROADCAST PUSH</Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </>
   );
 };

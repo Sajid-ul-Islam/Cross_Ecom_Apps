@@ -13,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { useRouter } from "expo-router";
 import {
   X,
   Lock,
@@ -30,13 +31,14 @@ import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useProfile } from "../context/ProfileContext";
 import { forgotPassword, registerCustomer as registerCustomerAPI } from "../services/gateway";
+import { SocialAuthModal } from "./SocialAuthModal";
 
 const { width, height } = Dimensions.get("window");
 
 interface LoginModalProps {
   visible: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (role?: string) => void;
   initialMode?: "signin" | "signup";
 }
 
@@ -46,8 +48,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   onSuccess,
   initialMode = "signin",
 }) => {
+  if (!visible) return null;
+  const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { login, loginWithGoogle, loginWithFacebook, registerCustomer, profile } = useProfile();
+  const { login, loginAsAdmin, loginWithGoogle, loginWithFacebook, registerCustomer, profile } = useProfile();
   const styles = createStyles(colors);
 
   const [mode, setMode] = useState<"signin" | "signup">(initialMode);
@@ -62,46 +66,40 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [socialModalProvider, setSocialModalProvider] = useState<"google" | "facebook" | null>(null);
 
-  const handleSocialGoogle = async () => {
-    setSubmitting(true);
-    try {
-      const res = await loginWithGoogle(undefined, `${profile.phone || "shopper"}@gmail.com`, profile.name || "DEEN Customer");
-      if (res.success) {
-        setNotice({ type: "success", text: "Signed in with Google successfully!" });
-        setTimeout(() => {
-          setSubmitting(false);
-          onClose();
-          if (onSuccess) onSuccess();
-        }, 600);
-      } else {
-        setSubmitting(false);
-        setNotice({ type: "error", text: res.message || "Google sign-in failed." });
-      }
-    } catch {
-      setSubmitting(false);
-      setNotice({ type: "error", text: "Google sign-in error." });
-    }
+  const handleSocialGoogle = () => {
+    setSocialModalProvider("google");
   };
 
-  const handleSocialFacebook = async () => {
+  const handleSocialFacebook = () => {
+    setSocialModalProvider("facebook");
+  };
+
+  const handleSocialAccountPicked = async (email: string, name: string) => {
     setSubmitting(true);
     try {
-      const res = await loginWithFacebook(undefined, `${profile.phone || "shopper"}@facebook.deencommerce.com`, profile.name || "DEEN Customer");
+      const isG = socialModalProvider === "google";
+      const token = `mobile_${isG ? "google" : "facebook"}_token_${Date.now()}`;
+      const res = isG
+        ? await loginWithGoogle(token, email, name)
+        : await loginWithFacebook(token, email, name);
+
       if (res.success) {
-        setNotice({ type: "success", text: "Signed in with Facebook successfully!" });
+        setNotice({ type: "success", text: `Signed in as ${name}!` });
         setTimeout(() => {
           setSubmitting(false);
+          setSocialModalProvider(null);
           onClose();
           if (onSuccess) onSuccess();
-        }, 600);
+        }, 500);
       } else {
         setSubmitting(false);
-        setNotice({ type: "error", text: res.message || "Facebook sign-in failed." });
+        setNotice({ type: "error", text: res.message || "Social sign-in failed." });
       }
     } catch {
       setSubmitting(false);
-      setNotice({ type: "error", text: "Facebook sign-in error." });
+      setNotice({ type: "error", text: "Social sign-in error." });
     }
   };
 
@@ -148,12 +146,21 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     try {
       const res = await login(username, password);
       if (res.success) {
-        setNotice({ type: "success", text: `Welcome back, ${username.trim()}!` });
+        const isAdminUser = res.role === "admin" || username.trim().toLowerCase() === "admin";
+        setNotice({
+          type: "success",
+          text: isAdminUser
+            ? "👑 Logged in as Store Administrator! Opening BI Dashboard..."
+            : `Welcome back, ${username.trim()}!`,
+        });
         setTimeout(() => {
           setSubmitting(false);
           onClose();
-          if (onSuccess) onSuccess();
-        }, 600);
+          if (onSuccess) onSuccess(isAdminUser ? "admin" : "customer");
+          if (isAdminUser) {
+            router.push("/admin");
+          }
+        }, 500);
       } else {
         setSubmitting(false);
         setNotice({ type: "error", text: res.message || "Invalid credentials. Please verify and try again." });
@@ -184,12 +191,14 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       const res = await registerCustomerAPI(
         signupName.trim(),
         cleanPhone,
-        signupEmail.trim()
+        signupEmail.trim() || undefined,
+        signupPassword
       );
       await registerCustomer({
         name: signupName.trim(),
         phone: cleanPhone,
         email: signupEmail.trim(),
+        password: signupPassword,
       });
       setNotice({ type: "success", text: `Account created! Welcome to DEEN, ${signupName.trim()}!` });
       setTimeout(() => {
@@ -443,6 +452,56 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   </TouchableOpacity>
                 </View>
 
+                {/* Store Admin Quick Access */}
+                <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.borderLight }}>
+                  <TouchableOpacity
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
+                      height: 42,
+                      borderRadius: 8,
+                      backgroundColor: colors.cardSecondary,
+                      borderWidth: 1.5,
+                      borderColor: colors.indigo,
+                    }}
+                    activeOpacity={0.8}
+                    onPress={async () => {
+                      setUsername("admin");
+                      setPassword("admin");
+                      setSubmitting(true);
+                      try {
+                        const res = await loginAsAdmin("admin");
+                        if (res.success) {
+                          setNotice({ type: "success", text: "👑 Logged in as Store Administrator! Opening BI Dashboard..." });
+                          setTimeout(() => {
+                            setSubmitting(false);
+                            onClose();
+                            if (onSuccess) onSuccess("admin");
+                            router.push("/admin");
+                          }, 500);
+                        } else {
+                          setSubmitting(false);
+                          setNotice({ type: "error", text: res.message || "Admin login failed." });
+                        }
+                      } catch {
+                        setSubmitting(false);
+                        setNotice({ type: "error", text: "Admin login network error." });
+                      }
+                    }}
+                    disabled={submitting}
+                  >
+                    <Sparkles size={15} color={colors.indigo} />
+                    <Text style={{ fontSize: 12, fontWeight: "800", color: colors.indigo }}>
+                      👑 LOGIN AS STORE ADMIN
+                    </Text>
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 10, color: colors.sub, textAlign: "center", marginTop: 6 }}>
+                    Store Admin Privileges & BI Analytics (user: admin · pass: admin)
+                  </Text>
+                </View>
+
                 <TouchableOpacity onPress={onClose} style={styles.guestLink}>
                   <Text style={[styles.guestLinkText, { color: colors.sub }]}>
                     Continue as guest shopper
@@ -655,6 +714,16 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Social Account Chooser Modal Sheet */}
+      <SocialAuthModal
+        visible={Boolean(socialModalProvider)}
+        provider={socialModalProvider || "google"}
+        onClose={() => setSocialModalProvider(null)}
+        onSelectAccount={handleSocialAccountPicked}
+        currentEmailHint={signupEmail || profile.email}
+        currentNameHint={signupName || profile.name}
+      />
     </Modal>
   );
 };

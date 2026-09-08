@@ -13,6 +13,7 @@ import { StoreProvider } from "../src/context/StoreContext";
 import { startGatewayKeepAlive, reportBug } from "../src/services/gateway";
 
 import { AnimatedSplashScreen } from "../src/components/AnimatedSplashScreen";
+import { OTAUpdateBanner } from "../src/components/OTAUpdateBanner";
 
 // Tell TypeScript that React Native's `global` exists (RN exposes it at runtime
 // but TS 6 strict lib doesn't include it).
@@ -99,6 +100,7 @@ export default function RootLayout() {
                         {isSplashVisible && (
                           <AnimatedSplashScreen onAnimationComplete={() => setSplashVisible(false)} />
                         )}
+                        <OTAUpdateBanner />
                       </OrderProvider>
                     </CartProvider>
                   </ReturnProvider>

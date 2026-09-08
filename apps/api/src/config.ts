@@ -15,6 +15,49 @@ export interface StoreConfig {
   };
 }
 
+export const DEFAULT_DEEN_OUTLETS = [
+  {
+    id: "mirpur-12",
+    name: "DEEN Mirpur 12 (Flagship Outlet)",
+    tag: "CENTRAL STUDIO & STORE PICKUP",
+    address: "Level 3, Ramzannesa Super Market, Mirpur 12 Bus Stand, Dhaka-1216",
+    hours: "Open Daily: 10:00 AM – 09:30 PM",
+    phone: "01972-627981",
+    mapQuery: "Ramzannesa+Super+Market+Mirpur+12+Dhaka",
+    pickup: true,
+  },
+  {
+    id: "wari-outlet",
+    name: "DEEN Wari Outlet",
+    tag: "DHAKA SOUTH SHOWROOM",
+    address: "Ground Floor, 41 A.K Famous Tower, Rankin Street, Wari, Dhaka-1203",
+    hours: "Open Daily: 10:30 AM – 09:30 PM",
+    phone: "01972-627983",
+    mapQuery: "Rankin+Street+Wari+Dhaka",
+    pickup: false,
+  },
+  {
+    id: "cumilla-outlet",
+    name: "DEEN Cumilla Outlet",
+    tag: "CUMILLA REGIONAL SHOWROOM",
+    address: "4th Floor, QR Tower, Badurtola (Dharmasagor Side), Kandirpar, Cumilla-3500",
+    hours: "Open Daily: 10:30 AM – 09:00 PM",
+    phone: "01972-627984",
+    mapQuery: "QR+Tower+Badurtola+Cumilla",
+    pickup: false,
+  },
+  {
+    id: "sylhet-outlet",
+    name: "DEEN Sylhet Outlet",
+    tag: "SYLHET REGIONAL SHOWROOM",
+    address: "54/A, Level 2, Block-A, Kumarpara, Zindabazar, Sylhet",
+    hours: "Open Daily: 10:30 AM – 09:30 PM",
+    phone: "01972-627985",
+    mapQuery: "Kumarpara+Sylhet",
+    pickup: false,
+  },
+];
+
 export const config = {
   port: Number(process.env.PORT ?? 8787),
   /** Public base URL of THIS gateway. Used to advertise itself on /v1/health. */
@@ -40,13 +83,15 @@ export const config = {
   catalogRateLimit: Number(process.env.CATALOG_RATE_LIMIT ?? 120),
   orderRateLimit: Number(process.env.ORDER_RATE_LIMIT ?? 6),
   logLevel: (process.env.LOG_LEVEL as "info" | "debug" | "warn" | "error") ?? "info",
+  /** Google Gemini API key for DEEN Assistant hybrid LLM fallback. */
+  geminiApiKey: process.env.GEMINI_API_KEY ?? "",
   /** Multi-tenant store registry (SaaS). JSON array in STORES env.
       When set, each store is keyed by its own apiKey and carries its own
       Woo credentials + branding. The default (legacy) store uses the top-level
       woo config + GATEWAY_API_KEY. */
   stores: parseStores(process.env.STORES),
   woo: {
-    site: process.env.WOO_SITE ?? "https://deencommerce.com",
+    site: process.env.WOO_SITE_URL ?? "https://deencommerce.com",
     consumerKey: process.env.WOO_CONSUMER_KEY ?? "",
     consumerSecret: process.env.WOO_CONSUMER_SECRET ?? "",
   },
@@ -76,6 +121,7 @@ export const config = {
     saleSubtitle: process.env.CAMPAIGN_SALE_SUBTITLE ?? "Season Clearance: 40%–50% discount on selected artisanal denim & apparel",
     saleBadge: process.env.CAMPAIGN_SALE_BADGE ?? "LIMITED TIME SALE",
     discountRange: "40%–50%",
+    activeFestival: process.env.CAMPAIGN_FESTIVAL ?? "", // e.g. eid_ul_fitr, jumma, pohela_boishakh
   },
   /** Store contact details (source of truth = gateway env, falls back to the
       real DEEN numbers). Admin can change via env without an app rebuild. */
@@ -102,8 +148,25 @@ export const config = {
       Admin edits this to add/remove/rename outlets without an app rebuild.
       Shape: [{ id, name, tag?, address, hours, phone, mapQuery?, pickup? }] */
   outlets: (() => {
-    try { return JSON.parse(process.env.STORE_OUTLETS ?? "[]"); } catch { return []; }
+    try {
+      const parsed = JSON.parse(process.env.STORE_OUTLETS ?? "[]");
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch {}
+    return DEFAULT_DEEN_OUTLETS;
   })(),
+  /** Scalability TTLs (S1) — env-overridable so Render/Vercel can tune
+      without a rebuild. Defaults preserve current behavior. */
+  ttl: {
+    catalogMs: Number(process.env.CACHE_CATALOG_TTL_MS ?? String(5 * 60 * 1000)),
+    pathaoTrackingMs: Number(process.env.CACHE_PATHAO_TTL_MS ?? String(60_000)),
+    webhookDedupeMs: Number(process.env.WEBHOOK_DEDUPE_TTL_MS ?? String(10 * 60 * 1000)),
+    biMs: Number(process.env.BI_CACHE_TTL_MS ?? String(10 * 60 * 1000)),
+    authSessionMs: Number(process.env.AUTH_SESSION_TTL_MS ?? String(30 * 24 * 60 * 60 * 1000)),
+    guestSessionMs: Number(process.env.GUEST_SESSION_TTL_MS ?? String(7 * 24 * 60 * 60 * 1000)),
+    wooDegradedAfterMs: Number(process.env.WOO_DEGRADED_AFTER_MS ?? String(5 * 60 * 1000)),
+  },
+  /** Persistence dir — S1 warns on /tmp (ephemeral on Render). */
+  dataDir: process.env.DATA_DIR ?? "/tmp/deen_gateway_data",
 };
 
 function parseStores(raw?: string): StoreConfig[] {

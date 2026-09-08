@@ -50,6 +50,7 @@ interface AdminBroadcastModalProps {
 }
 
 export const AdminBroadcastModal: React.FC<AdminBroadcastModalProps> = ({ visible, onClose }) => {
+  if (!visible) return null;
   const { broadcasts, sendBroadcast, refreshBroadcasts } = useNotifications();
   const { colors, isDark } = useTheme();
   const styles = createStyles(colors);
@@ -426,9 +427,9 @@ function createStyles(colors: ThemeColors) {
       marginTop: 2,
     },
     closeBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: colors.cardSecondary,
       alignItems: "center",
       justifyContent: "center",

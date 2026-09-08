@@ -16,7 +16,7 @@
 2. **Resilient In-Memory Caching & Circuit Breaking**: Automatically caches catalog data (with 5-minute TTL) and falls back to bundled catalog snapshots if upstream WooCommerce times out or errors.
 3. **Multi-Gateway Failover & Probing**: Exposes `/v1/health` and live endpoints designed to work seamlessly with client-side failover pools across Render / secondary cloud origins.
 4. **Real-time Webhook Invalidation**: Verifies WooCommerce HMAC-SHA256 signatures (`/v1/deen/webhook/woo`) for immediate product/stock cache purging on inventory changes.
-5. **Pathao Logistics & Order Fulfillment**: Normalizes order payload structure (64 Bangladesh districts, delivery charges, COD / bKash / Nagad metadata) and attaches Pathao consignment tracking IDs (`ptc_consignment_id`).
+5. **Pathao Logistics & Order Fulfillment**: Normalizes order payload structure (64 Bangladesh districts, delivery charges, COD / bKash / SSLCommerz metadata) and attaches Pathao consignment tracking IDs (`ptc_consignment_id`).
 
 ---
 

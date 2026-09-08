@@ -10,6 +10,7 @@ import {
   bdt,
   API_URL,
   fetchCampaigns,
+  fetchDeliveryFees,
   fetchDistricts,
   fetchProduct,
   loginWithGoogle,
@@ -17,9 +18,12 @@ import {
   validateCoupon,
   type ActiveCampaignState,
   type BdDistrict,
+  type AuthResult,
+  type DeliveryFees,
 } from "@/lib/api";
-import { BD_DISTRICTS } from "@/lib/districts";
+import { BD_DISTRICTS, getDistrictPostcode } from "@/lib/districts";
 import BankOffersModal from "@/components/BankOffersModal";
+import SocialAuthModal from "@/components/SocialAuthModal";
 
 interface DeliveryOption {
   id: string;
@@ -30,12 +34,13 @@ interface DeliveryOption {
   icon: string;
 }
 
-const DELIVERY_OPTIONS: Record<string, DeliveryOption> = {
+// Static metadata only — FEES come live from GET /v1/deen/shipping (Woo shipping
+// zones + express surcharge), so admin fee edits propagate with no app rebuild.
+const DELIVERY_OPTION_META: Record<string, Omit<DeliveryOption, "fee">> = {
   dhaka_standard: {
     id: "dhaka_standard",
     name: "Dhaka Standard (24–48h)",
     sub: "Standard home delivery inside Dhaka metropolitan",
-    fee: 50,
     badge: "STANDARD",
     icon: "🛵",
   },
@@ -43,7 +48,6 @@ const DELIVERY_OPTIONS: Record<string, DeliveryOption> = {
     id: "dhaka_express",
     name: "Dhaka Express (Same-Day / 12h)",
     sub: "Priority delivery within 12–18 hours inside Dhaka",
-    fee: 110,
     badge: "FAST",
     icon: "⚡",
   },
@@ -51,7 +55,6 @@ const DELIVERY_OPTIONS: Record<string, DeliveryOption> = {
     id: "outside",
     name: "Outside Dhaka (3–5 days)",
     sub: "Fast express courier across all 64 BD Districts",
-    fee: 90,
     badge: "REGIONAL",
     icon: "📦",
   },
@@ -59,7 +62,6 @@ const DELIVERY_OPTIONS: Record<string, DeliveryOption> = {
     id: "store_pickup",
     name: "Store Pickup (Mirpur 12)",
     sub: "Ready in 2h · Ramzannesa Super Market, Mirpur 12",
-    fee: 0,
     badge: "FREE",
     icon: "🏪",
   },
@@ -82,19 +84,13 @@ const PAYMENT_METHODS = [
   },
   {
     id: "bkash",
-    title: "bKash Direct / Merchant",
-    description: "Pay securely via official bKash merchant gateway or send-money.",
+    title: "bKash Direct / Send Money",
+    description: "Pay securely via bKash personal send-money with instant TrxID entry.",
     icon: "📱",
   },
   {
-    id: "nagad",
-    title: "Nagad",
-    description: "Instant payment using Nagad digital financial service.",
-    icon: "📲",
-  },
-  {
     id: "card",
-    title: "Debit / Credit Card / Net Banking",
+    title: "Debit / Credit Card (SSLCommerz)",
     description: "256-bit encrypted Visa, Mastercard, Amex, or bank portal.",
     icon: "💳",
   },
@@ -140,9 +136,23 @@ function CheckoutContent() {
   const [selectedArea, setSelectedArea] = useState<string>(
     searchParams.get("area") || "dhaka_standard"
   );
+  // Live delivery fees from GET /v1/deen/shipping (Woo zones + express surcharge).
+  const [liveFees, setLiveFees] = useState<DeliveryFees>({
+    insideDhaka: 50,
+    outsideDhaka: 90,
+    express: 120,
+    storePickup: 0,
+  });
+  useEffect(() => {
+    fetchDeliveryFees()
+      .then((f) => setLiveFees(f))
+      .catch(() => {});
+  }, []);
   const [deliverySlot, setDeliverySlot] = useState<string>("any");
   const [deliveryNotes, setDeliveryNotes] = useState("");
   const [payment, setPayment] = useState<string>("cod");
+  const [bkashNumber, setBkashNumber] = useState("");
+  const [trxId, setTrxId] = useState("");
 
   // Gift / Separate Shipping
   const [isGift, setIsGift] = useState(false);
@@ -167,6 +177,7 @@ function CheckoutContent() {
 
   // Campaign state from REST API
   const [campaign, setCampaign] = useState<ActiveCampaignState | null>(null);
+  const [checkoutSocialProvider, setCheckoutSocialProvider] = useState<"google" | "facebook" | null>(null);
 
   useEffect(() => {
     fetchCampaigns().then((data) => {
@@ -178,54 +189,37 @@ function CheckoutContent() {
     });
   }, []);
 
-  // Social Login Handler directly at checkout
-  const handleSocialLoginAtCheckout = async (provider: "google" | "facebook") => {
-    setSocialLoading(provider);
-    setApiError("");
-    try {
-      const fallbackEmail =
-        email.trim() ||
-        (phone
-          ? `${phone.replace(/[^0-9]/g, "")}@${provider}.deencommerce.com`
-          : `customer@${provider}.deencommerce.com`);
-      const fallbackName =
-        name.trim() || (provider === "google" ? "Google Customer" : "Facebook Customer");
-      const res =
-        provider === "google"
-          ? await loginWithGoogle(undefined, fallbackEmail, fallbackName)
-          : await loginWithFacebook(undefined, fallbackEmail, fallbackName);
+  // Social Login Handler directly at checkout - opens account chooser modal
+  const handleSocialLoginAtCheckout = (provider: "google" | "facebook") => {
+    setCheckoutSocialProvider(provider);
+  };
 
-      if (res.success && res.user) {
-        if (res.token) {
-          try {
-            localStorage.setItem("deen_web_guest_token", res.token);
-            localStorage.setItem("deen_web_auth_token", res.token);
-          } catch {}
-        }
-        const updated = {
-          name: res.user.name || fallbackName,
-          email: res.user.email || fallbackEmail,
-          phone: phone || profileData?.phone || "",
-          address: address || profileData?.address || "",
-          district: district.code,
-          city: city || "Dhaka",
-          role: "customer",
-          isGuest: false,
-        };
-        setProfileData(updated);
-        setIsGuestMode(false);
-        setName(res.user.name || fallbackName);
-        if (res.user.email) setEmail(res.user.email);
+  const handleSocialSuccessAtCheckout = (res: AuthResult) => {
+    if (res.success && res.user) {
+      if (res.token) {
         try {
-          localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+          localStorage.setItem("deen_web_guest_token", res.token);
+          localStorage.setItem("deen_web_auth_token", res.token);
         } catch {}
-      } else {
-        setApiError(res.message || `${provider} sign-in failed. Please enter details manually.`);
       }
-    } catch (err: any) {
-      setApiError(err?.message || `${provider} connection error. Please proceed as Guest.`);
-    } finally {
-      setSocialLoading(null);
+      const updated = {
+        name: res.user.name || name || "Customer",
+        email: res.user.email || email,
+        phone: phone || profileData?.phone || "",
+        address: address || profileData?.address || "",
+        district: district.code,
+        city: city || "Dhaka",
+        role: "customer" as const,
+        isGuest: false,
+      };
+      setProfileData(updated);
+      setIsGuestMode(false);
+      setName(res.user.name || name);
+      if (res.user.email) setEmail(res.user.email);
+      try {
+        localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+      } catch {}
+      setCheckoutSocialProvider(null);
     }
   };
 
@@ -270,8 +264,17 @@ function CheckoutContent() {
     }
   }, [initialCoupon]);
 
-  // Delivery Option calculation
-  const deliveryOpt = DELIVERY_OPTIONS[selectedArea] || DELIVERY_OPTIONS.dhaka_standard;
+  // Delivery options = static metadata merged with LIVE gateway fees.
+  const deliveryOptions = useMemo<Record<string, DeliveryOption>>(
+    () => ({
+      dhaka_standard: { ...DELIVERY_OPTION_META.dhaka_standard, fee: liveFees.insideDhaka },
+      dhaka_express: { ...DELIVERY_OPTION_META.dhaka_express, fee: liveFees.express },
+      outside: { ...DELIVERY_OPTION_META.outside, fee: liveFees.outsideDhaka },
+      store_pickup: { ...DELIVERY_OPTION_META.store_pickup, fee: liveFees.storePickup },
+    }),
+    [liveFees]
+  );
+  const deliveryOpt = deliveryOptions[selectedArea] || deliveryOptions.dhaka_standard;
   const deliveryFee = deliveryOpt.fee;
 
   // BOGO: buy 2+ same category → cheapest is free (matches API calculateBogo)
@@ -403,6 +406,20 @@ function CheckoutContent() {
     setApiError("");
 
     try {
+      const isManualMfs = payment.includes("bkash");
+
+      if (isManualMfs) {
+        if (!bkashNumber.trim() || !trxId.trim()) {
+          setApiError("Please enter your bKash mobile number and Transaction ID (TrxID).");
+          setLoading(false);
+          return;
+        }
+      }
+
+      const finalDeliveryNotes = isManualMfs
+        ? `[bKash Payment]\nSender Phone: ${bkashNumber.trim()}\nTrxID: ${trxId.trim()}\n${deliveryNotes.trim()}`
+        : deliveryNotes.trim();
+
       const orderResult = await placeOrder({
         name: isGift ? (giftName.trim() || name.trim()) : name.trim(),
         phone: isGift ? (giftPhone.replace(/[^0-9]/g, "").slice(-11) || cleanPhoneDigits) : cleanPhoneDigits,
@@ -414,12 +431,13 @@ function CheckoutContent() {
         city: selectedArea === "store_pickup" ? "Dhaka" : isGift ? (giftCity.trim() || giftDistrict.name) : (city.trim() || district.name),
         district: isGift ? giftDistrict.code : district.code,
         state: isGift ? giftDistrict.code : district.code,
-        postcode: "1200",
+        postcode: getDistrictPostcode(isGift ? giftDistrict.code : district.code),
         area: selectedArea,
         payment,
+        trxId: trxId.trim() || undefined,
         deliverySlot,
-        deliveryNotes: deliveryNotes.trim() || undefined,
-        customerNote: deliveryNotes.trim() || undefined,
+        deliveryNotes: finalDeliveryNotes || undefined,
+        customerNote: finalDeliveryNotes || undefined,
         coupon: couponInfo ? couponInfo.code : undefined,
         isGuestOrder: isGuestMode,
         isGiftOrder: isGift,
@@ -781,7 +799,7 @@ function CheckoutContent() {
 
               {/* Delivery Speed Radio Cards */}
               <div className="delivery-method-grid">
-                {Object.values(DELIVERY_OPTIONS).map((opt) => {
+                {Object.values(deliveryOptions).map((opt) => {
                   const isSelected = selectedArea === opt.id;
                   return (
                     <div
@@ -953,6 +971,31 @@ function CheckoutContent() {
                     You can pay the full amount of <strong>{bdt(total)}</strong> in cash when the courier hands over the parcel. Zero advance payment required!
                   </p>
                 </div>
+              ) : payment.includes("bkash") ? (
+                <div className="payment-info-box" style={{ marginTop: 16, background: "var(--indigo-light)", borderColor: "var(--indigo)" }}>
+                  <p className="payment-info-title" style={{ color: "var(--ink)" }}>📱 Manual bKash Send Money</p>
+                  <p className="payment-info-sub" style={{ marginBottom: 12, lineHeight: 1.6 }}>
+                    1. Go to your bKash Menu/App & select <strong>Send Money</strong>.<br/>
+                    2. Send <strong>{bdt(total)}</strong> to <strong>01952 700 500</strong> (Personal).<br/>
+                    3. Enter your bKash number and Transaction ID (TrxID) below:
+                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <input
+                      className="form-input"
+                      type="text"
+                      placeholder="Your bKash Number (e.g. 017XXXXXXXX)"
+                      value={bkashNumber}
+                      onChange={(e) => setBkashNumber(e.target.value)}
+                    />
+                    <input
+                      className="form-input"
+                      type="text"
+                      placeholder="bKash Transaction ID (TrxID)"
+                      value={trxId}
+                      onChange={(e) => setTrxId(e.target.value)}
+                    />
+                  </div>
+                </div>
               ) : (
                 <div className="payment-info-box" style={{ marginTop: 16 }}>
                   <p className="payment-info-title">🔒 Digital Merchant Processing</p>
@@ -1089,7 +1132,7 @@ function CheckoutContent() {
                         { code: "BRAC10", label: "BRAC 10%" },
                         { code: "EBLDEEN", label: "EBL 10%" },
                         { code: "SCBDEEN", label: "SCB 15%" },
-                        { code: "NAGAD100", label: "Nagad ৳100" },
+                        { code: "BKASH10", label: "bKash 10%" },
                       ].map((chip) => (
                         <button
                           key={chip.code}
@@ -1212,9 +1255,9 @@ function CheckoutContent() {
             {loading ? (
               "Placing…"
             ) : payment === "cod" ? (
-              `PLACE COD ORDER · ${bdt(total)}`
+              `PLACE CASH ON DELIVERY ORDER · ${bdt(total)}`
             ) : (
-              `PAY NOW · ${bdt(total)}`
+              `PROCEED TO PAYMENT · ${bdt(total)}`
             )}
           </button>
         </div>
@@ -1283,6 +1326,16 @@ function CheckoutContent() {
       <BankOffersModal
         isOpen={bankOffersOpen}
         onClose={() => setBankOffersOpen(false)}
+      />
+
+      {/* Social Auth Pop-Up Modal */}
+      <SocialAuthModal
+        isOpen={Boolean(checkoutSocialProvider)}
+        provider={checkoutSocialProvider || "google"}
+        onClose={() => setCheckoutSocialProvider(null)}
+        onSuccess={handleSocialSuccessAtCheckout}
+        currentEmailHint={email || profileData?.email}
+        currentNameHint={name || profileData?.name}
       />
     </div>
   );

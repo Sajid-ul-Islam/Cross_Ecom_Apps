@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import { useCart } from "@/lib/cart";
 import { useWishlist } from "@/lib/wishlist";
@@ -17,7 +18,15 @@ export default function ProductCard({ product }: Props) {
   const [added, setAdded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const price = product.salePrice ?? product.price;
+  const currentPrice = product.salePrice ?? product.price;
+  const price = currentPrice;
+  const originalPrice = product.regularPrice && product.regularPrice > currentPrice
+    ? product.regularPrice
+    : product.salePrice && product.price > product.salePrice
+    ? product.price
+    : null;
+  const hasDiscount = Boolean(originalPrice && originalPrice > currentPrice);
+  const discountPct = product.salePct || (hasDiscount && originalPrice ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100) : 0);
 
   const isSaved = isInWishlist(product.id);
 
@@ -48,15 +57,16 @@ export default function ProductCard({ product }: Props) {
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Image */}
-      <div className="product-card__image-wrap" style={{ position: "relative" }}>
+      <div className="product-card__image-wrap" style={{ position: "relative", width: "100%", aspectRatio: "3/4", overflow: "hidden" }}>
         {!imgError ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={isHovered && secondaryImg !== primaryImg ? secondaryImg : primaryImg}
             alt={product.name}
-            loading="lazy"
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             onError={() => setImgError(true)}
             style={{
+              objectFit: "cover",
               transition: "transform 0.3s ease, opacity 0.2s ease",
             }}
           />
@@ -80,36 +90,38 @@ export default function ProductCard({ product }: Props) {
         {product.isNew && (
           <span className="product-card__badge product-card__badge--new">NEW</span>
         )}
-        {product.salePct && product.salePct > 0 && (
+        {discountPct > 0 && (
           <span className="product-card__badge product-card__badge--sale">
-            -{product.salePct}%
+            -{discountPct}%
           </span>
         )}
         {product.stockStatus === "outofstock" && (
           <span className="product-card__badge product-card__badge--oos">OUT OF STOCK</span>
         )}
 
-        {/* Wishlist Heart Button */}
-        <button
-          type="button"
+        {/* Wishlist Heart Button - positioned at bottom right corner */}
+        <div
+          role="button"
+          tabIndex={0}
           onClick={handleToggleWishlist}
           aria-label={isSaved ? "Remove from wishlist" : "Add to wishlist"}
           title={isSaved ? "Saved in Wishlist" : "Save to Wishlist"}
           style={{
             position: "absolute",
-            top: 8,
-            right: 8,
+            bottom: 10,
+            right: 10,
             width: 32,
             height: 32,
             borderRadius: "50%",
-            background: "rgba(255, 255, 255, 0.9)",
+            background: "rgba(255, 255, 255, 0.92)",
+            backdropFilter: "blur(4px)",
             border: "none",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             cursor: "pointer",
-            zIndex: 4,
-            boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+            zIndex: 5,
+            boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
             transition: "transform 0.15s ease",
           }}
         >
@@ -123,17 +135,19 @@ export default function ProductCard({ product }: Props) {
           >
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
           </svg>
-        </button>
+        </div>
 
         {/* Quick add overlay */}
         {product.stockStatus !== "outofstock" && (
-          <button
+          <div
+            role="button"
+            tabIndex={0}
             onClick={handleAddToCart}
             style={{
               position: "absolute",
               bottom: 10,
               left: 10,
-              right: 10,
+              right: 48,
               padding: "8px",
               borderRadius: 6,
               border: "none",
@@ -145,11 +159,12 @@ export default function ProductCard({ product }: Props) {
               cursor: "pointer",
               opacity: 0,
               transition: "opacity 0.2s, background 0.2s",
+              textAlign: "center"
             }}
             className="product-card__quick-add"
           >
             {added ? "✓ ADDED" : "+ QUICK ADD"}
-          </button>
+          </div>
         )}
       </div>
 
@@ -158,9 +173,9 @@ export default function ProductCard({ product }: Props) {
         <p className="product-card__category">{product.category}</p>
         <p className="product-card__name">{product.name}</p>
         <div className="product-card__price-row">
-          <span className="product-card__price">{bdt(price)}</span>
-          {product.regularPrice && product.regularPrice > price && (
-            <span className="product-card__original">{bdt(product.regularPrice)}</span>
+          <span className="product-card__price">{bdt(currentPrice)}</span>
+          {hasDiscount && originalPrice && (
+            <span className="product-card__original">{bdt(originalPrice)}</span>
           )}
         </div>
         {product.sizes.length > 0 && (
@@ -175,6 +190,16 @@ export default function ProductCard({ product }: Props) {
       <style>{`
         .product-card:hover .product-card__quick-add {
           opacity: 1 !important;
+        }
+        @media (max-width: 768px), (hover: none) {
+          .product-card__quick-add {
+            opacity: 1 !important;
+            bottom: 8px !important;
+            left: 8px !important;
+            right: 42px !important;
+            padding: 6px 8px !important;
+            font-size: 10px !important;
+          }
         }
       `}</style>
     </Link>

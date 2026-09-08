@@ -22,7 +22,7 @@ const REWARD_OPTIONS = [
     title: "৳150 OFF Voucher",
     code: "STREAK150",
     coins: 150,
-    sub: "Valid on all Selvedge Denim & Festive Panjabis",
+    sub: "Valid on all Selvedge Denim & Panjabis",
   },
   {
     title: "Free Express Dhaka Delivery",
@@ -249,9 +249,9 @@ function createStyles(colors: ThemeColors) {
       marginTop: 2,
     },
     closeBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: colors.cardSecondary,
       alignItems: "center",
       justifyContent: "center",

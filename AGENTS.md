@@ -54,6 +54,7 @@ This codebase contains:
 
 2. **Touch Targets & Hit Slop ($\ge 44\text{ dp}$)**:
    - All interactive icons (Search, Bag, Notifications, Back arrows, Heart chips) must maintain minimum $44 \times 44\text{ dp}$ touch areas using `hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}`.
+   - Standalone boxed icon buttons (Header nav, modal close, PDP wishlist/stepper chips) must be **visually** $\ge 44 \times 44\text{ dp}$ (circle radius = ½ side). Only compact/overlay targets smaller than 44 visually (text ✕, splash buttons) may rely on hitSlop so that visual + slop $\ge 44$ effective — the pressed/focus ring must never be the sole sub-44 affordance.
 
 3. **Screen Reader & Semantics**:
    - Interactive SVG icon buttons must declare `accessibilityRole="button"` and descriptive `accessibilityLabel`.
@@ -88,6 +89,7 @@ Domain Context Boundaries:
    - District codes: `apps/mobile/src/data/districts.ts` (Mobile) / `apps/web/lib/districts.ts` (Web)
    - Currency & BDT formatting: `bdt()` in `gateway.ts` (Mobile) / `lib/api.ts` (Web)
    - Pricing & Cashback tiers: `apps/api/src/routes.ts` + `pricing.test.ts`
+   - REST API design standard: follow `docs/REST API design guidelines.md` for all endpoint work in `apps/api` — resource-based noun URLs, correct HTTP method semantics & idempotency, accurate status codes (never 200 with an error body), structured errors (code + message + failing fields), query params for filtering/sorting (no actions in URLs), explicit versioning for breaking changes. Error envelope `{ error, message, status, fields? }` is enforced by the `onSend` normalizer hook in `routes.ts` (guidelines §9).
 3. **Continuous Type Safety:** Every agent modification must compile with `npm run typecheck:all` (0 errors) before declaring a task complete.
 
 ---
@@ -124,8 +126,9 @@ npm test
    - The web app mobile view (`apps/web` on mobile viewports `< 768px`) must **exactly replicate the mobile app front view, layout, hierarchy, and functionality**.
    - **Any edit or feature added to the Mobile App must simultaneously be implemented on the Web App and its mobile view.**
 2. **Synchronized Navigation Semantics**:
-   - Both Web Mobile View and Native Mobile App declare the **5 standard navigation tabs**:
-     `[ 🏠 Home ]  [ 🗂️ Categories ]  [ 🛒 Cart (live badge) ]  [ 📦 Orders ]  [ 👤 Profile ]`
+   - Both Web Mobile View and Native Mobile App declare the **5 standard navigation tabs** (codified 2026-09-07 — supersedes the earlier Orders tab rule):
+     `[ 🏠 Home ]  [ 🗂️ Categories ]  [ 🛒 Cart (live badge) ]  [ 💬 Chat ]  [ 👤 Profile ]`
+   - The **Orders** screen is intentionally not a tab on either platform (Chat took its slot per `docs/design-system.md` §5.2 and shipped UX). Orders stays reachable via Profile and the order-success flow, with live Pathao consignment tracking rendered there (§1.2). Do NOT re-add Orders to the tab bar.
 3. **Synchronized Dynamic Campaigns**:
    - Both apps fetch active promotional state from `GET /v1/deen/campaigns` and automatically trigger the active promo banner (e.g. `🔥 FLAT UP TO 50% OFF` or Cashback tier progress).
 4. **Synchronized Customer Profiles & Auth**:

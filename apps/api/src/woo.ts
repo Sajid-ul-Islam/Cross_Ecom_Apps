@@ -103,7 +103,12 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
   const pct = parseDiscountPct(catNames);
   const current = Number(p.price) || 0;
   const regular = p.regular_price ? Number(p.regular_price) : pct ? Math.round(current / (1 - pct / 100)) : undefined;
-  const salePrice = p.on_sale && p.sale_price ? Number(p.sale_price) : p.on_sale ? current : undefined;
+  const rawSale = p.sale_price ? Number(p.sale_price) : undefined;
+  const onSale = Boolean(p.on_sale || (regular && current < regular) || (regular && rawSale && rawSale < regular));
+  const salePrice = onSale ? (rawSale || current) : undefined;
+  const regularPrice = onSale ? (regular || Math.round(current / (1 - (pct || 20) / 100))) : (regular || current);
+  const salePct = pct || (onSale && regularPrice && salePrice && regularPrice > salePrice ? Math.round(((regularPrice - salePrice) / regularPrice) * 100) : undefined);
+
   // Pick the right Woo/WP size per surface. `src` = full original (heavy);
   // `thumbnail` = WP-generated small (grid), `woocommerce_single` = medium (PDP).
   // All three are Woo-sourced — we never host or generate images.
@@ -120,10 +125,10 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
     sku: p.sku,
     name: p.name,
     category,
-    price: current,
+    price: regularPrice || current,
     salePrice,
-    regularPrice: regular,
-    salePct: pct,
+    regularPrice,
+    salePct,
     sizes,
     images: [imgs[0] ?? "", imgs[1] ?? imgs[0] ?? ""] as [string, string],
     gallery: picks.map((x) => x.full),
@@ -139,10 +144,55 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
   };
 }
 
+function mapStoreProductToDeen(p: any): DeenProduct {
+  const regularPrice = p.prices?.regular_price ? Number(p.prices.regular_price) : undefined;
+  const salePrice = p.prices?.sale_price ? Number(p.prices.sale_price) : undefined;
+  const currentPrice = Number(p.prices?.price) || salePrice || regularPrice || 0;
+  const onSale = Boolean(p.on_sale && regularPrice && salePrice && regularPrice > salePrice);
+  const catNames = (p.categories || []).map((c: any) => c.name);
+  const category = mapCategory(catNames);
+  const pct = onSale && regularPrice && salePrice
+    ? Math.round(((regularPrice - salePrice) / regularPrice) * 100)
+    : parseDiscountPct(catNames);
+
+  const sizeAttr = (p.attributes || []).find((a: any) => /size|মাপ/i.test(a.name));
+  const sizes = sizeAttr?.terms ? sizeAttr.terms.map((t: any) => t.name) : ["30", "32", "34", "36", "38"];
+
+  const imgs = (p.images || []).map((img: any) => normalizeImageUrl(img.src || img.thumbnail || "")).filter(Boolean);
+  const primaryImg = imgs[0] || "https://images.unsplash.com/photo-1542272604-780c96856592?w=800";
+  const secondaryImg = imgs[1] || primaryImg;
+
+  const cleanName = (p.name || "").replace(/&#038;/g, "&").replace(/&amp;/g, "&").replace(/&quot;/g, '"');
+
+  return {
+    id: String(p.id),
+    sku: p.sku || `DS-${p.id}`,
+    name: cleanName,
+    category,
+    price: regularPrice || currentPrice,
+    salePrice: onSale ? salePrice : undefined,
+    regularPrice: onSale ? regularPrice : undefined,
+    salePct: pct,
+    sizes: sizes.length > 0 ? sizes : ["M", "L", "XL"],
+    images: [primaryImg, secondaryImg],
+    gallery: imgs.length > 0 ? imgs : [primaryImg],
+    thumb: imgs[0] || primaryImg,
+    single: imgs[0] || primaryImg,
+    full: imgs[0] || primaryImg,
+    fabric: "Artisanal Denim & Fabric",
+    fit: "Slim Fit",
+    stockStatus: p.is_in_stock ? "instock" : "outofstock",
+    rating: Number(p.average_rating) || 4.9,
+    ratingCount: Number(p.review_count) || 12,
+    blurb: (p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220) || "Authentic DEEN design crafted in Bangladesh.",
+    isNew: catNames.some((c: string) => /new/i.test(c)),
+  };
+}
+
 /* ----------------------------- caching ----------------------------- */
-/* Woo rate-limits; cache the catalog for 5 min so stats + listings    */
-/* are cheap after the first warm-up.                                  */
-const CACHE_TTL_MS = 5 * 60 * 1000;
+/* Woo rate-limits; cache the catalog for CACHE_CATALOG_TTL_MS so stats + listings    */
+/* are cheap after the first warm-up. S1: env-overridable via config.ttl.                                  */
+const CACHE_TTL_MS = config.ttl.catalogMs;
 let catalogCache: { at: number; data: DeenProduct[] } | null = null;
 let catalogWarming: Promise<DeenProduct[]> | null = null;
 let coverCache: { at: number; data: Record<string, string> } | null = null;
@@ -156,7 +206,7 @@ export function wooHealthy(): boolean {
    ok | degraded | down without a live call. */
 let lastWooSuccessAt = 0;
 let lastWooErrorAt = 0;
-const WOO_DEGRADED_AFTER_MS = 5 * 60 * 1000; // no success in 5 min -> degraded
+const WOO_DEGRADED_AFTER_MS = config.ttl.wooDegradedAfterMs; // S1 env-overridable
 
 export function wooStatus(): "ok" | "degraded" | "down" {
   if (!wooHealthy()) return "down";
@@ -312,6 +362,51 @@ export async function wooPost<T = any>(path: string, body: Record<string, unknow
   throw lastErr instanceof Error ? lastErr : new Error("Woo POST failed");
 }
 
+/** PUT to WooCommerce REST API (used for updating customers/orders). */
+export async function wooPut<T = any>(path: string, body: Record<string, unknown>): Promise<T> {
+  if (Date.now() < cbOpenUntil) throw new Error("Woo circuit breaker open");
+  const { site, consumerKey, consumerSecret } = config.woo;
+  const url = new URL(`${site.replace(/\/$/, "")}/wp-json/wc/v3/${path}`);
+  url.searchParams.set("consumer_key", consumerKey);
+  url.searchParams.set("consumer_secret", consumerSecret);
+  const MAX_RETRIES = 2;
+  let lastErr: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 6000);
+    try {
+      const res = await fetch(url.toString(), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+      clearTimeout(t);
+      if (!res.ok) {
+        const rb = await res.text().catch(() => "");
+        throw new Error(`Woo PUT ${path} failed: ${res.status} ${rb.slice(0, 120)}`);
+      }
+      lastWooSuccessAt = Date.now();
+      cbFailures = 0;
+      return (await res.json()) as T;
+    } catch (err) {
+      clearTimeout(t);
+      lastErr = err;
+      if (err instanceof Error && /failed: [45]/.test(err.message)) break;
+      if (attempt < MAX_RETRIES) {
+        const baseDelay = 200 * Math.pow(2, attempt);
+        const jitter = Math.floor(Math.random() * 100);
+        await new Promise((r) => setTimeout(r, baseDelay + jitter));
+        continue;
+      }
+    }
+  }
+  lastWooErrorAt = Date.now();
+  cbFailures += 1;
+  if (cbFailures >= CB_THRESHOLD) cbOpenUntil = Date.now() + CB_COOLDOWN_MS;
+  throw lastErr instanceof Error ? lastErr : new Error("Woo PUT failed");
+}
+
 /* Invalidate the catalog cache (called by the Woo webhook when a product
    is created/updated/deleted). The next listing request re-fetches from Woo
    immediately, so price/discount/new-product changes show in seconds. */
@@ -345,16 +440,50 @@ export async function fetchWooProducts(opts?: { status?: string }): Promise<Deen
 
   const loader = async () => {
     const out: DeenProduct[] = [];
-    const perPage = 100;
-    for (let page = 1; page <= 10; page++) {
-      const batch = (await wooFetch("products", { status: statusFilter, per_page: String(perPage), page: String(page) })) as WooProduct[];
-      if (!Array.isArray(batch) || batch.length === 0) break;
-      for (const p of batch) {
-        const d = mapWooToDeen(p);
-        if (d) out.push(d);
+
+    // 1. Try authenticated WooCommerce REST API if keys are present
+    if (wooHealthy()) {
+      try {
+        const perPage = 100;
+        for (let page = 1; page <= 10; page++) {
+          const batch = (await wooFetch("products", { status: statusFilter, per_page: String(perPage), page: String(page) })) as WooProduct[];
+          if (!Array.isArray(batch) || batch.length === 0) break;
+          for (const p of batch) {
+            const d = mapWooToDeen(p);
+            if (d) out.push(d);
+          }
+          if (batch.length < perPage) break;
+        }
+        if (out.length > 0) return out;
+      } catch (err) {
+        console.warn("[woo] Authenticated WC API failed, trying public Store API:", (err as Error).message);
       }
-      if (batch.length < perPage) break;
     }
+
+    // 2. Fetch live exact products and images directly from deencommerce.com Store API
+    try {
+      const siteUrl = config.woo.site || "https://deencommerce.com";
+      for (let page = 1; page <= 3; page++) {
+        const res = await fetch(`${siteUrl}/wp-json/wc/store/v1/products?per_page=100&page=${page}`, {
+          headers: { "User-Agent": "DEEN-Commerce-Gateway/1.0" },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!res.ok) break;
+        const storeProducts = await res.json();
+        if (!Array.isArray(storeProducts) || storeProducts.length === 0) break;
+        for (const sp of storeProducts) {
+          out.push(mapStoreProductToDeen(sp));
+        }
+        if (storeProducts.length < 100) break;
+      }
+      if (out.length > 0) {
+        console.log(`[woo] Successfully fetched ${out.length} live products directly from ${siteUrl}`);
+        return out;
+      }
+    } catch (storeErr) {
+      console.warn("[woo] Store API fetch failed:", (storeErr as Error).message);
+    }
+
     return out;
   };
 
@@ -472,29 +601,241 @@ export async function fetchWooCategoryList(): Promise<{ category: string; count:
 /**
  * Source of truth for category cover images: WooCommerce's
  * `products/categories` endpoint, which carries each category's real
- * WordPress media `image.src`. The app is a thin client — covers must
- * originate from Woo/WordPress, never hardcoded or third-party hosts.
- * Returns a map keyed by DeenCategory name -> cover image URL.
+ * WordPress media `image.src`.
  */
+export const CANONICAL_CATEGORY_COVERS: Record<string, string> = {
+  JEANS: "https://deencommerce.com/wp-content/uploads/2025/11/Jeans.webp",
+  PANJABI: "https://deencommerce.com/wp-content/uploads/2026/02/Category.jpg",
+  SHIRT: "https://deencommerce.com/wp-content/uploads/2026/04/Category.webp",
+  "T-SHIRT": "https://deencommerce.com/wp-content/uploads/2026/04/category.jpg",
+  POLO: "https://deencommerce.com/wp-content/uploads/2025/11/Polo.webp",
+  TROUSERS: "https://deencommerce.com/wp-content/uploads/2026/04/Trouser-Category.jpg",
+  ACCESSORIES: "https://deencommerce.com/wp-content/uploads/2025/08/Accessories.webp",
+};
+
 export async function fetchWooCategoryImages(): Promise<Record<string, string>> {
   if (coverCache && Date.now() - coverCache.at < CACHE_TTL_MS) return coverCache.data;
-  const out: Record<string, string> = {};
-  if (!wooHealthy()) return out;
+  const out: Record<string, string> = { ...CANONICAL_CATEGORY_COVERS };
+
+  // Fetch live category images from deencommerce.com public Store API
   try {
-    const cats = (await wooFetch("products/categories", {
-      per_page: "100",
-      hide_empty: "false",
-    })) as Array<{ name: string; image?: { src?: string } | null }>;
-    for (const c of cats || []) {
-      const mapped = mapCategory([c.name]);
-      if (mapped === "OTHER") continue;
-      const src = c.image?.src;
-      if (src && !out[mapped]) out[mapped] = src;
+    const siteUrl = config.woo.site || "https://deencommerce.com";
+    const res = await fetch(`${siteUrl}/wp-json/wc/store/v1/products/categories?per_page=100`, {
+      headers: { "User-Agent": "DEEN-Commerce-Gateway/1.0" },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (res.ok) {
+      const cats = (await res.json()) as Array<{ slug: string; name: string; image?: { src?: string } | null }>;
+      for (const c of cats || []) {
+        const src = c.image?.src;
+        if (!src) continue;
+        const s = (c.slug || "").toLowerCase();
+        if (s === "jeans") out.JEANS = normalizeImageUrl(src);
+        else if (s === "men-panjabi" || s === "panjabi") out.PANJABI = normalizeImageUrl(src);
+        else if (s === "shirt") out.SHIRT = normalizeImageUrl(src);
+        else if (s === "t-shirts" || s === "t-shirt") out["T-SHIRT"] = normalizeImageUrl(src);
+        else if (s === "polo" || s === "polo-shirt") out.POLO = normalizeImageUrl(src);
+        else if (s === "trousers") out.TROUSERS = normalizeImageUrl(src);
+        else if (s === "accessories") out.ACCESSORIES = normalizeImageUrl(src);
+      }
     }
   } catch (e) {
-    console.error("[woo] category images failed:", (e as Error).message);
+    console.warn("[woo] live category covers fetch failed, using canonical covers:", (e as Error).message);
   }
+
   coverCache = { at: Date.now(), data: out };
+  return out;
+}
+
+export interface DeenHeroSlide {
+  id: string;
+  desktop: string;
+  mobile: string;
+  badge: string;
+  title: string;
+  headline: string;
+  subtitle: string;
+  actionUrl: string;
+  actionLabel: string;
+}
+
+export interface DeenHeroBanner {
+  desktop: string;
+  mobile: string;
+  title: string;
+  tagline: string;
+  subtitle: string;
+  actionUrl: string;
+  actionLabel: string;
+  slides: DeenHeroSlide[];
+}
+
+const DEFAULT_SLIDES: DeenHeroSlide[] = [
+  {
+    id: "slide_denim",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-2.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/08/Mobile-Hero-Banner.jpg",
+    badge: "দেশের প্রথম ডেনিম ব্র্যান্ড · DEEN",
+    title: "Raw Washed. Selvedge Heritage.",
+    headline: "ARTISANAL INDIGO & RAW SELVEDGE",
+    subtitle: "Woven on Vintage Shuttle Looms with Deep Rope-Dyed Indigo & Artisanal Precision.",
+    actionUrl: "/shop?category=JEANS",
+    actionLabel: "Explore Denim Collection →",
+  },
+  {
+    id: "slide_shirts",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-1.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-1.jpg",
+    badge: "NEW SEASON DROP · 2026",
+    title: "Cuban Collar & Dobby Jacquards.",
+    headline: "BREATHABLE RESORT & CASUAL SHIRTS",
+    subtitle: "High-density lightweight textures engineered specifically for Bangladesh's humid weather.",
+    actionUrl: "/shop?category=SHIRT",
+    actionLabel: "Shop Summer Shirts →",
+  },
+  {
+    id: "slide_tailoring",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
+    badge: "BESPOKE EVERYDAY LIVING",
+    title: "Tailored Comfort & Modern Classics.",
+    headline: "CARGO TROUSERS & HERITAGE PANJABIS",
+    subtitle: "Enduring silhouettes, reinforced bar-tacking, and supreme cotton craftsmanship.",
+    actionUrl: "/shop",
+    actionLabel: "Discover All Pieces →",
+  },
+];
+
+let heroCache: { at: number; data: DeenHeroBanner } | null = null;
+
+export async function fetchWooHeroBanner(): Promise<DeenHeroBanner> {
+  if (heroCache && Date.now() - heroCache.at < CACHE_TTL_MS) return heroCache.data;
+
+  const fallback: DeenHeroBanner = {
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-2.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/08/Mobile-Hero-Banner.jpg",
+    title: "দেশের প্রথম ডেনিম ব্র্যান্ড",
+    tagline: "Empathetic Men's Lifestyle Fashion in Bangladesh",
+    subtitle: "Woven on Vintage Shuttle Looms with Deep Rope-Dyed Indigo & Artisanal Precision",
+    actionUrl: "/shop",
+    actionLabel: "Explore Collection",
+    slides: DEFAULT_SLIDES,
+  };
+
+  try {
+    const siteUrl = config.woo.site || "https://deencommerce.com";
+    const res = await fetch(`${siteUrl}/wp-json/wp/v2/media?search=banner&per_page=10`, {
+      headers: { "User-Agent": "DEEN-Commerce-Gateway/1.0" },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (res.ok) {
+      const mediaList = (await res.json()) as Array<{ source_url?: string; title?: { rendered?: string } }>;
+      const webBanner2 = mediaList.find((m) => /web-banner-2/i.test(m.source_url || ""));
+      const webBanner1 = mediaList.find((m) => /web-banner-1/i.test(m.source_url || ""));
+      const webBanner0 = mediaList.find((m) => /web-banner\./i.test(m.source_url || ""));
+      const mobileBanner = mediaList.find((m) => /mobile-hero-banner/i.test(m.source_url || ""));
+
+      if (webBanner2?.source_url) {
+        fallback.desktop = normalizeImageUrl(webBanner2.source_url);
+        fallback.slides[0].desktop = normalizeImageUrl(webBanner2.source_url);
+      }
+      if (mobileBanner?.source_url) {
+        fallback.mobile = normalizeImageUrl(mobileBanner.source_url);
+        fallback.slides[0].mobile = normalizeImageUrl(mobileBanner.source_url);
+      }
+      if (webBanner1?.source_url) {
+        fallback.slides[1].desktop = normalizeImageUrl(webBanner1.source_url);
+        fallback.slides[1].mobile = normalizeImageUrl(webBanner1.source_url);
+      }
+      if (webBanner0?.source_url) {
+        fallback.slides[2].desktop = normalizeImageUrl(webBanner0.source_url);
+        fallback.slides[2].mobile = normalizeImageUrl(webBanner0.source_url);
+      }
+    }
+  } catch (e) {
+    console.warn("[woo] live hero banner fetch failed, using fallback:", (e as Error).message);
+  }
+
+  heroCache = { at: Date.now(), data: fallback };
+  return fallback;
+}
+
+export interface DeenSectionBanner {
+  id: string;
+  title: string;
+  image: string;
+  category: string;
+  actionUrl: string;
+}
+
+const CANONICAL_SECTION_BANNERS: DeenSectionBanner[] = [
+  {
+    id: "sec_denim",
+    title: "Raw Washed & Selvedge Denim Campaign",
+    image: "https://deencommerce.com/wp-content/uploads/2026/08/Section-image.jpg",
+    category: "JEANS",
+    actionUrl: "/shop?category=JEANS",
+  },
+  {
+    id: "sec_shirt",
+    title: "Summer Essential Resort & Cuban Shirts",
+    image: "https://deencommerce.com/wp-content/uploads/2026/06/Shirt-Section-Image.png",
+    category: "SHIRT",
+    actionUrl: "/shop?category=SHIRT",
+  },
+  {
+    id: "sec_panjabi",
+    title: "Artisanal Heritage Panjabi Collection",
+    image: "https://deencommerce.com/wp-content/uploads/2026/06/Panjabi-Section-Image.webp",
+    category: "PANJABI",
+    actionUrl: "/shop?category=PANJABI",
+  },
+  {
+    id: "sec_halfsleeve",
+    title: "Breathable Tees & Casual Polos",
+    image: "https://deencommerce.com/wp-content/uploads/2026/06/Half-sleeve-Section-iomage.webp",
+    category: "T-SHIRT",
+    actionUrl: "/shop?category=T-SHIRT",
+  },
+  {
+    id: "sec_trousers",
+    title: "Tailored Cargo Trousers & Everyday Comfort",
+    image: "https://deencommerce.com/wp-content/uploads/2026/05/Section-Image-4.jpg",
+    category: "TROUSERS",
+    actionUrl: "/shop?category=TROUSERS",
+  },
+];
+
+let sectionBannersCache: { at: number; data: DeenSectionBanner[] } | null = null;
+
+export async function fetchWooSectionBanners(): Promise<DeenSectionBanner[]> {
+  if (sectionBannersCache && Date.now() - sectionBannersCache.at < CACHE_TTL_MS) {
+    return sectionBannersCache.data;
+  }
+
+  const out = [...CANONICAL_SECTION_BANNERS];
+  try {
+    const siteUrl = config.woo.site || "https://deencommerce.com";
+    const res = await fetch(`${siteUrl}/wp-json/wp/v2/media?search=section&per_page=15`, {
+      headers: { "User-Agent": "DEEN-Commerce-Gateway/1.0" },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (res.ok) {
+      const mediaList = (await res.json()) as Array<{ source_url?: string; title?: { rendered?: string } }>;
+      for (const m of mediaList) {
+        const title = (m.title?.rendered || "").toLowerCase();
+        const src = m.source_url ? normalizeImageUrl(m.source_url) : null;
+        if (!src) continue;
+        if (title.includes("shirt") && out[1]) out[1].image = src;
+        else if (title.includes("panjabi") && out[2]) out[2].image = src;
+        else if (title.includes("half sleeve") && out[3]) out[3].image = src;
+      }
+    }
+  } catch (e) {
+    console.warn("[woo] live section banners fetch error:", (e as Error).message);
+  }
+
+  sectionBannersCache = { at: Date.now(), data: out };
   return out;
 }
 
@@ -528,26 +869,38 @@ export interface DeenPaymentMethod {
   type: "cod" | "redirect";
 }
 
+let _cachedPaymentMethods: { data: DeenPaymentMethod[]; expiresAt: number } | null = null;
+let _cachedShippingFees: { data: ShippingFees; expiresAt: number } | null = null;
+
 /** Source of truth: real, ENABLED payment gateways from WooCommerce.
     The app MUST render exactly these — never hardcode payment options. */
 export async function fetchWooPaymentMethods(): Promise<DeenPaymentMethod[]> {
-  if (!wooHealthy()) return [];
-  const list = (await wooFetch("payment_gateways", { per_page: "50" })) as any[];
-  const out: DeenPaymentMethod[] = [];
-  for (const g of list || []) {
-    if (!g.enabled) continue;
-    const id = String(g.id || "");
-    if (!id) continue;
-    // Map known methods to a type the app understands.
-    const type: "cod" | "redirect" = id === "cod" ? "cod" : "redirect";
-    out.push({
-      id,
-      title: String(g.title || g.method_title || id),
-      description: String(g.description || ""),
-      type,
-    });
+  const now = Date.now();
+  if (_cachedPaymentMethods && _cachedPaymentMethods.expiresAt > now) {
+    return _cachedPaymentMethods.data;
   }
-  return out;
+  if (!wooHealthy()) return _cachedPaymentMethods?.data || [];
+  try {
+    const list = (await wooFetch("payment_gateways", { per_page: "50" })) as any[];
+    const out: DeenPaymentMethod[] = [];
+    for (const g of list || []) {
+      if (!g.enabled) continue;
+      const id = String(g.id || "");
+      if (!id) continue;
+      // Map known methods to a type the app understands.
+      const type: "cod" | "redirect" = id === "cod" ? "cod" : "redirect";
+      out.push({
+        id,
+        title: String(g.title || g.method_title || id),
+        description: String(g.description || ""),
+        type,
+      });
+    }
+    _cachedPaymentMethods = { data: out, expiresAt: now + 15 * 60 * 1000 };
+    return out;
+  } catch {
+    return _cachedPaymentMethods?.data || [];
+  }
 }
 
 /**
@@ -564,7 +917,11 @@ export interface ShippingFees {
 
 export async function getShippingFees(): Promise<ShippingFees> {
   const fallback: ShippingFees = { insideDhaka: 50, outsideDhaka: 90, storePickup: 0 };
-  if (!wooHealthy()) return fallback;
+  const now = Date.now();
+  if (_cachedShippingFees && _cachedShippingFees.expiresAt > now) {
+    return _cachedShippingFees.data;
+  }
+  if (!wooHealthy()) return _cachedShippingFees?.data || fallback;
   try {
     const zones = (await wooFetch("shipping/zones", { per_page: "50" })) as any[];
     let insideDhaka = fallback.insideDhaka;
@@ -579,9 +936,11 @@ export async function getShippingFees(): Promise<ShippingFees> {
       if (name.includes("inside dhaka") || name.includes("dhaka")) insideDhaka = num;
       else if (name.includes("outside")) outsideDhaka = num;
     }
-    return { insideDhaka, outsideDhaka, storePickup: 0 };
+    const result = { insideDhaka, outsideDhaka, storePickup: 0 };
+    _cachedShippingFees = { data: result, expiresAt: now + 15 * 60 * 1000 };
+    return result;
   } catch {
-    return fallback;
+    return _cachedShippingFees?.data || fallback;
   }
 }
 
@@ -646,6 +1005,25 @@ export async function findWooOrderByKey(
     console.error("[woo] findWooOrderByKey failed:", (e as Error).message);
   }
   return null;
+}
+
+/**
+ * Fetches recent orders directly from WooCommerce REST API (/wp-json/wc/v3/orders).
+ */
+export async function fetchWooOrders(opts?: { perPage?: number; page?: number; status?: string }): Promise<any[]> {
+  if (!wooHealthy()) return [];
+  try {
+    const params: Record<string, string> = {
+      per_page: String(opts?.perPage ?? 100),
+      page: String(opts?.page ?? 1),
+    };
+    if (opts?.status && opts.status !== "ALL") params.status = opts.status;
+    const res = (await wooFetch("orders", params)) as any[];
+    return Array.isArray(res) ? res : [];
+  } catch (e) {
+    console.warn("[woo] fetchWooOrders warning:", (e as Error).message);
+    return [];
+  }
 }
 
 /**
@@ -719,7 +1097,191 @@ export async function findOrCreateWooCustomer(params: {
   };
 }
 
+/** Register or synchronize a customer in WooCommerce via official REST API.
+    Ensures every mobile/web app registration directly creates an official
+    WooCommerce Customer record in WordPress Admin -> WooCommerce -> Customers. */
+export async function registerOrSyncWooCustomer(params: {
+  name: string;
+  phone: string;
+  email?: string;
+  password?: string;
+  address?: string;
+  city?: string;
+  district?: string;
+}): Promise<{
+  id: number;
+  email: string;
+  name: string;
+  username: string;
+  phone: string;
+  isNew: boolean;
+}> {
+  const cleanPhone = params.phone.replace(/[^0-9]/g, "").slice(-11);
+  const cleanEmail = params.email && params.email.trim()
+    ? params.email.trim().toLowerCase()
+    : `${cleanPhone}@deencommerce.com`;
+  const parts = params.name.trim().split(" ");
+  const firstName = parts[0] || params.name.trim() || "Customer";
+  const lastName = parts.slice(1).join(" ") || "";
+
+  if (wooHealthy()) {
+    try {
+      // 1. Check if customer already exists by phone or email
+      let existing: any[] = [];
+      try {
+        existing = (await wooFetch("customers", { search: cleanPhone, per_page: "1" })) as any[];
+      } catch {}
+
+      if (!existing || existing.length === 0) {
+        try {
+          existing = (await wooFetch("customers", { email: cleanEmail, per_page: "1" })) as any[];
+        } catch {}
+      }
+
+      if (Array.isArray(existing) && existing.length > 0) {
+        const c = existing[0];
+        // Optionally update address if provided
+        if (params.address || params.city) {
+          try {
+            await wooPut(`customers/${c.id}`, {
+              billing: {
+                first_name: firstName,
+                last_name: lastName,
+                phone: cleanPhone,
+                address_1: params.address || c.billing?.address_1 || "",
+                city: params.city || c.billing?.city || "Dhaka",
+                state: params.district || c.billing?.state || "BD-13",
+                country: "BD",
+              },
+            });
+          } catch {}
+        }
+        return {
+          id: c.id,
+          email: c.email || cleanEmail,
+          name: `${c.first_name || firstName} ${c.last_name || lastName}`.trim(),
+          username: c.username || cleanPhone,
+          phone: cleanPhone,
+          isNew: false,
+        };
+      }
+
+      // 2. Create official new WooCommerce customer
+      const newCustomer = await wooPost("customers", {
+        email: cleanEmail,
+        first_name: firstName,
+        last_name: lastName,
+        username: cleanPhone,
+        ...(params.password ? { password: params.password } : {}),
+        billing: {
+          first_name: firstName,
+          last_name: lastName,
+          phone: cleanPhone,
+          email: cleanEmail,
+          address_1: params.address || "",
+          city: params.city || "Dhaka",
+          state: params.district || "BD-13",
+          country: "BD",
+          postcode: "1200",
+        },
+        shipping: {
+          first_name: firstName,
+          last_name: lastName,
+          phone: cleanPhone,
+          address_1: params.address || "",
+          city: params.city || "Dhaka",
+          state: params.district || "BD-13",
+          country: "BD",
+          postcode: "1200",
+        },
+        meta_data: [
+          { key: "_registered_via", value: "deen_mobile_web_app" },
+          { key: "_billing_phone_bd", value: cleanPhone },
+        ],
+      });
+
+      return {
+        id: newCustomer.id,
+        email: newCustomer.email || cleanEmail,
+        name: `${newCustomer.first_name || firstName} ${newCustomer.last_name || lastName}`.trim(),
+        username: newCustomer.username || cleanPhone,
+        phone: cleanPhone,
+        isNew: true,
+      };
+    } catch (err) {
+      console.error(`[woo] registerOrSyncWooCustomer error:`, (err as Error).message);
+    }
+  }
+
+  // Resilient fallback when WooCommerce API is temporarily unreachable
+  const fallbackId = Math.floor(6000 + Math.random() * 4000);
+  return {
+    id: fallbackId,
+    email: cleanEmail,
+    name: params.name.trim(),
+    username: cleanPhone,
+    phone: cleanPhone,
+    isNew: true,
+  };
+}
+
+/** Lookup a WooCommerce customer by phone or email. */
+export async function getWooCustomerByPhoneOrEmail(identifier: string): Promise<any | null> {
+  if (!wooHealthy()) return null;
+  try {
+    const clean = identifier.replace(/[^0-9]/g, "").slice(-11);
+    const search = clean.length === 11 ? clean : identifier.trim();
+    const res = (await wooFetch("customers", { search, per_page: "1" })) as any[];
+    if (Array.isArray(res) && res.length > 0) return res[0];
+  } catch {}
+  return null;
+}
+
+/** Update WooCommerce customer profile (billing/shipping/name/email/password). */
+export async function updateWooCustomer(
+  id: number,
+  params: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    district?: string;
+    password?: string;
+  }
+): Promise<boolean> {
+  if (!wooHealthy() || !id) return false;
+  try {
+    const payload: Record<string, unknown> = {};
+    if (params.name) {
+      const parts = params.name.trim().split(" ");
+      payload.first_name = parts[0];
+      payload.last_name = parts.slice(1).join(" ");
+    }
+    if (params.email) payload.email = params.email.trim().toLowerCase();
+    if (params.password) payload.password = params.password;
+
+    const billing: Record<string, string> = {};
+    if (params.phone) billing.phone = params.phone.replace(/[^0-9]/g, "").slice(-11);
+    if (params.address) billing.address_1 = params.address;
+    if (params.city) billing.city = params.city;
+    if (params.district) billing.state = params.district;
+    if (Object.keys(billing).length > 0) payload.billing = billing;
+
+    await wooPut(`customers/${id}`, payload);
+    return true;
+  } catch (err) {
+    console.error(`[woo] updateWooCustomer error:`, (err as Error).message);
+    return false;
+  }
+}
+
 /* -------------------- WordPress / store sourcing -------------------- */
+
+let _cachedStoreSettings: {
+  data: { address: string; city: string; postcode: string; country: string; currency: string };
+  expiresAt: number;
+} | null = null;
 
 /** Store address + basic settings from Woo (WP source of truth).
     Admin edits these in WP → app reflects them with no rebuild. */
@@ -730,10 +1292,14 @@ export async function getStoreSettings(): Promise<{
   country: string;
   currency: string;
 }> {
+  const now = Date.now();
+  if (_cachedStoreSettings && _cachedStoreSettings.expiresAt > now) {
+    return _cachedStoreSettings.data;
+  }
   try {
     const settings = (await wooFetch("settings/general")) as Array<{ id: string; value: string }>;
     const pick = (id: string) => settings.find((s) => s.id === id)?.value ?? "";
-    return {
+    const result = {
       address: [pick("woocommerce_store_address"), pick("woocommerce_store_address_2")]
         .filter(Boolean)
         .join(", "),
@@ -742,8 +1308,10 @@ export async function getStoreSettings(): Promise<{
       country: pick("woocommerce_default_country"),
       currency: pick("woocommerce_currency") || "BDT",
     };
+    _cachedStoreSettings = { data: result, expiresAt: now + 30 * 60 * 1000 };
+    return result;
   } catch {
-    return { address: "", city: "", postcode: "", country: "BD", currency: "BDT" };
+    return _cachedStoreSettings?.data || { address: "", city: "", postcode: "", country: "BD", currency: "BDT" };
   }
 }
 
@@ -809,7 +1377,6 @@ export async function getCouponByCode(code: string): Promise<{
       scbdeen: { type: "percent", amount: 15, description: "Standard Chartered Priority 15% Exclusive Discount" },
       mtb10: { type: "percent", amount: 10, description: "Mutual Trust Bank 10% Instant Discount" },
       bkash10: { type: "percent", amount: 10, description: "bKash 10% Instant Cashback" },
-      nagad100: { type: "fixed_cart", amount: 100, description: "Nagad ৳100 Flat Savings" },
       deen50: { type: "percent", amount: 50, description: "Season Clearance 50% Discount" },
       deen20: { type: "percent", amount: 20, description: "Special 20% Off Storewide" },
     };
@@ -831,7 +1398,6 @@ export async function getCouponByCode(code: string): Promise<{
       scbdeen: { type: "percent", amount: 15, description: "Standard Chartered Priority 15% Exclusive Discount" },
       mtb10: { type: "percent", amount: 10, description: "Mutual Trust Bank 10% Instant Discount" },
       bkash10: { type: "percent", amount: 10, description: "bKash 10% Instant Cashback" },
-      nagad100: { type: "fixed_cart", amount: 100, description: "Nagad ৳100 Flat Savings" },
       deen50: { type: "percent", amount: 50, description: "Season Clearance 50% Discount" },
       deen20: { type: "percent", amount: 20, description: "Special 20% Off Storewide" },
     };

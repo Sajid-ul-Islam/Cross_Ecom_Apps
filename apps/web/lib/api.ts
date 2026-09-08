@@ -145,6 +145,7 @@ export interface OrderPayload {
   giftRecipientPhone?: string;
   guestToken?: string;
   idempotencyKey?: string;
+  trxId?: string;
 }
 
 export interface OrderResult {
@@ -296,7 +297,7 @@ export async function fetchProducts(params?: {
 
     const res = await apiFetch(
       `${API_URL}/v1/deen/products${qs.toString() ? "?" + qs.toString() : ""}`,
-      { next: { revalidate: 60 } }
+      { next: { revalidate: 60, tags: ["catalog", "products"] } }
     );
     if (res.ok) {
       const data: Product[] = await res.json();
@@ -329,7 +330,7 @@ export async function fetchProducts(params?: {
 export async function fetchProduct(id: string): Promise<Product | null> {
   try {
     const res = await apiFetch(`${API_URL}/v1/deen/products/${encodeURIComponent(id)}`, {
-      next: { revalidate: 60 },
+      next: { revalidate: 60, tags: ["catalog", `product-${id}`] },
     });
     if (res.ok) {
       const product = await res.json();
@@ -351,7 +352,7 @@ export async function fetchProduct(id: string): Promise<Product | null> {
 export async function fetchCategories(): Promise<{ category: string; count: number }[]> {
   try {
     const res = await apiFetch(`${API_URL}/v1/deen/categories`, {
-      next: { revalidate: 300 },
+      next: { revalidate: 300, tags: ["categories"] },
     });
     if (res.ok) {
       const data = await res.json();
@@ -375,7 +376,7 @@ export async function fetchCategories(): Promise<{ category: string; count: numb
 export async function fetchCategoryCovers(): Promise<Record<string, string>> {
   try {
     const res = await apiFetch(`${API_URL}/v1/deen/category-covers`, {
-      next: { revalidate: 300 },
+      next: { revalidate: 300, tags: ["covers", "categories"] },
     });
     if (res.ok) {
       const data = await res.json();
@@ -436,6 +437,20 @@ export interface ActiveCampaignState {
   };
   bankOffers?: BankOffer[];
   rotatingCampaigns?: RotatingCampaignItem[];
+  festivalGreeting?: {
+    active: boolean;
+    id: string;
+    name: string;
+    motif: string;
+    titlebarText: string;
+    title: string;
+    subtitle: string;
+    greeting: string;
+    themePrimary: string;
+    themeSecondary: string;
+    actionLabel: string;
+    actionUrl: string;
+  };
 }
 
 export interface BdDistrict {
@@ -470,23 +485,178 @@ export interface DeliveryFees {
 }
 
 /**
- * Fetches live delivery fees from REST API (/v1/deen/pricing).
- * Single source of truth — mirrors WooCommerce shipping zones.
+ * Fetches live delivery fees from REST API (GET /v1/deen/shipping).
+ * Single source of truth — mirrors WooCommerce shipping zones + express surcharge
+ * (inside-Dhaka flat rate + gateway EXPRESS_SURCHARGE). Admin fee edits in WP
+ * propagate with no app rebuild.
  */
 export async function fetchDeliveryFees(): Promise<DeliveryFees> {
   try {
-    const res = await apiFetch(`${API_URL}/v1/deen/pricing`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items: [], area: "dhaka_standard" }),
+    const res = await apiFetch(`${API_URL}/v1/deen/shipping`, {
       cache: "no-store",
     });
     if (res.ok) {
       const data = await res.json();
-      if (data?.deliveryFees) return data.deliveryFees;
+      const f = data?.fees;
+      if (f && typeof f.insideDhaka === "number") {
+        return {
+          insideDhaka: f.insideDhaka,
+          outsideDhaka: f.outsideDhaka,
+          express: typeof f.express === "number" ? f.express : f.insideDhaka + 70,
+          storePickup: f.storePickup ?? 0,
+        };
+      }
     }
   } catch {}
+  // Gateway unreachable — mirror the gateway's own default zone costs.
   return { insideDhaka: 50, outsideDhaka: 90, express: 120, storePickup: 0 };
+}
+
+export interface HeroSlide {
+  id: string;
+  desktop: string;
+  mobile: string;
+  badge: string;
+  title: string;
+  headline: string;
+  subtitle: string;
+  actionUrl: string;
+  actionLabel: string;
+}
+
+export interface HeroBannerState {
+  desktop: string;
+  mobile: string;
+  title: string;
+  tagline: string;
+  subtitle: string;
+  actionUrl: string;
+  actionLabel: string;
+  slides: HeroSlide[];
+}
+
+const DEFAULT_BANNER_SLIDES: HeroSlide[] = [
+  {
+    id: "slide_denim",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-2.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/08/Mobile-Hero-Banner.jpg",
+    badge: "দেশের প্রথম ডেনিম ব্র্যান্ড · DEEN",
+    title: "Raw Washed. Selvedge Heritage.",
+    headline: "ARTISANAL INDIGO & RAW SELVEDGE",
+    subtitle: "Woven on Vintage Shuttle Looms with Deep Rope-Dyed Indigo & Artisanal Precision.",
+    actionUrl: "/shop?category=JEANS",
+    actionLabel: "Explore Denim Collection →",
+  },
+  {
+    id: "slide_shirts",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-1.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-1.jpg",
+    badge: "NEW SEASON DROP · 2026",
+    title: "Cuban Collar & Dobby Jacquards.",
+    headline: "BREATHABLE RESORT & CASUAL SHIRTS",
+    subtitle: "High-density lightweight textures engineered specifically for Bangladesh's humid weather.",
+    actionUrl: "/shop?category=SHIRT",
+    actionLabel: "Shop Summer Shirts →",
+  },
+  {
+    id: "slide_tailoring",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
+    badge: "BESPOKE EVERYDAY LIVING",
+    title: "Tailored Comfort & Modern Classics.",
+    headline: "CARGO TROUSERS & HERITAGE PANJABIS",
+    subtitle: "Enduring silhouettes, reinforced bar-tacking, and supreme cotton craftsmanship.",
+    actionUrl: "/shop",
+    actionLabel: "Discover All Pieces →",
+  },
+];
+
+export async function fetchHeroBanner(): Promise<HeroBannerState> {
+  const fallback: HeroBannerState = {
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-2.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/08/Mobile-Hero-Banner.jpg",
+    title: "দেশের প্রথম ডেনিম ব্র্যান্ড",
+    tagline: "Empathetic Men's Lifestyle Fashion in Bangladesh",
+    subtitle: "Woven on Vintage Shuttle Looms with Deep Rope-Dyed Indigo & Artisanal Precision",
+    actionUrl: "/shop",
+    actionLabel: "Explore Collection",
+    slides: DEFAULT_BANNER_SLIDES,
+  };
+
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/hero-banner`, {
+      next: { revalidate: 300, tags: ["hero", "banner"] },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.desktop) {
+        if (!data.slides || data.slides.length === 0) {
+          data.slides = DEFAULT_BANNER_SLIDES;
+        }
+        return data;
+      }
+    }
+  } catch {}
+  return fallback;
+}
+
+export interface SectionBannerItem {
+  id: string;
+  title: string;
+  image: string;
+  category: string;
+  actionUrl: string;
+}
+
+const FALLBACK_SECTION_BANNERS: SectionBannerItem[] = [
+  {
+    id: "sec_denim",
+    title: "Raw Washed & Selvedge Denim Campaign",
+    image: "https://deencommerce.com/wp-content/uploads/2026/08/Section-image.jpg",
+    category: "JEANS",
+    actionUrl: "/shop?category=JEANS",
+  },
+  {
+    id: "sec_shirt",
+    title: "Summer Essential Resort & Cuban Shirts",
+    image: "https://deencommerce.com/wp-content/uploads/2026/06/Shirt-Section-Image.png",
+    category: "SHIRT",
+    actionUrl: "/shop?category=SHIRT",
+  },
+  {
+    id: "sec_panjabi",
+    title: "Artisanal Heritage Panjabi Collection",
+    image: "https://deencommerce.com/wp-content/uploads/2026/06/Panjabi-Section-Image.webp",
+    category: "PANJABI",
+    actionUrl: "/shop?category=PANJABI",
+  },
+  {
+    id: "sec_halfsleeve",
+    title: "Breathable Tees & Casual Polos",
+    image: "https://deencommerce.com/wp-content/uploads/2026/06/Half-sleeve-Section-iomage.webp",
+    category: "T-SHIRT",
+    actionUrl: "/shop?category=T-SHIRT",
+  },
+  {
+    id: "sec_trousers",
+    title: "Tailored Cargo Trousers & Everyday Comfort",
+    image: "https://deencommerce.com/wp-content/uploads/2026/05/Section-Image-4.jpg",
+    category: "TROUSERS",
+    actionUrl: "/shop?category=TROUSERS",
+  },
+];
+
+export async function fetchSectionBanners(): Promise<SectionBannerItem[]> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/section-banners`, {
+      next: { revalidate: 300, tags: ["section", "banners"] },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) return data;
+    }
+  } catch {}
+  return FALLBACK_SECTION_BANNERS;
 }
 
 /**
@@ -621,6 +791,33 @@ export async function placeOrder(
     idempotencyKey,
   };
 
+  // When running in the browser, route through the Next.js Route Handler to shield the Gateway API key
+  if (typeof window !== "undefined") {
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey,
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(orderPayload),
+      });
+      if (res.ok) {
+        return (await res.json()) as OrderResult;
+      }
+      if (res.status >= 400 && res.status < 500) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || data.error || "Order validation failed.");
+      }
+    } catch (err: any) {
+      if (err?.message && !err.message.includes("fetch")) {
+        throw err;
+      }
+      // If Route Handler is unreachable, fall through to direct multi-origin gateway failover
+    }
+  }
+
   const origins = Array.from(new Set([API_URL, BACKUP_GATEWAY_URL]));
 
   let lastError: Error | null = null;
@@ -713,9 +910,39 @@ export type Category = (typeof CATEGORIES)[number];
 
 /* ----------------------------- payments ---------------------------- */
 
+export interface DeenPaymentMethod {
+  id: string;
+  title: string;
+  description: string;
+  type: "cod" | "redirect";
+}
+
+/**
+ * Fetches real, enabled payment gateways from WooCommerce via Fastify gateway.
+ * Source of truth = live WooCommerce settings.
+ */
+export async function fetchPaymentMethods(): Promise<DeenPaymentMethod[]> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/payment-methods`, {
+      next: { revalidate: 300, tags: ["payment-methods"] },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data?.methods) && data.methods.length > 0) {
+        return data.methods;
+      }
+    }
+  } catch {}
+  return [
+    { id: "cod", title: "Cash on delivery", description: "Pay with cash upon delivery.", type: "cod" },
+    { id: "bkash-for-woocommerce", title: "bKash", description: "Pay with bKash PGW.", type: "redirect" },
+    { id: "sslcommerz", title: "Debit / Credit Card (SSLCommerz)", description: "Pay securely through SSLCommerz.", type: "redirect" },
+  ];
+}
+
 export async function initiatePayment(
   orderId: string,
-  paymentMethod: "bkash" | "nagad" | "card" | "online",
+  paymentMethod: "bkash" | "card" | "online",
   amount?: number
 ): Promise<{ success: boolean; transaction?: Record<string, unknown>; merchantNumber: string; instruction: string; verificationUrl: string }> {
   const res = await apiFetch(`${API_URL}/v1/deen/payments/initiate`, {
@@ -733,7 +960,7 @@ export async function initiatePayment(
 export async function verifyPayment(
   orderId: string,
   trxId: string,
-  paymentMethod: "bkash" | "nagad" | "card" | "online" = "bkash",
+  paymentMethod: "bkash" | "card" | "online" = "bkash",
   senderPhone?: string
 ): Promise<{ success: boolean; message: string; order?: OrderResult }> {
   const res = await apiFetch(`${API_URL}/v1/deen/payments/verify`, {
@@ -794,11 +1021,31 @@ export async function fetchPathaoTracking(consignmentId: string): Promise<Pathao
 
 /* --------------------------- Social Auth (Google / Facebook) ---------------------------- */
 
+export interface AuthUser {
+  id: string;
+  name: string;
+  username: string;
+  email: string;
+  role: "customer" | "admin";
+  accountType?: "customer" | "admin" | "guest";
+  phone?: string;
+  wpUserId?: number;
+  avatarUrl?: string;
+}
+
+export interface AuthResult {
+  success: boolean;
+  message?: string;
+  user?: AuthUser;
+  token?: string;
+  isNewCustomer?: boolean;
+}
+
 export async function loginWithGoogle(
   idToken?: string,
   email?: string,
   name?: string
-): Promise<{ success: boolean; token?: string; user?: any; message?: string; isNewCustomer?: boolean }> {
+): Promise<AuthResult> {
   try {
     const res = await apiFetch(`${API_URL}/v1/auth/google`, {
       method: "POST",
@@ -819,7 +1066,7 @@ export async function loginWithFacebook(
   accessToken?: string,
   email?: string,
   name?: string
-): Promise<{ success: boolean; token?: string; user?: any; message?: string; isNewCustomer?: boolean }> {
+): Promise<AuthResult> {
   try {
     const res = await apiFetch(`${API_URL}/v1/auth/facebook`, {
       method: "POST",
@@ -884,6 +1131,54 @@ export async function registerCustomer(
   }
 }
 
+export async function changePassword(payload: {
+  currentPassword?: string;
+  newPassword: string;
+  confirmPassword?: string;
+  identifier?: string;
+}): Promise<{ success: boolean; message: string }> {
+  try {
+    const token = typeof window !== "undefined" ? localStorage.getItem("deen_web_guest_token") : null;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const res = await apiFetch(`${API_URL}/v1/auth/change-password`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    return data;
+  } catch (err: any) {
+    return { success: false, message: err?.message || "Password update failed. Please try again." };
+  }
+}
+
+export async function updateCustomerProfile(profileData: {
+  name: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  district?: string;
+}): Promise<{ success: boolean; message: string; profile?: any }> {
+  try {
+    const token = typeof window !== "undefined" ? localStorage.getItem("deen_web_guest_token") : null;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    const res = await apiFetch(`${API_URL}/v1/auth/update-profile`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(profileData),
+    });
+    const data = await res.json();
+    return data;
+  } catch (err: any) {
+    return { success: false, message: err?.message || "Failed to update profile." };
+  }
+}
+
 export async function validateCoupon(code: string): Promise<{ valid: boolean; code?: string; amount?: number; type?: "fixed" | "percent"; description?: string; message?: string }> {
   try {
     const clean = code.trim().toUpperCase();
@@ -909,6 +1204,49 @@ export interface Outlet {
   units?: number;
 }
 
+export const DEFAULT_OUTLETS: Outlet[] = [
+  {
+    id: "mirpur-12",
+    name: "DEEN Mirpur 12 (Flagship Outlet)",
+    tag: "CENTRAL STUDIO & STORE PICKUP",
+    address: "Level 3, Ramzannesa Super Market, Mirpur 12 Bus Stand, Dhaka-1216",
+    hours: "Open Daily: 10:00 AM – 09:30 PM",
+    phone: "01972-627981",
+    mapQuery: "Ramzannesa+Super+Market+Mirpur+12+Dhaka",
+    pickup: true,
+  },
+  {
+    id: "wari-outlet",
+    name: "DEEN Wari Outlet",
+    tag: "DHAKA SOUTH SHOWROOM",
+    address: "Ground Floor, 41 A.K Famous Tower, Rankin Street, Wari, Dhaka-1203",
+    hours: "Open Daily: 10:30 AM – 09:30 PM",
+    phone: "01972-627983",
+    mapQuery: "Rankin+Street+Wari+Dhaka",
+    pickup: false,
+  },
+  {
+    id: "cumilla-outlet",
+    name: "DEEN Cumilla Outlet",
+    tag: "CUMILLA REGIONAL SHOWROOM",
+    address: "4th Floor, QR Tower, Badurtola (Dharmasagor Side), Kandirpar, Cumilla-3500",
+    hours: "Open Daily: 10:30 AM – 09:00 PM",
+    phone: "01972-627984",
+    mapQuery: "QR+Tower+Badurtola+Cumilla",
+    pickup: false,
+  },
+  {
+    id: "sylhet-outlet",
+    name: "DEEN Sylhet Outlet",
+    tag: "SYLHET REGIONAL SHOWROOM",
+    address: "54/A, Level 2, Block-A, Kumarpara, Zindabazar, Sylhet",
+    hours: "Open Daily: 10:30 AM – 09:30 PM",
+    phone: "01972-627985",
+    mapQuery: "Kumarpara+Sylhet",
+    pickup: false,
+  },
+];
+
 /** Fetch physical retail outlets from the gateway. */
 export async function fetchOutlets(): Promise<Outlet[]> {
   try {
@@ -917,10 +1255,12 @@ export async function fetchOutlets(): Promise<Outlet[]> {
     });
     if (res.ok) {
       const data = await res.json();
-      return data.outlets || [];
+      if (Array.isArray(data.outlets) && data.outlets.length > 0) {
+        return data.outlets;
+      }
     }
   } catch {}
-  return [];
+  return DEFAULT_OUTLETS;
 }
 
 /* ------------------------- app settings (business rules) ------------ */
