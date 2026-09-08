@@ -798,6 +798,24 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .mobile-tab-btn--active {
   color: var(--indigo);
 }
+/* Jakob's Law: Emphasize center/primary tab for core action (Cart in e-commerce) */
+.mobile-tab-btn--primary {
+  background: linear-gradient(135deg, var(--indigo) 0%, #3b82f6 100%);
+  border-radius: 12px;
+  padding: 6px 0 8px;
+  margin-top: -4px;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+  transform: translateY(-2px);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.mobile-tab-btn--primary:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.45);
+}
+.mobile-tab-btn--primary .mobile-tab-label {
+  font-weight: 900;
+  letter-spacing: 0.4px;
+}
 .mobile-tab-icon-wrap {
   position: relative;
   display: flex;
