@@ -651,6 +651,7 @@ export interface DeenHeroSlide {
   id: string;
   desktop: string;
   mobile: string;
+  videoUrl?: string;
   badge: string;
   title: string;
   headline: string;
@@ -675,6 +676,7 @@ const DEFAULT_SLIDES: DeenHeroSlide[] = [
     id: "slide_denim",
     desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-2.jpg",
     mobile: "https://deencommerce.com/wp-content/uploads/2026/08/Mobile-Hero-Banner.jpg",
+    videoUrl: "https://deencommerce.com/wp-content/uploads/2026/09/Denim-Web-Banner_1920x840pxl.mp4",
     badge: "দেশের প্রথম ডেনিম ব্র্যান্ড · DEEN",
     title: "Raw Washed. Selvedge Heritage.",
     headline: "ARTISANAL INDIGO & RAW SELVEDGE",
@@ -683,15 +685,16 @@ const DEFAULT_SLIDES: DeenHeroSlide[] = [
     actionLabel: "Explore Denim Collection →",
   },
   {
-    id: "slide_shirts",
+    id: "slide_season_clearance",
     desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-1.jpg",
     mobile: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-1.jpg",
-    badge: "NEW SEASON DROP · 2026",
-    title: "Cuban Collar & Dobby Jacquards.",
-    headline: "BREATHABLE RESORT & CASUAL SHIRTS",
-    subtitle: "High-density lightweight textures engineered specifically for Bangladesh's humid weather.",
-    actionUrl: "/shop?category=SHIRT",
-    actionLabel: "Shop Summer Shirts →",
+    videoUrl: "https://deencommerce.com/wp-content/uploads/2026/09/END-OF-THE-SESSION-2_1920x8401.mp4",
+    badge: "END OF SEASON DROP · 2026",
+    title: "Artisanal Tailoring & Comfort.",
+    headline: "SEASON CLEARANCE IS LIVE",
+    subtitle: "Up to 50% discount on selected artisanal denim, resort shirts & tailored comfort.",
+    actionUrl: "/shop",
+    actionLabel: "Explore Season Sale →",
   },
   {
     id: "slide_tailoring",

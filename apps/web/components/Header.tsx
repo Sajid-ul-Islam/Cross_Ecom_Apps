@@ -8,6 +8,9 @@ import SearchModal from "@/components/SearchModal";
 import NotificationModal from "@/components/NotificationModal";
 import BankOffersModal from "@/components/BankOffersModal";
 import WishlistModal from "@/components/WishlistModal";
+import SideNavDrawer from "@/components/SideNavDrawer";
+import StoriesFeedModal from "@/components/StoriesFeedModal";
+import { DEFAULT_SOCIAL_FEED } from "@/lib/api";
 
 export default function Header() {
   const pathname = usePathname();
@@ -17,6 +20,8 @@ export default function Header() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [bankOffersOpen, setBankOffersOpen] = useState(false);
   const [wishlistOpen, setWishlistOpen] = useState(false);
+  const [sideNavOpen, setSideNavOpen] = useState(false);
+  const [storiesOpen, setStoriesOpen] = useState(false);
   const [profile, setProfile] = useState<{ role?: string; isGuest?: boolean; name?: string } | null>(null);
 
   useEffect(() => {
@@ -62,8 +67,34 @@ export default function Header() {
     <>
       <header className="nav">
         <div className="container nav__inner">
-          {/* Brand */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {/* Brand & Hamburger Menu */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button
+              type="button"
+              className="nav__icon-btn nav__hamburger-btn"
+              onClick={() => setSideNavOpen(true)}
+              aria-label="Open Navigation Menu"
+              title="Menu & Options"
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "var(--surface-2)",
+                border: "1px solid var(--border)",
+                color: "var(--ink)",
+                cursor: "pointer",
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </svg>
+            </button>
+
             <Link href="/" className="nav__brand" style={{ display: "flex", alignItems: "center" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -343,6 +374,20 @@ export default function Header() {
       <WishlistModal
         isOpen={wishlistOpen}
         onClose={() => setWishlistOpen(false)}
+      />
+
+      {/* Side Card Navigation Drawer */}
+      <SideNavDrawer
+        isOpen={sideNavOpen}
+        onClose={() => setSideNavOpen(false)}
+        onOpenStories={() => setStoriesOpen(true)}
+      />
+
+      {/* Shoppable Stories Feed Modal */}
+      <StoriesFeedModal
+        isOpen={storiesOpen}
+        onClose={() => setStoriesOpen(false)}
+        feedData={DEFAULT_SOCIAL_FEED}
       />
     </>
   );

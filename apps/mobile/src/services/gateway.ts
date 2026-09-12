@@ -1887,3 +1887,187 @@ export async function fetchAppSettings(): Promise<AppSettings | null> {
     return null;
   }
 }
+
+/* ------------------------- official brand social media & shoppable reels ---- */
+
+export interface SocialAccountInfo {
+  facebook: string;
+  instagram: string;
+  linkedin: string;
+  whatsapp: string;
+  handle: string;
+  communityCount: string;
+}
+
+export interface SocialStory {
+  id: string;
+  title: string;
+  image: string;
+  hasUnseen?: boolean;
+  actionUrl: string;
+}
+
+export interface TaggedProduct {
+  id: string;
+  name: string;
+  price: number;
+  regularPrice?: number;
+  category?: string;
+  image: string;
+}
+
+export interface SocialReel {
+  id: string;
+  title: string;
+  author: string;
+  platform: 'instagram' | 'facebook' | 'tiktok';
+  poster: string;
+  videoUrl?: string;
+  caption: string;
+  likes: number;
+  views: string;
+  comments: number;
+  permalink: string;
+  taggedProduct?: TaggedProduct;
+}
+
+export interface SocialFeedData {
+  officialAccounts: SocialAccountInfo;
+  stories: SocialStory[];
+  reels: SocialReel[];
+}
+
+export const DEFAULT_SOCIAL_FEED: SocialFeedData = {
+  officialAccounts: {
+    facebook: 'https://www.facebook.com/deencommerce',
+    instagram: 'https://www.instagram.com/deencommerce/?hl=en',
+    linkedin: 'https://www.linkedin.com/company/deencommerce',
+    whatsapp: 'https://wa.me/8801952700500',
+    handle: '@deencommerce',
+    communityCount: '125,000+ Patrons Across Bangladesh',
+  },
+  stories: [
+    {
+      id: 'story_1',
+      title: 'Raw Selvedge',
+      image: 'https://deencommerce.com/wp-content/uploads/2025/11/Jeans.webp',
+      hasUnseen: true,
+      actionUrl: '/(tabs)/shop?category=JEANS',
+    },
+    {
+      id: 'story_2',
+      title: 'Heritage Panjabi',
+      image: 'https://deencommerce.com/wp-content/uploads/2026/02/Category.jpg',
+      hasUnseen: true,
+      actionUrl: '/(tabs)/shop?category=PANJABI',
+    },
+    {
+      id: 'story_3',
+      title: 'Oxford Shirts',
+      image: 'https://deencommerce.com/wp-content/uploads/2026/04/Category.webp',
+      hasUnseen: false,
+      actionUrl: '/(tabs)/shop?category=SHIRT',
+    },
+    {
+      id: 'story_4',
+      title: 'Dhaka Studio',
+      image: 'https://deencommerce.com/wp-content/uploads/2026/08/Mobile-Hero-Banner.jpg',
+      hasUnseen: false,
+      actionUrl: '/(tabs)/shop',
+    },
+  ],
+  reels: [
+    {
+      id: 'reel_selvedge_autumn',
+      title: 'Raw Selvedge Denim Craftsmanship',
+      author: '@deencommerce',
+      platform: 'instagram',
+      poster: 'https://deencommerce.com/wp-content/uploads/2026/08/Section-image.jpg',
+      videoUrl: 'https://deencommerce.com/wp-content/uploads/2026/09/Denim-Web-Banner_1920x840pxl.mp4',
+      caption: 'Every fold speaks dedication. 100% shuttle-loom woven raw selvedge with signature red-line ID. Engineered to fade with your daily journey. 👖✨ #DeenDenim #RawSelvedge #MadeInBangladesh',
+      likes: 1842,
+      views: '24.5K',
+      comments: 96,
+      permalink: 'https://www.instagram.com/deencommerce/?hl=en',
+      taggedProduct: {
+        id: '14164',
+        name: 'Springfield Polo Shirt',
+        price: 1090,
+        regularPrice: 1090,
+        category: 'POLO',
+        image: 'https://deencommerce.com/wp-content/uploads/2026/09/Springfield-Polo-Shirt-103-0100-119-600x750.webp',
+      },
+    },
+    {
+      id: 'reel_season_clearance',
+      title: 'End of Season Showcase',
+      author: '@deencommerce',
+      platform: 'facebook',
+      poster: 'https://deencommerce.com/wp-content/uploads/2026/06/Panjabi-Section-Image.webp',
+      videoUrl: 'https://deencommerce.com/wp-content/uploads/2026/09/END-OF-THE-SESSION-2_1920x8401.mp4',
+      caption: 'Artisanal tailoring, lightweight resort shirts & raw denim engineered for Bangladesh. Catch the season clearance drop! ⚡ #DeenCommerce #BangladeshDenim',
+      likes: 2430,
+      views: '38.2K',
+      comments: 142,
+      permalink: 'https://www.facebook.com/deencommerce',
+      taggedProduct: {
+        id: '14157',
+        name: 'Springfield Classic Shirt',
+        price: 1090,
+        regularPrice: 1090,
+        category: 'SHIRT',
+        image: 'https://deencommerce.com/wp-content/uploads/2026/09/Springfield-Polo-Shirt-103-0100-119-600x750.webp',
+      },
+    },
+    {
+      id: 'reel_oxford_shirt',
+      title: 'Classic Oxford Weave - Work to Weekend',
+      author: '@deencommerce',
+      platform: 'instagram',
+      poster: 'https://deencommerce.com/wp-content/uploads/2026/06/Shirt-Section-Image.png',
+      caption: 'Heavyweight pin-point Oxford weave. Mother-of-pearl buttons and tailored relaxed fit for Dhaka\'s climate. 👔 #DeenTailoring #OxfordShirt',
+      likes: 1290,
+      views: '19.4K',
+      comments: 68,
+      permalink: 'https://www.instagram.com/deencommerce/?hl=en',
+      taggedProduct: {
+        id: '103',
+        name: 'Premium Tailored Oxford Shirt',
+        price: 1750,
+        regularPrice: 1950,
+        category: 'SHIRT',
+        image: 'https://deencommerce.com/wp-content/uploads/2026/04/Category.webp',
+      },
+    },
+    {
+      id: 'reel_summer_half_sleeve',
+      title: 'Breathable Heavyweight 240 GSM Tees',
+      author: '@deencommerce',
+      platform: 'instagram',
+      poster: 'https://deencommerce.com/wp-content/uploads/2026/06/Half-sleeve-Section-iomage.webp',
+      caption: 'Structured drop-shoulder silhouette in 100% combed compact cotton. Minimalist essential for daily wear. ⚡ #DeenStudio #DailyApparel',
+      likes: 1520,
+      views: '22.1K',
+      comments: 74,
+      permalink: 'https://www.instagram.com/deencommerce/?hl=en',
+      taggedProduct: {
+        id: '104',
+        name: '240 GSM Heavyweight Drop-Shoulder Tee',
+        price: 850,
+        regularPrice: 990,
+        category: 'T-SHIRT',
+        image: 'https://deencommerce.com/wp-content/uploads/2026/06/Half-sleeve-Section-iomage.webp',
+      },
+    },
+  ],
+};
+
+export async function fetchSocialFeed(): Promise<SocialFeedData> {
+  try {
+    const res = await request<SocialFeedData>('/v1/deen/social/feed', undefined, 8000, true);
+    if (res && res.reels && res.reels.length > 0) {
+      return res;
+    }
+  } catch {}
+  return DEFAULT_SOCIAL_FEED;
+}

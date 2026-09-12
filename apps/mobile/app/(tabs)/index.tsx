@@ -36,7 +36,9 @@ import { AdminBroadcastModal } from "../../src/components/AdminBroadcastModal";
 import { FestivalGreetingModal } from "../../src/components/FestivalGreetingModal";
 import { MotionHero } from "../../src/components/MotionHero";
 import { BrandStorySection } from "../../src/components/BrandStorySection";
+import { ShopTheGramSection } from "../../src/components/ShopTheGramSection";
 import { NotificationOptInModal, NOTIF_OPT_IN_DISMISSED_KEY } from "../../src/components/NotificationOptInModal";
+import { fetchSocialFeed, DEFAULT_SOCIAL_FEED, type SocialFeedData } from "../../src/services/gateway";
 
 const { width } = Dimensions.get("window");
 
@@ -49,6 +51,7 @@ export default function HomeScreen() {
   const styles = createStyles(colors, s);
   const [products, setProducts] = useState<Product[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
+  const [socialFeed, setSocialFeed] = useState<SocialFeedData>(DEFAULT_SOCIAL_FEED);
 
   const [broadcastModalVisible, setBroadcastModalVisible] = useState(false);
   const [notifOptInVisible, setNotifOptInVisible] = useState(false);
@@ -66,6 +69,9 @@ export default function HomeScreen() {
     try {
       const p = await fetchProducts();
       setProducts(p);
+      fetchSocialFeed().then((sf) => {
+        if (sf) setSocialFeed(sf);
+      }).catch(() => {});
       if (isAdmin) {
         const s = await fetchStats();
         setStats(s);
@@ -446,6 +452,9 @@ export default function HomeScreen() {
 
         {/* Artisanal Heritage, Craft & Authenticity — swipeable story rail */}
         <BrandStorySection />
+
+        {/* Community UGC Lookbook & Shoppable Stories */}
+        <ShopTheGramSection feedData={socialFeed} />
       </ScrollView>
 
       {/* Admin Broadcast Marketing Modal */}

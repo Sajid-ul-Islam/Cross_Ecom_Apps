@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { fetchProducts, fetchCampaigns, fetchCategoryCovers, fetchCategories, fetchHeroBanner, fetchSectionBanners, bdt } from "@/lib/api";
+import { fetchProducts, fetchCampaigns, fetchCategoryCovers, fetchCategories, fetchHeroBanner, fetchSectionBanners, fetchSocialFeed, bdt } from "@/lib/api";
 import { getCategoryInfo } from "@/lib/categories";
 import ProductCard from "@/components/ProductCard";
 import HeroSlider from "@/components/HeroSlider";
 import SectionOfferBanner from "@/components/SectionOfferBanner";
 import BrandStorySection from "@/components/BrandStorySection";
+import ShopTheGramSection from "@/components/ShopTheGramSection";
 
 export const metadata = {
   title: "DEEN - দেশের প্রথম ডেনিম ব্র্যান্ড",
@@ -23,6 +24,7 @@ export default async function HomePage() {
     categoriesList,
     heroBanner,
     sectionBanners,
+    socialFeed,
   ] = await Promise.all([
     fetchProducts({ per_page: 8 }),
     fetchProducts({ per_page: 4, sort: "new" }),
@@ -34,6 +36,7 @@ export default async function HomePage() {
     fetchCategories(),
     fetchHeroBanner(),
     fetchSectionBanners(),
+    fetchSocialFeed(),
   ]);
 
   const activePromo = campaign?.activeCampaign;
@@ -521,6 +524,9 @@ export default async function HomePage() {
           </section>
         )}
       </div>
+
+      {/* ── Shop The Gram & Social UGC Lookbooks ───────────────────── */}
+      <ShopTheGramSection feedData={socialFeed} />
     </>
   );
 }

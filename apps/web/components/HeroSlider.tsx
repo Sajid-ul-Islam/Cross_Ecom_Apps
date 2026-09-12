@@ -130,23 +130,68 @@ export default function HeroSlider({ bannerData }: HeroSliderProps) {
                 cursor: "pointer",
               }}
             >
-              <picture style={{ width: "100%", height: "100%", display: "block" }}>
-                <source media="(max-width: 768px)" srcSet={slide.mobile || slide.desktop} />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={slide.desktop}
-                  alt={slide.headline || slide.title || "DEEN Collection Banner"}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    display: "block",
-                    transform: isActive ? "scale(1)" : "scale(1.025)",
-                    transition: "transform 5000ms ease-out",
-                  }}
-                  loading={index === 0 ? "eager" : "lazy"}
-                />
-              </picture>
+              {slide.videoUrl ? (
+                <div style={{ position: "relative", width: "100%", height: "100%" }}>
+                  <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    preload="auto"
+                    poster={slide.desktop}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      display: "block",
+                    }}
+                  >
+                    <source src={slide.videoUrl} type="video/mp4" />
+                  </video>
+                  {/* Subtle video badge */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 14,
+                      left: 14,
+                      background: "rgba(0, 0, 0, 0.6)",
+                      backdropFilter: "blur(6px)",
+                      color: "#FFFFFF",
+                      padding: "4px 10px",
+                      borderRadius: 999,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      letterSpacing: "0.05em",
+                      textTransform: "uppercase",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      border: "1px solid rgba(255, 255, 255, 0.2)",
+                    }}
+                  >
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
+                    Brand Showcase
+                  </div>
+                </div>
+              ) : (
+                <picture style={{ width: "100%", height: "100%", display: "block" }}>
+                  <source media="(max-width: 768px)" srcSet={slide.mobile || slide.desktop} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={slide.desktop}
+                    alt={slide.headline || slide.title || "DEEN Collection Banner"}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      display: "block",
+                      transform: isActive ? "scale(1)" : "scale(1.025)",
+                      transition: "transform 5000ms ease-out",
+                    }}
+                    loading={index === 0 ? "eager" : "lazy"}
+                  />
+                </picture>
+              )}
             </Link>
           );
         })}
