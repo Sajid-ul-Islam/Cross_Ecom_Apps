@@ -176,6 +176,6 @@ export function getCurrentFestival(overrideId?: string): FestivalTheme | null {
     return FESTIVALS.jumma;
   }
 
-  // Default fallback during festive/launch periods: Jumma or Eid
-  return FESTIVALS.eid_ul_fitr;
+  // No active festival
+  return null;
 }

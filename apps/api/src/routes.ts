@@ -1866,7 +1866,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     if (m === 5 && d >= 26 && d <= 30) return { active: true, ...festivals.eid_ul_adha };
     if (dow === 5) return { active: true, ...festivals.jumma };
 
-    return { active: true, ...festivals.eid_ul_fitr };
+    return { active: false };
   }
 
   /* ---- active campaigns & offers (dynamic source of truth) ---- */

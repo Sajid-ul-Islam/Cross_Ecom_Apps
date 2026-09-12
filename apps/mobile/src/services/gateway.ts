@@ -291,6 +291,116 @@ function sortProductsLocal(list: Product[], sort: string): Product[] {
   }
 }
 
+const WORDPRESS_SITE_URL = "https://deencommerce.com";
+
+function normalizeImageUrl(src: string): string {
+  if (!src || typeof src !== "string") return "";
+  let clean = src.trim();
+  if (clean.startsWith("//")) clean = `https:${clean}`;
+  else if (clean.startsWith("/")) clean = `${WORDPRESS_SITE_URL}${clean}`;
+  else if (clean.startsWith("http://")) clean = clean.replace("http://", "https://");
+  return clean;
+}
+
+function parseDiscountPct(cats: string[]): number {
+  let pct = 0;
+  for (const c of cats) {
+    const m = /(\d+)\s*%\s*OFF/i.exec(c);
+    if (m) pct = Math.max(pct, Number(m[1]));
+  }
+  return pct;
+}
+
+function mapStoreCategory(catNames: string[]): Exclude<DeenCategory, "ALL"> {
+  const upper = catNames.map((c) => c.trim().toUpperCase());
+  for (const c of ["JEANS", "PANJABI", "SHIRT", "T-SHIRT", "TROUSERS", "POLO", "ACCESSORIES"] as const) {
+    if (upper.includes(c)) return c;
+  }
+  if (upper.some((c) => c.includes("SHIRT") && !c.includes("T-SHIRT") && !c.includes("POLO"))) return "SHIRT";
+  if (upper.some((c) => c.includes("T-SHIRT") || c.includes("TEE"))) return "T-SHIRT";
+  if (upper.some((c) => c.includes("PANJABI") || c.includes("PUNJABI"))) return "PANJABI";
+  if (upper.some((c) => c.includes("JEAN") || c.includes("DENIM"))) return "JEANS";
+  if (upper.some((c) => c.includes("TROUSER") || c.includes("CHINO") || c.includes("PANT"))) return "TROUSERS";
+  if (upper.some((c) => c.includes("POLO"))) return "POLO";
+  if (upper.some((c) => c.includes("ACCESS") || c.includes("BAG") || c.includes("BELT") || c.includes("WALLET"))) return "ACCESSORIES";
+  return "OTHER";
+}
+
+export function mapStoreProductToMobile(p: any): Product {
+  const regularPrice = p.prices?.regular_price ? Number(p.prices.regular_price) : undefined;
+  const salePrice = p.prices?.sale_price ? Number(p.prices.sale_price) : undefined;
+  const currentPrice = Number(p.prices?.price) || salePrice || regularPrice || 0;
+  const onSale = Boolean(p.on_sale && regularPrice && salePrice && regularPrice > salePrice);
+  const catNames = (p.categories || []).map((c: any) => c.name);
+  const category = mapStoreCategory(catNames);
+  const pct = onSale && regularPrice && salePrice
+    ? Math.round(((regularPrice - salePrice) / regularPrice) * 100)
+    : parseDiscountPct(catNames);
+
+  const sizeAttr = (p.attributes || []).find((a: any) => /size|মাপ/i.test(a.name));
+  const sizes = sizeAttr?.terms ? sizeAttr.terms.map((t: any) => t.name) : ["30", "32", "34", "36", "38"];
+
+  const fitAttr = (p.attributes || []).find((a: any) => /fit/i.test(a.name));
+  const fitVal = fitAttr?.terms?.[0]?.name;
+
+  const rawImgs = (p.images || []).map((img: any) => ({
+    full: normalizeImageUrl(img.src || ""),
+    thumb: normalizeImageUrl(img.thumbnail || img.src || ""),
+  })).filter((x: any) => Boolean(x.full));
+
+  const primaryImg = rawImgs[0]?.full || "https://deencommerce.com/wp-content/uploads/2026/05/jeans-1.jpg";
+  const secondaryImg = rawImgs[1]?.full || primaryImg;
+  const thumbImg = rawImgs[0]?.thumb || primaryImg;
+
+  const cleanName = (p.name || "").replace(/&#038;/g, "&").replace(/&amp;/g, "&").replace(/&quot;/g, '"');
+
+  return {
+    id: String(p.id),
+    sku: p.sku || `DS-${p.id}`,
+    name: cleanName,
+    category,
+    price: regularPrice || currentPrice,
+    salePrice: onSale ? salePrice : undefined,
+    regularPrice: onSale ? regularPrice : undefined,
+    salePct: pct || undefined,
+    sizes: sizes.length > 0 ? sizes : ["M", "L", "XL"],
+    images: [primaryImg, secondaryImg],
+    gallery: rawImgs.map((x: any) => x.full).length > 0 ? rawImgs.map((x: any) => x.full) : [primaryImg],
+    thumb: thumbImg,
+    single: primaryImg,
+    full: primaryImg,
+    fabric: "Premium Fabric",
+    fit: fitVal || "Regular Fit",
+    stockStatus: p.is_in_stock ? "instock" : "outofstock",
+    rating: Number(p.average_rating) || 4.9,
+    ratingCount: Number(p.review_count) || 12,
+    blurb: (p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220) || "Authentic DEEN design crafted in Bangladesh.",
+    isNew: catNames.some((c: string) => /new/i.test(c)),
+  };
+}
+
+/**
+ * Direct public WooCommerce Store API fallback (no API key required).
+ * Bypasses Render when gateway is unreachable or sleeping.
+ */
+export async function fetchDirectStoreProducts(perPage = 100): Promise<Product[]> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const res = await fetch(`${WORDPRESS_SITE_URL}/wp-json/wc/store/v1/products?per_page=${perPage}`, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!res.ok) return [];
+    const raw = await res.json();
+    if (Array.isArray(raw)) {
+      return raw.map(mapStoreProductToMobile);
+    }
+  } catch {}
+  return [];
+}
+
 /**
  * Loads products from live gateway when online, with fallback to local cache and bundled data.
  */
@@ -313,9 +423,17 @@ export async function fetchProducts(
       cacheKey,
       TTL.CATALOG,
       async () => {
-        const fresh = await request<Product[]>(`/v1/deen/products${qs ? `?${qs}` : ""}`, undefined, 6000);
-        if (Array.isArray(fresh) && fresh.length > 0) return fresh;
-        // If API returned empty, fall back to bundled
+        try {
+          const fresh = await request<Product[]>(`/v1/deen/products${qs ? `?${qs}` : ""}`, undefined, 6000);
+          if (Array.isArray(fresh) && fresh.length > 0) return fresh;
+        } catch (gateErr) {
+          // Tier 2: Render Gateway failed/cold-starting -> Direct WooCommerce Store API fallback
+          const directWp = await fetchDirectStoreProducts(100);
+          if (Array.isArray(directWp) && directWp.length > 0) {
+            return applyFilters(directWp, category, query);
+          }
+        }
+        // If API returned empty/failed, fall back to bundled
         return applyFilters(getBundledProducts(), category, query);
       }
     );
@@ -324,10 +442,19 @@ export async function fetchProducts(
       return sort ? sortProductsLocal(filtered, sort) : filtered;
     }
   } catch {
-    // Network failure — fallback
+    // Network failure — fallback to direct WP or bundled
   }
 
-  // Fallback to bundled snapshot
+  // Tier 2 outer fallback if cache threw
+  try {
+    const directWp = await fetchDirectStoreProducts(100);
+    if (Array.isArray(directWp) && directWp.length > 0) {
+      const filtered = applyFilters(directWp, category, query);
+      return sort ? sortProductsLocal(filtered, sort) : filtered;
+    }
+  } catch {}
+
+  // Tier 3: Fallback to bundled snapshot
   const bundled = applyFilters(getBundledProducts(), category, query);
   return sort ? sortProductsLocal(bundled, sort) : bundled;
 }
@@ -345,7 +472,27 @@ export async function fetchCategories(): Promise<{ category: string; count: numb
   try {
     const cats = await request<{ category: string; count: number }[]>("/v1/deen/categories", undefined, 5000);
     if (Array.isArray(cats) && cats.length > 0) return cats;
-  } catch {}
+  } catch {
+    // Direct WP Store API fallback for categories
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(`${WORDPRESS_SITE_URL}/wp-json/wc/store/v1/products/categories?per_page=100`, {
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const raw = await res.json();
+        if (Array.isArray(raw) && raw.length > 0) {
+          const mapped = raw
+            .filter((c: any) => c.name && c.count > 0)
+            .map((c: any) => ({ category: String(c.name).toUpperCase(), count: Number(c.count) || 0 }));
+          if (mapped.length > 0) return mapped;
+        }
+      }
+    } catch {}
+  }
 
   // Fallback: derive categories from bundled products
   const bundled = getBundledProducts();
@@ -375,6 +522,23 @@ export async function fetchProductById(id: string): Promise<Product | undefined>
     const p = await request<Product>(`/v1/deen/products/${id}`, undefined, 6000);
     if (p && p.id) return p;
   } catch {}
+
+  // Direct WP Store API fallback if numeric id
+  if (/^\d+$/.test(id)) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(`${WORDPRESS_SITE_URL}/wp-json/wc/store/v1/products/${id}`, {
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const raw = await res.json();
+        if (raw && raw.id) return mapStoreProductToMobile(raw);
+      }
+    } catch {}
+  }
 
   // 1. Search cached products
   try {
@@ -771,6 +935,25 @@ export async function fetchPage(slug: string): Promise<{ title: string; content:
   try {
     return await request<{ title: string; content: string }>(`/v1/deen/page?slug=${encodeURIComponent(slug)}`, undefined, 5000, true);
   } catch {
+    // Direct WordPress core REST API fallback (/wp-json/wp/v2/pages?slug=...)
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(`${WORDPRESS_SITE_URL}/wp-json/wp/v2/pages?slug=${encodeURIComponent(slug)}`, {
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const pages = await res.json();
+        if (Array.isArray(pages) && pages[0]) {
+          return {
+            title: pages[0].title?.rendered || slug,
+            content: pages[0].content?.rendered || "",
+          };
+        }
+      }
+    } catch {}
     return null;
   }
 }

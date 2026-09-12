@@ -274,9 +274,118 @@ function applyLocalFilters(
   return list;
 }
 
+export const WORDPRESS_SITE_URL = "https://deencommerce.com";
+
+function parseDiscountPct(cats: string[]): number {
+  let pct = 0;
+  for (const c of cats) {
+    const m = /(\d+)\s*%\s*OFF/i.exec(c);
+    if (m) pct = Math.max(pct, Number(m[1]));
+  }
+  return pct;
+}
+
+function mapStoreCategory(catNames: string[]): string {
+  const upper = catNames.map((c) => c.trim().toUpperCase());
+  for (const c of ["JEANS", "PANJABI", "SHIRT", "T-SHIRT", "TROUSERS", "POLO", "ACCESSORIES"]) {
+    if (upper.includes(c)) return c;
+  }
+  if (upper.some((c) => c.includes("SHIRT") && !c.includes("T-SHIRT") && !c.includes("POLO"))) return "SHIRT";
+  if (upper.some((c) => c.includes("T-SHIRT") || c.includes("TEE"))) return "T-SHIRT";
+  if (upper.some((c) => c.includes("PANJABI") || c.includes("PUNJABI"))) return "PANJABI";
+  if (upper.some((c) => c.includes("JEAN") || c.includes("DENIM"))) return "JEANS";
+  if (upper.some((c) => c.includes("TROUSER") || c.includes("CHINO") || c.includes("PANT"))) return "TROUSERS";
+  if (upper.some((c) => c.includes("POLO"))) return "POLO";
+  if (upper.some((c) => c.includes("ACCESS") || c.includes("BAG") || c.includes("BELT") || c.includes("WALLET"))) return "ACCESSORIES";
+  return "OTHER";
+}
+
+export function mapStoreProductToWeb(p: any): Product {
+  const regularPrice = p.prices?.regular_price ? Number(p.prices.regular_price) : undefined;
+  const salePrice = p.prices?.sale_price ? Number(p.prices.sale_price) : undefined;
+  const currentPrice = Number(p.prices?.price) || salePrice || regularPrice || 0;
+  const onSale = Boolean(p.on_sale && regularPrice && salePrice && regularPrice > salePrice);
+  const catNames = (p.categories || []).map((c: any) => c.name);
+  const category = mapStoreCategory(catNames);
+  const pct = onSale && regularPrice && salePrice
+    ? Math.round(((regularPrice - salePrice) / regularPrice) * 100)
+    : parseDiscountPct(catNames);
+
+  const sizeAttr = (p.attributes || []).find((a: any) => /size|মাপ/i.test(a.name));
+  const sizes = sizeAttr?.terms ? sizeAttr.terms.map((t: any) => t.name) : ["30", "32", "34", "36", "38"];
+
+  const imgs = (p.images || []).map((img: any) => resolveProductImage(img.src || img.thumbnail || "")).filter(Boolean);
+  const primaryImg = imgs[0] || "https://deencommerce.com/wp-content/uploads/2026/05/jeans-1.jpg";
+  const secondaryImg = imgs[1] || primaryImg;
+
+  const cleanName = (p.name || "").replace(/&#038;/g, "&").replace(/&amp;/g, "&").replace(/&quot;/g, '"');
+
+  return {
+    id: String(p.id),
+    sku: p.sku || `DS-${p.id}`,
+    name: cleanName,
+    category,
+    price: regularPrice || currentPrice,
+    salePrice: onSale ? salePrice : undefined,
+    regularPrice: onSale ? regularPrice : undefined,
+    salePct: pct || undefined,
+    sizes: sizes.length > 0 ? sizes : ["M", "L", "XL"],
+    images: [primaryImg, secondaryImg],
+    gallery: imgs.length > 0 ? imgs : [primaryImg],
+    fabric: "Premium Fabric",
+    stockStatus: p.is_in_stock ? "instock" : "outofstock",
+    rating: Number(p.average_rating) || 4.9,
+    ratingCount: Number(p.review_count) || 12,
+    blurb: (p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220) || "Authentic DEEN design crafted in Bangladesh.",
+    description: p.description || p.short_description || "",
+    slug: p.slug || "",
+    isNew: catNames.some((c: string) => /new/i.test(c)),
+  };
+}
+
 /**
- * Fetches products from live Fastify Gateway REST API with automatic failover
- * and offline-first bundled catalog fallback.
+ * Direct public WooCommerce Store API fallback for Web (no API key required).
+ */
+export async function fetchDirectStoreProductsWeb(perPage = 100): Promise<Product[]> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    // On web client, if browser CORS is an issue, we query the internal Next.js route /api/products
+    const targetUrl = typeof window !== "undefined"
+      ? `/api/products?per_page=${perPage}`
+      : `${WORDPRESS_SITE_URL}/wp-json/wc/store/v1/products?per_page=${perPage}`;
+    const res = await fetch(targetUrl, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+      next: { revalidate: 60 },
+    } as any);
+    clearTimeout(timeoutId);
+    if (!res.ok) return [];
+    const raw = await res.json();
+    if (Array.isArray(raw)) {
+      return raw.map(mapStoreProductToWeb);
+    }
+  } catch {}
+  return [];
+}
+
+/**
+ * Keeps the primary Render gateway warm during active browser sessions.
+ * Pings /health every 4 minutes so the server doesn't spin down while a user is browsing.
+ */
+export function startWebGatewayKeepAlive(intervalMs = 4 * 60 * 1000): () => void {
+  if (typeof window === "undefined") return () => {};
+  const ping = () => {
+    fetch(`${DEFAULT_GATEWAY_URL}/health`, { mode: "no-cors" }).catch(() => {});
+  };
+  ping();
+  const timer = setInterval(ping, intervalMs);
+  return () => clearInterval(timer);
+}
+
+/**
+ * Fetches products from live Fastify Gateway REST API with automatic failover,
+ * direct WordPress Store API fallback, and offline-first bundled catalog snapshot.
  */
 export async function fetchProducts(params?: {
   category?: string;
@@ -302,15 +411,31 @@ export async function fetchProducts(params?: {
     if (res.ok) {
       const data: Product[] = await res.json();
       if (Array.isArray(data) && data.length > 0) {
-        // Defense-in-depth: filter out OOS products even if API missed them
         return data.filter((p) => (p.stockStatus || "instock") !== "outofstock");
       }
     }
   } catch {
-    // Network or timeout failure — fallback gracefully to bundled snapshot
+    // Primary and backup Render gateways failed or timed out
   }
 
-  // Graceful fallback to bundled catalog snapshot
+  // Tier 2: Direct WordPress WooCommerce Store API fallback
+  try {
+    const directWp = await fetchDirectStoreProductsWeb(params?.per_page || 100);
+    if (Array.isArray(directWp) && directWp.length > 0) {
+      const filtered = applyLocalFilters(
+        directWp,
+        params?.category,
+        params?.search,
+        params?.sort
+      );
+      if (params?.per_page && params.per_page > 0) {
+        return filtered.slice(0, params.per_page);
+      }
+      return filtered;
+    }
+  } catch {}
+
+  // Tier 3: Graceful fallback to bundled catalog snapshot
   const fallback = applyLocalFilters(
     getBundledProducts(),
     params?.category,
@@ -325,7 +450,7 @@ export async function fetchProducts(params?: {
 
 /**
  * Fetches single product details with real variations from the REST API gateway,
- * with fallback to bundled snapshot.
+ * with direct WordPress Store API fallback and bundled snapshot backup.
  */
 export async function fetchProduct(id: string): Promise<Product | null> {
   try {
@@ -340,6 +465,26 @@ export async function fetchProduct(id: string): Promise<Product | null> {
     // Network or timeout failure — fallback
   }
 
+  // Tier 2: Direct WP Store API fallback if id is numeric
+  if (/^\d+$/.test(id)) {
+    try {
+      const targetUrl = typeof window !== "undefined"
+        ? `/api/products?id=${encodeURIComponent(id)}`
+        : `${WORDPRESS_SITE_URL}/wp-json/wc/store/v1/products/${encodeURIComponent(id)}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(targetUrl, {
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const raw = await res.json();
+        if (raw && raw.id) return mapStoreProductToWeb(raw);
+      }
+    } catch {}
+  }
+
   // Fallback to snapshot search by ID or slug
   const all = getBundledProducts();
   const found = all.find((p) => String(p.id) === String(id) || p.slug === id);
@@ -347,7 +492,7 @@ export async function fetchProduct(id: string): Promise<Product | null> {
 }
 
 /**
- * Fetches live category counts from the REST API gateway, with fallback.
+ * Fetches live category counts from the REST API gateway, with Store API fallback.
  */
 export async function fetchCategories(): Promise<{ category: string; count: number }[]> {
   try {
@@ -358,7 +503,28 @@ export async function fetchCategories(): Promise<{ category: string; count: numb
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) return data;
     }
-  } catch {}
+  } catch {
+    // Direct WP Store API fallback
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(`${WORDPRESS_SITE_URL}/wp-json/wc/store/v1/products/categories?per_page=100`, {
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+        next: { revalidate: 300 },
+      } as any);
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const raw = await res.json();
+        if (Array.isArray(raw) && raw.length > 0) {
+          const mapped = raw
+            .filter((c: any) => c.name && c.count > 0)
+            .map((c: any) => ({ category: String(c.name).toUpperCase(), count: Number(c.count) || 0 }));
+          if (mapped.length > 0) return mapped;
+        }
+      }
+    } catch {}
+  }
 
   // Fallback: derive categories from bundled snapshot
   const bundled = getBundledProducts();

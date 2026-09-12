@@ -12,6 +12,7 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 import ScrollToTop from "@/components/ScrollToTop";
 import AiConciergeDrawer from "@/components/AiConciergeDrawer";
 import FestivalGreetingModal from "@/components/FestivalGreetingModal";
+import GatewayKeepAlive from "@/components/GatewayKeepAlive";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://deencommerce.com"),
@@ -97,6 +98,7 @@ export default function RootLayout({
             <ScrollToTop />
             <AiConciergeDrawer />
             <FestivalGreetingModal />
+            <GatewayKeepAlive />
           </WishlistProvider>
         </CartProvider>
       </body>
