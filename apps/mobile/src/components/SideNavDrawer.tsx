@@ -30,7 +30,6 @@ interface SideNavDrawerProps {
   visible: boolean;
   onClose: () => void;
   onOpenStories: () => void;
-  onOpenShopTheGram?: () => void;
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -40,7 +39,6 @@ export const SideNavDrawer: React.FC<SideNavDrawerProps> = ({
   visible,
   onClose,
   onOpenStories,
-  onOpenShopTheGram,
 }) => {
   const router = useRouter();
   const { colors, isDark, setThemeMode } = useTheme();
@@ -155,52 +153,37 @@ export const SideNavDrawer: React.FC<SideNavDrawerProps> = ({
               )}
             </View>
 
-            {/* Section 1: Featured Experience (Stories Feed & Shop The Gram) */}
+            {/* Section 1: Featured Experience (Stories Feed) */}
             <View style={styles.sectionBlock}>
               <Text style={[styles.sectionTitle, { color: colors.sub }]}>FEATURED EXPERIENCE</Text>
-              <View style={styles.featuredGrid}>
-                {/* Stories Feed Choice */}
-                <TouchableOpacity
-                  style={[styles.featureCard, { backgroundColor: isDark ? "rgba(239, 68, 68, 0.12)" : "rgba(239, 68, 68, 0.08)", borderColor: "rgba(239, 68, 68, 0.3)" }]}
-                  onPress={() => {
-                    onClose();
-                    onOpenStories();
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.featureHeaderRow}>
-                    <Text style={styles.featureEmoji}>🎬</Text>
-                    <View style={styles.livePill}>
-                      <Text style={styles.liveText}>LIVE</Text>
+              <TouchableOpacity
+                style={[
+                  styles.featureCardFull,
+                  {
+                    backgroundColor: isDark ? "rgba(239, 68, 68, 0.12)" : "rgba(239, 68, 68, 0.08)",
+                    borderColor: "rgba(239, 68, 68, 0.3)",
+                  },
+                ]}
+                onPress={() => {
+                  onClose();
+                  onOpenStories();
+                }}
+                activeOpacity={0.8}
+              >
+                <View style={styles.featureLeftRow}>
+                  <Text style={{ fontSize: 24 }}>🎬</Text>
+                  <View>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                      <Text style={[styles.featureTitle, { color: colors.ink }]}>Stories Feed</Text>
+                      <View style={styles.livePill}>
+                        <Text style={styles.liveText}>LIVE</Text>
+                      </View>
                     </View>
+                    <Text style={[styles.featureSub, { color: colors.sub }]}>Shoppable Reels &amp; Drops</Text>
                   </View>
-                  <Text style={[styles.featureTitle, { color: colors.ink }]}>Stories Feed</Text>
-                  <Text style={[styles.featureSub, { color: colors.sub }]}>Reels & Drops</Text>
-                </TouchableOpacity>
-
-                {/* Shop The Gram Choice */}
-                <TouchableOpacity
-                  style={[styles.featureCard, { backgroundColor: isDark ? "rgba(168, 85, 247, 0.12)" : "rgba(168, 85, 247, 0.08)", borderColor: "rgba(168, 85, 247, 0.3)" }]}
-                  onPress={() => {
-                    onClose();
-                    if (onOpenShopTheGram) {
-                      onOpenShopTheGram();
-                    } else {
-                      router.push("/(tabs)/shop");
-                    }
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.featureHeaderRow}>
-                    <Text style={styles.featureEmoji}>📸</Text>
-                    <View style={[styles.livePill, { backgroundColor: "rgba(168, 85, 247, 0.2)" }]}>
-                      <Text style={[styles.liveText, { color: "#a855f7" }]}>UGC</Text>
-                    </View>
-                  </View>
-                  <Text style={[styles.featureTitle, { color: colors.ink }]}>Shop The Gram</Text>
-                  <Text style={[styles.featureSub, { color: colors.sub }]}>Community Fits</Text>
-                </TouchableOpacity>
-              </View>
+                </View>
+                <Text style={{ fontSize: 16, color: colors.sub }}>→</Text>
+              </TouchableOpacity>
             </View>
 
             {/* Section 2: Apparel & Collections */}
@@ -459,6 +442,20 @@ const styles = StyleSheet.create({
   featuredGrid: {
     flexDirection: "row",
     gap: 10,
+  },
+  featureCardFull: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  featureLeftRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   featureCard: {
     flex: 1,

@@ -36,7 +36,6 @@ import { AdminBroadcastModal } from "../../src/components/AdminBroadcastModal";
 import { FestivalGreetingModal } from "../../src/components/FestivalGreetingModal";
 import { MotionHero } from "../../src/components/MotionHero";
 import { BrandStorySection } from "../../src/components/BrandStorySection";
-import { ShopTheGramSection } from "../../src/components/ShopTheGramSection";
 import { NotificationOptInModal, NOTIF_OPT_IN_DISMISSED_KEY } from "../../src/components/NotificationOptInModal";
 import { fetchSocialFeed, DEFAULT_SOCIAL_FEED, type SocialFeedData } from "../../src/services/gateway";
 
@@ -452,9 +451,6 @@ export default function HomeScreen() {
 
         {/* Artisanal Heritage, Craft & Authenticity — swipeable story rail */}
         <BrandStorySection />
-
-        {/* Community UGC Lookbook & Shoppable Stories */}
-        <ShopTheGramSection feedData={socialFeed} />
       </ScrollView>
 
       {/* Admin Broadcast Marketing Modal */}

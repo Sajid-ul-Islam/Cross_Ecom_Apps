@@ -263,13 +263,13 @@ export default function SideNavDrawer({ isOpen, onClose, onOpenStories }: SideNa
           )}
         </div>
 
-        {/* Section 1: Interactive Brand & Content (Stories Feed & Shop The Gram) */}
+        {/* Section 1: Interactive Brand & Content (Stories Feed) */}
         <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
           <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "var(--sub)", letterSpacing: "0.08em", marginBottom: 12 }}>
             Featured Experience
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <div>
             {/* Stories Feed Option */}
             <button
               type="button"
@@ -283,11 +283,12 @@ export default function SideNavDrawer({ isOpen, onClose, onOpenStories }: SideNa
                 }
               }}
               style={{
+                width: "100%",
                 display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-start",
-                padding: "12px",
-                borderRadius: 10,
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "14px 16px",
+                borderRadius: 12,
                 background: "linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(244, 63, 94, 0.08) 100%)",
                 border: "1px solid rgba(239, 68, 68, 0.25)",
                 cursor: "pointer",
@@ -295,45 +296,17 @@ export default function SideNavDrawer({ isOpen, onClose, onOpenStories }: SideNa
                 transition: "transform 150ms ease",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                <span style={{ fontSize: 18 }}>🎬</span>
-                <span style={{ fontSize: 10, fontWeight: 800, color: "#ef4444", textTransform: "uppercase", letterSpacing: "0.06em" }}>LIVE</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 24 }}>🎬</span>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: "var(--ink)" }}>Stories Feed</span>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: "#ef4444", background: "rgba(239, 68, 68, 0.15)", padding: "2px 6px", borderRadius: 4, letterSpacing: "0.06em" }}>LIVE</span>
+                  </div>
+                  <div style={{ fontSize: 11.5, color: "var(--sub)", marginTop: 2 }}>Shoppable Reels &amp; Drops</div>
+                </div>
               </div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>Stories Feed</div>
-              <div style={{ fontSize: 11, color: "var(--sub)", marginTop: 2 }}>Shoppable Reels & Drops</div>
-            </button>
-
-            {/* Shop The Gram Option */}
-            <button
-              type="button"
-              onClick={() => {
-                onClose();
-                const el = document.getElementById("shop-the-gram");
-                if (el) {
-                  el.scrollIntoView({ behavior: "smooth" });
-                } else {
-                  router.push("/#shop-the-gram");
-                }
-              }}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-start",
-                padding: "12px",
-                borderRadius: 10,
-                background: "linear-gradient(135deg, rgba(168, 85, 247, 0.12) 0%, rgba(99, 102, 241, 0.08) 100%)",
-                border: "1px solid rgba(168, 85, 247, 0.25)",
-                cursor: "pointer",
-                textAlign: "left",
-                transition: "transform 150ms ease",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                <span style={{ fontSize: 18 }}>📸</span>
-                <span style={{ fontSize: 10, fontWeight: 800, color: "#a855f7", textTransform: "uppercase", letterSpacing: "0.06em" }}>UGC</span>
-              </div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>Shop The Gram</div>
-              <div style={{ fontSize: 11, color: "var(--sub)", marginTop: 2 }}>Community Styles</div>
+              <span style={{ color: "var(--sub)", fontSize: 14, fontWeight: 700 }}>→</span>
             </button>
           </div>
         </div>

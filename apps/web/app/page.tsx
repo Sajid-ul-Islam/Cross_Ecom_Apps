@@ -5,7 +5,6 @@ import ProductCard from "@/components/ProductCard";
 import HeroSlider from "@/components/HeroSlider";
 import SectionOfferBanner from "@/components/SectionOfferBanner";
 import BrandStorySection from "@/components/BrandStorySection";
-import ShopTheGramSection from "@/components/ShopTheGramSection";
 
 export const metadata = {
   title: "DEEN - দেশের প্রথম ডেনিম ব্র্যান্ড",
@@ -524,9 +523,6 @@ export default async function HomePage() {
           </section>
         )}
       </div>
-
-      {/* ── Shop The Gram & Social UGC Lookbooks ───────────────────── */}
-      <ShopTheGramSection feedData={socialFeed} />
     </>
   );
 }
