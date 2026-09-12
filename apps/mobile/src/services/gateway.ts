@@ -63,6 +63,7 @@ const extra = (Constants.expoConfig?.extra ?? {}) as {
 
 /** Default to Render live gateway */
 const DEFAULT_GATEWAY_URL = "https://cross-ecom-apps-4b4n.onrender.com";
+const BACKUP_GATEWAY_URL = "https://cross-ecom-apps.onrender.com";
 
 /** Ordered list of gateway base URLs.
  *  Source of truth (per-build) = app.json `extra.gatewayUrl` (primary) and
@@ -76,6 +77,7 @@ export const GATEWAY_URLS: string[] = Array.from(
       extra.gatewayUrl,
       ...(Array.isArray(extra.gatewayUrls) ? extra.gatewayUrls : []),
       DEFAULT_GATEWAY_URL,
+      BACKUP_GATEWAY_URL,
     ]
       .filter(Boolean)
       .map((u) => String(u).replace(/\/$/, "")),
