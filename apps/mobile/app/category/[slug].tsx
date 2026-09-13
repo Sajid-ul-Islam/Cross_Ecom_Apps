@@ -464,12 +464,13 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
       fontWeight: "800",
     },
     columnWrapper: {
-      paddingHorizontal: 16,
-      gap: 12,
+      paddingHorizontal: 8,
+      gap: 8,
     },
     gridItem: {
       flex: 1,
-      maxWidth: (width - 44) / 2,
+      maxWidth: (width - 24) / 2,
+      marginBottom: 8,
     },
     bold: s.bold,
     emptyWrap: {

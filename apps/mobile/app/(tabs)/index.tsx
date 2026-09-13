@@ -380,7 +380,7 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
-        {/* Section Offer Banner 1: Selvedge Denim Campaign */}
+        {/* Section Offer Banner 1: Cross Hatch Denim Campaign */}
         <TouchableOpacity
           activeOpacity={0.9}
           onPress={() => router.push({ pathname: "/category/[slug]", params: { slug: "JEANS" } })}
@@ -396,7 +396,7 @@ export default function HomeScreen() {
         {/* Denim Masterpieces */}
         <SectionHeader
           title="SIGNATURE DENIM"
-          subtitle="100% Cotton Selvedge & Comfort Stretch Jeans"
+          subtitle="100% Cotton Cross Hatch & Comfort Stretch Jeans"
           actionText="All Jeans →"
           onActionPress={() => router.push({ pathname: "/category/[slug]", params: { slug: "JEANS" } })}
         />
@@ -558,8 +558,8 @@ const createStyles = (colors: ThemeColors, s: ReturnType<typeof sharedStyles>) =
   categoryChipText: { fontSize: 11, fontWeight: "700", color: colors.ink, letterSpacing: 0.5 },
   horizontalProductList: { paddingHorizontal: 16, gap: 12 },
   horizontalCardWrapper: { width: width * 0.46 },
-  grid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 16, justifyContent: "space-between" },
-  gridItem: { width: "48%" },
+  grid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
+  gridItem: { width: "48.5%", marginBottom: 10 },
   // insights
   loadingCard: { margin: 16, padding: 24, alignItems: "center", backgroundColor: colors.card, borderRadius: 10, borderWidth: 1, borderColor: colors.border },
   loadingText: { marginTop: 8, fontSize: 12, color: colors.sub },

@@ -227,8 +227,12 @@ export const COMMERCE_KNOWLEDGE: KnowledgeItem[] = [
   {
     id: "kb_selvedge_heritage",
     topic: "heritage",
-    title: "Selvedge Denim Craftsmanship & Heritage",
+    title: "Cross Hatch Denim Craftsmanship & Heritage",
     keywords: [
+      "cross hatch",
+      "cross-hatch",
+      "crosshatch",
+      "ক্রসহ্যাচ",
       "selvedge",
       "selvage",
       "shuttle loom",
@@ -247,9 +251,9 @@ export const COMMERCE_KNOWLEDGE: KnowledgeItem[] = [
       "sanforized",
     ],
     contentBn:
-      "DEEN সেলভেজ ডেনিম ঐতিহ্যবাহী শাটল লুম (Shuttle Loom)-এ বুনা প্রিমিয়াম ফেব্রিক দ্বারা নির্মিত।\n• রেড-লাইন সেলভেজ আইডি (Red-Line Selvedge ID) যা বটম কফ ফোল্ড করলে স্পষ্ট দৃশ্যমান হয়।\n• ১২.৫ থেকে ১৪.৫ আউন্স (oz) মিড ও হেভিওয়েট খাঁটি লং-স্ট্যাপল কটন ফেব্রিক।\n• ১০০% সানফোরাইজড (Sanforized) যাতে ধোয়ার পর সাইজ ছোট বা লেগ-টুইস্ট না হয়।\n• ব্যবহারের সাথে সাথে ব্যক্তির শরীরের মাপ অনুযায়ী অনন্য ভিস্কার (Whiskers) এবং ফেডিং তৈরি করে।",
+      "DEEN জিন্স মূলত প্রিমিয়াম ক্রস হ্যাচ (Cross Hatch) টেক্সচারড ডেনিম দ্বারা নির্মিত:\n• স্বতন্ত্র ক্রস-হ্যাচ (Cross Hatch) টেক্সচারড শাটল লুম (Shuttle Loom) স্ট্রাকচার যা ফেডিং-এ আকর্ষণীয় গ্রিড প্যাটার্ন দেয়।\n• রেড-লাইন (Red-Line) আইডি যা বটম কফ ফোল্ড করলে দৃশ্যমান হয়।\n• ১২.৫ থেকে ১৪.৫ আউন্স (oz) মিড ও হেভিওয়েট খাঁটি লং-স্ট্যাপল কটন ফেব্রিক।\n• ১০০% সানফোরাইজড (Sanforized) যাতে ধোয়ার পর সাইজ ছোট বা লেগ-টুইস্ট না হয়।\n• দীর্ঘস্থায়ী ডুরাবিলিটি ও ব্যবহারের সাথে সাথে আকর্ষণীয় ভিস্কার (Whiskers) ফেডিং তৈরি করে।",
     contentEn:
-      "DEEN Selvedge Denim represents pure artisanal heritage woven on vintage shuttle looms:\n• Finished with our signature Red-Line Selvedge ticker visible upon cuffing.\n• Robust 12.5 oz to 14.5 oz 100% long-staple ring-spun cotton fabric weights.\n• Pre-sanforized construction to eliminate severe post-wash shrinkage and leg twisting.\n• Ages organically over time, developing unique honeycombs, whiskers, and personalized patina.",
+      "DEEN Jeans feature signature Cross Hatch denim fabric engineered with distinctive warp and weft textures:\n• Distinctive cross-hatch slub weave woven on vintage shuttle looms for rich dimensional fading.\n• Finished with signature Red-Line ticker detailing visible upon cuffing.\n• Robust 12.5 oz to 14.5 oz 100% long-staple ring-spun cotton fabric weights.\n• Pre-sanforized construction to eliminate severe post-wash shrinkage and leg twisting.\n• Custom copper rivets, heavy-duty stitching, and natural whisker development over time.",
   },
   {
     id: "kb_payment_methods",

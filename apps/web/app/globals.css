@@ -669,12 +669,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 @media (max-width: 600px) {
-  .container { padding: 0 16px; }
+  .container { padding: 0 8px; }
   .hero { height: 70vh; min-height: 400px; margin: 0 0 32px; }
   .hero__content { padding: 24px 20px; }
   .hero__title { font-size: 1.8rem; }
   .hero__sub { font-size: 13px; margin-bottom: 20px; }
-  .product-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .product-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .footer__grid { grid-template-columns: 1fr; }
   .trust-bar { grid-template-columns: 1fr; }
   .payment-options { grid-template-columns: 1fr; }

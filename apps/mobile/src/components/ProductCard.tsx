@@ -145,7 +145,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     overflow: "hidden",
-    marginBottom: 12,
   },
   imageWrapper: {
     width: "100%",

@@ -11,13 +11,13 @@ export interface CategoryInfo {
 export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
   JEANS: {
     slug: "JEANS",
-    title: "Artisanal Selvedge Denim & Jeans",
-    subtitle: "Woven on Vintage Shuttle Looms with Deep Rope-Dyed Indigo",
+    title: "Artisanal Cross Hatch Denim & Jeans",
+    subtitle: "Woven with Distinctive Cross Hatch Texture & Deep Rope-Dyed Indigo",
     description:
-      "Engineered from ring-spun Japanese & Turkish indigo fabrics with reinforced chain-stitched hems, custom oxidized copper rivets, and tailored ergonomic tapers.",
+      "Engineered with signature cross-hatch warp and weft textures, reinforced chain-stitched hems, custom oxidized copper rivets, and tailored ergonomic tapers.",
     coverImage: "https://deencommerce.com/wp-content/uploads/2025/11/Jeans.webp",
-    metaBadge: "13.5 OZ SELVEDGE",
-    highlights: ["12.5oz–14.5oz Raw & Washed Denim", "YKK Solid Brass Zippers", "Comfort Stretch & Raw Rigid Fits"],
+    metaBadge: "13.5 OZ CROSS HATCH",
+    highlights: ["12.5oz–14.5oz Cross Hatch Denim", "YKK Solid Brass Zippers", "Comfort Stretch & Authentic Slub Fits"],
   },
   PANJABI: {
     slug: "PANJABI",

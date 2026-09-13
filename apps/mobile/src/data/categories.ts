@@ -16,15 +16,15 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
   JEANS: {
     slug: "JEANS",
     name: "JEANS",
-    title: "SELVEDGE DENIM & JEANS",
-    subtitle: "Woven on Vintage Shuttle Looms with Deep Rope-Dyed Indigo",
+    title: "CROSS HATCH DENIM & JEANS",
+    subtitle: "Woven with Distinctive Cross Hatch Texture & Deep Rope-Dyed Indigo",
     description:
-      "Engineered for authentic fades and timeless durability. Featuring signature redline selvedge edges, custom copper rivets, and heavy tobacco stitch thread.",
+      "Engineered for authentic fades and timeless durability. Featuring signature cross-hatch warp and weft textures, custom copper rivets, and heavy tobacco stitch thread.",
     coverImage:
       "https://deencommerce.com/wp-content/uploads/2025/11/Jeans.webp",
-    badge: "13.5 OZ SELVEDGE",
-    craftNote: "Sanforized Japanese-grade denim with less than 2% shrinkage.",
-    filterTags: ["All", "Raw Selvedge", "Slim Tapered", "Regular Fit", "Whisker Wash"],
+    badge: "13.5 OZ CROSS HATCH",
+    craftNote: "Sanforized cross-hatch denim with authentic texture and less than 2% shrinkage.",
+    filterTags: ["All", "Cross Hatch", "Slim Tapered", "Regular Fit", "Whisker Wash"],
   },
   PANJABI: {
     slug: "PANJABI",

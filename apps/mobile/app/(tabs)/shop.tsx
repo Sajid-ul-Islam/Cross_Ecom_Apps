@@ -319,8 +319,8 @@ export default function ShopScreen() {
 function createStyles(colors: any, s: ReturnType<typeof sharedStyles>) {
   return StyleSheet.create({
     searchSection: {
-      paddingHorizontal: 16,
-      paddingVertical: 10,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
     },
     searchBar: {
       flexDirection: "row",
@@ -337,11 +337,11 @@ function createStyles(colors: any, s: ReturnType<typeof sharedStyles>) {
       height: "100%",
     },
     categoriesContainer: {
-      paddingBottom: 10,
+      paddingBottom: 8,
     },
     categoryScroll: {
-      paddingHorizontal: 16,
-      gap: 10,
+      paddingHorizontal: 10,
+      gap: 8,
     },
     catTile: {
       flexDirection: "row",
@@ -401,7 +401,7 @@ function createStyles(colors: any, s: ReturnType<typeof sharedStyles>) {
     sortBar: {
       flexDirection: "row",
       gap: 6,
-      paddingHorizontal: 16,
+      paddingHorizontal: 10,
       paddingBottom: 8,
     },
     sortChip: {
@@ -425,8 +425,8 @@ function createStyles(colors: any, s: ReturnType<typeof sharedStyles>) {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      paddingHorizontal: 16,
-      paddingVertical: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
     },
     resultCount: {
       fontSize: 10,
@@ -440,13 +440,18 @@ function createStyles(colors: any, s: ReturnType<typeof sharedStyles>) {
       fontSize: 11,
       fontWeight: "600",
     },
-    scrollContent: { ...s.scrollContent, paddingBottom: 24, paddingHorizontal: 16 },
+    scrollContent: {
+      paddingHorizontal: 8,
+      paddingTop: 4,
+      paddingBottom: 24,
+    },
     row: {
-      justifyContent: "space-between",
+      gap: 8,
     },
     gridItem: {
-      width: "48%",
-      marginBottom: 12,
+      flex: 1,
+      maxWidth: "50%",
+      marginBottom: 8,
     },
     centerContainer: {
       alignItems: "center",
