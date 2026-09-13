@@ -35,28 +35,28 @@ export const DarkColors: typeof LightColors = {
   // Brand Denim Palette
   indigo: "#5B6EE1",
   indigoDark: "#4354BF",
-  indigoLight: "#1F2848",
+  indigoLight: "#161622",
   denimStitch: "#EAA74B",
 
-  // Background & Surfaces
-  paper: "#0D111A",
-  card: "#161C2A",
-  cardSecondary: "#1F273B",
-  border: "#2A344D",
-  borderLight: "#1E2638",
+  // Background & Surfaces (True AMOLED Deep Black)
+  paper: "#000000",
+  card: "#101010",
+  cardSecondary: "#181818",
+  border: "#262626",
+  borderLight: "#181818",
 
-  // Typography
-  ink: "#F4F6FC",
-  sub: "#B2BBD4",
-  faint: "#8C96B2",
+  // Typography (Neutral Crisp Monochromes)
+  ink: "#FFFFFF",
+  sub: "#A3A3A3",
+  faint: "#737373",
 
   // Status & Accents
   crimson: "#F25F5C",
-  crimsonLight: "#3A191D",
+  crimsonLight: "#220E10",
   emerald: "#34D399",
-  emeraldLight: "#143828",
+  emeraldLight: "#082218",
   amber: "#FBBF24",
-  amberLight: "#382B0E",
+  amberLight: "#261C08",
 
   // Bangladeshi Payment Accents
   bkash: "#FF3388",

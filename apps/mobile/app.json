@@ -10,7 +10,7 @@
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0D111A"
+      "backgroundColor": "#000000"
     },
     "updates": {
       "url": "https://u.expo.dev/6e5914c5-c56c-4cc7-ad0b-f9bf6cf3d7bd",

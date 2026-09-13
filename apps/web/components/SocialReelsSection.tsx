@@ -101,7 +101,7 @@ export default function SocialReelsSection({ reels }: SocialReelsSectionProps) {
                 overflow: "hidden",
                 position: "relative",
                 cursor: "pointer",
-                background: "#0D111A",
+                background: "#000000",
                 border: "1px solid var(--border)",
                 boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
                 transition: "transform 0.2s ease, box-shadow 0.2s ease",

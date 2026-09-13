@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
     position: "relative",
-    backgroundColor: "#0D111A",
+    backgroundColor: "#000000",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.22,
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(13, 17, 26, 0.42)",
+    backgroundColor: "rgba(0, 0, 0, 0.45)",
   },
   contentOverlay: {
     position: "absolute",

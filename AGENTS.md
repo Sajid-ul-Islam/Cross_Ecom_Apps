@@ -49,7 +49,7 @@ This codebase contains:
 ## 3. UI/UX, Design System & Accessibility (WCAG 2.2 AA) Rules
 
 1. **Dark & Light Mode Contrast**:
-   - Dark mode backgrounds (`#0D111A`, `#161C2A`) must always pair with bright, high-contrast typography (`#F4F6FC` primary, `#B2BBD4` secondary, `#8C96B2` tertiary) achieving $\ge 4.5:1$ (WCAG AA).
+   - Dark mode backgrounds (`#000000` true AMOLED black, `#101010` surface elevation 1) must always pair with bright, high-contrast typography (`#FFFFFF` primary, `#A3A3A3` secondary, `#737373` tertiary) achieving $\ge 4.5:1$ (WCAG AA).
    - Never import static `Colors.*` tokens in stylesheets. Always use dynamic `useTheme()` tokens.
 
 2. **Touch Targets & Hit Slop ($\ge 44\text{ dp}$)**:

@@ -100,7 +100,7 @@ export default function DynamicCampaignBanner() {
         };
       case "camp_cards":
         return {
-          bg: "linear-gradient(90deg, #090e24 0%, #13193a 50%, #0d122b 100%)",
+          bg: "linear-gradient(90deg, #0a0c16 0%, #121528 50%, #0a0c16 100%)",
           border: "rgba(99, 102, 241, 0.4)",
           shadow: "0 2px 14px rgba(99, 102, 241, 0.2)",
           badgeBg: "linear-gradient(135deg, #4f46e5, #4338ca)",
@@ -122,9 +122,9 @@ export default function DynamicCampaignBanner() {
         };
       default:
         return {
-          bg: "linear-gradient(90deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)",
+          bg: "linear-gradient(90deg, #0a0a0a 0%, #161616 50%, #0a0a0a 100%)",
           border: "rgba(99, 102, 241, 0.4)",
-          shadow: "0 2px 14px rgba(0, 0, 0, 0.2)",
+          shadow: "0 2px 14px rgba(0, 0, 0, 0.3)",
           badgeBg: "linear-gradient(135deg, #4f46e5, #4338ca)",
           ctaBg: "rgba(255, 255, 255, 0.15)",
           ctaBorder: "rgba(255, 255, 255, 0.35)",

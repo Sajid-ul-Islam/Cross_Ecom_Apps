@@ -127,7 +127,7 @@ A persistent role switcher (`UserModeBar.tsx`) is rendered on the **Home feed** 
 
 ### 1. System-Inherited & User-Selectable Theme Engine
 - **OS Theme Auto-Inheritance**: Automatically follows iOS and Android dark/light mode via `useColorScheme()` (`app.json` configured with `"userInterfaceStyle": "automatic"`).
-- **User Override**: In-app selector on the Profile screen offering `🌓 System Auto`, `☀️ Light Mode` (warm Japanese parchment `#F7F6F0`), and `🌙 Dark Mode` (midnight slate `#0D111A`).
+- **User Override**: In-app selector on the Profile screen offering `🌓 System Auto`, `☀️ Light Mode` (warm Japanese parchment `#F7F6F0`), and `🌙 Dark Mode` (AMOLED deep black `#000000`).
 - **Persistence**: Remembers preferences across sessions using `AsyncStorage` (`@deen_theme_mode_v1`).
 
 ### 2. Push Notifications & Admin Broadcast Marketing

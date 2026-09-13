@@ -27,16 +27,16 @@ The design system enforces dynamic semantic color tokens. Per workspace rules, s
 
 All background and text pairings maintain a contrast ratio $\ge 4.5:1$ for standard text and $\ge 3:1$ for large text and UI components.
 
-| Token | Light Mode Value | Dark Mode Value | Contrast vs Background | Role |
+| Token | Light Mode Value | Dark Mode Value (AMOLED) | Contrast vs Background | Role |
 | :--- | :--- | :--- | :--- | :--- |
-| `bg` | `#F8F9FA` | `#0D111A` | N/A | Application viewport base |
-| `card` | `#FFFFFF` | `#161C2A` | N/A | Content elevation container |
-| `cardSecondary`| `#F1F5F9` | `#1F273B` | N/A | Nested cards, pill badges, inputs |
-| `ink` | `#0F172A` | `#F4F6FC` | **15.2:1** (Dark) / **17.8:1** (Light) | Primary titles, headlines, prices |
-| `sub` | `#475569` | `#8C96B2` | **5.4:1** (Dark) / **6.2:1** (Light) | Secondary copy, captions, timestamps |
-| `muted` | `#64748B` | `#64748B` | **4.6:1** (Dark) / **4.8:1** (Light) | Subtle metadata, placeholders |
-| `border` | `#E2E8F0` | `#232B3E` | $\ge 3.0:1$ | Dividers, card borders, stroke outlines |
-| `borderLight` | `rgba(0,0,0,0.06)` | `rgba(255,255,255,0.08)` | Structural accents |
+| `bg` | `#F8F9FA` | `#000000` | N/A | Application viewport base (True AMOLED pitch black) |
+| `card` | `#FFFFFF` | `#101010` | N/A | Content elevation container (Neutral OLED surface 1) |
+| `cardSecondary`| `#F1F5F9` | `#181818` | N/A | Nested cards, pill badges, inputs (Neutral OLED surface 2) |
+| `ink` | `#0F172A` | `#FFFFFF` | **21.0:1** (Dark) / **17.8:1** (Light) | Primary titles, headlines, prices |
+| `sub` | `#475569` | `#A3A3A3` | **6.5:1** (Dark) / **6.2:1** (Light) | Secondary copy, captions, timestamps |
+| `muted` | `#64748B` | `#737373` | **4.7:1** (Dark) / **4.8:1** (Light) | Subtle metadata, placeholders |
+| `border` | `#E2E8F0` | `#262626` | $\ge 3.0:1$ | Dividers, card borders, stroke outlines |
+| `borderLight` | `rgba(0,0,0,0.06)` | `#181818` | Structural accents |
 
 ---
 

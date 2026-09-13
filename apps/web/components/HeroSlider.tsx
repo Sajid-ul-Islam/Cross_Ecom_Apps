@@ -8,6 +8,164 @@ interface HeroSliderProps {
   bannerData: HeroBannerState;
 }
 
+interface HeroVideoItemProps {
+  videoUrl: string;
+  poster: string;
+  isActive: boolean;
+  isFirst: boolean;
+}
+
+function HeroVideoItem({ videoUrl, poster, isActive, isFirst }: HeroVideoItemProps) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+
+  // Synchronously ensure muted DOM property is true
+  const setVideoRef = useCallback((el: HTMLVideoElement | null) => {
+    videoRef.current = el;
+    if (el) {
+      el.muted = true;
+      el.defaultMuted = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.muted = isMuted;
+    video.defaultMuted = true;
+
+    if (isActive) {
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsPlaying(true);
+          })
+          .catch(() => {
+            // Browser autoplay policy blocked; resume on user gesture
+            setIsPlaying(false);
+            const resumeOnGesture = () => {
+              if (videoRef.current && isActive) {
+                videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+              }
+              window.removeEventListener("pointerdown", resumeOnGesture);
+              window.removeEventListener("touchstart", resumeOnGesture);
+            };
+            window.addEventListener("pointerdown", resumeOnGesture, { once: true, passive: true });
+            window.addEventListener("touchstart", resumeOnGesture, { once: true, passive: true });
+          });
+      }
+    } else {
+      video.pause();
+      setIsPlaying(false);
+    }
+  }, [isActive, isMuted]);
+
+  const handleToggleMute = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!videoRef.current) return;
+    const nextMuted = !isMuted;
+    videoRef.current.muted = nextMuted;
+    setIsMuted(nextMuted);
+    if (!isPlaying) {
+      videoRef.current.play().catch(() => {});
+    }
+  };
+
+  return (
+    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+      <video
+        ref={setVideoRef}
+        src={videoUrl}
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload={isFirst ? "auto" : "metadata"}
+        poster={poster}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          display: "block",
+        }}
+      >
+        <source src={videoUrl} type="video/mp4" />
+      </video>
+
+      {/* Subtle brand showcase badge with active playback indicator */}
+      <div
+        style={{
+          position: "absolute",
+          top: 14,
+          left: 14,
+          background: "rgba(0, 0, 0, 0.65)",
+          backdropFilter: "blur(6px)",
+          WebkitBackdropFilter: "blur(6px)",
+          color: "#FFFFFF",
+          padding: "5px 12px",
+          borderRadius: 999,
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: "0.05em",
+          textTransform: "uppercase",
+          display: "flex",
+          alignItems: "center",
+          gap: 7,
+          border: "1px solid rgba(255, 255, 255, 0.2)",
+          zIndex: 3,
+        }}
+      >
+        <span
+          style={{
+            width: 7,
+            height: 7,
+            borderRadius: "50%",
+            background: isPlaying ? "#10b981" : "#ef4444",
+            display: "inline-block",
+            boxShadow: isPlaying ? "0 0 8px #10b981" : "none",
+          }}
+        />
+        {isPlaying ? "Brand Film · Playing" : "Brand Showcase"}
+      </div>
+
+      {/* Audio toggle button */}
+      <button
+        type="button"
+        onClick={handleToggleMute}
+        aria-label={isMuted ? "Unmute video audio" : "Mute video audio"}
+        style={{
+          position: "absolute",
+          bottom: 24,
+          right: 24,
+          background: "rgba(0, 0, 0, 0.65)",
+          backdropFilter: "blur(6px)",
+          WebkitBackdropFilter: "blur(6px)",
+          color: "#FFFFFF",
+          border: "1px solid rgba(255, 255, 255, 0.25)",
+          borderRadius: 20,
+          padding: "6px 12px",
+          fontSize: 11.5,
+          fontWeight: 700,
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          zIndex: 3,
+        }}
+      >
+        <span>{isMuted ? "🔇" : "🔊"}</span>
+        <span>{isMuted ? "Sound Off" : "Sound On"}</span>
+      </button>
+    </div>
+  );
+}
+
 export default function HeroSlider({ bannerData }: HeroSliderProps) {
   const slides: HeroSlide[] =
     bannerData?.slides && bannerData.slides.length > 0
@@ -131,48 +289,12 @@ export default function HeroSlider({ bannerData }: HeroSliderProps) {
               }}
             >
               {slide.videoUrl ? (
-                <div style={{ position: "relative", width: "100%", height: "100%" }}>
-                  <video
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    preload={index === 0 ? "auto" : "metadata"}
-                    poster={slide.desktop}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      display: "block",
-                    }}
-                  >
-                    <source src={slide.videoUrl} type="video/mp4" />
-                  </video>
-                  {/* Subtle video badge */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: 14,
-                      left: 14,
-                      background: "rgba(0, 0, 0, 0.6)",
-                      backdropFilter: "blur(6px)",
-                      color: "#FFFFFF",
-                      padding: "4px 10px",
-                      borderRadius: 999,
-                      fontSize: 11,
-                      fontWeight: 700,
-                      letterSpacing: "0.05em",
-                      textTransform: "uppercase",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                      border: "1px solid rgba(255, 255, 255, 0.2)",
-                    }}
-                  >
-                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
-                    Brand Showcase
-                  </div>
-                </div>
+                <HeroVideoItem
+                  videoUrl={slide.videoUrl}
+                  poster={slide.desktop}
+                  isActive={isActive}
+                  isFirst={index === 0}
+                />
               ) : (
                 <picture style={{ width: "100%", height: "100%", display: "block" }}>
                   <source media="(max-width: 768px)" srcSet={slide.mobile || slide.desktop} />
