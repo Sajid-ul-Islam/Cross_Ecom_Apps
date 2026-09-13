@@ -383,7 +383,7 @@ export default function Header() {
         onOpenStories={() => setStoriesOpen(true)}
       />
 
-      {/* Shoppable Stories Feed Modal */}
+      {/* Shoppable Stories Modal */}
       <StoriesFeedModal
         isOpen={storiesOpen}
         onClose={() => setStoriesOpen(false)}

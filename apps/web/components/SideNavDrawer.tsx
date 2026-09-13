@@ -263,14 +263,14 @@ export default function SideNavDrawer({ isOpen, onClose, onOpenStories }: SideNa
           )}
         </div>
 
-        {/* Section 1: Interactive Brand & Content (Stories Feed) */}
+        {/* Section 1: Interactive Brand & Content (Stories) */}
         <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
           <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "var(--sub)", letterSpacing: "0.08em", marginBottom: 12 }}>
             Featured Experience
           </div>
 
           <div>
-            {/* Stories Feed Option */}
+            {/* Stories Option */}
             <button
               type="button"
               onClick={() => {
@@ -300,7 +300,7 @@ export default function SideNavDrawer({ isOpen, onClose, onOpenStories }: SideNa
                 <span style={{ fontSize: 24 }}>🎬</span>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 14, fontWeight: 800, color: "var(--ink)" }}>Stories Feed</span>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: "var(--ink)" }}>Stories</span>
                     <span style={{ fontSize: 10, fontWeight: 800, color: "#ef4444", background: "rgba(239, 68, 68, 0.15)", padding: "2px 6px", borderRadius: 4, letterSpacing: "0.06em" }}>LIVE</span>
                   </div>
                   <div style={{ fontSize: 11.5, color: "var(--sub)", marginTop: 2 }}>Shoppable Reels &amp; Drops</div>

@@ -174,7 +174,7 @@ export const Header: React.FC<HeaderProps> = ({
         onOpenStories={() => setStoriesVisible(true)}
       />
 
-      {/* Shoppable Stories Feed Modal */}
+      {/* Shoppable Stories Modal */}
       <StoriesFeedModal
         visible={storiesVisible}
         onClose={() => setStoriesVisible(false)}

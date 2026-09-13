@@ -255,6 +255,12 @@ export default async function HomePage() {
               margin-right: 5px;
               animation: livePulseDot 1.8s ease-in-out infinite;
             }
+            @media (min-width: 769px) and (max-width: 1024px) {
+              .cat-moving-track {
+                animation-duration: 36s;
+                gap: 14px;
+              }
+            }
             @media (max-width: 768px) {
               .cat-moving-card {
                 flex: 0 0 170px;

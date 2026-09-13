@@ -153,7 +153,7 @@ export const SideNavDrawer: React.FC<SideNavDrawerProps> = ({
               )}
             </View>
 
-            {/* Section 1: Featured Experience (Stories Feed) */}
+            {/* Section 1: Featured Experience (Stories) */}
             <View style={styles.sectionBlock}>
               <Text style={[styles.sectionTitle, { color: colors.sub }]}>FEATURED EXPERIENCE</Text>
               <TouchableOpacity
@@ -174,7 +174,7 @@ export const SideNavDrawer: React.FC<SideNavDrawerProps> = ({
                   <Text style={{ fontSize: 24 }}>🎬</Text>
                   <View>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                      <Text style={[styles.featureTitle, { color: colors.ink }]}>Stories Feed</Text>
+                      <Text style={[styles.featureTitle, { color: colors.ink }]}>Stories</Text>
                       <View style={styles.livePill}>
                         <Text style={styles.liveText}>LIVE</Text>
                       </View>

@@ -137,7 +137,7 @@ export default function HeroSlider({ bannerData }: HeroSliderProps) {
                     loop
                     muted
                     playsInline
-                    preload="auto"
+                    preload={index === 0 ? "auto" : "metadata"}
                     poster={slide.desktop}
                     style={{
                       width: "100%",
@@ -189,6 +189,8 @@ export default function HeroSlider({ bannerData }: HeroSliderProps) {
                       transition: "transform 5000ms ease-out",
                     }}
                     loading={index === 0 ? "eager" : "lazy"}
+                    decoding={index === 0 ? "sync" : "async"}
+                    fetchPriority={index === 0 ? "high" : "auto"}
                   />
                 </picture>
               )}

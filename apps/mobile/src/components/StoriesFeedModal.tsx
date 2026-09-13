@@ -210,7 +210,7 @@ export const StoriesFeedModal: React.FC<StoriesFeedModalProps> = ({
             style={styles.closeBtn}
             onPress={onClose}
             accessibilityRole="button"
-            accessibilityLabel="Close stories feed"
+            accessibilityLabel="Close stories"
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <X size={20} color="#FFFFFF" />

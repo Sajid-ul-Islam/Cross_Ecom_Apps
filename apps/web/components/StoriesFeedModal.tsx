@@ -148,7 +148,7 @@ export default function StoriesFeedModal({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Stories & Reels Feed"
+      aria-label="Stories"
       style={{
         position: "fixed",
         inset: 0,
@@ -302,7 +302,7 @@ export default function StoriesFeedModal({
                 justifyContent: "center",
                 cursor: "pointer",
               }}
-              aria-label="Close Stories Feed"
+              aria-label="Close Stories"
             >
               ✕
             </button>

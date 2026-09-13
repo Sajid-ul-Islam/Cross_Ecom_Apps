@@ -9,7 +9,7 @@ import {
   Animated,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { ArrowRight, Sparkles, ShieldCheck } from "./Icons";
+import { ArrowRight, Sparkles, ShieldCheck, Play } from "./Icons";
 import { useTheme } from "../context/ThemeContext";
 
 const { width } = Dimensions.get("window");
@@ -51,7 +51,11 @@ const SLIDES: HeroSlide[] = [
   },
 ];
 
-export const MotionHero: React.FC = () => {
+interface MotionHeroProps {
+  onWatchStory?: () => void;
+}
+
+export const MotionHero: React.FC<MotionHeroProps> = ({ onWatchStory }) => {
   const router = useRouter();
   const { colors } = useTheme();
   const [activeIndex, setActiveIndex] = useState(0);
@@ -120,10 +124,26 @@ export const MotionHero: React.FC = () => {
               <Text style={styles.badgeText}>{currentSlide.badge}</Text>
             </View>
 
-            <View style={styles.guaranteePill}>
-              <ShieldCheck size={11} color="#10B981" />
-              <Text style={styles.guaranteeText}>7-Day Size Swap</Text>
-            </View>
+            {onWatchStory ? (
+              <TouchableOpacity
+                style={styles.watchStoryPill}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onWatchStory();
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Watch Brand Film Story"
+              >
+                <Play size={10} color="#FFFFFF" />
+                <Text style={styles.watchStoryText}>Watch Story</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.guaranteePill}>
+                <ShieldCheck size={11} color="#10B981" />
+                <Text style={styles.guaranteeText}>7-Day Size Swap</Text>
+              </View>
+            )}
           </View>
 
           {/* Title and Tagline */}
@@ -228,6 +248,22 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     fontWeight: "900",
     letterSpacing: 0.6,
+  },
+  watchStoryPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(239, 68, 68, 0.9)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  watchStoryText: {
+    color: "#FFFFFF",
+    fontSize: 9.5,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
   },
   guaranteePill: {
     flexDirection: "row",

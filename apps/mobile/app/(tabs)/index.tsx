@@ -36,6 +36,7 @@ import { AdminBroadcastModal } from "../../src/components/AdminBroadcastModal";
 import { FestivalGreetingModal } from "../../src/components/FestivalGreetingModal";
 import { MotionHero } from "../../src/components/MotionHero";
 import { BrandStorySection } from "../../src/components/BrandStorySection";
+import { StoriesFeedModal } from "../../src/components/StoriesFeedModal";
 import { NotificationOptInModal, NOTIF_OPT_IN_DISMISSED_KEY } from "../../src/components/NotificationOptInModal";
 import { fetchSocialFeed, DEFAULT_SOCIAL_FEED, type SocialFeedData } from "../../src/services/gateway";
 
@@ -54,6 +55,7 @@ export default function HomeScreen() {
 
   const [broadcastModalVisible, setBroadcastModalVisible] = useState(false);
   const [notifOptInVisible, setNotifOptInVisible] = useState(false);
+  const [storiesVisible, setStoriesVisible] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem(NOTIF_OPT_IN_DISMISSED_KEY).then((val) => {
@@ -175,7 +177,7 @@ export default function HomeScreen() {
         refreshControl={refreshControl}
       >
         {/* Interactive Motion Brand Hero Experience */}
-        <MotionHero />
+        <MotionHero onWatchStory={() => setStoriesVisible(true)} />
 
         {/* ADMIN ONLY — Store Insights / BI dashboard.
             Customers never see sales data. Gated by role. */}
@@ -463,6 +465,13 @@ export default function HomeScreen() {
       <NotificationOptInModal
         visible={notifOptInVisible}
         onClose={() => setNotifOptInVisible(false)}
+      />
+
+      {/* Shoppable Stories Modal */}
+      <StoriesFeedModal
+        visible={storiesVisible}
+        onClose={() => setStoriesVisible(false)}
+        feedData={socialFeed}
       />
     </ScreenShell>
   );
