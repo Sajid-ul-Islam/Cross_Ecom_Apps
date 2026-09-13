@@ -13,9 +13,10 @@ interface HeroVideoItemProps {
   poster: string;
   isActive: boolean;
   isFirst: boolean;
+  onEnded?: () => void;
 }
 
-function HeroVideoItem({ videoUrl, poster, isActive, isFirst }: HeroVideoItemProps) {
+function HeroVideoItem({ videoUrl, poster, isActive, isFirst, onEnded }: HeroVideoItemProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   // Synchronously ensure muted DOM property is true
@@ -35,6 +36,7 @@ function HeroVideoItem({ videoUrl, poster, isActive, isFirst }: HeroVideoItemPro
     video.defaultMuted = true;
 
     if (isActive) {
+      video.currentTime = 0;
       const playPromise = video.play();
       if (playPromise !== undefined) {
         playPromise.catch(() => {
@@ -61,11 +63,15 @@ function HeroVideoItem({ videoUrl, poster, isActive, isFirst }: HeroVideoItemPro
         ref={setVideoRef}
         src={videoUrl}
         autoPlay
-        loop
         muted
         playsInline
         preload={isFirst ? "auto" : "metadata"}
         poster={poster}
+        onEnded={() => {
+          if (isActive && onEnded) {
+            onEnded();
+          }
+        }}
         style={{
           width: "100%",
           height: "100%",
@@ -109,12 +115,21 @@ export default function HeroSlider({ bannerData }: HeroSliderProps) {
     setCurrent((prev) => (prev - 1 + slides.length) % slides.length);
   }, [slides.length]);
 
-  // Auto-advance slideshow every 5 seconds
+  const currentSlide = slides[current];
+
+  // Auto-advance: videos advance when full video finishes (onEnded); static images advance after 5.5s
   useEffect(() => {
     if (isPaused || slides.length <= 1) return;
-    const timer = setInterval(nextSlide, 5000);
-    return () => clearInterval(timer);
-  }, [isPaused, slides.length, nextSlide]);
+
+    if (currentSlide?.videoUrl) {
+      // 30s safety watchdog in case network stalls or video fails to buffer
+      const watchdog = setTimeout(nextSlide, 30000);
+      return () => clearTimeout(watchdog);
+    }
+
+    const timer = setTimeout(nextSlide, 5500);
+    return () => clearTimeout(timer);
+  }, [isPaused, slides.length, nextSlide, current, currentSlide?.videoUrl]);
 
   // Touch swipe support for mobile
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -207,6 +222,7 @@ export default function HeroSlider({ bannerData }: HeroSliderProps) {
                   poster={slide.desktop}
                   isActive={isActive}
                   isFirst={index === 0}
+                  onEnded={nextSlide}
                 />
               ) : (
                 <picture style={{ width: "100%", height: "100%", display: "block" }}>

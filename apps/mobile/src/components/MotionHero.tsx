@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Image,
@@ -53,12 +53,13 @@ const SLIDES: HeroSlide[] = [
   },
 ];
 
-const HeroVideoSlide: React.FC<{ videoUrl: string; isActive: boolean }> = ({
-  videoUrl,
-  isActive,
-}) => {
+const HeroVideoSlide: React.FC<{
+  videoUrl: string;
+  isActive: boolean;
+  onEnded: () => void;
+}> = ({ videoUrl, isActive, onEnded }) => {
   const player = useVideoPlayer(videoUrl, (p) => {
-    p.loop = true;
+    p.loop = false; // Do not loop: play full video once before next slide
     p.muted = true;
     if (isActive) {
       p.play();
@@ -72,6 +73,17 @@ const HeroVideoSlide: React.FC<{ videoUrl: string; isActive: boolean }> = ({
       player.pause();
     }
   }, [isActive, player]);
+
+  useEffect(() => {
+    const sub = player.addListener("playToEnd", () => {
+      if (isActive) {
+        onEnded();
+      }
+    });
+    return () => {
+      sub.remove();
+    };
+  }, [player, isActive, onEnded]);
 
   return (
     <VideoView
@@ -96,27 +108,32 @@ export const MotionHero: React.FC<MotionHeroProps> = () => {
 
   const currentSlide = SLIDES[activeIndex];
 
-  useEffect(() => {
-    const duration = currentSlide.videoUrl ? 8000 : 5500;
-    const timer = setInterval(() => {
-      // Smooth fade out
+  const advanceToNextSlide = useCallback(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 0.2,
+      duration: 350,
+      useNativeDriver: true,
+    }).start(() => {
+      setActiveIndex((prev) => (prev + 1) % SLIDES.length);
       Animated.timing(fadeAnim, {
-        toValue: 0.2,
-        duration: 350,
+        toValue: 1,
+        duration: 450,
         useNativeDriver: true,
-      }).start(() => {
-        setActiveIndex((prev) => (prev + 1) % SLIDES.length);
-        // Fade back in
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 450,
-          useNativeDriver: true,
-        }).start();
-      });
-    }, duration);
+      }).start();
+    });
+  }, [fadeAnim]);
 
-    return () => clearInterval(timer);
-  }, [activeIndex, fadeAnim, currentSlide.videoUrl]);
+  useEffect(() => {
+    // For static images, advance after 5.5 seconds.
+    // For video slides, advance upon playback completion (via onEnded) with a 30s safety watchdog.
+    if (currentSlide.videoUrl) {
+      const watchdog = setTimeout(advanceToNextSlide, 30000);
+      return () => clearTimeout(watchdog);
+    }
+
+    const timer = setTimeout(advanceToNextSlide, 5500);
+    return () => clearTimeout(timer);
+  }, [activeIndex, currentSlide.videoUrl, advanceToNextSlide]);
 
   const handlePrimaryPress = () => {
     if (currentSlide.categorySlug) {
@@ -147,6 +164,7 @@ export const MotionHero: React.FC<MotionHeroProps> = () => {
               key={currentSlide.id}
               videoUrl={currentSlide.videoUrl}
               isActive={true}
+              onEnded={advanceToNextSlide}
             />
           ) : null}
         </Animated.View>
