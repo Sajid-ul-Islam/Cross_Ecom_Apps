@@ -17,8 +17,6 @@ interface HeroVideoItemProps {
 
 function HeroVideoItem({ videoUrl, poster, isActive, isFirst }: HeroVideoItemProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
 
   // Synchronously ensure muted DOM property is true
   const setVideoRef = useCallback((el: HTMLVideoElement | null) => {
@@ -33,47 +31,29 @@ function HeroVideoItem({ videoUrl, poster, isActive, isFirst }: HeroVideoItemPro
     const video = videoRef.current;
     if (!video) return;
 
-    video.muted = isMuted;
+    video.muted = true;
     video.defaultMuted = true;
 
     if (isActive) {
       const playPromise = video.play();
       if (playPromise !== undefined) {
-        playPromise
-          .then(() => {
-            setIsPlaying(true);
-          })
-          .catch(() => {
-            // Browser autoplay policy blocked; resume on user gesture
-            setIsPlaying(false);
-            const resumeOnGesture = () => {
-              if (videoRef.current && isActive) {
-                videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
-              }
-              window.removeEventListener("pointerdown", resumeOnGesture);
-              window.removeEventListener("touchstart", resumeOnGesture);
-            };
-            window.addEventListener("pointerdown", resumeOnGesture, { once: true, passive: true });
-            window.addEventListener("touchstart", resumeOnGesture, { once: true, passive: true });
-          });
+        playPromise.catch(() => {
+          // Browser autoplay policy blocked; resume on user gesture
+          const resumeOnGesture = () => {
+            if (videoRef.current && isActive) {
+              videoRef.current.play().catch(() => {});
+            }
+            window.removeEventListener("pointerdown", resumeOnGesture);
+            window.removeEventListener("touchstart", resumeOnGesture);
+          };
+          window.addEventListener("pointerdown", resumeOnGesture, { once: true, passive: true });
+          window.addEventListener("touchstart", resumeOnGesture, { once: true, passive: true });
+        });
       }
     } else {
       video.pause();
-      setIsPlaying(false);
     }
-  }, [isActive, isMuted]);
-
-  const handleToggleMute = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!videoRef.current) return;
-    const nextMuted = !isMuted;
-    videoRef.current.muted = nextMuted;
-    setIsMuted(nextMuted);
-    if (!isPlaying) {
-      videoRef.current.play().catch(() => {});
-    }
-  };
+  }, [isActive]);
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
@@ -86,8 +66,6 @@ function HeroVideoItem({ videoUrl, poster, isActive, isFirst }: HeroVideoItemPro
         playsInline
         preload={isFirst ? "auto" : "metadata"}
         poster={poster}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
         style={{
           width: "100%",
           height: "100%",
@@ -97,71 +75,6 @@ function HeroVideoItem({ videoUrl, poster, isActive, isFirst }: HeroVideoItemPro
       >
         <source src={videoUrl} type="video/mp4" />
       </video>
-
-      {/* Subtle brand showcase badge with active playback indicator */}
-      <div
-        style={{
-          position: "absolute",
-          top: 14,
-          left: 14,
-          background: "rgba(0, 0, 0, 0.65)",
-          backdropFilter: "blur(6px)",
-          WebkitBackdropFilter: "blur(6px)",
-          color: "#FFFFFF",
-          padding: "5px 12px",
-          borderRadius: 999,
-          fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: "0.05em",
-          textTransform: "uppercase",
-          display: "flex",
-          alignItems: "center",
-          gap: 7,
-          border: "1px solid rgba(255, 255, 255, 0.2)",
-          zIndex: 3,
-        }}
-      >
-        <span
-          style={{
-            width: 7,
-            height: 7,
-            borderRadius: "50%",
-            background: isPlaying ? "#10b981" : "#ef4444",
-            display: "inline-block",
-            boxShadow: isPlaying ? "0 0 8px #10b981" : "none",
-          }}
-        />
-        {isPlaying ? "Brand Film · Playing" : "Brand Showcase"}
-      </div>
-
-      {/* Audio toggle button */}
-      <button
-        type="button"
-        onClick={handleToggleMute}
-        aria-label={isMuted ? "Unmute video audio" : "Mute video audio"}
-        style={{
-          position: "absolute",
-          bottom: 24,
-          right: 24,
-          background: "rgba(0, 0, 0, 0.65)",
-          backdropFilter: "blur(6px)",
-          WebkitBackdropFilter: "blur(6px)",
-          color: "#FFFFFF",
-          border: "1px solid rgba(255, 255, 255, 0.25)",
-          borderRadius: 20,
-          padding: "6px 12px",
-          fontSize: 11.5,
-          fontWeight: 700,
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          zIndex: 3,
-        }}
-      >
-        <span>{isMuted ? "🔇" : "🔊"}</span>
-        <span>{isMuted ? "Sound Off" : "Sound On"}</span>
-      </button>
     </div>
   );
 }

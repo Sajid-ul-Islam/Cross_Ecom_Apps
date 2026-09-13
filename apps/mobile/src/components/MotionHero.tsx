@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
-  Text,
   Image,
   TouchableOpacity,
   StyleSheet,
@@ -10,11 +9,10 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
-import { ArrowRight, Sparkles, ShieldCheck, Play } from "./Icons";
 import { useTheme } from "../context/ThemeContext";
 
-const { width } = Dimensions.get("window");
-const HERO_HEIGHT = Math.round((width - 32) * (10 / 16)); // 16:10 cinematic banner ratio
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const HERO_HEIGHT = Math.round(SCREEN_WIDTH * (9 / 16)); // 16:9 cinematic edge-to-edge ratio
 
 interface HeroSlide {
   id: string;
@@ -89,13 +87,12 @@ interface MotionHeroProps {
   onWatchStory?: () => void;
 }
 
-export const MotionHero: React.FC<MotionHeroProps> = ({ onWatchStory }) => {
+export const MotionHero: React.FC<MotionHeroProps> = () => {
   const router = useRouter();
   const { colors } = useTheme();
   const [activeIndex, setActiveIndex] = useState(0);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
-  const slideAnim = useRef(new Animated.Value(0)).current;
 
   const currentSlide = SLIDES[activeIndex];
 
@@ -135,7 +132,7 @@ export const MotionHero: React.FC<MotionHeroProps> = ({ onWatchStory }) => {
   return (
     <View style={styles.container}>
       <TouchableOpacity
-        activeOpacity={0.94}
+        activeOpacity={0.96}
         onPress={handlePrimaryPress}
         style={styles.heroCard}
       >
@@ -154,58 +151,7 @@ export const MotionHero: React.FC<MotionHeroProps> = ({ onWatchStory }) => {
           ) : null}
         </Animated.View>
 
-        {/* Multi-gradient backdrop for rich text contrast */}
-        <View style={styles.darkGradient} />
-
-        {/* Content Overlay */}
-        <View style={styles.contentOverlay}>
-          {/* Top Brand Pill */}
-          <View style={styles.badgeRow}>
-            <View style={styles.badgePill}>
-              <Sparkles size={11} color="#FFFFFF" />
-              <Text style={styles.badgeText}>{currentSlide.badge}</Text>
-            </View>
-
-            {onWatchStory ? (
-              <TouchableOpacity
-                style={styles.watchStoryPill}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  onWatchStory();
-                }}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel="Watch Brand Film Story"
-              >
-                <Play size={10} color="#FFFFFF" />
-                <Text style={styles.watchStoryText}>Watch Story</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.guaranteePill}>
-                <ShieldCheck size={11} color="#10B981" />
-                <Text style={styles.guaranteeText}>7-Day Size Swap</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Title and Tagline */}
-          <Text style={styles.titleText}>{currentSlide.title}</Text>
-          <Text style={styles.taglineText}>{currentSlide.tagline}</Text>
-
-          {/* CTA Row */}
-          <View style={styles.ctaRow}>
-            <View style={styles.primaryCta}>
-              <Text style={styles.primaryCtaText}>EXPLORE NOW</Text>
-              <ArrowRight size={13} color="#FFFFFF" />
-            </View>
-
-            <Text style={styles.shopCategoryHint}>
-              Tap to view {currentSlide.categorySlug || "collection"} →
-            </Text>
-          </View>
-        </View>
-
-        {/* Sleek Slide Indicators */}
+        {/* Sleek Minimal Slide Indicators */}
         <View style={styles.indicatorRow}>
           {SLIDES.map((_, i) => (
             <TouchableOpacity
@@ -215,8 +161,9 @@ export const MotionHero: React.FC<MotionHeroProps> = ({ onWatchStory }) => {
               style={[
                 styles.indicatorBar,
                 {
-                  width: i === activeIndex ? 24 : 6,
-                  backgroundColor: i === activeIndex ? "#FFFFFF" : "rgba(255,255,255,0.4)",
+                  width: i === activeIndex ? 20 : 6,
+                  backgroundColor:
+                    i === activeIndex ? "#FFFFFF" : "rgba(255,255,255,0.45)",
                 },
               ]}
             />
@@ -229,21 +176,18 @@ export const MotionHero: React.FC<MotionHeroProps> = ({ onWatchStory }) => {
 
 const styles = StyleSheet.create({
   container: {
-    marginHorizontal: 16,
-    marginTop: 8,
+    marginHorizontal: -16, // Flush edge-to-edge canceling screen 16px horizontal padding
+    marginTop: -16, // Flush to screen top
     marginBottom: 16,
+    width: SCREEN_WIDTH,
   },
   heroCard: {
+    width: SCREEN_WIDTH,
     height: HERO_HEIGHT,
-    borderRadius: 16,
+    borderRadius: 0, // Edge-to-edge clean
     overflow: "hidden",
     position: "relative",
     backgroundColor: "#000000",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    elevation: 4,
   },
   imageWrap: {
     width: "100%",
@@ -253,129 +197,17 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  darkGradient: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.45)",
-  },
-  contentOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: 16,
-    justifyContent: "flex-end",
-  },
-  badgeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 6,
-  },
-  badgePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: "rgba(99, 102, 241, 0.88)",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  badgeText: {
-    color: "#FFFFFF",
-    fontSize: 9.5,
-    fontWeight: "900",
-    letterSpacing: 0.6,
-  },
-  watchStoryPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: "rgba(239, 68, 68, 0.9)",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  watchStoryText: {
-    color: "#FFFFFF",
-    fontSize: 9.5,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
-  },
-  guaranteePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "rgba(16, 185, 129, 0.4)",
-  },
-  guaranteeText: {
-    color: "#FFFFFF",
-    fontSize: 9.5,
-    fontWeight: "700",
-  },
-  titleText: {
-    color: "#FFFFFF",
-    fontSize: 19,
-    fontWeight: "900",
-    letterSpacing: 0.3,
-    marginBottom: 4,
-    textShadowColor: "rgba(0,0,0,0.8)",
-    textShadowOffset: { width: 0, height: 1.5 },
-    textShadowRadius: 4,
-  },
-  taglineText: {
-    color: "rgba(255,255,255,0.88)",
-    fontSize: 11.5,
-    lineHeight: 16,
-    fontWeight: "600",
-    marginBottom: 10,
-    maxWidth: width * 0.75,
-    textShadowColor: "rgba(0,0,0,0.7)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
-  ctaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  primaryCta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#6366F1",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  primaryCtaText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-  shopCategoryHint: {
-    color: "rgba(255,255,255,0.8)",
-    fontSize: 10.5,
-    fontWeight: "700",
-  },
   indicatorRow: {
     position: "absolute",
-    top: 12,
-    right: 14,
+    bottom: 12,
+    right: 16,
     flexDirection: "row",
     gap: 5,
     alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   indicatorBar: {
     height: 4,
