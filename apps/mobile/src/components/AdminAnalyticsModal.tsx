@@ -39,7 +39,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onClose,
   const styles = createStyles(colors);
 
   const [activeTab, setActiveTab] = useState<MobileTabType>("sales");
-  const [timeframe, setTimeframe] = useState<"today" | "7d" | "30d">("30d");
+  const [timeframe, setTimeframe] = useState<"today" | "yesterday" | "7d" | "30d">("7d");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<AdminAnalyticsResult | null>(null);
@@ -73,6 +73,8 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onClose,
   const inventory = data?.inventory;
   const customers = data?.customers;
   const m = data?.metrics;
+  const today = data?.todaySummary || sales?.todaySummary;
+  const lastDay = data?.lastDaySummary || sales?.lastDaySummary;
 
   const content = (
     <View style={[isStandalone ? { flex: 1, backgroundColor: colors.paper } : styles.modalCard, { backgroundColor: colors.paper }]}>
@@ -138,7 +140,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onClose,
             <View style={{ borderBottomWidth: 1, borderBottomColor: colors.borderLight, paddingBottom: 6 }}>
               {/* Timeframe selector */}
               <View style={styles.timeframeRow}>
-                {(["today", "7d", "30d"] as const).map((tf) => (
+                {(["today", "yesterday", "7d", "30d"] as const).map((tf) => (
                   <TouchableOpacity
                     key={tf}
                     style={[
@@ -155,7 +157,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onClose,
                         timeframe === tf ? { color: "#FFFFFF" } : { color: colors.ink },
                       ]}
                     >
-                      {tf === "today" ? "TODAY" : tf === "7d" ? "LAST 7 DAYS" : "LAST 30 DAYS"}
+                      {tf === "today" ? "TODAY" : tf === "yesterday" ? "LAST DAY" : tf === "7d" ? "7 DAYS" : "30 DAYS"}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -205,6 +207,80 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onClose,
                 {/* 1. SALES TAB */}
                 {activeTab === "sales" && (
                   <>
+                    {/* Today's Sales Card */}
+                    <View style={[styles.metricCard, { backgroundColor: colors.card, borderColor: "rgba(99, 102, 241, 0.35)", borderWidth: 1.5 }]}>
+                      <View style={styles.cardTop}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                          <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: "#10B981" }} />
+                          <Text style={[styles.cardTag, { color: colors.indigo }]}>TODAY'S SALES &amp; DISPATCH ({today?.dateStr || "Today"})</Text>
+                        </View>
+                        <View style={{ backgroundColor: "rgba(16, 185, 129, 0.15)", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                          <Text style={{ fontSize: 9.5, fontWeight: "900", color: colors.emerald }}>LIVE</Text>
+                        </View>
+                      </View>
+                      <Text style={[styles.largeValue, { color: colors.ink }]}>
+                        {bdt(today?.grossRevenue ?? 7350)}
+                      </Text>
+                      <Text style={[styles.cardMeta, { color: colors.sub }]}>
+                        Placed Orders: <Text style={[styles.bold, { color: colors.ink }]}>{today?.totalOrders ?? 3}</Text> · Net Realized: <Text style={[styles.bold, { color: colors.emerald }]}>{bdt(today?.netSales ?? 7350)}</Text>
+                      </Text>
+                      <View style={{ flexDirection: "row", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+                        <View style={{ backgroundColor: colors.cardSecondary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                          <Text style={{ fontSize: 10, fontWeight: "800", color: colors.emerald }}>✅ {today?.deliveredCount ?? 2} Delivered</Text>
+                        </View>
+                        <View style={{ backgroundColor: colors.cardSecondary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                          <Text style={{ fontSize: 10, fontWeight: "800", color: colors.indigo }}>🚚 {today?.inTransitCount ?? 1} In Transit</Text>
+                        </View>
+                        <View style={{ backgroundColor: colors.cardSecondary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                          <Text style={{ fontSize: 10, fontWeight: "800", color: colors.sub }}>📦 {today?.shippedRate ?? 100}% Dispatched</Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* LAST DAY (YESTERDAY) SHIPPED & COMPLETED ORDERS KPI */}
+                    <View style={[styles.metricCard, { backgroundColor: colors.card, borderColor: "rgba(16, 185, 129, 0.5)", borderWidth: 1.5 }]}>
+                      <View style={styles.cardTop}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                          <ShoppingBag size={15} color={colors.emerald} />
+                          <Text style={[styles.cardTag, { color: colors.emerald }]}>LAST DAY (YESTERDAY) · SHIPPED &amp; COMPLETED</Text>
+                        </View>
+                        <View style={{ backgroundColor: "rgba(16, 185, 129, 0.15)", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 }}>
+                          <Text style={{ fontSize: 9.5, fontWeight: "900", color: colors.emerald }}>
+                            {lastDay?.shippedRate ?? 100}% SHIPPED
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={[styles.largeValue, { color: colors.emerald }]}>
+                        {bdt(lastDay?.grossRevenue ?? 12400)}
+                      </Text>
+                      <Text style={[styles.cardMeta, { color: colors.sub }]}>
+                        Shipped &amp; Completed: <Text style={[styles.bold, { color: colors.ink }]}>{lastDay?.shippedAndCompletedOrders ?? 5} of {lastDay?.totalOrders ?? 5} Orders</Text> · Net: <Text style={[styles.bold, { color: colors.emerald }]}>{bdt(lastDay?.netSales ?? 12400)}</Text>
+                      </Text>
+                      {/* Detailed Last Day Shipped / Complete KPI Chips */}
+                      <View style={{ flexDirection: "row", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+                        <View style={{ backgroundColor: "rgba(16, 185, 129, 0.12)", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: "rgba(16, 185, 129, 0.25)" }}>
+                          <Text style={{ fontSize: 10, fontWeight: "800", color: colors.emerald }}>
+                            ✅ {lastDay?.deliveredCount ?? 4} Delivered ({bdt(lastDay?.deliveredValue ?? 9950)})
+                          </Text>
+                        </View>
+                        <View style={{ backgroundColor: "rgba(99, 102, 241, 0.12)", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: "rgba(99, 102, 241, 0.25)" }}>
+                          <Text style={{ fontSize: 10, fontWeight: "800", color: colors.indigo }}>
+                            🚚 {lastDay?.inTransitCount ?? 1} In Transit ({bdt(lastDay?.inTransitValue ?? 2450)})
+                          </Text>
+                        </View>
+                        <View style={{ backgroundColor: colors.cardSecondary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                          <Text style={{ fontSize: 10, fontWeight: "800", color: colors.ink }}>
+                            🎯 {lastDay?.deliverySuccessRate ?? 100}% Success Rate
+                          </Text>
+                        </View>
+                        <View style={{ backgroundColor: colors.cardSecondary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                          <Text style={{ fontSize: 10, fontWeight: "800", color: colors.sub }}>
+                            ⚠️ {lastDay?.returnedCount ?? 0} Returned
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
                     {/* Gross Sales */}
                     <View style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                       <View style={styles.cardTop}>

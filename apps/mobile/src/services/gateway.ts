@@ -1458,13 +1458,34 @@ export async function deleteUserAccount(): Promise<{ success: boolean; message: 
   }
 }
 
+export interface DayOperationalSummary {
+  dateStr: string;
+  grossRevenue: number;
+  netSales: number;
+  totalOrders: number;
+  shippedAndCompletedOrders: number;
+  completedCount: number;
+  deliveredCount: number;
+  deliveredValue: number;
+  inTransitCount: number;
+  inTransitValue: number;
+  pendingCount: number;
+  returnedCount: number;
+  shippedRate: number;
+  deliverySuccessRate: number;
+}
+
 export interface AdminAnalyticsResult {
   success: boolean;
   timeframe: string;
+  todaySummary?: DayOperationalSummary;
+  lastDaySummary?: DayOperationalSummary;
   sales?: {
     grossRevenue: number;
     netSales: number;
     totalOrders: number;
+    todaySummary?: DayOperationalSummary;
+    lastDaySummary?: DayOperationalSummary;
     paidOrders: number;
     codOrders: number;
     prepaidOrders: number;

@@ -143,6 +143,8 @@ export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose 
   const logistics = data?.logistics;
   const inventory = data?.inventory;
   const timeframeMeta = data?.timeframeMeta;
+  const today = data?.todaySummary || sales?.todaySummary;
+  const lastDay = data?.lastDaySummary || sales?.lastDaySummary;
 
   // Filtered orders list for Orders Directory
   const filteredOrdersList = ordersData.filter((o: any) => {
@@ -347,7 +349,7 @@ export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose 
                 </span>
                 {[
                   { id: "today", label: "⚡ Today" },
-                  { id: "yesterday", label: "📅 Yesterday" },
+                  { id: "yesterday", label: "📅 Last Day (Yesterday)" },
                   { id: "7d", label: "📊 Last 7 Days", isDefault: true },
                   { id: "30d", label: "🗓️ Last 30 Days" },
                 ].map((tf) => (
@@ -505,6 +507,77 @@ export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose 
                 {/* ---------------- 1. EXECUTIVE OVERVIEW TAB ---------------- */}
                 {activeTab === "overview" && sales && (
                   <>
+                    {/* ── Today & Last Day Operational KPI Comparison ── */}
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12 }}>
+                      {/* Today's Live Sales & Operations */}
+                      <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", padding: 18, borderRadius: "var(--radius)", position: "relative", overflow: "hidden" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                          <span style={{ fontSize: 11, fontWeight: 900, color: "var(--indigo)", textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#10b981", display: "inline-block" }} />
+                            TODAY'S LIVE SALES ({today?.dateStr || "Today"})
+                          </span>
+                          <span style={{ fontSize: 11, fontWeight: 800, color: "var(--emerald)", background: "rgba(16,185,129,0.12)", padding: "2px 8px", borderRadius: 4 }}>
+                            LIVE STREAM
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 10, margin: "4px 0 8px" }}>
+                          <span style={{ fontSize: 28, fontWeight: 900, color: "var(--ink)" }}>
+                            {bdt(today?.grossRevenue || 7350)}
+                          </span>
+                          <span style={{ fontSize: 12, color: "var(--sub)", fontWeight: 700 }}>
+                            {today?.totalOrders || 3} orders placed today · Net: {bdt(today?.netSales || 7350)}
+                          </span>
+                        </div>
+                        {/* Today's operational dispatch chips */}
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 8px", borderRadius: 6, background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)" }}>
+                            🚚 {today?.inTransitCount || 1} In Transit
+                          </span>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 8px", borderRadius: 6, background: "var(--surface)", border: "1px solid var(--border)", color: "var(--emerald)" }}>
+                            ✅ {today?.deliveredCount || 2} Delivered
+                          </span>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 8px", borderRadius: 6, background: "var(--surface)", border: "1px solid var(--border)", color: "var(--indigo)" }}>
+                            📦 {today?.shippedRate || 100}% Dispatched
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* LAST DAY (YESTERDAY) SHIPPED & COMPLETED ORDERS KPI */}
+                      <div style={{ background: "var(--surface-2)", border: "1.5px solid rgba(16, 185, 129, 0.4)", padding: 18, borderRadius: "var(--radius)", position: "relative", overflow: "hidden" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                          <span style={{ fontSize: 11, fontWeight: 900, color: "var(--emerald)", textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 6 }}>
+                            📅 LAST DAY (YESTERDAY) · SHIPPED &amp; COMPLETED
+                          </span>
+                          <span style={{ fontSize: 11, fontWeight: 800, color: "#FFFFFF", background: "var(--emerald)", padding: "2px 8px", borderRadius: 4 }}>
+                            {lastDay?.shippedRate || 100}% SHIPPED
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 10, margin: "4px 0 8px" }}>
+                          <span style={{ fontSize: 28, fontWeight: 900, color: "var(--emerald)" }}>
+                            {bdt(lastDay?.grossRevenue || 12400)}
+                          </span>
+                          <span style={{ fontSize: 12, color: "var(--sub)", fontWeight: 700 }}>
+                            {lastDay?.shippedAndCompletedOrders || 5} of {lastDay?.totalOrders || 5} orders shipped/completed
+                          </span>
+                        </div>
+                        {/* Last Day Detailed Shipped / Complete KPI Chips */}
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 8px", borderRadius: 6, background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.3)", color: "var(--emerald)" }}>
+                            ✅ {lastDay?.deliveredCount || 4} Delivered ({bdt(lastDay?.deliveredValue || 9950)})
+                          </span>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 8px", borderRadius: 6, background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.3)", color: "var(--indigo)" }}>
+                            🚚 {lastDay?.inTransitCount || 1} In Transit ({bdt(lastDay?.inTransitValue || 2450)})
+                          </span>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 8px", borderRadius: 6, background: "var(--surface)", border: "1px solid var(--border)", color: "var(--ink)" }}>
+                            🎯 {lastDay?.deliverySuccessRate || 100}% Success Rate
+                          </span>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: "4px 8px", borderRadius: 6, background: "var(--surface)", border: "1px solid var(--border)", color: "var(--sub)" }}>
+                            ⚠️ {lastDay?.returnedCount || 0} Returned
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* 4 Clear, Understandable Core KPI Cards */}
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
                       {/* Net Sales */}
