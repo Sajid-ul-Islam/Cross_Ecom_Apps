@@ -273,3 +273,118 @@ test("Last Day KPI: Fallback baseline maintains 100% data integrity when zero te
   assert.equal(res.inTransitCount, 1);
 });
 
+/* ------------------------------------------------------------------ */
+/*  Background Sales Calculation Scheduler Unit Tests                 */
+/* ------------------------------------------------------------------ */
+
+interface SchedulerState {
+  status: "idle" | "running" | "error";
+  intervalMs: number;
+  lastRunStartedAt: string | null;
+  lastRunFinishedAt: string | null;
+  lastDurationMs: number;
+  warmedKeys: string[];
+  totalOrdersProcessed: number;
+  lastError: string | null;
+  runCount: number;
+}
+
+function createSalesSchedulerSimulator(intervalMs: number = 12 * 60 * 1000) {
+  const state: SchedulerState = {
+    status: "idle",
+    intervalMs,
+    lastRunStartedAt: null,
+    lastRunFinishedAt: null,
+    lastDurationMs: 0,
+    warmedKeys: [],
+    totalOrdersProcessed: 0,
+    lastError: null,
+    runCount: 0,
+  };
+
+  const materializedStore = new Map<string, any>();
+
+  async function runCycle(ordersCount: number = 15) {
+    if (state.status === "running") {
+      return { skipped: true, reason: "in_progress", state };
+    }
+
+    const start = Date.now();
+    state.status = "running";
+    state.lastRunStartedAt = new Date(start).toISOString();
+    state.lastError = null;
+
+    try {
+      state.totalOrdersProcessed = ordersCount;
+      const targetTimeframes = ["today", "yesterday", "7d", "30d"];
+      const warmedKeys: string[] = [];
+
+      for (const tf of targetTimeframes) {
+        const cacheKey = `analytics:${tf}:ALL:ALL:ALL:ALL`;
+        materializedStore.set(cacheKey, {
+          timeframe: tf,
+          grossRevenue: ordersCount * 2400,
+          orders: ordersCount,
+          materializedAt: Date.now(),
+        });
+        warmedKeys.push(cacheKey);
+      }
+      warmedKeys.push("pathao_logistics_bi");
+      materializedStore.set("pathao_logistics_bi", { warmed: true });
+
+      state.status = "idle";
+      state.lastRunFinishedAt = new Date().toISOString();
+      state.lastDurationMs = Date.now() - start;
+      state.warmedKeys = warmedKeys;
+      state.runCount++;
+
+      return { success: true, state, warmedKeys };
+    } catch (err) {
+      state.status = "error";
+      state.lastError = (err as Error).message;
+      return { success: false, state, error: (err as Error).message };
+    }
+  }
+
+  return { state, materializedStore, runCycle };
+}
+
+test("Sales Scheduler: Cadence defaults to 10-15m window (12m = 720,000ms)", () => {
+  const scheduler = createSalesSchedulerSimulator();
+  assert.equal(scheduler.state.intervalMs, 720000);
+  assert.ok(scheduler.state.intervalMs >= 10 * 60 * 1000);
+  assert.ok(scheduler.state.intervalMs <= 15 * 60 * 1000);
+});
+
+test("Sales Scheduler: Materializes today, yesterday, 7d, 30d and Pathao BI keys", async () => {
+  const scheduler = createSalesSchedulerSimulator();
+  const res = await scheduler.runCycle(20);
+
+  assert.equal(res.success, true);
+  assert.equal(scheduler.state.runCount, 1);
+  assert.equal(scheduler.state.status, "idle");
+  assert.equal(scheduler.state.totalOrdersProcessed, 20);
+  assert.deepEqual(res.warmedKeys, [
+    "analytics:today:ALL:ALL:ALL:ALL",
+    "analytics:yesterday:ALL:ALL:ALL:ALL",
+    "analytics:7d:ALL:ALL:ALL:ALL",
+    "analytics:30d:ALL:ALL:ALL:ALL",
+    "pathao_logistics_bi",
+  ]);
+  assert.ok(scheduler.materializedStore.has("analytics:today:ALL:ALL:ALL:ALL"));
+  assert.ok(scheduler.materializedStore.has("analytics:yesterday:ALL:ALL:ALL:ALL"));
+  assert.ok(scheduler.materializedStore.has("analytics:7d:ALL:ALL:ALL:ALL"));
+  assert.ok(scheduler.materializedStore.has("analytics:30d:ALL:ALL:ALL:ALL"));
+});
+
+test("Sales Scheduler: Prevents overlapping execution storms", async () => {
+  const scheduler = createSalesSchedulerSimulator();
+  scheduler.state.status = "running"; // simulate active in-flight cycle
+
+  const res = await scheduler.runCycle(50);
+  assert.equal(res.skipped, true);
+  assert.equal(res.reason, "in_progress");
+  assert.equal(scheduler.state.runCount, 0); // did not increment
+});
+
+

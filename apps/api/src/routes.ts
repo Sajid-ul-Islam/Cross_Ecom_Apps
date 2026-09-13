@@ -1055,16 +1055,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   await loadPayments();
   await biCache.init();
 
-  // Non-blocking background worker: keeps BI analytics and Pathao logistics warm in cache
-  biCache.startBackgroundWorker(async () => {
-    try {
-      const wooOrders = await fetchWooOrders({ perPage: 100 });
-      const combined = [...(orders || []), ...wooOrders];
-      await buildPathaoLogisticsBi(combined);
-    } catch (err) {
-      console.warn("[biCache] Background worker warm-up warning:", (err as Error).message);
-    }
-  }, 5 * 60 * 1000);
+  // Note: Dedicated Background Sales & Operations Calculation Scheduler is initialized alongside analytics routes below.
 
   /* ---- catalog (filter + search + sort) ---- */
   app.get("/v1/deen/products", async (req, reply) => {
@@ -4108,452 +4099,455 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     return unified;
   }
 
-  /* ---- ADMIN BI ANALYTICS SUITE (Gated by admin session / gateway key) ---- */
-  app.get("/v1/deen/admin/analytics", async (req, reply) => {
-    const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
-    const gatewayKey = req.headers["x-gateway-key"] as string | undefined;
-    const session = resolveAuthSession(authHeader);
-    const isAdmin = (session && session.role === "admin") || gatewayKey === "deen_mobile_gateway_secret_2026" || !config.apiKey;
-    if (!isAdmin) {
-      return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required. Customer access is strictly restricted." });
-    }
-
+  /* ---- ADMIN BI ANALYTICS COMPUTATION ENGINE ---- */
+  async function computeAdminAnalyticsPayload(params: {
+    timeframe?: string;
+    productId?: string;
+    category?: string;
+    district?: string;
+    payment?: string;
+    forceRefresh?: boolean;
+  }): Promise<any> {
     const {
       timeframe = "7d",
       productId = "ALL",
       category = "ALL",
       district = "ALL",
       payment = "ALL",
-      refresh,
-    } = (req.query as any) || {};
+      forceRefresh = false,
+    } = params;
 
-    const cacheKey = `analytics:${timeframe}:${category}:${productId}:${district}:${payment}`;
+    const allOrders = await getUnifiedOrders(forceRefresh);
+    const products = await getCatalog();
 
-    const { data: analyticsPayload, hit, ageSeconds, computeDurationMs } = await biCache.getOrCompute(
-      cacheKey,
-      async () => {
-        const allOrders = await getUnifiedOrders(refresh === "true" || refresh === "1");
-        const products = await getCatalog();
+    const now = Date.now();
+    const nowDate = new Date(now);
 
-        const now = Date.now();
-        const nowDate = new Date(now);
+    let startTime = 0;
+    let endTime = now;
+    let timeframeLabel = "Last 7 Days";
+    let timeframeDays = 7;
+    let dateRangeStr = "";
 
-        let startTime = 0;
-        let endTime = now;
-        let timeframeLabel = "Last 7 Days";
-        let timeframeDays = 7;
-        let dateRangeStr = "";
+    if (timeframe === "today") {
+      timeframeLabel = "Today";
+      timeframeDays = 1;
+      const startOfToday = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate(), 0, 0, 0, 0);
+      startTime = startOfToday.getTime();
+      endTime = now;
+      dateRangeStr = nowDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    } else if (timeframe === "yesterday") {
+      timeframeLabel = "Yesterday";
+      timeframeDays = 1;
+      const startOfYesterday = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - 1, 0, 0, 0, 0);
+      const endOfYesterday = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - 1, 23, 59, 59, 999);
+      startTime = startOfYesterday.getTime();
+      endTime = endOfYesterday.getTime();
+      dateRangeStr = new Date(startTime).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    } else if (timeframe === "7d") {
+      timeframeLabel = "Last 7 Days";
+      timeframeDays = 7;
+      startTime = now - 7 * 86400000;
+      endTime = now;
+      const startD = new Date(startTime);
+      dateRangeStr = `${startD.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${nowDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    } else {
+      timeframeLabel = "Last 30 Days";
+      timeframeDays = 30;
+      startTime = now - 30 * 86400000;
+      endTime = now;
+      const startD = new Date(startTime);
+      dateRangeStr = `${startD.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${nowDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    }
 
-        if (timeframe === "today") {
-          timeframeLabel = "Today";
-          timeframeDays = 1;
-          const startOfToday = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate(), 0, 0, 0, 0);
-          startTime = startOfToday.getTime();
-          endTime = now;
-          dateRangeStr = nowDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-        } else if (timeframe === "yesterday") {
-          timeframeLabel = "Yesterday";
-          timeframeDays = 1;
-          const startOfYesterday = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - 1, 0, 0, 0, 0);
-          const endOfYesterday = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - 1, 23, 59, 59, 999);
-          startTime = startOfYesterday.getTime();
-          endTime = endOfYesterday.getTime();
-          dateRangeStr = new Date(startTime).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-        } else if (timeframe === "7d") {
-          timeframeLabel = "Last 7 Days";
-          timeframeDays = 7;
-          startTime = now - 7 * 86400000;
-          endTime = now;
-          const startD = new Date(startTime);
-          dateRangeStr = `${startD.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${nowDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    // Dedicated Daily Operational KPI calculations for Today and Last Day (Yesterday)
+    const startOfTodayMs = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate(), 0, 0, 0, 0).getTime();
+    const endOfTodayMs = now;
+    const startOfYesterdayMs = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - 1, 0, 0, 0, 0).getTime();
+    const endOfYesterdayMs = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - 1, 23, 59, 59, 999).getTime();
+
+    const todayRawOrders = allOrders.filter((o: any) => {
+      const t = new Date(o.date_created || o.created_at || Date.now()).getTime();
+      return t >= startOfTodayMs && t <= endOfTodayMs;
+    });
+
+    const yesterdayRawOrders = allOrders.filter((o: any) => {
+      const t = new Date(o.date_created || o.created_at || Date.now()).getTime();
+      return t >= startOfYesterdayMs && t <= endOfYesterdayMs;
+    });
+
+    const computeOperationalDay = (
+      dayOrders: any[],
+      label: string,
+      fallbackOrders: number,
+      fallbackGross: number,
+      fallbackDelivered: number,
+      fallbackInTransit: number
+    ) => {
+      let grossRevenue = 0;
+      let totalOrders = dayOrders.length;
+      let deliveredCount = 0;
+      let deliveredValue = 0;
+      let inTransitCount = 0;
+      let inTransitValue = 0;
+      let returnedCount = 0;
+      let returnedValue = 0;
+      let pendingCount = 0;
+
+      for (const o of dayOrders) {
+        const tot = Number(o.total || o.totalAmount || 0);
+        grossRevenue += tot;
+        const st = String(o.status || o.pathaoStatus || "processing").toLowerCase();
+        if (st.includes("deliver") || st === "completed") {
+          deliveredCount++;
+          deliveredValue += tot;
+        } else if (st.includes("transit") || st === "dispatched" || st === "picked") {
+          inTransitCount++;
+          inTransitValue += tot;
+        } else if (st.includes("return") || st === "rto" || st === "failed" || st === "cancelled") {
+          returnedCount++;
+          returnedValue += tot;
         } else {
-          timeframeLabel = "Last 30 Days";
-          timeframeDays = 30;
-          startTime = now - 30 * 86400000;
-          endTime = now;
-          const startD = new Date(startTime);
-          dateRangeStr = `${startD.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${nowDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+          pendingCount++;
         }
+      }
 
-        // Dedicated Daily Operational KPI calculations for Today and Last Day (Yesterday)
-        const startOfTodayMs = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate(), 0, 0, 0, 0).getTime();
-        const endOfTodayMs = now;
-        const startOfYesterdayMs = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - 1, 0, 0, 0, 0).getTime();
-        const endOfYesterdayMs = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate() - 1, 23, 59, 59, 999).getTime();
+      if (totalOrders === 0 && grossRevenue === 0) {
+        totalOrders = fallbackOrders;
+        grossRevenue = fallbackGross;
+        deliveredCount = fallbackDelivered;
+        deliveredValue = Math.round(fallbackGross * (fallbackDelivered / fallbackOrders));
+        inTransitCount = fallbackInTransit;
+        inTransitValue = Math.round(fallbackGross * (fallbackInTransit / fallbackOrders));
+        returnedCount = 0;
+        pendingCount = Math.max(0, totalOrders - deliveredCount - inTransitCount);
+      }
 
-        const todayRawOrders = allOrders.filter((o: any) => {
-          const t = new Date(o.date_created || o.created_at || Date.now()).getTime();
-          return t >= startOfTodayMs && t <= endOfTodayMs;
+      const shippedAndCompletedOrders = deliveredCount + inTransitCount;
+      const shippedRate = totalOrders > 0 ? Number(((shippedAndCompletedOrders / totalOrders) * 100).toFixed(1)) : 100;
+      const finished = deliveredCount + returnedCount;
+      const deliverySuccessRate = finished > 0 ? Number(((deliveredCount / finished) * 100).toFixed(1)) : 100;
+      const netSales = Math.max(0, grossRevenue - returnedValue);
+
+      return {
+        dateStr: label,
+        grossRevenue,
+        netSales,
+        totalOrders,
+        shippedAndCompletedOrders,
+        completedCount: deliveredCount,
+        deliveredCount,
+        deliveredValue,
+        inTransitCount,
+        inTransitValue,
+        pendingCount,
+        returnedCount,
+        shippedRate,
+        deliverySuccessRate,
+      };
+    };
+
+    const todaySummary = computeOperationalDay(
+      todayRawOrders,
+      nowDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      3,
+      7350,
+      2,
+      1
+    );
+
+    const lastDaySummary = computeOperationalDay(
+      yesterdayRawOrders,
+      new Date(startOfYesterdayMs).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      5,
+      12400,
+      4,
+      1
+    );
+
+    // Apply dynamic filters across time, product, category, district, payment mode
+    const filteredOrders = allOrders.filter((o: any) => {
+      const createdTime = new Date(o.date_created || o.created_at || Date.now()).getTime();
+      if (createdTime < startTime || createdTime > endTime) return false;
+
+      // Filter by district if specified
+      if (district && district !== "ALL") {
+        const orderDistrict = o.billing?.state || o.customer?.district || "BD-13";
+        if (orderDistrict !== district) return false;
+      }
+
+      // Filter by payment method if specified
+      if (payment && payment !== "ALL") {
+        const orderPay = (o.payment_method || o.payment || "cod").toLowerCase();
+        if (orderPay !== payment.toLowerCase()) return false;
+      }
+
+      const items = o.line_items || o.items || [];
+
+      // Filter by category if specified
+      if (category && category !== "ALL") {
+        const hasCategory = items.some((it: any) => {
+          const itemCat = String(it.category || "").toUpperCase();
+          return itemCat.includes(category.toUpperCase());
         });
+        if (!hasCategory) return false;
+      }
 
-        const yesterdayRawOrders = allOrders.filter((o: any) => {
-          const t = new Date(o.date_created || o.created_at || Date.now()).getTime();
-          return t >= startOfYesterdayMs && t <= endOfYesterdayMs;
+      // Filter by productId if specified
+      if (productId && productId !== "ALL") {
+        const hasProduct = items.some((it: any) => {
+          const itId = String(it.id || it.product_id || "");
+          const itSku = String(it.sku || "");
+          const itName = String(it.name || it.product_name || "").toLowerCase();
+          return itId === productId || itSku === productId || itName.includes(productId.toLowerCase());
         });
+        if (!hasProduct) return false;
+      }
 
-        const computeOperationalDay = (
-          dayOrders: any[],
-          label: string,
-          fallbackOrders: number,
-          fallbackGross: number,
-          fallbackDelivered: number,
-          fallbackInTransit: number
-        ) => {
-          let grossRevenue = 0;
-          let totalOrders = dayOrders.length;
-          let deliveredCount = 0;
-          let deliveredValue = 0;
-          let inTransitCount = 0;
-          let inTransitValue = 0;
-          let returnedCount = 0;
-          let returnedValue = 0;
-          let pendingCount = 0;
+      return true;
+    });
 
-          for (const o of dayOrders) {
-            const tot = Number(o.total || o.totalAmount || 0);
-            grossRevenue += tot;
-            const st = String(o.status || o.pathaoStatus || "processing").toLowerCase();
-            if (st.includes("deliver") || st === "completed") {
-              deliveredCount++;
-              deliveredValue += tot;
-            } else if (st.includes("transit") || st === "dispatched" || st === "picked") {
-              inTransitCount++;
-              inTransitValue += tot;
-            } else if (st.includes("return") || st === "rto" || st === "failed" || st === "cancelled") {
-              returnedCount++;
-              returnedValue += tot;
-            } else {
-              pendingCount++;
-            }
-          }
+    // 1. Sales Insights & KPI Calculations
+    let totalOrders = filteredOrders.length;
+    let grossRevenue = 0;
+    let codOrders = 0;
+    let totalItemsCount = 0;
 
-          if (totalOrders === 0 && grossRevenue === 0) {
-            totalOrders = fallbackOrders;
-            grossRevenue = fallbackGross;
-            deliveredCount = fallbackDelivered;
-            deliveredValue = Math.round(fallbackGross * (fallbackDelivered / fallbackOrders));
-            inTransitCount = fallbackInTransit;
-            inTransitValue = Math.round(fallbackGross * (fallbackInTransit / fallbackOrders));
-            returnedCount = 0;
-            pendingCount = Math.max(0, totalOrders - deliveredCount - inTransitCount);
-          }
+    // Logistics & Pathao return tracking
+    let deliveredCount = 0;
+    let deliveredValue = 0;
+    let returnedCount = 0;
+    let returnedValue = 0;
+    let partialCount = 0;
+    let partialValue = 0;
+    let inTransitCount = 0;
+    let inTransitValue = 0;
+    let pendingCount = 0;
 
-          const shippedAndCompletedOrders = deliveredCount + inTransitCount;
-          const shippedRate = totalOrders > 0 ? Number(((shippedAndCompletedOrders / totalOrders) * 100).toFixed(1)) : 100;
-          const finished = deliveredCount + returnedCount;
-          const deliverySuccessRate = finished > 0 ? Number(((deliveredCount / finished) * 100).toFixed(1)) : 100;
-          const netSales = Math.max(0, grossRevenue - returnedValue);
+    const categoryRev: Record<string, { revenue: number; units: number }> = {};
+    const districtSales: Record<string, { districtName: string; orderCount: number; revenue: number }> = {};
+    const dailyMap: Record<string, { date: string; revenue: number; netSales: number; orders: number; units: number }> = {};
+    const productPerfMap: Record<string, { id: string; name: string; sku: string; category: string; units: number; revenue: number; returnedUnits: number }> = {};
+    const pairMap: Record<string, { pairTitle: string; itemA: string; itemB: string; count: number; totalRevenue: number }> = {};
 
-          return {
-            dateStr: label,
-            grossRevenue,
-            netSales,
-            totalOrders,
-            shippedAndCompletedOrders,
-            completedCount: deliveredCount,
-            deliveredCount,
-            deliveredValue,
-            inTransitCount,
-            inTransitValue,
-            pendingCount,
-            returnedCount,
-            shippedRate,
-            deliverySuccessRate,
+    // Initialize timeline points matching timeframe
+    const isHourly = timeframe === "today" || timeframe === "yesterday";
+    if (isHourly) {
+      const hours = ["08:00", "11:00", "14:00", "17:00", "20:00", "23:00"];
+      for (const h of hours) {
+        dailyMap[h] = { date: h, revenue: 0, netSales: 0, orders: 0, units: 0 };
+      }
+    } else if (timeframe === "7d") {
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now - i * 86400000);
+        const dateKey = i === 0 ? "Today" : `${d.getMonth() + 1}/${d.getDate()}`;
+        dailyMap[dateKey] = { date: dateKey, revenue: 0, netSales: 0, orders: 0, units: 0 };
+      }
+    } else {
+      const trendDays = 14;
+      for (let i = trendDays - 1; i >= 0; i--) {
+        const d = new Date(now - i * 86400000);
+        const dateKey = i === 0 ? "Today" : `${d.getMonth() + 1}/${d.getDate()}`;
+        dailyMap[dateKey] = { date: dateKey, revenue: 0, netSales: 0, orders: 0, units: 0 };
+      }
+    }
+
+    for (const o of filteredOrders) {
+      const ordTotal = Number(o.total || o.totalAmount || 0);
+      grossRevenue += ordTotal;
+      if ((o.payment_method || o.payment) === "cod") codOrders++;
+
+      const items = o.line_items || o.items || [];
+      const orderProductNames: string[] = [];
+
+      for (const it of items) {
+        const qty = Number(it.quantity || it.qty || 1);
+        totalItemsCount += qty;
+        const cat = it.category || "JEANS";
+        if (!categoryRev[cat]) categoryRev[cat] = { revenue: 0, units: 0 };
+        const itemTotal = Number(it.total || ((it.price || 0) * qty) || 0);
+        categoryRev[cat].revenue += itemTotal;
+        categoryRev[cat].units += qty;
+
+        const prodKey = String(it.id || it.product_id || it.name || "Item");
+        const prodName = it.name || it.product_name || "Garment";
+        orderProductNames.push(prodName);
+
+        if (!productPerfMap[prodKey]) {
+          productPerfMap[prodKey] = {
+            id: prodKey,
+            name: prodName,
+            sku: it.sku || prodKey,
+            category: cat,
+            units: 0,
+            revenue: 0,
+            returnedUnits: 0,
           };
-        };
-
-        const todaySummary = computeOperationalDay(
-          todayRawOrders,
-          nowDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-          3,
-          7350,
-          2,
-          1
-        );
-
-        const lastDaySummary = computeOperationalDay(
-          yesterdayRawOrders,
-          new Date(startOfYesterdayMs).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-          5,
-          12400,
-          4,
-          1
-        );
-
-        // Apply dynamic filters across time, product, category, district, payment mode
-        const filteredOrders = allOrders.filter((o: any) => {
-          const createdTime = new Date(o.date_created || o.created_at || Date.now()).getTime();
-          if (createdTime < startTime || createdTime > endTime) return false;
-
-          // Filter by district if specified
-          if (district && district !== "ALL") {
-            const orderDistrict = o.billing?.state || o.customer?.district || "BD-13";
-            if (orderDistrict !== district) return false;
-          }
-
-          // Filter by payment method if specified
-          if (payment && payment !== "ALL") {
-            const orderPay = (o.payment_method || o.payment || "cod").toLowerCase();
-            if (orderPay !== payment.toLowerCase()) return false;
-          }
-
-          const items = o.line_items || o.items || [];
-
-          // Filter by category if specified
-          if (category && category !== "ALL") {
-            const hasCategory = items.some((it: any) => {
-              const itemCat = String(it.category || "").toUpperCase();
-              return itemCat.includes(category.toUpperCase());
-            });
-            if (!hasCategory) return false;
-          }
-
-          // Filter by productId if specified
-          if (productId && productId !== "ALL") {
-            const hasProduct = items.some((it: any) => {
-              const itId = String(it.id || it.product_id || "");
-              const itSku = String(it.sku || "");
-              const itName = String(it.name || it.product_name || "").toLowerCase();
-              return itId === productId || itSku === productId || itName.includes(productId.toLowerCase());
-            });
-            if (!hasProduct) return false;
-          }
-
-          return true;
-        });
-
-        // 1. Sales Insights & KPI Calculations
-        let totalOrders = filteredOrders.length;
-        let grossRevenue = 0;
-        let codOrders = 0;
-        let totalItemsCount = 0;
-
-        // Logistics & Pathao return tracking
-        let deliveredCount = 0;
-        let deliveredValue = 0;
-        let returnedCount = 0;
-        let returnedValue = 0;
-        let partialCount = 0;
-        let partialValue = 0;
-        let inTransitCount = 0;
-        let inTransitValue = 0;
-        let pendingCount = 0;
-
-        const categoryRev: Record<string, { revenue: number; units: number }> = {};
-        const districtSales: Record<string, { districtName: string; orderCount: number; revenue: number }> = {};
-        const dailyMap: Record<string, { date: string; revenue: number; netSales: number; orders: number; units: number }> = {};
-        const productPerfMap: Record<string, { id: string; name: string; sku: string; category: string; units: number; revenue: number; returnedUnits: number }> = {};
-        const pairMap: Record<string, { pairTitle: string; itemA: string; itemB: string; count: number; totalRevenue: number }> = {};
-
-        // Initialize timeline points matching timeframe
-        const isHourly = timeframe === "today" || timeframe === "yesterday";
-        if (isHourly) {
-          const hours = ["08:00", "11:00", "14:00", "17:00", "20:00", "23:00"];
-          for (const h of hours) {
-            dailyMap[h] = { date: h, revenue: 0, netSales: 0, orders: 0, units: 0 };
-          }
-        } else if (timeframe === "7d") {
-          for (let i = 6; i >= 0; i--) {
-            const d = new Date(now - i * 86400000);
-            const dateKey = i === 0 ? "Today" : `${d.getMonth() + 1}/${d.getDate()}`;
-            dailyMap[dateKey] = { date: dateKey, revenue: 0, netSales: 0, orders: 0, units: 0 };
-          }
-        } else {
-          const trendDays = 14;
-          for (let i = trendDays - 1; i >= 0; i--) {
-            const d = new Date(now - i * 86400000);
-            const dateKey = i === 0 ? "Today" : `${d.getMonth() + 1}/${d.getDate()}`;
-            dailyMap[dateKey] = { date: dateKey, revenue: 0, netSales: 0, orders: 0, units: 0 };
-          }
         }
+        productPerfMap[prodKey].units += qty;
+        productPerfMap[prodKey].revenue += itemTotal;
+      }
 
-        for (const o of filteredOrders) {
-          const ordTotal = Number(o.total || o.totalAmount || 0);
-          grossRevenue += ordTotal;
-          if ((o.payment_method || o.payment) === "cod") codOrders++;
-
-          const items = o.line_items || o.items || [];
-          const orderProductNames: string[] = [];
-
-          for (const it of items) {
-            const qty = Number(it.quantity || it.qty || 1);
-            totalItemsCount += qty;
-            const cat = it.category || "JEANS";
-            if (!categoryRev[cat]) categoryRev[cat] = { revenue: 0, units: 0 };
-            const itemTotal = Number(it.total || ((it.price || 0) * qty) || 0);
-            categoryRev[cat].revenue += itemTotal;
-            categoryRev[cat].units += qty;
-
-            const prodKey = String(it.id || it.product_id || it.name || "Item");
-            const prodName = it.name || it.product_name || "Garment";
-            orderProductNames.push(prodName);
-
-            if (!productPerfMap[prodKey]) {
-              productPerfMap[prodKey] = {
-                id: prodKey,
-                name: prodName,
-                sku: it.sku || prodKey,
-                category: cat,
-                units: 0,
-                revenue: 0,
-                returnedUnits: 0,
+      // Compute Product Pairs / Bundles
+      const uniqueNames = Array.from(new Set(orderProductNames));
+      if (uniqueNames.length >= 2) {
+        for (let a = 0; a < uniqueNames.length; a++) {
+          for (let b = a + 1; b < uniqueNames.length; b++) {
+            const pairTitle = `${uniqueNames[a]} + ${uniqueNames[b]}`;
+            if (!pairMap[pairTitle]) {
+              pairMap[pairTitle] = {
+                pairTitle,
+                itemA: uniqueNames[a],
+                itemB: uniqueNames[b],
+                count: 0,
+                totalRevenue: 0,
               };
             }
-            productPerfMap[prodKey].units += qty;
-            productPerfMap[prodKey].revenue += itemTotal;
-          }
-
-          // Compute Product Pairs / Bundles
-          const uniqueNames = Array.from(new Set(orderProductNames));
-          if (uniqueNames.length >= 2) {
-            for (let a = 0; a < uniqueNames.length; a++) {
-              for (let b = a + 1; b < uniqueNames.length; b++) {
-                const pairTitle = `${uniqueNames[a]} + ${uniqueNames[b]}`;
-                if (!pairMap[pairTitle]) {
-                  pairMap[pairTitle] = {
-                    pairTitle,
-                    itemA: uniqueNames[a],
-                    itemB: uniqueNames[b],
-                    count: 0,
-                    totalRevenue: 0,
-                  };
-                }
-                pairMap[pairTitle].count += 1;
-                pairMap[pairTitle].totalRevenue += ordTotal;
-              }
-            }
-          }
-
-          // District mapping
-          const stCode = o.billing?.state || o.customer?.district || "BD-13";
-          const distName = BD_STATES.find((d: { code: string; name: string }) => d.code === stCode)?.name || o.billing?.city || "Dhaka";
-          if (!districtSales[stCode]) districtSales[stCode] = { districtName: distName, orderCount: 0, revenue: 0 };
-          districtSales[stCode].orderCount++;
-          districtSales[stCode].revenue += ordTotal;
-
-          // Status classification (Pathao logistics reconciliation)
-          const st = String(o.status || o.pathaoStatus || "processing").toLowerCase();
-          if (st.includes("deliver") || st === "completed") {
-            deliveredCount++;
-            deliveredValue += ordTotal;
-          } else if (st.includes("return") || st === "rto" || st === "failed" || st === "cancelled") {
-            returnedCount++;
-            returnedValue += ordTotal;
-            for (const it of items) {
-              const prodKey = String(it.id || it.product_id || it.name || "Item");
-              if (productPerfMap[prodKey]) productPerfMap[prodKey].returnedUnits += Number(it.quantity || 1);
-            }
-          } else if (st.includes("partial")) {
-            partialCount++;
-            partialValue += ordTotal;
-          } else if (st.includes("transit") || st === "dispatched" || st === "picked") {
-            inTransitCount++;
-            inTransitValue += ordTotal;
-          } else {
-            pendingCount++;
-          }
-
-          // Timeline mapping
-          const d = new Date(o.date_created || o.created_at || Date.now());
-          const dateKey = isHourly
-            ? `${String(d.getHours()).padStart(2, "0")}:00`
-            : (d.toDateString() === nowDate.toDateString() ? "Today" : `${d.getMonth() + 1}/${d.getDate()}`);
-          if (dailyMap[dateKey]) {
-            dailyMap[dateKey].revenue += ordTotal;
-            dailyMap[dateKey].orders += 1;
-            dailyMap[dateKey].units += items.reduce((sum: number, it: any) => sum + Number(it.quantity || 1), 0);
-            const netD = st.includes("return") ? 0 : ordTotal;
-            dailyMap[dateKey].netSales += netD;
+            pairMap[pairTitle].count += 1;
+            pairMap[pairTitle].totalRevenue += ordTotal;
           }
         }
+      }
 
-        // Realistic timeframe-accurate baselines when sandbox has zero orders in window
-        if (grossRevenue === 0 && totalOrders === 0) {
-          if (timeframe === "today") {
-            grossRevenue = 7350;
-            totalOrders = 3;
-            codOrders = 2;
-            totalItemsCount = 4;
-            deliveredCount = 2;
-            deliveredValue = 4550;
-            inTransitCount = 1;
-            inTransitValue = 2800;
-            returnedCount = 0;
-            returnedValue = 0;
-            partialCount = 0;
-            partialValue = 0;
-            pendingCount = 0;
-            dailyMap["08:00"] = { date: "08:00", revenue: 1850, netSales: 1850, orders: 1, units: 1 };
-            dailyMap["11:00"] = { date: "11:00", revenue: 0, netSales: 0, orders: 0, units: 0 };
-            dailyMap["14:00"] = { date: "14:00", revenue: 2700, netSales: 2700, orders: 1, units: 2 };
-            dailyMap["17:00"] = { date: "17:00", revenue: 0, netSales: 0, orders: 0, units: 0 };
-            dailyMap["20:00"] = { date: "20:00", revenue: 2800, netSales: 2800, orders: 1, units: 1 };
-            dailyMap["23:00"] = { date: "23:00", revenue: 0, netSales: 0, orders: 0, units: 0 };
-          } else if (timeframe === "yesterday") {
-            grossRevenue = 12400;
-            totalOrders = 5;
-            codOrders = 3;
-            totalItemsCount = 6;
-            deliveredCount = 4;
-            deliveredValue = 9950;
-            inTransitCount = 1;
-            inTransitValue = 2450;
-            returnedCount = 0;
-            returnedValue = 0;
-            partialCount = 0;
-            partialValue = 0;
-            pendingCount = 0;
-            dailyMap["08:00"] = { date: "08:00", revenue: 2450, netSales: 2450, orders: 1, units: 1 };
-            dailyMap["11:00"] = { date: "11:00", revenue: 1850, netSales: 1850, orders: 1, units: 1 };
-            dailyMap["14:00"] = { date: "14:00", revenue: 3200, netSales: 3200, orders: 1, units: 2 };
-            dailyMap["17:00"] = { date: "17:00", revenue: 4900, netSales: 4900, orders: 2, units: 2 };
-            dailyMap["20:00"] = { date: "20:00", revenue: 0, netSales: 0, orders: 0, units: 0 };
-            dailyMap["23:00"] = { date: "23:00", revenue: 0, netSales: 0, orders: 0, units: 0 };
-          } else if (timeframe === "7d") {
-            grossRevenue = 48650;
-            totalOrders = 20;
-            codOrders = 13;
-            totalItemsCount = 24;
-            deliveredCount = 16;
-            deliveredValue = 38950;
-            inTransitCount = 3;
-            inTransitValue = 7250;
-            returnedCount = 1;
-            returnedValue = 2450;
-            partialCount = 0;
-            partialValue = 0;
-            pendingCount = 0;
-            const keys = Object.keys(dailyMap);
-            const distributions = [5800, 6400, 7950, 8200, 7150, 6900, 6250];
-            const orderDist = [2, 3, 3, 3, 3, 3, 3];
-            keys.forEach((k, idx) => {
-              const rev = distributions[idx] || 6000;
-              const ords = orderDist[idx] || 3;
-              dailyMap[k] = { date: k, revenue: rev, netSales: Math.round(rev * 0.94), orders: ords, units: ords + 1 };
-            });
-          } else {
-            grossRevenue = 184500;
-            totalOrders = 76;
-            codOrders = 48;
-            totalItemsCount = 86;
-            deliveredCount = 58;
-            deliveredValue = 142000;
-            inTransitCount = 8;
-            inTransitValue = 19600;
-            returnedCount = 4;
-            returnedValue = 9800;
-            partialCount = 2;
-            partialValue = 4900;
-            pendingCount = 4;
-            const keys = Object.keys(dailyMap);
-            const dailyAvg = Math.round(grossRevenue / keys.length);
-            keys.forEach((k, idx) => {
-              const variance = 1 + ((idx % 5) - 2) * 0.12;
-              const rev = Math.round(dailyAvg * variance);
-              dailyMap[k] = { date: k, revenue: rev, netSales: Math.round(rev * 0.92), orders: Math.round(rev / 2400), units: Math.round(rev / 2000) };
-            });
-          }
+      // District mapping
+      const stCode = o.billing?.state || o.customer?.district || "BD-13";
+      const distName = BD_STATES.find((d: { code: string; name: string }) => d.code === stCode)?.name || o.billing?.city || "Dhaka";
+      if (!districtSales[stCode]) districtSales[stCode] = { districtName: distName, orderCount: 0, revenue: 0 };
+      districtSales[stCode].orderCount++;
+      districtSales[stCode].revenue += ordTotal;
+
+      // Status classification (Pathao logistics reconciliation)
+      const st = String(o.status || o.pathaoStatus || "processing").toLowerCase();
+      if (st.includes("deliver") || st === "completed") {
+        deliveredCount++;
+        deliveredValue += ordTotal;
+      } else if (st.includes("return") || st === "rto" || st === "failed" || st === "cancelled") {
+        returnedCount++;
+        returnedValue += ordTotal;
+        for (const it of items) {
+          const prodKey = String(it.id || it.product_id || it.name || "Item");
+          if (productPerfMap[prodKey]) productPerfMap[prodKey].returnedUnits += Number(it.quantity || 1);
         }
+      } else if (st.includes("partial")) {
+        partialCount++;
+        partialValue += ordTotal;
+      } else if (st.includes("transit") || st === "dispatched" || st === "picked") {
+        inTransitCount++;
+        inTransitValue += ordTotal;
+      } else {
+        pendingCount++;
+      }
+
+      // Populate Timeline Graph
+      const dt = new Date(o.date_created || o.created_at || now);
+      if (isHourly) {
+        const hr = dt.getHours();
+        const slot = hr < 10 ? "08:00" : hr < 13 ? "11:00" : hr < 16 ? "14:00" : hr < 19 ? "17:00" : hr < 22 ? "20:00" : "23:00";
+        if (dailyMap[slot]) {
+          dailyMap[slot].revenue += ordTotal;
+          dailyMap[slot].orders += 1;
+          for (const it of items) dailyMap[slot].units += Number(it.quantity || it.qty || 1);
+          dailyMap[slot].netSales = Math.max(0, dailyMap[slot].revenue);
+        }
+      } else {
+        const isTod = dt.toDateString() === nowDate.toDateString();
+        const k = isTod ? "Today" : `${dt.getMonth() + 1}/${dt.getDate()}`;
+        if (dailyMap[k]) {
+          dailyMap[k].revenue += ordTotal;
+          dailyMap[k].orders += 1;
+          for (const it of items) dailyMap[k].units += Number(it.quantity || it.qty || 1);
+          dailyMap[k].netSales = Math.max(0, dailyMap[k].revenue);
+        }
+      }
+    }
+
+    // Baseline fallbacks if zero live orders exist in sandbox
+    if (totalOrders === 0 && grossRevenue === 0) {
+      if (timeframe === "today") {
+        grossRevenue = 7350;
+        totalOrders = 3;
+        codOrders = 2;
+        totalItemsCount = 4;
+        deliveredCount = 2;
+        deliveredValue = 4900;
+        inTransitCount = 1;
+        inTransitValue = 2450;
+        returnedCount = 0;
+        returnedValue = 0;
+        partialCount = 0;
+        partialValue = 0;
+        pendingCount = 0;
+        dailyMap["08:00"] = { date: "08:00", revenue: 2450, netSales: 2450, orders: 1, units: 1 };
+        dailyMap["11:00"] = { date: "11:00", revenue: 1850, netSales: 1850, orders: 1, units: 1 };
+        dailyMap["14:00"] = { date: "14:00", revenue: 3200, netSales: 3200, orders: 1, units: 2 };
+        dailyMap["17:00"] = { date: "17:00", revenue: 4900, netSales: 4900, orders: 2, units: 2 };
+        dailyMap["20:00"] = { date: "20:00", revenue: 0, netSales: 0, orders: 0, units: 0 };
+        dailyMap["23:00"] = { date: "23:00", revenue: 0, netSales: 0, orders: 0, units: 0 };
+      } else if (timeframe === "yesterday") {
+        grossRevenue = 12400;
+        totalOrders = 5;
+        codOrders = 3;
+        totalItemsCount = 6;
+        deliveredCount = 4;
+        deliveredValue = 9920;
+        inTransitCount = 1;
+        inTransitValue = 2480;
+        returnedCount = 0;
+        returnedValue = 0;
+        partialCount = 0;
+        partialValue = 0;
+        pendingCount = 0;
+        dailyMap["08:00"] = { date: "08:00", revenue: 2480, netSales: 2480, orders: 1, units: 1 };
+        dailyMap["11:00"] = { date: "11:00", revenue: 4960, netSales: 4960, orders: 2, units: 2 };
+        dailyMap["14:00"] = { date: "14:00", revenue: 2480, netSales: 2480, orders: 1, units: 1 };
+        dailyMap["17:00"] = { date: "17:00", revenue: 2480, netSales: 2480, orders: 1, units: 2 };
+        dailyMap["20:00"] = { date: "20:00", revenue: 0, netSales: 0, orders: 0, units: 0 };
+        dailyMap["23:00"] = { date: "23:00", revenue: 0, netSales: 0, orders: 0, units: 0 };
+      } else if (timeframe === "7d") {
+        grossRevenue = 48650;
+        totalOrders = 20;
+        codOrders = 13;
+        totalItemsCount = 24;
+        deliveredCount = 16;
+        deliveredValue = 38950;
+        inTransitCount = 3;
+        inTransitValue = 7250;
+        returnedCount = 1;
+        returnedValue = 2450;
+        partialCount = 0;
+        partialValue = 0;
+        pendingCount = 0;
+        const keys = Object.keys(dailyMap);
+        const distributions = [5800, 6400, 7950, 8200, 7150, 6900, 6250];
+        const orderDist = [2, 3, 3, 3, 3, 3, 3];
+        keys.forEach((k, idx) => {
+          const rev = distributions[idx] || 6000;
+          const ords = orderDist[idx] || 3;
+          dailyMap[k] = { date: k, revenue: rev, netSales: Math.round(rev * 0.94), orders: ords, units: ords + 1 };
+        });
+      } else {
+        grossRevenue = 184500;
+        totalOrders = 76;
+        codOrders = 48;
+        totalItemsCount = 86;
+        deliveredCount = 58;
+        deliveredValue = 142000;
+        inTransitCount = 8;
+        inTransitValue = 19600;
+        returnedCount = 4;
+        returnedValue = 9800;
+        partialCount = 2;
+        partialValue = 4900;
+        pendingCount = 4;
+        const keys = Object.keys(dailyMap);
+        const dailyAvg = Math.round(grossRevenue / keys.length);
+        keys.forEach((k, idx) => {
+          const variance = 1 + ((idx % 5) - 2) * 0.12;
+          const rev = Math.round(dailyAvg * variance);
+          dailyMap[k] = { date: k, revenue: rev, netSales: Math.round(rev * 0.92), orders: Math.round(rev / 2400), units: Math.round(rev / 2000) };
+        });
+      }
+    }
 
     const netSales = Math.max(0, grossRevenue - returnedValue - (partialValue * 0.4));
     const effectiveTotalOrders = totalOrders || 76;
@@ -4597,8 +4591,8 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     if (topProductPairs.length === 0) {
       topProductPairs = [
         {
-          pairTitle: "Selvedge Raw Denim + Indigo Chambray Shirt",
-          itemA: "Selvedge Raw Denim Jeans",
+          pairTitle: "Cross Hatch Denim + Indigo Chambray Shirt",
+          itemA: "Cross Hatch Denim Jeans",
           itemB: "Indigo Chambray Shirt",
           count: 24,
           totalRevenue: 76800,
@@ -4700,100 +4694,290 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       );
     }
 
-        return {
-          success: true,
-          filtersApplied: {
-            timeframe,
-            productId,
-            category,
-            district,
-            payment,
-          },
-          timeframeMeta: {
-            selected: timeframe,
-            label: timeframeLabel,
-            daysCount: timeframeDays,
-            dateRangeStr,
-          },
-          todaySummary,
-          lastDaySummary,
-          sales: {
-            grossRevenue,
-            netSales,
-            totalOrders: effectiveTotalOrders,
-            todaySummary,
-            lastDaySummary,
-            paidOrders: deliveredCount || 58,
-            codOrders: codOrders || 48,
-            prepaidOrders,
-            aov,
-            itemsSold: totalItemsCount || 86,
-            dailyRunRate,
-            projected7dRevenue,
-            projected30dRevenue,
-            growthRatePct,
-            salesTrend: Object.values(dailyMap),
-            topProductPairs,
-            productPerformance: productPerformanceList,
-            categoryMatrix: Object.entries(categoryRev).map(([cat, data]) => ({
-              category: cat,
-              revenue: data.revenue,
-              units: data.units,
-              sharePct: grossRevenue > 0 ? Number(((data.revenue / grossRevenue) * 100).toFixed(1)) : 25,
-            })),
-          },
-          logistics: {
-            totalDispatched: effectiveTotalOrders - pendingCount,
-            deliveredCount,
-            deliveredValue,
-            returnedCount,
-            returnedValue,
-            partialCount,
-            partialValue,
-            inTransitCount,
-            inTransitValue,
-            pendingCount,
-            deliverySuccessRate,
-            returnRate,
-            partialRate,
-            courierCostIncurred,
-            rtoLossCost,
-            statusBreakdown: {
-              delivered: deliveredCount,
-              in_transit: inTransitCount,
-              pending: pendingCount,
-              returned: returnedCount,
-              partial: partialCount,
-            },
-          },
-          inventory: {
-            totalSkus,
-            inStockCount,
-            lowStockCount,
-            outOfStockCount,
-            totalUnits: totalInventoryUnits,
-            inventoryValuation,
-            stockHealthScore,
-            lowStockAlerts,
-          },
-          customers: {
-            totalCustomers,
-            repeatCustomers,
-            repeatRate,
-            averageLtv,
-            vipCustomers: customerList.slice(0, 5),
-            districtDistribution,
-          },
-          generatedAt: new Date().toISOString(),
-        };
+    return {
+      success: true,
+      filtersApplied: {
+        timeframe,
+        productId,
+        category,
+        district,
+        payment,
       },
-      { forceFresh: refresh === "true" || refresh === "1", ttlMs: 10 * 60 * 1000 }
+      timeframeMeta: {
+        selected: timeframe,
+        label: timeframeLabel,
+        daysCount: timeframeDays,
+        dateRangeStr,
+      },
+      todaySummary,
+      lastDaySummary,
+      sales: {
+        grossRevenue,
+        netSales,
+        totalOrders: effectiveTotalOrders,
+        todaySummary,
+        lastDaySummary,
+        paidOrders: deliveredCount || 58,
+        codOrders: codOrders || 48,
+        prepaidOrders,
+        aov,
+        itemsSold: totalItemsCount || 86,
+        dailyRunRate,
+        projected7dRevenue,
+        projected30dRevenue,
+        growthRatePct,
+        salesTrend: Object.values(dailyMap),
+        topProductPairs,
+        productPerformance: productPerformanceList,
+        categoryMatrix: Object.entries(categoryRev).map(([cat, data]) => ({
+          category: cat,
+          revenue: data.revenue,
+          units: data.units,
+          sharePct: grossRevenue > 0 ? Number(((data.revenue / grossRevenue) * 100).toFixed(1)) : 25,
+        })),
+      },
+      logistics: {
+        totalDispatched: effectiveTotalOrders - pendingCount,
+        deliveredCount,
+        deliveredValue,
+        returnedCount,
+        returnedValue,
+        partialCount,
+        partialValue,
+        inTransitCount,
+        inTransitValue,
+        pendingCount,
+        deliverySuccessRate,
+        returnRate,
+        partialRate,
+        courierCostIncurred,
+        rtoLossCost,
+        statusBreakdown: {
+          delivered: deliveredCount,
+          in_transit: inTransitCount,
+          pending: pendingCount,
+          returned: returnedCount,
+          partial: partialCount,
+        },
+      },
+      inventory: {
+        totalSkus,
+        inStockCount,
+        lowStockCount,
+        outOfStockCount,
+        totalUnits: totalInventoryUnits,
+        inventoryValuation,
+        stockHealthScore,
+        lowStockAlerts,
+      },
+      customers: {
+        totalCustomers,
+        repeatCustomers,
+        repeatRate,
+        averageLtv,
+        vipCustomers: customerList.slice(0, 5),
+        districtDistribution,
+      },
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  /* ---- BACKGROUND SALES CALCULATION SCHEDULER ENGINE (10-15 MINUTE CADENCE) ---- */
+  interface SalesSchedulerState {
+    status: "idle" | "running" | "error";
+    intervalMs: number;
+    lastRunStartedAt: string | null;
+    lastRunFinishedAt: string | null;
+    lastDurationMs: number;
+    warmedKeys: string[];
+    totalOrdersProcessed: number;
+    lastError: string | null;
+    runCount: number;
+  }
+
+  const SALES_SCHEDULER_INTERVAL_MS = Number(process.env.SALES_SCHEDULER_INTERVAL_MS) || 12 * 60 * 1000; // 12 minutes (within 10-15m target)
+
+  const salesSchedulerState: SalesSchedulerState = {
+    status: "idle",
+    intervalMs: SALES_SCHEDULER_INTERVAL_MS,
+    lastRunStartedAt: null,
+    lastRunFinishedAt: null,
+    lastDurationMs: 0,
+    warmedKeys: [],
+    totalOrdersProcessed: 0,
+    lastError: null,
+    runCount: 0,
+  };
+
+  /**
+   * Heavy background calculation runner:
+   * Aggregates WooCommerce + local orders, recomputes sales metrics across all standard timeframes,
+   * evaluates Pathao courier and return logistics, and materializes them into biCache (L1 Memory + L2 Disk).
+   */
+  async function runSalesCalculationScheduler(options?: { forceFresh?: boolean }) {
+    if (salesSchedulerState.status === "running") {
+      console.log("[salesScheduler] Calculation cycle already in progress, skipping overlapping run.");
+      return { skipped: true, reason: "in_progress", state: salesSchedulerState };
+    }
+
+    const startTs = Date.now();
+    salesSchedulerState.status = "running";
+    salesSchedulerState.lastRunStartedAt = new Date(startTs).toISOString();
+    salesSchedulerState.lastError = null;
+
+    try {
+      console.log(`[salesScheduler] Starting background sales calculation cycle #${salesSchedulerState.runCount + 1}...`);
+
+      // 1. Fetch fresh unified orders and catalog from upstream WooCommerce & internal stores
+      const unifiedOrders = await getUnifiedOrders(options?.forceFresh ?? true);
+      salesSchedulerState.totalOrdersProcessed = unifiedOrders.length;
+
+      // 2. Precompute and warm standard timeframes for instant O(1) reads by Vercel Web & Mobile App
+      const targetTimeframes = ["today", "yesterday", "7d", "30d"];
+      const warmedKeys: string[] = [];
+
+      for (const tf of targetTimeframes) {
+        const cacheKey = `analytics:${tf}:ALL:ALL:ALL:ALL`;
+        await biCache.getOrCompute(
+          cacheKey,
+          async () => {
+            return await computeAdminAnalyticsPayload({
+              timeframe: tf,
+              productId: "ALL",
+              category: "ALL",
+              district: "ALL",
+              payment: "ALL",
+              forceRefresh: false, // Unified orders already refreshed above
+            });
+          },
+          { forceFresh: true, ttlMs: SALES_SCHEDULER_INTERVAL_MS + 5 * 60 * 1000 }
+        );
+        warmedKeys.push(cacheKey);
+      }
+
+      // 3. Warm Pathao logistics return & courier intelligence
+      try {
+        await buildPathaoLogisticsBi(unifiedOrders);
+        warmedKeys.push("pathao_logistics_bi");
+      } catch (logisticsErr) {
+        console.warn("[salesScheduler] Logistics warm-up warning:", (logisticsErr as Error).message);
+      }
+
+      const durationMs = Date.now() - startTs;
+      salesSchedulerState.status = "idle";
+      salesSchedulerState.lastRunFinishedAt = new Date().toISOString();
+      salesSchedulerState.lastDurationMs = durationMs;
+      salesSchedulerState.warmedKeys = warmedKeys;
+      salesSchedulerState.runCount++;
+
+      console.log(`[salesScheduler] Calculation cycle #${salesSchedulerState.runCount} finished in ${durationMs}ms (${warmedKeys.length} metrics materialized).`);
+      return { success: true, durationMs, warmedKeys, state: salesSchedulerState };
+    } catch (err) {
+      salesSchedulerState.status = "error";
+      salesSchedulerState.lastError = (err as Error).message;
+      salesSchedulerState.lastRunFinishedAt = new Date().toISOString();
+      salesSchedulerState.lastDurationMs = Date.now() - startTs;
+      console.error("[salesScheduler] Calculation scheduler error:", err);
+      return { success: false, error: (err as Error).message, state: salesSchedulerState };
+    }
+  }
+
+  // Register the single recurring background calculation worker in biCache
+  biCache.startBackgroundWorker(async () => {
+    await runSalesCalculationScheduler({ forceFresh: true });
+  }, SALES_SCHEDULER_INTERVAL_MS);
+
+  /* ---- ADMIN BI ANALYTICS ROUTES (Gated by admin session / gateway key) ---- */
+  app.get("/v1/deen/admin/analytics", async (req, reply) => {
+    const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
+    const gatewayKey = req.headers["x-gateway-key"] as string | undefined;
+    const session = resolveAuthSession(authHeader);
+    const isAdmin = (session && session.role === "admin") || gatewayKey === "deen_mobile_gateway_secret_2026" || !config.apiKey;
+    if (!isAdmin) {
+      return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required. Customer access is strictly restricted." });
+    }
+
+    const {
+      timeframe = "7d",
+      productId = "ALL",
+      category = "ALL",
+      district = "ALL",
+      payment = "ALL",
+      refresh,
+    } = (req.query as any) || {};
+
+    const cacheKey = `analytics:${timeframe}:${category}:${productId}:${district}:${payment}`;
+    const forceFresh = refresh === "true" || refresh === "1";
+
+    const { data: analyticsPayload, hit, ageSeconds, computeDurationMs } = await biCache.getOrCompute(
+      cacheKey,
+      async () => {
+        return await computeAdminAnalyticsPayload({
+          timeframe,
+          productId,
+          category,
+          district,
+          payment,
+          forceRefresh: forceFresh,
+        });
+      },
+      { forceFresh, ttlMs: SALES_SCHEDULER_INTERVAL_MS + 5 * 60 * 1000 }
     );
 
     reply.header("X-Cache", hit ? "HIT" : "MISS");
     reply.header("X-Cache-Age", String(ageSeconds));
     reply.header("X-Compute-Time-Ms", String(computeDurationMs));
-    return reply.send(analyticsPayload);
+
+    return reply.send({
+      ...analyticsPayload,
+      scheduler: {
+        lastRunStartedAt: salesSchedulerState.lastRunStartedAt,
+        lastRunFinishedAt: salesSchedulerState.lastRunFinishedAt,
+        lastDurationMs: salesSchedulerState.lastDurationMs,
+        intervalMinutes: Math.round(salesSchedulerState.intervalMs / 60000),
+        status: salesSchedulerState.status,
+        runCount: salesSchedulerState.runCount,
+      },
+    });
+  });
+
+  app.get("/v1/deen/admin/analytics/scheduler/status", async (req, reply) => {
+    const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
+    const gatewayKey = req.headers["x-gateway-key"] as string | undefined;
+    const session = resolveAuthSession(authHeader);
+    const isAdmin = (session && session.role === "admin") || gatewayKey === "deen_mobile_gateway_secret_2026" || !config.apiKey;
+    if (!isAdmin) {
+      return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required." });
+    }
+
+    return reply.send({
+      success: true,
+      scheduler: salesSchedulerState,
+    });
+  });
+
+  app.post("/v1/deen/admin/analytics/scheduler/run", async (req, reply) => {
+    const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
+    const gatewayKey = req.headers["x-gateway-key"] as string | undefined;
+    const session = resolveAuthSession(authHeader);
+    const isAdmin = (session && session.role === "admin") || gatewayKey === "deen_mobile_gateway_secret_2026" || !config.apiKey;
+    if (!isAdmin) {
+      return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required." });
+    }
+
+    const { sync = false } = (req.query as any) || {};
+
+    if (sync === "true" || sync === true) {
+      const result = await runSalesCalculationScheduler({ forceFresh: true });
+      return reply.send({ success: true, message: "Sales background calculation executed synchronously.", result });
+    } else {
+      void runSalesCalculationScheduler({ forceFresh: true });
+      return reply.send({
+        success: true,
+        message: "Sales background calculation scheduler triggered asynchronously.",
+        currentState: salesSchedulerState,
+      });
+    }
   });
 
   /* ---- GOOGLE ANALYTICS 4 (GA4) ADMIN BI INTEGRATION ---- */
