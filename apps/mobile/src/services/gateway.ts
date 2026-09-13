@@ -1475,6 +1475,42 @@ export interface DayOperationalSummary {
   deliverySuccessRate: number;
 }
 
+export interface MarketBasketRule {
+  antecedent: string;
+  consequent: string;
+  pairTitle: string;
+  supportPct: number;
+  confidencePct: number;
+  lift: number;
+  coOccurrenceCount: number;
+  bundleRevenue: number;
+  recommendationStrength: "STRONG" | "MODERATE" | "NEUTRAL";
+}
+
+export interface MarketBasketAnalytics {
+  upt: number;
+  multiItemOrderRate: number;
+  basketDistribution: {
+    singleItemPct: number;
+    twoItemsPct: number;
+    threeOrMorePct: number;
+    singleItemCount: number;
+    twoItemsCount: number;
+    threeOrMoreCount: number;
+  };
+  rules: MarketBasketRule[];
+  topBundles: Array<{
+    pairTitle: string;
+    itemA: string;
+    itemB: string;
+    count: number;
+    totalRevenue: number;
+    lift?: number;
+    confidencePct?: number;
+    supportPct?: number;
+  }>;
+}
+
 export interface AdminAnalyticsResult {
   success: boolean;
   timeframe: string;
@@ -1496,10 +1532,11 @@ export interface AdminAnalyticsResult {
     projected30dRevenue: number;
     growthRatePct: number;
     salesTrend: Array<{ date: string; revenue: number; netSales: number; orders: number }>;
-    topProductPairs?: Array<{ pairTitle: string; itemA: string; itemB: string; count: number; totalRevenue: number }>;
+    topProductPairs?: Array<{ pairTitle: string; itemA: string; itemB: string; count: number; totalRevenue: number; lift?: number; confidencePct?: number; supportPct?: number }>;
     productPerformance?: Array<{ id: string; name: string; sku: string; category: string; units: number; revenue: number; returnedUnits: number; returnRatePct: number; netSales: number }>;
     categoryMatrix: Array<{ category: string; revenue: number; units: number; sharePct: number }>;
   };
+  marketBasket?: MarketBasketAnalytics;
   logistics?: {
     totalDispatched: number;
     deliveredCount: number;

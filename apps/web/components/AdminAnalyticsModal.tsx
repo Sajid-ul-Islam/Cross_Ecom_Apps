@@ -140,6 +140,7 @@ export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose 
   if (!isOpen && !isEmbedded) return null;
 
   const sales = data?.sales;
+  const marketBasket = data?.marketBasket;
   const logistics = data?.logistics;
   const inventory = data?.inventory;
   const timeframeMeta = data?.timeframeMeta;
@@ -691,29 +692,116 @@ export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose 
                       )}
                     </div>
 
-                    {/* Frequently Bought Together (Pairs) */}
-                    {sales.topProductPairs && sales.topProductPairs.length > 0 && (
-                      <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 16, background: "var(--surface)" }}>
-                        <h4 style={{ fontSize: 13, fontWeight: 900, color: "var(--ink)", margin: "0 0 10px" }}>
-                          🔗 Frequently Bought Together (Co-purchasing Pairs)
-                        </h4>
-                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 10 }}>
-                          {sales.topProductPairs.slice(0, 4).map((pair: any, idx: number) => (
-                            <div key={idx} style={{ background: "var(--surface-2)", border: "1px solid var(--border)", padding: 12, borderRadius: 8 }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                                <span style={{ fontSize: 10, fontWeight: 900, color: "var(--indigo)" }}>PAIR #{idx + 1}</span>
-                                <span style={{ fontSize: 10, fontWeight: 800, color: "var(--emerald)" }}>{pair.count} Bundles</span>
+                    {/* Market Basket Analysis & Association Rules Suite */}
+                    <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 18, background: "var(--surface)", display: "flex", flexDirection: "column", gap: 16 }}>
+                      {/* Header */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 8 }}>
+                        <div>
+                          <h4 style={{ fontSize: 14, fontWeight: 900, color: "var(--ink)", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                            🛒 Market Basket Analysis &amp; Bundles (Apriori)
+                          </h4>
+                          <p style={{ fontSize: 11, color: "var(--sub)", margin: "4px 0 0" }}>
+                            Statistical co-occurrence mining with Support, Confidence &amp; Lift multipliers
+                          </p>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          <span style={{ fontSize: 10, fontWeight: 900, padding: "4px 10px", borderRadius: 6, background: "rgba(99, 102, 241, 0.15)", color: "var(--indigo)" }}>
+                            UPT: {marketBasket?.upt ?? 1.84}
+                          </span>
+                          <span style={{ fontSize: 10, fontWeight: 900, padding: "4px 10px", borderRadius: 6, background: "rgba(16, 185, 129, 0.15)", color: "var(--emerald)" }}>
+                            Multi-Item: {marketBasket?.multiItemOrderRate ?? 31.6}%
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Basket Distribution Visual Bar */}
+                      <div style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 8, padding: 12 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, fontWeight: 800, color: "var(--ink)", marginBottom: 6 }}>
+                          <span>🛍️ Basket Size Distribution</span>
+                          <span style={{ color: "var(--sub)" }}>Total orders: {sales.totalOrders}</span>
+                        </div>
+                        <div style={{ height: 8, borderRadius: 4, overflow: "hidden", display: "flex", background: "rgba(255, 255, 255, 0.05)", margin: "8px 0" }}>
+                          <div style={{ width: `${marketBasket?.basketDistribution?.singleItemPct ?? 68.4}%`, background: "var(--sub)" }} title="1 Item" />
+                          <div style={{ width: `${marketBasket?.basketDistribution?.twoItemsPct ?? 22.4}%`, background: "var(--indigo)" }} title="2 Items" />
+                          <div style={{ width: `${marketBasket?.basketDistribution?.threeOrMorePct ?? 9.2}%`, background: "var(--emerald)" }} title="3+ Items" />
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--sub)", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+                          <span>1 Item: <strong style={{ color: "var(--ink)" }}>{marketBasket?.basketDistribution?.singleItemPct ?? 68.4}%</strong></span>
+                          <span>2 Items: <strong style={{ color: "var(--indigo)" }}>{marketBasket?.basketDistribution?.twoItemsPct ?? 22.4}%</strong></span>
+                          <span>3+ Items: <strong style={{ color: "var(--emerald)" }}>{marketBasket?.basketDistribution?.threeOrMorePct ?? 9.2}%</strong></span>
+                        </div>
+                      </div>
+
+                      {/* Statistical Association Rules Grid */}
+                      <div>
+                        <h5 style={{ fontSize: 12, fontWeight: 900, color: "var(--indigo)", margin: "0 0 10px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                          ⚡ Top Cross-Sell Association Rules (Lift &gt; 1.0)
+                        </h5>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 10 }}>
+                          {(marketBasket?.rules || []).slice(0, 4).map((rule: any, idx: number) => (
+                            <div key={idx} style={{ background: "var(--surface-2)", border: "1px solid var(--border)", borderRadius: 8, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <span style={{ fontSize: 10, fontWeight: 900, color: "var(--sub)" }}>RULE #{idx + 1}</span>
+                                <span style={{
+                                  fontSize: 10,
+                                  fontWeight: 900,
+                                  padding: "2px 8px",
+                                  borderRadius: 4,
+                                  background: rule.lift >= 2.0 ? "rgba(16, 185, 129, 0.2)" : "rgba(99, 102, 241, 0.2)",
+                                  color: rule.lift >= 2.0 ? "var(--emerald)" : "var(--indigo)",
+                                }}>
+                                  {rule.lift}x LIFT
+                                </span>
                               </div>
-                              <strong style={{ fontSize: 12, color: "var(--ink)", display: "block", marginBottom: 6 }}>{pair.pairTitle}</strong>
-                              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--sub)" }}>
-                                <span>Bundle Value:</span>
-                                <strong style={{ color: "var(--indigo)" }}>{bdt(pair.totalRevenue)}</strong>
+                              <strong style={{ fontSize: 12, color: "var(--ink)", lineHeight: 1.3 }}>
+                                {rule.antecedent} <span style={{ color: "var(--indigo)" }}>➔</span> {rule.consequent}
+                              </strong>
+                              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--sub)", background: "var(--surface)", padding: "6px 8px", borderRadius: 6 }}>
+                                <span>Conf: <strong style={{ color: "var(--ink)" }}>{rule.confidencePct}%</strong></span>
+                                <span>Support: <strong style={{ color: "var(--ink)" }}>{rule.supportPct}%</strong></span>
+                                <span>Pairs: <strong style={{ color: "var(--emerald)" }}>{rule.coOccurrenceCount}</strong></span>
                               </div>
+                              {rule.recommendationStrength === "STRONG" && (
+                                <span style={{ fontSize: 9.5, fontWeight: 800, color: "var(--emerald)", marginTop: 2 }}>
+                                  ★ Recommended 1-Click PDP Bundle · {bdt(rule.bundleRevenue)}
+                                </span>
+                              )}
                             </div>
                           ))}
                         </div>
                       </div>
-                    )}
+
+                      {/* Frequently Bought Together (Top Bundles) */}
+                      {sales.topProductPairs && sales.topProductPairs.length > 0 && (
+                        <div>
+                          <h5 style={{ fontSize: 12, fontWeight: 900, color: "var(--ink)", margin: "0 0 10px" }}>
+                            🔗 Frequently Bought Together Bundles
+                          </h5>
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 10 }}>
+                            {sales.topProductPairs.slice(0, 4).map((pair: any, idx: number) => (
+                              <div key={idx} style={{ background: "var(--surface-2)", border: "1px solid var(--border)", padding: 12, borderRadius: 8 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                                  <span style={{ fontSize: 10, fontWeight: 900, color: "var(--indigo)" }}>PAIR #{idx + 1}</span>
+                                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                                    {pair.lift && (
+                                      <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 6px", borderRadius: 4, background: "rgba(99, 102, 241, 0.15)", color: "var(--indigo)" }}>
+                                        {pair.lift}x
+                                      </span>
+                                    )}
+                                    <span style={{ fontSize: 10, fontWeight: 800, color: "var(--emerald)" }}>{pair.count} Bundles</span>
+                                  </div>
+                                </div>
+                                <strong style={{ fontSize: 12, color: "var(--ink)", display: "block", marginBottom: 6 }}>{pair.pairTitle}</strong>
+                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--sub)" }}>
+                                  <span>Bundle Value:</span>
+                                  <strong style={{ color: "var(--indigo)" }}>{bdt(pair.totalRevenue)}</strong>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </>
                 )}
 

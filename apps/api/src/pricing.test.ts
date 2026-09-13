@@ -387,4 +387,156 @@ test("Sales Scheduler: Prevents overlapping execution storms", async () => {
   assert.equal(scheduler.state.runCount, 0); // did not increment
 });
 
+/* ------------------------------------------------------------------ */
+/*  Market Basket Analysis & Association Rules Unit Tests              */
+/* ------------------------------------------------------------------ */
+
+function calculateMarketBasket(orders: Array<{ items: string[]; total?: number }>) {
+  const N = orders.length || 1;
+  const itemFreq: Record<string, number> = {};
+  const pairFreq: Record<string, { itemA: string; itemB: string; count: number; totalRevenue: number }> = {};
+  let singleCount = 0;
+  let twoCount = 0;
+  let threePlusCount = 0;
+  let totalUnits = 0;
+
+  for (const o of orders) {
+    const qty = o.items.length;
+    totalUnits += qty;
+    if (qty === 1) singleCount++;
+    else if (qty === 2) twoCount++;
+    else if (qty >= 3) threePlusCount++;
+
+    const unique = Array.from(new Set(o.items));
+    for (const it of unique) {
+      itemFreq[it] = (itemFreq[it] || 0) + 1;
+    }
+
+    if (unique.length >= 2) {
+      for (let i = 0; i < unique.length; i++) {
+        for (let j = i + 1; j < unique.length; j++) {
+          const key = [unique[i], unique[j]].sort().join(" + ");
+          if (!pairFreq[key]) {
+            pairFreq[key] = { itemA: unique[i], itemB: unique[j], count: 0, totalRevenue: 0 };
+          }
+          pairFreq[key].count++;
+          pairFreq[key].totalRevenue += o.total || 2500;
+        }
+      }
+    }
+  }
+
+  const upt = Number((totalUnits / N).toFixed(2));
+  const multiItemOrderRate = Number((((N - singleCount) / N) * 100).toFixed(1));
+
+  const rules: Array<{
+    antecedent: string;
+    consequent: string;
+    supportPct: number;
+    confidencePct: number;
+    lift: number;
+    recommendationStrength: "STRONG" | "MODERATE" | "NEUTRAL";
+  }> = [];
+
+  for (const p of Object.values(pairFreq)) {
+    const freqA = itemFreq[p.itemA] || p.count;
+    const freqB = itemFreq[p.itemB] || p.count;
+    const countAB = p.count;
+
+    const support = countAB / N;
+    const confAtoB = countAB / freqA;
+    const liftAtoB = Number((confAtoB / (freqB / N)).toFixed(2));
+
+    rules.push({
+      antecedent: p.itemA,
+      consequent: p.itemB,
+      supportPct: Number((support * 100).toFixed(1)),
+      confidencePct: Number((confAtoB * 100).toFixed(1)),
+      lift: liftAtoB,
+      recommendationStrength: liftAtoB >= 2.0 ? "STRONG" : liftAtoB >= 1.2 ? "MODERATE" : "NEUTRAL",
+    });
+  }
+
+  return {
+    upt,
+    multiItemOrderRate,
+    basketDistribution: {
+      singleItemCount: singleCount,
+      twoItemsCount: twoCount,
+      threeOrMoreCount: threePlusCount,
+      singleItemPct: Number(((singleCount / N) * 100).toFixed(1)),
+      twoItemsPct: Number(((twoCount / N) * 100).toFixed(1)),
+      threeOrMorePct: Number(((threePlusCount / N) * 100).toFixed(1)),
+    },
+    rules,
+  };
+}
+
+test("Market Basket: Computes accurate UPT and multi-item basket distribution", () => {
+  const transactions = [
+    { items: ["Cross Hatch Denim Jeans"] },
+    { items: ["Cross Hatch Denim Jeans", "Indigo Chambray Shirt"] },
+    { items: ["Cross Hatch Denim Jeans", "Heavyweight Minimal Tee", "Indigo Chambray Shirt"] },
+    { items: ["Vintage Washed Jeans"] },
+  ];
+  const res = calculateMarketBasket(transactions);
+
+  assert.equal(res.upt, 1.75); // 7 items across 4 orders = 1.75 UPT
+  assert.equal(res.multiItemOrderRate, 50.0); // 2 of 4 orders have >= 2 items
+  assert.equal(res.basketDistribution.singleItemCount, 2);
+  assert.equal(res.basketDistribution.twoItemsCount, 1);
+  assert.equal(res.basketDistribution.threeOrMoreCount, 1);
+});
+
+test("Market Basket: Association Rules calculate Support, Confidence and Lift accurately", () => {
+  const transactions = [
+    { items: ["Cross Hatch Denim Jeans", "Indigo Chambray Shirt"] },
+    { items: ["Cross Hatch Denim Jeans", "Indigo Chambray Shirt"] },
+    { items: ["Cross Hatch Denim Jeans", "Indigo Chambray Shirt"] },
+    { items: ["Cross Hatch Denim Jeans"] },
+    { items: ["Cross Hatch Denim Jeans"] },
+    { items: ["Indigo Chambray Shirt"] },
+    { items: ["Heavyweight Minimal Tee"] },
+    { items: ["Heavyweight Minimal Tee"] },
+    { items: ["Utility Relaxed Chino"] },
+    { items: ["Heritage Black Panjabi"] },
+  ];
+
+  const res = calculateMarketBasket(transactions);
+  const rule = res.rules.find(
+    (r) => r.antecedent === "Cross Hatch Denim Jeans" && r.consequent === "Indigo Chambray Shirt"
+  );
+
+  assert.ok(rule, "Rule for Jeans -> Shirt should exist");
+  assert.equal(rule.supportPct, 30.0); // 3 / 10 = 30%
+  assert.equal(rule.confidencePct, 60.0); // 3 / 5 = 60%
+  assert.equal(rule.lift, 1.5); // 0.6 / 0.4 = 1.5x
+  assert.equal(rule.recommendationStrength, "MODERATE"); // 1.2 <= Lift < 2.0
+});
+
+test("Market Basket: Lift >= 2.0 flags STRONG recommendation for high affinity bundles", () => {
+  const transactions = [
+    { items: ["Cross Hatch Denim Jeans", "Signature Belt"] },
+    { items: ["Cross Hatch Denim Jeans", "Signature Belt"] },
+    { items: ["Other Item 1"] },
+    { items: ["Other Item 2"] },
+    { items: ["Other Item 3"] },
+    { items: ["Other Item 4"] },
+    { items: ["Other Item 5"] },
+    { items: ["Other Item 6"] },
+    { items: ["Other Item 7"] },
+    { items: ["Other Item 8"] },
+  ];
+
+  const res = calculateMarketBasket(transactions);
+  const rule = res.rules.find(
+    (r) => r.antecedent === "Cross Hatch Denim Jeans" && r.consequent === "Signature Belt"
+  );
+
+  assert.ok(rule);
+  assert.equal(rule.lift, 5.0);
+  assert.equal(rule.recommendationStrength, "STRONG");
+});
+
+
 

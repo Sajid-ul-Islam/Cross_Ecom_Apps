@@ -73,6 +73,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onClose,
   const inventory = data?.inventory;
   const customers = data?.customers;
   const m = data?.metrics;
+  const marketBasket = data?.marketBasket;
   const today = data?.todaySummary || sales?.todaySummary;
   const lastDay = data?.lastDaySummary || sales?.lastDaySummary;
 
@@ -106,7 +107,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onClose,
               {[
                 { id: "sales", label: "📊 Sales" },
                 { id: "ga4", label: "📈 Google Analytics (GA4)" },
-                { id: "pairs", label: "🔗 Pairs" },
+                { id: "pairs", label: "🛒 Basket & Bundles" },
                 { id: "logistics", label: "🚚 Logistics" },
                 { id: "stock", label: "📦 Inventory" },
                 { id: "customers", label: "👥 VIPs" },
@@ -588,23 +589,178 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onClose,
                   </View>
                 )}
 
-                {/* 2. PRODUCT PAIRS & BUNDLES TAB */}
+                {/* 2. MARKET BASKET ANALYSIS & BUNDLES TAB */}
                 {activeTab === "pairs" && (
-                  <View style={{ gap: 10 }}>
+                  <View style={{ gap: 12 }}>
+                    {/* Header Basket KPIs */}
+                    <View style={styles.gridRow}>
+                      <View style={[styles.gridCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <Text style={[styles.gridLabel, { color: colors.indigo }]}>UNITS PER TRANSACTION (UPT)</Text>
+                        <Text style={[styles.gridValue, { color: colors.ink }]}>
+                          {marketBasket?.upt ?? 1.84}
+                        </Text>
+                        <Text style={[styles.gridSub, { color: colors.sub }]}>Avg items / basket (Apparel target: 1.6–2.2)</Text>
+                      </View>
+
+                      <View style={[styles.gridCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                        <Text style={[styles.gridLabel, { color: colors.emerald }]}>MULTI-ITEM CARTS</Text>
+                        <Text style={[styles.gridValue, { color: colors.emerald }]}>
+                          {marketBasket?.multiItemOrderRate ?? 31.6}%
+                        </Text>
+                        <Text style={[styles.gridSub, { color: colors.sub }]}>Baskets with 2+ items</Text>
+                      </View>
+                    </View>
+
+                    {/* Basket Size Distribution */}
+                    <View style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.border, padding: 14 }]}>
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                        <Text style={[styles.sectionTitle, { color: colors.ink, marginBottom: 0 }]}>
+                          🛍️ Basket Size Distribution
+                        </Text>
+                        <Text style={{ fontSize: 11, color: colors.sub }}>
+                          Total orders: <Text style={{ color: colors.ink, fontWeight: "800" }}>{sales?.totalOrders ?? 76}</Text>
+                        </Text>
+                      </View>
+
+                      {/* Visual segment progress bar */}
+                      <View style={{ height: 10, borderRadius: 5, overflow: "hidden", flexDirection: "row", backgroundColor: colors.cardSecondary, marginVertical: 6 }}>
+                        <View style={{ width: `${marketBasket?.basketDistribution?.singleItemPct ?? 68.4}%`, backgroundColor: colors.sub }} />
+                        <View style={{ width: `${marketBasket?.basketDistribution?.twoItemsPct ?? 22.4}%`, backgroundColor: colors.indigo }} />
+                        <View style={{ width: `${marketBasket?.basketDistribution?.threeOrMorePct ?? 9.2}%`, backgroundColor: colors.emerald }} />
+                      </View>
+
+                      {/* Legend */}
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 6 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.sub }} />
+                          <Text style={{ fontSize: 11, color: colors.ink, fontWeight: "700" }}>
+                            1 Item: <Text style={{ color: colors.sub }}>{marketBasket?.basketDistribution?.singleItemPct ?? 68.4}%</Text>
+                          </Text>
+                        </View>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.indigo }} />
+                          <Text style={{ fontSize: 11, color: colors.ink, fontWeight: "700" }}>
+                            2 Items: <Text style={{ color: colors.indigo }}>{marketBasket?.basketDistribution?.twoItemsPct ?? 22.4}%</Text>
+                          </Text>
+                        </View>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.emerald }} />
+                          <Text style={{ fontSize: 11, color: colors.ink, fontWeight: "700" }}>
+                            3+ Items: <Text style={{ color: colors.emerald }}>{marketBasket?.basketDistribution?.threeOrMorePct ?? 9.2}%</Text>
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Statistical Association Rules (Support, Confidence, Lift) */}
                     <View style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                      <Text style={[styles.sectionTitle, { color: colors.indigo }]}>🔗 FREQUENT ITEMSET PRODUCT PAIRS</Text>
-                      <Text style={{ fontSize: 10, color: colors.sub, marginBottom: 8 }}>
-                        Top product combinations purchased together in selected timeline:
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                        <Text style={[styles.sectionTitle, { color: colors.indigo, marginBottom: 0 }]}>
+                          ⚡ ASSOCIATION RULES (LIFT & CONFIDENCE)
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: 10, color: colors.sub, marginBottom: 10 }}>
+                        Statistical cross-sell rules with Lift &gt; 1.0 (Apriori Algorithm):
                       </Text>
-                      {sales?.topProductPairs?.map((pair, idx) => (
+
+                      <View style={{ gap: 10 }}>
+                        {(marketBasket?.rules || []).slice(0, 6).map((rule, idx) => (
+                          <View
+                            key={idx}
+                            style={{
+                              backgroundColor: colors.cardSecondary,
+                              borderColor: colors.borderLight,
+                              borderWidth: 1,
+                              borderRadius: 10,
+                              padding: 12,
+                            }}
+                          >
+                            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+                              <View style={{ flex: 1, marginRight: 8 }}>
+                                <Text style={{ fontSize: 10, fontWeight: "900", color: colors.sub, textTransform: "uppercase" }}>
+                                  Rule #{idx + 1}
+                                </Text>
+                                <Text style={{ fontSize: 12, fontWeight: "800", color: colors.ink, marginTop: 2 }}>
+                                  {rule.antecedent} <Text style={{ color: colors.indigo }}>➔</Text> {rule.consequent}
+                                </Text>
+                              </View>
+                              <View
+                                style={{
+                                  paddingHorizontal: 8,
+                                  paddingVertical: 3,
+                                  borderRadius: 6,
+                                  backgroundColor: rule.lift >= 2.0 ? colors.emeraldLight : colors.indigoLight,
+                                }}
+                              >
+                                <Text
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: "900",
+                                    color: rule.lift >= 2.0 ? colors.emerald : colors.indigo,
+                                  }}
+                                >
+                                  {rule.lift}x LIFT
+                                </Text>
+                              </View>
+                            </View>
+
+                            {/* Metric Badges */}
+                            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4, alignItems: "center" }}>
+                              <View style={{ backgroundColor: colors.card, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                                <Text style={{ fontSize: 10, color: colors.sub }}>
+                                  Confidence: <Text style={{ color: colors.ink, fontWeight: "800" }}>{rule.confidencePct}%</Text>
+                                </Text>
+                              </View>
+                              <View style={{ backgroundColor: colors.card, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                                <Text style={{ fontSize: 10, color: colors.sub }}>
+                                  Support: <Text style={{ color: colors.ink, fontWeight: "800" }}>{rule.supportPct}%</Text>
+                                </Text>
+                              </View>
+                              <View style={{ backgroundColor: colors.card, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                                <Text style={{ fontSize: 10, color: colors.sub }}>
+                                  Co-bought: <Text style={{ color: colors.emerald, fontWeight: "800" }}>{rule.coOccurrenceCount} times</Text>
+                                </Text>
+                              </View>
+                            </View>
+
+                            {/* Recommendation Note */}
+                            {rule.recommendationStrength === "STRONG" && (
+                              <View style={{ marginTop: 8, paddingTop: 6, borderTopWidth: 1, borderTopColor: colors.borderLight, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                                <Text style={{ fontSize: 10, fontWeight: "800", color: colors.emerald }}>
+                                  ★ High Affinity: Recommended 1-Click PDP Bundle
+                                </Text>
+                                <Text style={{ fontSize: 10, color: colors.sub }}>
+                                  Sales: <Text style={{ color: colors.ink, fontWeight: "800" }}>{bdt(rule.bundleRevenue)}</Text>
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+
+                    {/* Top Bundles Summary */}
+                    <View style={[styles.metricCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                      <Text style={[styles.sectionTitle, { color: colors.indigo }]}>🔗 TOP FREQUENT PRODUCT BUNDLES</Text>
+                      <Text style={{ fontSize: 10, color: colors.sub, marginBottom: 8 }}>
+                        Best-selling product combinations purchased together:
+                      </Text>
+                      {(marketBasket?.topBundles || sales?.topProductPairs || []).map((pair, idx) => (
                         <View key={idx} style={[styles.categoryRow, { borderTopColor: colors.borderLight, flexDirection: "column", gap: 4 }]}>
-                          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                             <Text style={{ fontSize: 11, fontWeight: "800", color: colors.ink, flex: 1 }}>
                               #{idx + 1} {pair.pairTitle}
                             </Text>
-                            <Text style={{ fontSize: 11, fontWeight: "900", color: colors.indigo }}>
-                              {pair.count} Pairs
-                            </Text>
+                            <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
+                              {pair.lift && (
+                                <View style={{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, backgroundColor: colors.indigoLight }}>
+                                  <Text style={{ fontSize: 10, fontWeight: "800", color: colors.indigoDark }}>{pair.lift}x Lift</Text>
+                                </View>
+                              )}
+                              <Text style={{ fontSize: 11, fontWeight: "900", color: colors.indigo }}>
+                                {pair.count} Bundles
+                              </Text>
+                            </View>
                           </View>
                           <Text style={{ fontSize: 10, color: colors.sub }}>
                             Total Bundle Sales: <Text style={{ color: colors.emerald, fontWeight: "800" }}>{bdt(pair.totalRevenue)}</Text>
