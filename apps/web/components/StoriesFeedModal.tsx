@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import Link from "next/link";
 import type { SocialFeedData, SocialReel, Product } from "@/lib/api";
 import { useCart } from "@/lib/cart";
@@ -19,7 +19,10 @@ export default function StoriesFeedModal({
   initialIndex = 0,
 }: StoriesFeedModalProps) {
   const { addItem } = useCart();
-  const reels = feedData?.reels && feedData.reels.length > 0 ? feedData.reels : [];
+  const reels = useMemo(
+    () => (feedData?.reels && feedData.reels.length > 0 ? feedData.reels : []),
+    [feedData?.reels]
+  );
   const [activeIndex, setActiveIndex] = useState(initialIndex);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -29,6 +32,14 @@ export default function StoriesFeedModal({
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const lastTapRef = useRef<number>(0);
+
+  const nextReel = useCallback(() => {
+    setActiveIndex((prev) => (prev < reels.length - 1 ? prev + 1 : 0));
+  }, [reels.length]);
+
+  const prevReel = useCallback(() => {
+    setActiveIndex((prev) => (prev > 0 ? prev - 1 : Math.max(0, reels.length - 1)));
+  }, [reels.length]);
 
   useEffect(() => {
     if (isOpen) {
@@ -49,7 +60,7 @@ export default function StoriesFeedModal({
         window.removeEventListener("keydown", handleKeyDown);
       };
     }
-  }, [isOpen, initialIndex]);
+  }, [isOpen, initialIndex, onClose, nextReel, prevReel]);
 
   // Sync likes state
   useEffect(() => {
@@ -63,22 +74,6 @@ export default function StoriesFeedModal({
   }, [reels]);
 
   const currentReel: SocialReel | undefined = reels[activeIndex];
-
-  const nextReel = () => {
-    if (activeIndex < reels.length - 1) {
-      setActiveIndex((prev) => prev + 1);
-    } else {
-      setActiveIndex(0); // loop back
-    }
-  };
-
-  const prevReel = () => {
-    if (activeIndex > 0) {
-      setActiveIndex((prev) => prev - 1);
-    } else {
-      setActiveIndex(reels.length - 1);
-    }
-  };
 
   const toggleLike = (reelId: string) => {
     setLikesState((prev) => {

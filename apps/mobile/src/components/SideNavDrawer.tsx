@@ -45,7 +45,7 @@ export const SideNavDrawer: React.FC<SideNavDrawerProps> = ({
   const { profile } = useProfile();
 
   const categories = [
-    { label: "Jeans & Selvedge", query: "JEANS", icon: "👖" },
+    { label: "Jeans & Cross Hatch", query: "JEANS", icon: "👖" },
     { label: "Casual & Resort Shirts", query: "SHIRT", icon: "👔" },
     { label: "Heritage Panjabi", query: "PANJABI", icon: "✨" },
     { label: "Springfield Polos", query: "POLO", icon: "👕" },

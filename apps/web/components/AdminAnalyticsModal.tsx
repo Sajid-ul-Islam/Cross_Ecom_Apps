@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { API_URL, bdt } from "@/lib/api";
 import {
   SalesTrendAreaChart,
@@ -54,7 +54,7 @@ export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose 
   const [passkeyInput, setPasskeyInput] = useState("");
   const [passkeyError, setPasskeyError] = useState(false);
 
-  const loadData = async (forceRefresh = false) => {
+  const loadData = useCallback(async (forceRefresh = false) => {
     setLoading(true);
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("deen_web_guest_token") : null;
@@ -91,13 +91,13 @@ export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose 
     } finally {
       setLoading(false);
     }
-  };
+  }, [timeframe, categoryFilter, productFilter, districtFilter, paymentFilter]);
 
   useEffect(() => {
     if ((isEmbedded || isOpen) && isUnlocked) {
       loadData();
     }
-  }, [isEmbedded, isOpen, timeframe, categoryFilter, productFilter, districtFilter, paymentFilter, isUnlocked]);
+  }, [isEmbedded, isOpen, isUnlocked, loadData]);
 
   const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
     setStatusUpdatingId(orderId);
@@ -515,7 +515,7 @@ export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose 
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                           <span style={{ fontSize: 11, fontWeight: 900, color: "var(--indigo)", textTransform: "uppercase", letterSpacing: "0.06em", display: "flex", alignItems: "center", gap: 6 }}>
                             <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#10b981", display: "inline-block" }} />
-                            TODAY'S LIVE SALES ({today?.dateStr || "Today"})
+                            TODAY&apos;S LIVE SALES ({today?.dateStr || "Today"})
                           </span>
                           <span style={{ fontSize: 11, fontWeight: 800, color: "var(--emerald)", background: "rgba(16,185,129,0.12)", padding: "2px 8px", borderRadius: 4 }}>
                             LIVE STREAM

@@ -57,7 +57,7 @@ export default function SideNavDrawer({ isOpen, onClose, onOpenStories }: SideNa
   if (!isOpen) return null;
 
   const categories = [
-    { label: "Jeans & Selvedge", query: "JEANS", icon: "👖" },
+    { label: "Jeans & Cross Hatch", query: "JEANS", icon: "👖" },
     { label: "Casual & Resort Shirts", query: "SHIRT", icon: "👔" },
     { label: "Heritage Panjabi", query: "PANJABI", icon: "✨" },
     { label: "Springfield Polos", query: "POLO", icon: "👕" },

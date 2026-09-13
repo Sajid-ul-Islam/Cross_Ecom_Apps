@@ -13,7 +13,7 @@ import {
   Share,
 } from "react-native";
 import { X, Gift, Sparkles, Share2, Check, Tag } from "./Icons";
-import { Colors, ThemeColors } from "../theme/colors";
+import type { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { bdt } from "../services/gateway";
 import { useRewards } from "../context/RewardsContext";
@@ -32,7 +32,7 @@ const CARD_THEMES = [
   },
   {
     id: "denim",
-    name: "Raw Selvedge",
+    name: "Cross Hatch Denim",
     bg: "#0E1A2B",
     accent: "#E08D3C",
     sub: "Artisanal Denim Heritage",

@@ -90,7 +90,7 @@ function ProductCardBase({ product, style }: ProductCardProps) {
 
         {/* Wishlist Heart Button */}
         <TouchableOpacity
-          style={[styles.heartBtn, { backgroundColor: isDark ? "rgba(13, 17, 26, 0.85)" : "rgba(255, 255, 255, 0.85)" }]}
+          style={[styles.heartBtn, { backgroundColor: isDark ? "rgba(16, 16, 16, 0.85)" : "rgba(255, 255, 255, 0.85)" }]}
           onPress={() => toggleWishlist(product)}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           accessibilityRole="button"
