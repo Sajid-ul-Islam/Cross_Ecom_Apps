@@ -205,9 +205,11 @@ export default async function HomePage() {
               flex-wrap: nowrap;
               gap: 16px;
               width: max-content;
-              animation: catMarquee 32s linear infinite;
+              animation: catMarquee 80s linear infinite;
             }
-            .cat-moving-track:hover {
+            .cat-moving-track:hover,
+            .cat-moving-track:active,
+            .cat-moving-track:focus-within {
               animation-play-state: paused;
             }
             .cat-moving-card {
@@ -257,7 +259,7 @@ export default async function HomePage() {
             }
             @media (min-width: 769px) and (max-width: 1024px) {
               .cat-moving-track {
-                animation-duration: 36s;
+                animation-duration: 90s;
                 gap: 14px;
               }
             }
@@ -268,7 +270,7 @@ export default async function HomePage() {
                 height: 205px;
               }
               .cat-moving-track {
-                animation-duration: 24s;
+                animation-duration: 75s;
                 gap: 12px;
               }
             }
@@ -360,10 +362,12 @@ export default async function HomePage() {
               flex-wrap: nowrap;
               gap: 18px;
               width: max-content;
-              animation: bestSellerMarquee 220s linear infinite;
+              animation: bestSellerMarquee 480s linear infinite;
               will-change: transform;
             }
-            .bestseller-slider-track:hover {
+            .bestseller-slider-track:hover,
+            .bestseller-slider-track:active,
+            .bestseller-slider-track:focus-within {
               animation-play-state: paused;
             }
             .bestseller-card-wrap {
@@ -377,7 +381,7 @@ export default async function HomePage() {
                 width: 185px;
               }
               .bestseller-slider-track {
-                animation-duration: 200s;
+                animation-duration: 420s;
                 gap: 12px;
               }
             }

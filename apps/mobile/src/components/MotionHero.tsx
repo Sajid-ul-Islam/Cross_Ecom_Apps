@@ -9,6 +9,7 @@ import {
   Animated,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useVideoPlayer, VideoView } from "expo-video";
 import { ArrowRight, Sparkles, ShieldCheck, Play } from "./Icons";
 import { useTheme } from "../context/ThemeContext";
 
@@ -18,6 +19,7 @@ const HERO_HEIGHT = Math.round((width - 32) * (10 / 16)); // 16:10 cinematic ban
 interface HeroSlide {
   id: string;
   image: string;
+  videoUrl?: string;
   badge: string;
   title: string;
   tagline: string;
@@ -28,14 +30,16 @@ const SLIDES: HeroSlide[] = [
   {
     id: "denim_hero",
     image: "https://deencommerce.com/wp-content/uploads/2026/08/Mobile-Hero-Banner.jpg",
-    badge: "🔥 RAW SELVEDGE '26",
+    videoUrl: "https://deencommerce.com/wp-content/uploads/2026/09/Denim-Web-Banner_1920x840pxl.mp4",
+    badge: "🔥 CROSS HATCH DENIM '26",
     title: "দেশের প্রথম ডেনিম ব্র্যান্ড",
-    tagline: "13.5oz Red-Line ID Selvedge woven on vintage shuttle looms",
+    tagline: "13.5oz Cross Hatch Denim woven on vintage shuttle looms",
     categorySlug: "JEANS",
   },
   {
     id: "shirt_hero",
     image: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-1.jpg",
+    videoUrl: "https://deencommerce.com/wp-content/uploads/2026/09/END-OF-THE-SESSION-2_1920x8401.mp4",
     badge: "👔 TAILORED SHIRTS",
     title: "Pin-Point Oxford Weave",
     tagline: "Pure cotton comfort engineered for Bangladesh weather",
@@ -51,6 +55,36 @@ const SLIDES: HeroSlide[] = [
   },
 ];
 
+const HeroVideoSlide: React.FC<{ videoUrl: string; isActive: boolean }> = ({
+  videoUrl,
+  isActive,
+}) => {
+  const player = useVideoPlayer(videoUrl, (p) => {
+    p.loop = true;
+    p.muted = true;
+    if (isActive) {
+      p.play();
+    }
+  });
+
+  useEffect(() => {
+    if (isActive) {
+      player.play();
+    } else {
+      player.pause();
+    }
+  }, [isActive, player]);
+
+  return (
+    <VideoView
+      style={StyleSheet.absoluteFill}
+      player={player}
+      nativeControls={false}
+      contentFit="cover"
+    />
+  );
+};
+
 interface MotionHeroProps {
   onWatchStory?: () => void;
 }
@@ -63,7 +97,10 @@ export const MotionHero: React.FC<MotionHeroProps> = ({ onWatchStory }) => {
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
 
+  const currentSlide = SLIDES[activeIndex];
+
   useEffect(() => {
+    const duration = currentSlide.videoUrl ? 8000 : 5500;
     const timer = setInterval(() => {
       // Smooth fade out
       Animated.timing(fadeAnim, {
@@ -79,12 +116,10 @@ export const MotionHero: React.FC<MotionHeroProps> = ({ onWatchStory }) => {
           useNativeDriver: true,
         }).start();
       });
-    }, 5500);
+    }, duration);
 
     return () => clearInterval(timer);
-  }, [fadeAnim]);
-
-  const currentSlide = SLIDES[activeIndex];
+  }, [activeIndex, fadeAnim, currentSlide.videoUrl]);
 
   const handlePrimaryPress = () => {
     if (currentSlide.categorySlug) {
@@ -110,6 +145,13 @@ export const MotionHero: React.FC<MotionHeroProps> = ({ onWatchStory }) => {
             style={styles.heroImage}
             resizeMode="cover"
           />
+          {currentSlide.videoUrl ? (
+            <HeroVideoSlide
+              key={currentSlide.id}
+              videoUrl={currentSlide.videoUrl}
+              isActive={true}
+            />
+          ) : null}
         </Animated.View>
 
         {/* Multi-gradient backdrop for rich text contrast */}
