@@ -27,7 +27,7 @@ interface HeroSlide {
 const SLIDES: HeroSlide[] = [
   {
     id: "denim_hero",
-    image: "https://deencommerce.com/wp-content/uploads/2026/08/Mobile-Hero-Banner.jpg",
+    image: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
     videoUrl: "https://deencommerce.com/wp-content/uploads/2026/09/Denim-Web-Banner_1920x840pxl.mp4",
     badge: "🔥 CROSS HATCH DENIM '26",
     title: "দেশের প্রথম ডেনিম ব্র্যান্ড",
@@ -36,7 +36,7 @@ const SLIDES: HeroSlide[] = [
   },
   {
     id: "shirt_hero",
-    image: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-1.jpg",
+    image: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
     videoUrl: "https://deencommerce.com/wp-content/uploads/2026/09/END-OF-THE-SESSION-2_1920x8401.mp4",
     badge: "👔 TAILORED SHIRTS",
     title: "Pin-Point Oxford Weave",
@@ -45,7 +45,7 @@ const SLIDES: HeroSlide[] = [
   },
   {
     id: "panjabi_hero",
-    image: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
+    image: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
     badge: "🌙 HERITAGE COLLECTION",
     title: "Indigo Dobby Panjabi",
     tagline: "Artisanal hand-finished collars & timeless elegance",

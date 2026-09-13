@@ -2008,28 +2008,28 @@ export const DEFAULT_SOCIAL_FEED: SocialFeedData = {
     {
       id: 'story_1',
       title: 'Raw Selvedge',
-      image: 'https://deencommerce.com/wp-content/uploads/2025/11/Jeans.webp',
+      image: 'https://deencommerce.com/wp-content/uploads/2026/05/DEEN-90s-Blue-Jeans-Slim-Fit-101-0100-138-front.webp',
       hasUnseen: true,
       actionUrl: '/(tabs)/shop?category=JEANS',
     },
     {
       id: 'story_2',
       title: 'Heritage Panjabi',
-      image: 'https://deencommerce.com/wp-content/uploads/2026/02/Category.jpg',
+      image: 'https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Stone-Embroidered-Panjabi-106-0101-136-Front.webp',
       hasUnseen: true,
       actionUrl: '/(tabs)/shop?category=PANJABI',
     },
     {
       id: 'story_3',
       title: 'Oxford Shirts',
-      image: 'https://deencommerce.com/wp-content/uploads/2026/04/Category.webp',
+      image: 'https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Flanel-Shirt-102-0302-041-Front.webp',
       hasUnseen: false,
       actionUrl: '/(tabs)/shop?category=SHIRT',
     },
     {
       id: 'story_4',
       title: 'Dhaka Studio',
-      image: 'https://deencommerce.com/wp-content/uploads/2026/08/Mobile-Hero-Banner.jpg',
+      image: 'https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp',
       hasUnseen: false,
       actionUrl: '/(tabs)/shop',
     },
@@ -2040,7 +2040,7 @@ export const DEFAULT_SOCIAL_FEED: SocialFeedData = {
       title: 'Raw Selvedge Denim Craftsmanship',
       author: '@deencommerce',
       platform: 'instagram',
-      poster: 'https://deencommerce.com/wp-content/uploads/2026/08/Section-image.jpg',
+      poster: 'https://deencommerce.com/wp-content/uploads/2026/05/DEEN-90s-Blue-Jeans-Slim-Fit-101-0100-138-front.webp',
       videoUrl: 'https://deencommerce.com/wp-content/uploads/2026/09/Denim-Web-Banner_1920x840pxl.mp4',
       caption: 'Every fold speaks dedication. 100% shuttle-loom woven raw selvedge with signature red-line ID. Engineered to fade with your daily journey. 👖✨ #DeenDenim #RawSelvedge #MadeInBangladesh',
       likes: 1842,
@@ -2061,7 +2061,7 @@ export const DEFAULT_SOCIAL_FEED: SocialFeedData = {
       title: 'End of Season Showcase',
       author: '@deencommerce',
       platform: 'facebook',
-      poster: 'https://deencommerce.com/wp-content/uploads/2026/06/Panjabi-Section-Image.webp',
+      poster: 'https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Stone-Embroidered-Panjabi-106-0101-136-Front.webp',
       videoUrl: 'https://deencommerce.com/wp-content/uploads/2026/09/END-OF-THE-SESSION-2_1920x8401.mp4',
       caption: 'Artisanal tailoring, lightweight resort shirts & raw denim engineered for Bangladesh. Catch the season clearance drop! ⚡ #DeenCommerce #BangladeshDenim',
       likes: 2430,
@@ -2082,7 +2082,7 @@ export const DEFAULT_SOCIAL_FEED: SocialFeedData = {
       title: 'Classic Oxford Weave - Work to Weekend',
       author: '@deencommerce',
       platform: 'instagram',
-      poster: 'https://deencommerce.com/wp-content/uploads/2026/06/Shirt-Section-Image.png',
+      poster: 'https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Flanel-Shirt-102-0302-041-Front.webp',
       caption: 'Heavyweight pin-point Oxford weave. Mother-of-pearl buttons and tailored relaxed fit for Dhaka\'s climate. 👔 #DeenTailoring #OxfordShirt',
       likes: 1290,
       views: '19.4K',
@@ -2094,7 +2094,7 @@ export const DEFAULT_SOCIAL_FEED: SocialFeedData = {
         price: 1750,
         regularPrice: 1950,
         category: 'SHIRT',
-        image: 'https://deencommerce.com/wp-content/uploads/2026/04/Category.webp',
+        image: 'https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Checkmate-Executive-Formal-Shirt-102-0501-005-Front.webp',
       },
     },
     {
@@ -2102,7 +2102,7 @@ export const DEFAULT_SOCIAL_FEED: SocialFeedData = {
       title: 'Breathable Heavyweight 240 GSM Tees',
       author: '@deencommerce',
       platform: 'instagram',
-      poster: 'https://deencommerce.com/wp-content/uploads/2026/06/Half-sleeve-Section-iomage.webp',
+      poster: 'https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Essential-Black-T-shirt-105-0101-380-Front.webp',
       caption: 'Structured drop-shoulder silhouette in 100% combed compact cotton. Minimalist essential for daily wear. ⚡ #DeenStudio #DailyApparel',
       likes: 1520,
       views: '22.1K',
@@ -2114,7 +2114,7 @@ export const DEFAULT_SOCIAL_FEED: SocialFeedData = {
         price: 850,
         regularPrice: 990,
         category: 'T-SHIRT',
-        image: 'https://deencommerce.com/wp-content/uploads/2026/06/Half-sleeve-Section-iomage.webp',
+        image: 'https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Warm-Spice-T-shirt-105-0101-377-Front.webp',
       },
     },
   ],
@@ -2128,4 +2128,58 @@ export async function fetchSocialFeed(): Promise<SocialFeedData> {
     }
   } catch {}
   return DEFAULT_SOCIAL_FEED;
+}
+
+export interface SectionBannerItem {
+  id: string;
+  title: string;
+  image: string;
+  category: string;
+  actionUrl: string;
+}
+
+export const FALLBACK_SECTION_BANNERS: SectionBannerItem[] = [
+  {
+    id: "sec_denim",
+    title: "Raw Washed & Selvedge Denim Campaign",
+    image: "https://deencommerce.com/wp-content/uploads/2026/05/DEEN-90s-Blue-Jeans-Slim-Fit-101-0100-138-front.webp",
+    category: "JEANS",
+    actionUrl: "/category/JEANS",
+  },
+  {
+    id: "sec_shirt",
+    title: "Summer Essential Resort & Cuban Shirts",
+    image: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Flanel-Shirt-102-0302-041-Front.webp",
+    category: "SHIRT",
+    actionUrl: "/category/SHIRT",
+  },
+  {
+    id: "sec_panjabi",
+    title: "Artisanal Heritage Panjabi Collection",
+    image: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Stone-Embroidered-Panjabi-106-0101-136-Front.webp",
+    category: "PANJABI",
+    actionUrl: "/category/PANJABI",
+  },
+  {
+    id: "sec_halfsleeve",
+    title: "Breathable Tees & Casual Polos",
+    image: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Essential-Black-T-shirt-105-0101-380-Front.webp",
+    category: "T-SHIRT",
+    actionUrl: "/category/T-SHIRT",
+  },
+  {
+    id: "sec_trousers",
+    title: "Tailored Cargo Trousers & Everyday Comfort",
+    image: "https://deencommerce.com/wp-content/uploads/2026/09/Lefties-Baggy-Cargo-Trousers-DS-104-0402-005-Model-front.webp",
+    category: "TROUSERS",
+    actionUrl: "/category/TROUSERS",
+  },
+];
+
+export async function fetchSectionBanners(): Promise<SectionBannerItem[]> {
+  try {
+    const banners = await request<SectionBannerItem[]>("/v1/deen/section-banners", undefined, 6000);
+    if (Array.isArray(banners) && banners.length > 0) return banners;
+  } catch {}
+  return FALLBACK_SECTION_BANNERS;
 }

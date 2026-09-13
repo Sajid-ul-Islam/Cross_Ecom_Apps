@@ -21,7 +21,7 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     description:
       "Engineered for authentic fades and timeless durability. Featuring signature cross-hatch warp and weft textures, custom copper rivets, and heavy tobacco stitch thread.",
     coverImage:
-      "https://deencommerce.com/wp-content/uploads/2025/11/Jeans.webp",
+      "https://deencommerce.com/wp-content/uploads/2026/05/DEEN-90s-Blue-Jeans-Slim-Fit-101-0100-138-front.webp",
     badge: "13.5 OZ CROSS HATCH",
     craftNote: "Sanforized cross-hatch denim with authentic texture and less than 2% shrinkage.",
     filterTags: ["All", "Cross Hatch", "Slim Tapered", "Regular Fit", "Whisker Wash"],
@@ -34,7 +34,7 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     description:
       "A seamless fusion of cultural heritage and contemporary menswear. Tailored from breathable dobby cotton jacquard weaves with subtle indigo geometry.",
     coverImage:
-      "https://deencommerce.com/wp-content/uploads/2026/02/Category.jpg",
+      "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Gold-Semi-Formal-Panjabi-106-0101-123-close-2.webp",
     badge: "EID & CELEBRATION",
     craftNote: "Pure cotton jacquard weave with self-textured indigo geometric motifs.",
     filterTags: ["All", "Dobby Weave", "Semi-Slim", "Mandarin Collar", "Casual Classic"],
@@ -47,7 +47,7 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     description:
       "Designed for effortless layering and all-day comfort. Cut with single-needle tailoring, reinforced side gussets, and pre-washed soft textures.",
     coverImage:
-      "https://deencommerce.com/wp-content/uploads/2026/04/Category.webp",
+      "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Checkmate-Executive-Formal-Shirt-102-0501-005-Front.webp",
     badge: "100% COTTON",
     craftNote: "Pre-washed yarn-dyed cotton ensuring zero post-wash twisting.",
     filterTags: ["All", "Oxford", "Twill", "Button Down", "Mandarin Collar"],
@@ -60,7 +60,7 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     description:
       "The quintessential foundation of modern streetwear. Crafted from ultra-dense 240 GSM organic cotton with double-ribbed collars that never sag.",
     coverImage:
-      "https://deencommerce.com/wp-content/uploads/2026/04/category.jpg",
+      "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Warm-Spice-T-shirt-105-0101-377-Front.webp",
     badge: "240 GSM ZERO-TORQUE",
     craftNote: "Pre-shrunk ring-spun cotton engineered for maximum drape and shape retention.",
     filterTags: ["All", "Heavyweight", "Relaxed Fit", "Graphic Drops", "Plain Classics"],
@@ -73,7 +73,7 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     description:
       "Elevated casual wear crafted from heavyweight cotton pique. Finished with tipped flat-knit collars, mother-of-pearl buttons, and split side hems.",
     coverImage:
-      "https://deencommerce.com/wp-content/uploads/2025/11/Polo.webp",
+      "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Polo-103-0200-053-Front.webp",
     badge: "HONEYCOMB PIQUE",
     craftNote: "Interlock combed cotton with natural stretch and moisture-wicking weave.",
     filterTags: ["All", "Pique Cotton", "Tipped Collar", "Slim Fit", "Classic Navy"],
@@ -86,7 +86,7 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     description:
       "Ergonomic utility bottoms designed for city mobility. Featuring deep slant cargo pockets, reinforced knees, and tailored ankle cinches.",
     coverImage:
-      "https://deencommerce.com/wp-content/uploads/2026/04/Trouser-Category.jpg",
+      "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Teal-Trousers-110-0101-015-Model-Front.webp",
     badge: "COTTON RIPSTOP",
     craftNote: "High-density military-spec weave with triple-stitched stress points.",
     filterTags: ["All", "Utility Cargo", "Chino", "Ergonomic Taper", "Drawstring"],
@@ -99,7 +99,7 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     description:
       "Artisanal leather accessories handcrafted by master leatherworkers in Old Dhaka. Solid brass hardware that patinas gracefully with age.",
     coverImage:
-      "https://deencommerce.com/wp-content/uploads/2025/08/Accessories.webp",
+      "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Wallet-109-0102-071-Side-view.webp",
     badge: "VEG-TAN LEATHER",
     craftNote: "100% full-grain vegetable tanned cowhide and solid brass buckle hardware.",
     filterTags: ["All", "Belts", "Wallets", "Caps", "Bags"],

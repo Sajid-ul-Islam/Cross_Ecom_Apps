@@ -38,7 +38,7 @@ import { MotionHero } from "../../src/components/MotionHero";
 import { BrandStorySection } from "../../src/components/BrandStorySection";
 import { StoriesFeedModal } from "../../src/components/StoriesFeedModal";
 import { NotificationOptInModal, NOTIF_OPT_IN_DISMISSED_KEY } from "../../src/components/NotificationOptInModal";
-import { fetchSocialFeed, DEFAULT_SOCIAL_FEED, type SocialFeedData } from "../../src/services/gateway";
+import { fetchSocialFeed, DEFAULT_SOCIAL_FEED, type SocialFeedData, fetchSectionBanners, type SectionBannerItem } from "../../src/services/gateway";
 
 const { width } = Dimensions.get("window");
 
@@ -52,6 +52,7 @@ export default function HomeScreen() {
   const [products, setProducts] = useState<Product[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [socialFeed, setSocialFeed] = useState<SocialFeedData>(DEFAULT_SOCIAL_FEED);
+  const [sectionBanners, setSectionBanners] = useState<SectionBannerItem[]>([]);
 
   const [broadcastModalVisible, setBroadcastModalVisible] = useState(false);
   const [notifOptInVisible, setNotifOptInVisible] = useState(false);
@@ -72,6 +73,9 @@ export default function HomeScreen() {
       setProducts(p);
       fetchSocialFeed().then((sf) => {
         if (sf) setSocialFeed(sf);
+      }).catch(() => {});
+      fetchSectionBanners().then((sb) => {
+        if (sb && sb.length > 0) setSectionBanners(sb);
       }).catch(() => {});
       if (isAdmin) {
         const s = await fetchStats();
@@ -387,7 +391,7 @@ export default function HomeScreen() {
           style={{ marginHorizontal: 16, marginVertical: 12, borderRadius: 12, overflow: "hidden", height: 160, backgroundColor: "#000" }}
         >
           <Image
-            source={{ uri: "https://deencommerce.com/wp-content/uploads/2026/08/Section-image.jpg" }}
+            source={{ uri: sectionBanners[0]?.image || "https://deencommerce.com/wp-content/uploads/2026/05/DEEN-90s-Blue-Jeans-Slim-Fit-101-0100-138-front.webp" }}
             style={{ width: "100%", height: "100%" }}
             resizeMode="cover"
           />
@@ -416,7 +420,7 @@ export default function HomeScreen() {
           style={{ marginHorizontal: 16, marginVertical: 12, borderRadius: 12, overflow: "hidden", height: 160, backgroundColor: "#000" }}
         >
           <Image
-            source={{ uri: "https://deencommerce.com/wp-content/uploads/2026/06/Shirt-Section-Image.png" }}
+            source={{ uri: sectionBanners[1]?.image || "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Flanel-Shirt-102-0302-041-Front.webp" }}
             style={{ width: "100%", height: "100%" }}
             resizeMode="cover"
           />
@@ -445,7 +449,7 @@ export default function HomeScreen() {
           style={{ marginHorizontal: 16, marginVertical: 12, borderRadius: 12, overflow: "hidden", height: 160, backgroundColor: "#000" }}
         >
           <Image
-            source={{ uri: "https://deencommerce.com/wp-content/uploads/2026/06/Half-sleeve-Section-iomage.webp" }}
+            source={{ uri: sectionBanners[3]?.image || "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Essential-Black-T-shirt-105-0101-380-Front.webp" }}
             style={{ width: "100%", height: "100%" }}
             resizeMode="cover"
           />

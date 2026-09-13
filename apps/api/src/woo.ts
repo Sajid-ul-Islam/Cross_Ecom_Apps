@@ -604,13 +604,14 @@ export async function fetchWooCategoryList(): Promise<{ category: string; count:
  * WordPress media `image.src`.
  */
 export const CANONICAL_CATEGORY_COVERS: Record<string, string> = {
-  JEANS: "https://deencommerce.com/wp-content/uploads/2025/11/Jeans.webp",
-  PANJABI: "https://deencommerce.com/wp-content/uploads/2026/02/Category.jpg",
-  SHIRT: "https://deencommerce.com/wp-content/uploads/2026/04/Category.webp",
-  "T-SHIRT": "https://deencommerce.com/wp-content/uploads/2026/04/category.jpg",
-  POLO: "https://deencommerce.com/wp-content/uploads/2025/11/Polo.webp",
-  TROUSERS: "https://deencommerce.com/wp-content/uploads/2026/04/Trouser-Category.jpg",
-  ACCESSORIES: "https://deencommerce.com/wp-content/uploads/2025/08/Accessories.webp",
+  JEANS: "https://deencommerce.com/wp-content/uploads/2026/05/DEEN-90s-Blue-Jeans-Slim-Fit-101-0100-138-front.webp",
+  PANJABI: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Gold-Semi-Formal-Panjabi-106-0101-123-close-2.webp",
+  SHIRT: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Checkmate-Executive-Formal-Shirt-102-0501-005-Front.webp",
+  "T-SHIRT": "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Warm-Spice-T-shirt-105-0101-377-Front.webp",
+  POLO: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Polo-103-0200-053-Front.webp",
+  TROUSERS: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Teal-Trousers-110-0101-015-Model-Front.webp",
+  ACCESSORIES: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Wallet-109-0102-071-Side-view.webp",
+  SWEATSHIRTS: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Sweat-Shirt-108-0101-007-Front.webp",
 };
 
 export async function fetchWooCategoryImages(): Promise<Record<string, string>> {
@@ -630,13 +631,14 @@ export async function fetchWooCategoryImages(): Promise<Record<string, string>> 
         const src = c.image?.src;
         if (!src) continue;
         const s = (c.slug || "").toLowerCase();
-        if (s === "jeans") out.JEANS = normalizeImageUrl(src);
+        if (s === "jeans" || s === "denim") out.JEANS = normalizeImageUrl(src);
         else if (s === "men-panjabi" || s === "panjabi") out.PANJABI = normalizeImageUrl(src);
-        else if (s === "shirt") out.SHIRT = normalizeImageUrl(src);
-        else if (s === "t-shirts" || s === "t-shirt") out["T-SHIRT"] = normalizeImageUrl(src);
-        else if (s === "polo" || s === "polo-shirt") out.POLO = normalizeImageUrl(src);
-        else if (s === "trousers") out.TROUSERS = normalizeImageUrl(src);
-        else if (s === "accessories") out.ACCESSORIES = normalizeImageUrl(src);
+        else if (s === "shirts" || s === "shirt") out.SHIRT = normalizeImageUrl(src);
+        else if (s === "t-shirts" || s === "t-shirt" || s === "tees") out["T-SHIRT"] = normalizeImageUrl(src);
+        else if (s === "polo-shirts" || s === "polo" || s === "polo-shirt") out.POLO = normalizeImageUrl(src);
+        else if (s === "trousers" || s === "cargo-pants" || s === "trouser") out.TROUSERS = normalizeImageUrl(src);
+        else if (s === "accessories" || s === "belt" || s === "wallet") out.ACCESSORIES = normalizeImageUrl(src);
+        else if (s === "sweatshirts" || s === "winter") out.SWEATSHIRTS = normalizeImageUrl(src);
       }
     }
   } catch (e) {
@@ -674,20 +676,20 @@ export interface DeenHeroBanner {
 const DEFAULT_SLIDES: DeenHeroSlide[] = [
   {
     id: "slide_denim",
-    desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-2.jpg",
-    mobile: "https://deencommerce.com/wp-content/uploads/2026/08/Mobile-Hero-Banner.jpg",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
     videoUrl: "https://deencommerce.com/wp-content/uploads/2026/09/Denim-Web-Banner_1920x840pxl.mp4",
     badge: "দেশের প্রথম ডেনিম ব্র্যান্ড · DEEN",
     title: "Raw Washed. Selvedge Heritage.",
-    headline: "ARTISANAL INDIGO & RAW SELVEDGE",
+    headline: "ARTISANAL INDIGO & CROSS HATCH DENIM",
     subtitle: "Woven on Vintage Shuttle Looms with Deep Rope-Dyed Indigo & Artisanal Precision.",
     actionUrl: "/shop?category=JEANS",
     actionLabel: "Explore Denim Collection →",
   },
   {
     id: "slide_season_clearance",
-    desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-1.jpg",
-    mobile: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-1.jpg",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
     videoUrl: "https://deencommerce.com/wp-content/uploads/2026/09/END-OF-THE-SESSION-2_1920x8401.mp4",
     badge: "END OF SEASON DROP · 2026",
     title: "Artisanal Tailoring & Comfort.",
@@ -698,8 +700,8 @@ const DEFAULT_SLIDES: DeenHeroSlide[] = [
   },
   {
     id: "slide_tailoring",
-    desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
-    mobile: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
     badge: "BESPOKE EVERYDAY LIVING",
     title: "Tailored Comfort & Modern Classics.",
     headline: "CARGO TROUSERS & HERITAGE PANJABIS",
@@ -715,8 +717,8 @@ export async function fetchWooHeroBanner(): Promise<DeenHeroBanner> {
   if (heroCache && Date.now() - heroCache.at < CACHE_TTL_MS) return heroCache.data;
 
   const fallback: DeenHeroBanner = {
-    desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-2.jpg",
-    mobile: "https://deencommerce.com/wp-content/uploads/2026/08/Mobile-Hero-Banner.jpg",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
     title: "দেশের প্রথম ডেনিম ব্র্যান্ড",
     tagline: "Empathetic Men's Lifestyle Fashion in Bangladesh",
     subtitle: "Woven on Vintage Shuttle Looms with Deep Rope-Dyed Indigo & Artisanal Precision",
@@ -733,30 +735,23 @@ export async function fetchWooHeroBanner(): Promise<DeenHeroBanner> {
     });
     if (res.ok) {
       const mediaList = (await res.json()) as Array<{ source_url?: string; title?: { rendered?: string } }>;
-      const webBanner2 = mediaList.find((m) => /web-banner-2/i.test(m.source_url || ""));
-      const webBanner1 = mediaList.find((m) => /web-banner-1/i.test(m.source_url || ""));
-      const webBanner0 = mediaList.find((m) => /web-banner\./i.test(m.source_url || ""));
-      const mobileBanner = mediaList.find((m) => /mobile-hero-banner/i.test(m.source_url || ""));
+      const desktopImgs = mediaList
+        .filter((m) => {
+          const t = (m.title?.rendered || "").toLowerCase();
+          return (t.includes("web") || t.includes("desktop") || t.includes("banner")) && !t.includes("mobile");
+        })
+        .map((m) => normalizeImageUrl(m.source_url || ""))
+        .filter(Boolean);
+      const mobileImgs = mediaList
+        .filter((m) => (m.title?.rendered || "").toLowerCase().includes("mobile"))
+        .map((m) => normalizeImageUrl(m.source_url || ""))
+        .filter(Boolean);
 
-      if (webBanner2?.source_url) {
-        fallback.desktop = normalizeImageUrl(webBanner2.source_url);
-        fallback.slides[0].desktop = normalizeImageUrl(webBanner2.source_url);
-      }
-      if (mobileBanner?.source_url) {
-        fallback.mobile = normalizeImageUrl(mobileBanner.source_url);
-        fallback.slides[0].mobile = normalizeImageUrl(mobileBanner.source_url);
-      }
-      if (webBanner1?.source_url) {
-        fallback.slides[1].desktop = normalizeImageUrl(webBanner1.source_url);
-        fallback.slides[1].mobile = normalizeImageUrl(webBanner1.source_url);
-      }
-      if (webBanner0?.source_url) {
-        fallback.slides[2].desktop = normalizeImageUrl(webBanner0.source_url);
-        fallback.slides[2].mobile = normalizeImageUrl(webBanner0.source_url);
-      }
+      if (desktopImgs.length > 0) fallback.desktop = desktopImgs[0];
+      if (mobileImgs.length > 0) fallback.mobile = mobileImgs[0];
     }
   } catch (e) {
-    console.warn("[woo] live hero banner fetch failed, using fallback:", (e as Error).message);
+    console.warn("[woo] live hero banner fetch failed, using canonical hero:", (e as Error).message);
   }
 
   heroCache = { at: Date.now(), data: fallback };
@@ -775,35 +770,35 @@ const CANONICAL_SECTION_BANNERS: DeenSectionBanner[] = [
   {
     id: "sec_denim",
     title: "Raw Washed & Selvedge Denim Campaign",
-    image: "https://deencommerce.com/wp-content/uploads/2026/08/Section-image.jpg",
+    image: "https://deencommerce.com/wp-content/uploads/2026/05/DEEN-90s-Blue-Jeans-Slim-Fit-101-0100-138-front.webp",
     category: "JEANS",
     actionUrl: "/shop?category=JEANS",
   },
   {
     id: "sec_shirt",
     title: "Summer Essential Resort & Cuban Shirts",
-    image: "https://deencommerce.com/wp-content/uploads/2026/06/Shirt-Section-Image.png",
+    image: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Flanel-Shirt-102-0302-041-Front.webp",
     category: "SHIRT",
     actionUrl: "/shop?category=SHIRT",
   },
   {
     id: "sec_panjabi",
     title: "Artisanal Heritage Panjabi Collection",
-    image: "https://deencommerce.com/wp-content/uploads/2026/06/Panjabi-Section-Image.webp",
+    image: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Stone-Embroidered-Panjabi-106-0101-136-Front.webp",
     category: "PANJABI",
     actionUrl: "/shop?category=PANJABI",
   },
   {
     id: "sec_halfsleeve",
     title: "Breathable Tees & Casual Polos",
-    image: "https://deencommerce.com/wp-content/uploads/2026/06/Half-sleeve-Section-iomage.webp",
+    image: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Essential-Black-T-shirt-105-0101-380-Front.webp",
     category: "T-SHIRT",
     actionUrl: "/shop?category=T-SHIRT",
   },
   {
     id: "sec_trousers",
     title: "Tailored Cargo Trousers & Everyday Comfort",
-    image: "https://deencommerce.com/wp-content/uploads/2026/05/Section-Image-4.jpg",
+    image: "https://deencommerce.com/wp-content/uploads/2026/09/Lefties-Baggy-Cargo-Trousers-DS-104-0402-005-Model-front.webp",
     category: "TROUSERS",
     actionUrl: "/shop?category=TROUSERS",
   },

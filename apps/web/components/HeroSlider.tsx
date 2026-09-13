@@ -92,8 +92,8 @@ export default function HeroSlider({ bannerData }: HeroSliderProps) {
       : [
           {
             id: "slide_denim",
-            desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-2.jpg",
-            mobile: "https://deencommerce.com/wp-content/uploads/2026/08/Mobile-Hero-Banner.jpg",
+            desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
+            mobile: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
             badge: "",
             title: "",
             headline: "",

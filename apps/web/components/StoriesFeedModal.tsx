@@ -239,9 +239,9 @@ export default function StoriesFeedModal({
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="https://deencommerce.com/wp-content/uploads/2025/11/Jeans.webp"
+              src={currentReel.poster || "https://deencommerce.com/wp-content/uploads/2026/05/DEEN-90s-Blue-Jeans-Slim-Fit-101-0100-138-front.webp"}
               alt="DEEN Logo"
-              style={{ width: 34, height: 34, borderRadius: "50%", border: "2px solid #6366f1" }}
+              style={{ width: 34, height: 34, borderRadius: "50%", border: "2px solid #6366f1", objectFit: "cover" }}
             />
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
