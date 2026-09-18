@@ -37,7 +37,7 @@ export function ArrowRightIcon({ size = 14 }: { size?: number }) {
 export const CHIPS = [
   { emoji: "🧵", title: "Red-Line Selvedge", sub: "13.5oz vintage shuttle loom" },
   { emoji: "✂️", title: "Dhaka Central Studio", sub: "In-house artisan master tailors" },
-  { emoji: "🏬", title: "4 Retail Showrooms", sub: "Mirpur 12, Wari & Cumilla" },
+  { emoji: "🏬", title: "4 Retail Showrooms", sub: "Mirpur 12, Wari, Cumilla & Sylhet" },
   { emoji: "🔄", title: "Doorstep Exchange", sub: "7-day hassle-free size swaps" },
 ];
 
@@ -76,7 +76,7 @@ export const TRUST_ITEMS: TrustItem[] = [
     tone: "var(--crimson)",
     title: "Flagship Stores",
     desc: "Visit our outlets for personal fittings and full collection previews.",
-    points: ["Mirpur 12 (Dhaka)", "Wari (Dhaka) · Cumilla"],
-    tag: "MIRPUR 12 · WARI · CUMILLA",
+    points: ["Mirpur 12 & Wari (Dhaka)", "Cumilla & Sylhet Showrooms"],
+    tag: "MIRPUR 12 · WARI · CUMILLA · SYLHET",
   },
 ];

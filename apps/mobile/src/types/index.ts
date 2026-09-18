@@ -14,6 +14,8 @@ export interface Product {
   sku: string;
   name: string;
   category: "JEANS" | "PANJABI" | "SHIRT" | "T-SHIRT" | "TROUSERS" | "POLO" | "ACCESSORIES" | "OTHER";
+  segment?: "collection" | "select";
+  brand?: string;
   price: number;
   salePrice?: number;
   regularPrice?: number;

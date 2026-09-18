@@ -72,8 +72,13 @@ function ProductCardBase({ product, style }: ProductCardProps) {
             <ActivityIndicator size="small" color={colors.indigo} />
           </View>
         )}
+        {product.segment === "select" && (
+          <View style={styles.badgeSelect}>
+            <Text style={styles.badgeSelectText}>⚡ SELECT</Text>
+          </View>
+        )}
         {product.isNew && (
-          <View style={[styles.badgeNew, { backgroundColor: colors.indigo }]}>
+          <View style={[styles.badgeNew, { backgroundColor: colors.indigo }, product.segment === "select" && styles.badgeNewOffset]}>
             <Text style={styles.badgeNewText}>NEW</Text>
           </View>
         )}
@@ -101,10 +106,16 @@ function ProductCardBase({ product, style }: ProductCardProps) {
       </View>
 
       <View style={styles.info}>
-        <Text style={[styles.category, { color: colors.sub }]}>{product.category}</Text>
+        <Text style={[styles.category, { color: colors.sub }]}>
+          {product.category}
+          {product.brand && product.brand !== "DEEN" ? ` · ${product.brand.toUpperCase()}` : ""}
+        </Text>
         <Text style={[styles.name, { color: colors.ink }]} numberOfLines={2}>
           {product.name}
         </Text>
+        {product.sku ? (
+          <Text style={[styles.sku, { color: colors.faint }]}>SKU: {product.sku}</Text>
+        ) : null}
 
         <View style={styles.priceRow}>
           <Text style={[styles.price, { color: isDark ? colors.indigo : colors.indigoDark }]}>
@@ -172,11 +183,29 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 4,
   },
+  badgeNewOffset: {
+    top: 34,
+  },
   badgeNewText: {
     color: "#FFFFFF",
     fontSize: 9,
     fontWeight: "800",
     letterSpacing: 0.8,
+  },
+  badgeSelect: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 4,
+    backgroundColor: "#1C1917",
+  },
+  badgeSelectText: {
+    color: "#D97706",
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
   badgeSale: {
     position: "absolute",
@@ -232,8 +261,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     lineHeight: 18,
-    marginBottom: 6,
+    marginBottom: 3,
     minHeight: 36,
+  },
+  sku: {
+    fontSize: 9,
+    fontFamily: "monospace" as const,
+    letterSpacing: 0.3,
+    marginBottom: 5,
+    opacity: 0.7,
   },
   priceRow: {
     flexDirection: "row",

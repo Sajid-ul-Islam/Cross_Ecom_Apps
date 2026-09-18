@@ -87,8 +87,24 @@ export default function ProductCard({ product }: Props) {
           </div>
         )}
 
+        {product.segment === "select" && (
+          <span
+            className="product-card__badge"
+            style={{
+              left: 8,
+              top: 8,
+              background: "#1e1b4b",
+              color: "#fbbf24",
+              border: "1px solid rgba(251, 191, 36, 0.4)",
+            }}
+          >
+            ⚡ SELECT
+          </span>
+        )}
         {product.isNew && (
-          <span className="product-card__badge product-card__badge--new">NEW</span>
+          <span className="product-card__badge product-card__badge--new" style={product.segment === "select" ? { top: 32 } : undefined}>
+            NEW
+          </span>
         )}
         {discountPct > 0 && (
           <span className="product-card__badge product-card__badge--sale">
@@ -113,15 +129,14 @@ export default function ProductCard({ product }: Props) {
             width: 32,
             height: 32,
             borderRadius: "50%",
-            background: "rgba(255, 255, 255, 0.92)",
+            background: "rgba(255,255,255,0.85)",
             backdropFilter: "blur(4px)",
-            border: "none",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             cursor: "pointer",
-            zIndex: 5,
-            boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+            zIndex: 2,
             transition: "transform 0.15s ease",
           }}
         >
@@ -158,20 +173,33 @@ export default function ProductCard({ product }: Props) {
               letterSpacing: 0.5,
               cursor: "pointer",
               opacity: 0,
-              transition: "opacity 0.2s, background 0.2s",
-              textAlign: "center"
+              transition: "opacity 0.2s ease, background 0.2s ease",
+              textAlign: "center",
+              zIndex: 2,
             }}
             className="product-card__quick-add"
           >
-            {added ? "✓ ADDED" : "+ QUICK ADD"}
+            {added ? "✓ ADDED TO BAG" : "+ QUICK ADD"}
           </div>
         )}
       </div>
 
       {/* Info */}
       <div className="product-card__info">
-        <p className="product-card__category">{product.category}</p>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4 }}>
+          <p className="product-card__category">{product.category}</p>
+          {product.brand && product.brand !== "DEEN" && (
+            <span style={{ fontSize: 10, fontWeight: 800, color: "var(--indigo)", textTransform: "uppercase" }}>
+              {product.brand}
+            </span>
+          )}
+        </div>
         <p className="product-card__name">{product.name}</p>
+        {product.sku && (
+          <p style={{ fontSize: 10, color: "var(--sub)", fontFamily: "monospace", letterSpacing: 0.3, marginBottom: 4, opacity: 0.75 }}>
+            SKU: {product.sku}
+          </p>
+        )}
         <div className="product-card__price-row">
           <span className="product-card__price">{bdt(currentPrice)}</span>
           {hasDiscount && originalPrice && (

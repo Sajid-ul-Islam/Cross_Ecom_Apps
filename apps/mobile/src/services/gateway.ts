@@ -259,11 +259,32 @@ export function startGatewayKeepAlive(intervalMs = 4 * 60 * 1000): () => void {
 
 /* ----------------------------- catalog ----------------------------- */
 
-function applyFilters(list: Product[], category?: DeenCategory, query?: string): Product[] {
+function applyFilters(
+  list: Product[],
+  category?: DeenCategory,
+  query?: string,
+  segment?: "all" | "collection" | "select"
+): Product[] {
   let out = (list || []).filter((p) => (p.stockStatus || "instock") !== "outofstock");
-  if (category && category !== "ALL") {
-    out = out.filter((p) => p.category === category);
+
+  // Segment filtering (collection vs select)
+  if (segment === "select") {
+    out = out.filter((p) => p.segment === "select");
+  } else if (segment === "collection") {
+    out = out.filter((p) => p.segment === "collection" || !p.segment);
   }
+
+  if (category && category !== "ALL") {
+    const norm = (category as string).toUpperCase().replace(/[- ]/g, "_");
+    if (norm === "DEEN_SELECT" || norm === "SELECT") {
+      out = out.filter((p) => p.segment === "select");
+    } else if (norm === "DEEN_COLLECTION" || norm === "COLLECTION") {
+      out = out.filter((p) => p.segment === "collection" || !p.segment);
+    } else {
+      out = out.filter((p) => p.category === category);
+    }
+  }
+
   if (query && query.trim()) {
     const q = query.toLowerCase();
     out = out.filter(
@@ -271,7 +292,10 @@ function applyFilters(list: Product[], category?: DeenCategory, query?: string):
         p.name.toLowerCase().includes(q) ||
         p.category.toLowerCase().includes(q) ||
         p.sku.toLowerCase().includes(q) ||
-        (p.fabric || "").toLowerCase().includes(q)
+        (p.fabric || "").toLowerCase().includes(q) ||
+        (p.brand && p.brand.toLowerCase().includes(q)) ||
+        (q.includes("select") && p.segment === "select") ||
+        (q.includes("collection") && (p.segment === "collection" || !p.segment))
     );
   }
   return out;
@@ -354,13 +378,33 @@ export function mapStoreProductToMobile(p: any): Product {
   const secondaryImg = rawImgs[1]?.full || primaryImg;
   const thumbImg = rawImgs[0]?.thumb || primaryImg;
 
-  const cleanName = (p.name || "").replace(/&#038;/g, "&").replace(/&amp;/g, "&").replace(/&quot;/g, '"');
+  const isSelect = (p.categories || []).some(
+    (c: any) =>
+      c.id === 1281 ||
+      c.parent === 1281 ||
+      /deen\s*select/i.test(c.name || "") ||
+      /deen-select/i.test(c.slug || "")
+  );
+  const segment: "collection" | "select" = isSelect ? "select" : "collection";
+  const brand = /springfield/i.test(p.name)
+    ? "Springfield"
+    : /lefties/i.test(p.name)
+    ? "Lefties"
+    : /pull\s*&?\s*bear/i.test(p.name)
+    ? "Pull & Bear"
+    : /zara/i.test(p.name)
+    ? "Zara"
+    : isSelect
+    ? "DEEN Select"
+    : "DEEN";
 
   return {
     id: String(p.id),
     sku: p.sku || `DS-${p.id}`,
-    name: cleanName,
+    name: p.name,
     category,
+    segment,
+    brand,
     price: regularPrice || currentPrice,
     salePrice: onSale ? salePrice : undefined,
     regularPrice: onSale ? regularPrice : undefined,
@@ -409,14 +453,16 @@ export async function fetchDirectStoreProducts(perPage = 100): Promise<Product[]
 export async function fetchProducts(
   category?: DeenCategory,
   query?: string,
-  sort?: "price-asc" | "price-desc" | "name-asc" | "new"
+  sort?: "price-asc" | "price-desc" | "name-asc" | "new",
+  segment?: "all" | "collection" | "select"
 ): Promise<Product[]> {
   const params = new URLSearchParams();
   if (category && category !== "ALL") params.set("category", category);
+  if (segment && segment !== "all") params.set("segment", segment);
   if (query && query.trim()) params.set("q", query.trim());
   if (sort) params.set("sort", sort);
   const qs = params.toString();
-  const cacheKey = `products_${category || "ALL"}_${query || ""}_${sort || "default"}`;
+  const cacheKey = `products_${category || "ALL"}_${segment || "all"}_${query || ""}_${sort || "default"}`;
 
   try {
     // Use fetch-or-cache: returns cached data if fresh, otherwise fetches from API
@@ -432,15 +478,15 @@ export async function fetchProducts(
           // Tier 2: Render Gateway failed/cold-starting -> Direct WooCommerce Store API fallback
           const directWp = await fetchDirectStoreProducts(100);
           if (Array.isArray(directWp) && directWp.length > 0) {
-            return applyFilters(directWp, category, query);
+            return applyFilters(directWp, category, query, segment);
           }
         }
         // If API returned empty/failed, fall back to bundled
-        return applyFilters(getBundledProducts(), category, query);
+        return applyFilters(getBundledProducts(), category, query, segment);
       }
     );
     if (Array.isArray(list) && list.length > 0) {
-      const filtered = applyFilters(list, category, query);
+      const filtered = applyFilters(list, category, query, segment);
       return sort ? sortProductsLocal(filtered, sort) : filtered;
     }
   } catch {
@@ -451,13 +497,13 @@ export async function fetchProducts(
   try {
     const directWp = await fetchDirectStoreProducts(100);
     if (Array.isArray(directWp) && directWp.length > 0) {
-      const filtered = applyFilters(directWp, category, query);
+      const filtered = applyFilters(directWp, category, query, segment);
       return sort ? sortProductsLocal(filtered, sort) : filtered;
     }
   } catch {}
 
   // Tier 3: Fallback to bundled snapshot
-  const bundled = applyFilters(getBundledProducts(), category, query);
+  const bundled = applyFilters(getBundledProducts(), category, query, segment);
   return sort ? sortProductsLocal(bundled, sort) : bundled;
 }
 

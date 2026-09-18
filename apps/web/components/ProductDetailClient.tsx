@@ -175,7 +175,44 @@ export default function ProductDetailClient({
         {/* Info & Buying Controls */}
         <div>
           {/* Category & Badges */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+            {product.segment === "select" ? (
+              <span
+                style={{
+                  background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)",
+                  color: "#fbbf24",
+                  border: "1px solid rgba(251, 191, 36, 0.4)",
+                  padding: "3px 8px",
+                  borderRadius: 4,
+                  fontSize: 11,
+                  fontWeight: 900,
+                  letterSpacing: "0.5px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <span>⚡</span> DEEN SELECT {product.brand && product.brand !== "DEEN" ? `· ${product.brand.toUpperCase()}` : "· CURATED DROP"}
+              </span>
+            ) : (
+              <span
+                style={{
+                  background: "rgba(99, 102, 241, 0.1)",
+                  color: "var(--indigo)",
+                  border: "1px solid rgba(99, 102, 241, 0.3)",
+                  padding: "3px 8px",
+                  borderRadius: 4,
+                  fontSize: 11,
+                  fontWeight: 900,
+                  letterSpacing: "0.5px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <span>💎</span> DEEN COLLECTION
+              </span>
+            )}
             <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: "var(--sub)", textTransform: "uppercase" }}>
               {product.category}
             </span>
@@ -191,9 +228,15 @@ export default function ProductDetailClient({
             )}
           </div>
 
-          <h1 style={{ fontSize: 28, fontWeight: 900, color: "var(--ink)", lineHeight: 1.25, marginBottom: 12 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 900, color: "var(--ink)", lineHeight: 1.25, marginBottom: 6 }}>
             {product.name}
           </h1>
+
+          {product.sku && (
+            <p style={{ fontSize: 11, fontFamily: "monospace", color: "var(--sub)", letterSpacing: 0.4, marginBottom: 12, opacity: 0.8 }}>
+              SKU: <strong style={{ color: "var(--ink)" }}>{product.sku}</strong>
+            </p>
+          )}
 
           {/* Rating */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>

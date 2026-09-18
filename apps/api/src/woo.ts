@@ -94,11 +94,33 @@ function normalizeImageUrl(src: string): string {
   return clean;
 }
 
+function isDeenSelectCategory(categories: Array<{ id?: number; name?: string; slug?: string; parent?: number }>): boolean {
+  return (categories || []).some(
+    (c) =>
+      c.id === 1281 ||
+      c.parent === 1281 ||
+      /deen\s*select/i.test(c.name || "") ||
+      /deen-select/i.test(c.slug || "")
+  );
+}
+
+function detectBrand(name: string, isSelect: boolean): string {
+  const lower = (name || "").toLowerCase();
+  if (/springfield/i.test(lower)) return "Springfield";
+  if (/lefties/i.test(lower)) return "Lefties";
+  if (/pull\s*&?\s*bear/i.test(lower)) return "Pull & Bear";
+  if (/zara/i.test(lower)) return "Zara";
+  return isSelect ? "DEEN Select" : "DEEN";
+}
+
 function mapWooToDeen(p: WooProduct): DeenProduct | null {
   // Skip draft/pending products — customers should never see them
   if (p.status && p.status !== "publish" && p.status !== "private") return null;
   const catNames = p.categories.map((c) => c.name);
   const category = mapCategory(catNames);
+  const isSelect = isDeenSelectCategory(p.categories || []);
+  const segment: "collection" | "select" = isSelect ? "select" : "collection";
+  const brand = detectBrand(p.name, isSelect);
   const sizes = getSizes(p);
   const pct = parseDiscountPct(catNames);
   const current = Number(p.price) || 0;
@@ -125,6 +147,8 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
     sku: p.sku,
     name: p.name,
     category,
+    segment,
+    brand,
     price: regularPrice || current,
     salePrice,
     regularPrice,
@@ -151,6 +175,8 @@ function mapStoreProductToDeen(p: any): DeenProduct {
   const onSale = Boolean(p.on_sale && regularPrice && salePrice && regularPrice > salePrice);
   const catNames = (p.categories || []).map((c: any) => c.name);
   const category = mapCategory(catNames);
+  const isSelect = isDeenSelectCategory(p.categories || []);
+  const segment: "collection" | "select" = isSelect ? "select" : "collection";
   const pct = onSale && regularPrice && salePrice
     ? Math.round(((regularPrice - salePrice) / regularPrice) * 100)
     : parseDiscountPct(catNames);
@@ -163,12 +189,15 @@ function mapStoreProductToDeen(p: any): DeenProduct {
   const secondaryImg = imgs[1] || primaryImg;
 
   const cleanName = (p.name || "").replace(/&#038;/g, "&").replace(/&amp;/g, "&").replace(/&quot;/g, '"');
+  const brand = detectBrand(cleanName, isSelect);
 
   return {
     id: String(p.id),
     sku: p.sku || `DS-${p.id}`,
     name: cleanName,
     category,
+    segment,
+    brand,
     price: regularPrice || currentPrice,
     salePrice: onSale ? salePrice : undefined,
     regularPrice: onSale ? regularPrice : undefined,
@@ -612,6 +641,8 @@ export const CANONICAL_CATEGORY_COVERS: Record<string, string> = {
   TROUSERS: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Teal-Trousers-110-0101-015-Model-Front.webp",
   ACCESSORIES: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Wallet-109-0102-071-Side-view.webp",
   SWEATSHIRTS: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Sweat-Shirt-108-0101-007-Front.webp",
+  DEEN_SELECT: "https://deencommerce.com/wp-content/uploads/2026/09/Springfield-Polo-Shirt-103-0100-119.webp",
+  DEEN_COLLECTION: "https://deencommerce.com/wp-content/uploads/2026/05/DEEN-90s-Blue-Jeans-Slim-Fit-101-0100-138-front.webp",
 };
 
 export async function fetchWooCategoryImages(): Promise<Record<string, string>> {
@@ -639,6 +670,8 @@ export async function fetchWooCategoryImages(): Promise<Record<string, string>> 
         else if (s === "trousers" || s === "cargo-pants" || s === "trouser") out.TROUSERS = normalizeImageUrl(src);
         else if (s === "accessories" || s === "belt" || s === "wallet") out.ACCESSORIES = normalizeImageUrl(src);
         else if (s === "sweatshirts" || s === "winter") out.SWEATSHIRTS = normalizeImageUrl(src);
+        else if (s === "deen-select" || s === "deen_select") out.DEEN_SELECT = normalizeImageUrl(src);
+        else if (s === "men" || s === "all-products") out.DEEN_COLLECTION = normalizeImageUrl(src);
       }
     }
   } catch (e) {
@@ -699,15 +732,15 @@ const DEFAULT_SLIDES: DeenHeroSlide[] = [
     actionLabel: "Explore Season Sale →",
   },
   {
-    id: "slide_tailoring",
-    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
-    mobile: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
-    badge: "BESPOKE EVERYDAY LIVING",
-    title: "Tailored Comfort & Modern Classics.",
-    headline: "CARGO TROUSERS & HERITAGE PANJABIS",
-    subtitle: "Enduring silhouettes, reinforced bar-tacking, and supreme cotton craftsmanship.",
-    actionUrl: "/shop",
-    actionLabel: "Discover All Pieces →",
+    id: "slide_curated_drops",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/Springfield-Polo-Shirt-103-0100-119-600x750.webp",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/09/Springfield-Polo-Shirt-103-0100-119-600x750.webp",
+    badge: "DEEN SELECT · CURATED DROPS",
+    title: "Curated International Labels.",
+    headline: "SPRINGFIELD, LEFTIES & PULL & BEAR",
+    subtitle: "European casual cuts, breathable pique polos, and utility twill pants.",
+    actionUrl: "/shop?segment=select",
+    actionLabel: "Discover DEEN Select →",
   },
 ];
 

@@ -311,10 +311,58 @@ export default function SideNavDrawer({ isOpen, onClose, onOpenStories }: SideNa
           </div>
         </div>
 
+        {/* Brand Lines: DEEN Collection & DEEN Select */}
+        <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "var(--sub)", letterSpacing: "0.08em", marginBottom: 10 }}>
+            Brand Lines
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <Link
+              href="/shop?segment=collection"
+              onClick={onClose}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
+                padding: "10px 12px",
+                borderRadius: 8,
+                background: "rgba(99, 102, 241, 0.08)",
+                border: "1px solid rgba(99, 102, 241, 0.25)",
+                textDecoration: "none",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 800, color: "var(--indigo)" }}>
+                <span>💎</span> Collection
+              </div>
+              <div style={{ fontSize: 10, color: "var(--sub)" }}>Artisanal In-House Craft</div>
+            </Link>
+
+            <Link
+              href="/shop?segment=select"
+              onClick={onClose}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 4,
+                padding: "10px 12px",
+                borderRadius: 8,
+                background: "rgba(217, 119, 6, 0.08)",
+                border: "1px solid rgba(217, 119, 6, 0.25)",
+                textDecoration: "none",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 800, color: "#D97706" }}>
+                <span>⚡</span> Select
+              </div>
+              <div style={{ fontSize: 10, color: "var(--sub)" }}>Curated Global Drops</div>
+            </Link>
+          </div>
+        </div>
+
         {/* Section 2: Product Categories */}
         <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
           <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", color: "var(--sub)", letterSpacing: "0.08em", marginBottom: 12 }}>
-            Apparel & Collections
+            Apparel &amp; Collections
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>

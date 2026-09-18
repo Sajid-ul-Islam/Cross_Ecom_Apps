@@ -277,8 +277,8 @@ export default function HomeScreen() {
 
         {/* Categories Showcase with Cover Images */}
         <SectionHeader
-          title="EXPLORE COLLECTIONS"
-          subtitle="Tailored menswear crafted in Bangladesh"
+          title="SHOP BY CATEGORY"
+          subtitle="Denim styles, curated drops & artisanal essentials"
           actionText="All Items →"
           onActionPress={() => router.push("/(tabs)/shop")}
         />
@@ -299,7 +299,6 @@ export default function HomeScreen() {
           {/* Doubled for seamless infinite loop */}
           {[...categories, ...categories].map((cat, idx) => {
             const info = getCategoryInfo(cat);
-            const count = products.filter((p) => p.category.toUpperCase() === cat.toUpperCase()).length;
             return (
               <TouchableOpacity
                 key={`${cat}-${idx}`}
@@ -316,8 +315,8 @@ export default function HomeScreen() {
                       <Text style={styles.catCardBadgeText}>{info.badge}</Text>
                     </View>
                   )}
-                  <Text style={styles.catCardTitle}>{info.name}</Text>
-                  <Text style={styles.catCardCount}>{count > 0 ? `${count} Items` : "Explore Vault"}</Text>
+                  <Text style={styles.catCardTitle}>{info.title || info.name}</Text>
+                  <Text style={styles.catCardCount} numberOfLines={1}>{info.subtitle}</Text>
                 </View>
               </TouchableOpacity>
             );
@@ -457,6 +456,18 @@ export default function HomeScreen() {
 
         {/* Artisanal Heritage, Craft & Authenticity — swipeable story rail */}
         <BrandStorySection />
+
+        {/* Authentic Payment Partner Trust Banner */}
+        <View style={{ alignItems: "center", marginVertical: 18, paddingHorizontal: 16 }}>
+          <Image
+            source={require("../../assets/paywith.png")}
+            style={{ width: width - 48, height: 26, opacity: 0.85 }}
+            resizeMode="contain"
+          />
+          <Text style={{ fontSize: 11, color: colors.sub, marginTop: 10, textAlign: "center", fontWeight: "600" }}>
+            দেশের প্রথম ডেনিম ব্র্যান্ড · 100% Secure Checkout
+          </Text>
+        </View>
       </ScrollView>
 
       {/* Admin Broadcast Marketing Modal */}
@@ -508,9 +519,9 @@ const createStyles = (colors: ThemeColors, s: ReturnType<typeof sharedStyles>) =
   heroBtnText: { color: "#FFFFFF", fontSize: 11, fontWeight: "800", letterSpacing: 1 },
   categoryCardScroll: { paddingHorizontal: 16, gap: 12, paddingBottom: 4 },
   catCard: {
-    width: 140,
-    height: 180,
-    borderRadius: 10,
+    width: 148,
+    height: 188,
+    borderRadius: 12,
     overflow: "hidden",
     backgroundColor: colors.indigoDark,
     position: "relative",

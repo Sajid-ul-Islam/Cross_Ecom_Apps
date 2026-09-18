@@ -67,13 +67,10 @@ export const Header: React.FC<HeaderProps> = ({
                 <Menu size={20} color={colors.ink} />
               </TouchableOpacity>
               <Image
-                source={require("../../assets/icon.png")}
+                source={isDark ? require("../../assets/logo_white.png") : require("../../assets/logo.png")}
                 style={styles.brandLogo}
-                resizeMode="cover"
+                resizeMode="contain"
               />
-              <Text style={[styles.brandTitle, { color: isDark ? colors.indigo : colors.indigoDark }]}>
-                DEEN
-              </Text>
             </View>
             {subtitle ? (
               <Text style={[styles.brandSubtitle, { color: colors.sub }]}>{subtitle}</Text>
@@ -212,9 +209,8 @@ function createStyles(colors: ThemeColors) {
       letterSpacing: 2,
     },
     brandLogo: {
-      width: 26,
-      height: 26,
-      borderRadius: 6,
+      width: 96,
+      height: 28,
     },
     brandSubtitle: {
       fontSize: 11,

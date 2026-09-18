@@ -964,6 +964,25 @@ function CheckoutContent() {
                 })}
               </div>
 
+              {/* Genuine DEEN Commerce Payment Partner Trust Badge */}
+              <div style={{ marginTop: 14, textAlign: "center", padding: "10px 14px", background: "var(--surface-2)", borderRadius: 8, border: "1px solid var(--border)" }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: "var(--sub)", margin: "0 0 8px", letterSpacing: "0.5px" }}>
+                  100% SECURE &amp; VERIFIED PAYMENT PARTNERS
+                </p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/paywith_web_versionW.png"
+                  alt="bKash, Nagad, Rocket, Visa, Mastercard, AMEX, Cash on Delivery"
+                  style={{
+                    maxWidth: "100%",
+                    height: "auto",
+                    maxHeight: 40,
+                    objectFit: "contain",
+                    display: "inline-block",
+                  }}
+                />
+              </div>
+
               {payment === "cod" ? (
                 <div className="payment-info-box" style={{ marginTop: 16 }}>
                   <p className="payment-info-title">💵 Cash on Delivery Verified</p>

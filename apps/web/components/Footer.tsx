@@ -15,19 +15,18 @@ export default async function Footer() {
             <div className="footer__brand-name" style={{ marginBottom: 12 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/logo.png"
-                alt="DEEN Commerce"
+                src="/logo_white.png"
+                alt="DEEN - দেশের প্রথম ডেনিম ব্র্যান্ড"
                 style={{
-                  height: 32,
+                  height: 34,
                   width: "auto",
                   objectFit: "contain",
-                  filter: "invert(1) brightness(1.2)",
                 }}
               />
             </div>
             <p className="footer__tagline">
-              Crafted for the modern Bangladeshi man — premium fabrics, honest
-              pricing, delivered to your door.
+              <strong>দেশের প্রথম ডেনিম ব্র্যান্ড</strong> — artisanal selvedge denim,
+              combed cotton tailoring, and contemporary menswear crafted with pride in Bangladesh.
             </p>
             <div style={{ marginTop: 16, display: "flex", gap: 10, alignItems: "center" }}>
               <a
@@ -131,54 +130,88 @@ export default async function Footer() {
 
           {/* Shop */}
           <div>
-            <p className="footer__col-title">Shop</p>
+            <p className="footer__col-title">Collections</p>
             <ul className="footer__links">
-              {["JEANS", "SHIRT", "PANJABI", "T-SHIRT", "TROUSERS", "ACCESSORIES"].map((c) => (
-                <li key={c}>
-                  <Link href={`/shop?category=${c}`}>{c.charAt(0) + c.slice(1).toLowerCase()}</Link>
+              {[
+                { label: "Denim & Jeans", href: "/shop?category=JEANS" },
+                { label: "Casual & Formal Shirts", href: "/shop?category=SHIRT" },
+                { label: "Heritage Panjabi", href: "/shop?category=PANJABI" },
+                { label: "240 GSM T-Shirts", href: "/shop?category=T-SHIRT" },
+                { label: "Cargo & Trousers", href: "/shop?category=TROUSERS" },
+                { label: "DEEN Select ⚡", href: "/shop?segment=select" },
+                { label: "Sale & Offers 🔥", href: "/shop?sort=sale" },
+              ].map((c) => (
+                <li key={c.label}>
+                  <Link href={c.href}>{c.label}</Link>
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Info */}
+          {/* Shopping Policies */}
           <div>
-            <p className="footer__col-title">Information</p>
+            <p className="footer__col-title">Shopping Policies</p>
             <ul className="footer__links">
-              <li><Link href="/shop">All Products</Link></li>
-              <li><Link href="/shop#size-guide">Size Guide</Link></li>
-              <li><Link href="/orders#returns">Return Policy</Link></li>
-              <li><Link href="/cart#delivery">Delivery Info</Link></li>
+              <li><Link href="/orders">Track My Order (Pathao)</Link></li>
+              <li><Link href="/orders#returns">Exchange &amp; Refund Policy</Link></li>
+              <li><Link href="/cart#delivery">Doorstep Delivery Policy</Link></li>
+              <li><Link href="/shop#size-guide">Official Size Guide</Link></li>
+              <li><Link href="/profile">My Account</Link></li>
             </ul>
           </div>
 
-          {/* Contact */}
+          {/* Customer Service & Outlets */}
           <div>
-            <p className="footer__col-title">Contact</p>
+            <p className="footer__col-title">Customer Service</p>
             <ul className="footer__links">
-              <li style={{ color: "var(--sub)", fontSize: 13 }}>
-                📍 {outlets.length > 0 ? outlets[0].address : 'Ramzannesa Super Market, Mirpur 12, Dhaka 1216'}<br />
-                <span style={{ fontSize: 11, color: "var(--brand)" }}>Outlets: {outlets.map(o => o.name.replace('DEEN ', '').replace(' Outlet', '').replace(' (Flagship Outlet)', '')).join(' · ') || 'Mirpur 12 · Wari · Cumilla · Sylhet'}</span>
+              <li style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.5 }}>
+                📍 <strong>Flagship:</strong> {outlets.length > 0 ? outlets[0].address : "Level 3, Ramzannesa Super Market, Mirpur 12, Dhaka"}<br />
+                <span style={{ fontSize: 11, color: "var(--brand)" }}>
+                  Showrooms: {outlets.map((o) => o.name.replace("DEEN ", "").replace(" Outlet", "").replace(" (Flagship Outlet)", "")).join(" · ") || "Mirpur 12 · Wari · Cumilla · Sylhet"}
+                </span>
               </li>
               <li style={{ marginTop: 8 }}>
-                <a href={`tel:+88${waDigits}`} style={{ fontSize: 13 }}>
-                  📞 +880 {whatsapp}
+                <a href={`tel:+88${waDigits}`} style={{ fontSize: 13, fontWeight: 700 }}>
+                  📞 Hotline: +880 {whatsapp}
                 </a>
               </li>
               <li>
-                <a href={`mailto:${settings?.contact?.email || 'support@deencommerce.com'}`} style={{ fontSize: 13 }}>
-                  ✉️ {settings?.contact?.email || 'support@deencommerce.com'}
+                <a href={`mailto:${settings?.contact?.email || "support@deencommerce.com"}`} style={{ fontSize: 13 }}>
+                  ✉️ {settings?.contact?.email || "support@deencommerce.com"}
                 </a>
               </li>
             </ul>
-            <div style={{ marginTop: 14 }}>
-              <p className="footer__col-title">Hours</p>
-              <p style={{ fontSize: 12, color: "var(--sub)", lineHeight: 1.6 }}>
-                Sat–Thu: 10am – 10pm<br />
-                Fri: 2pm – 10pm
+            <div style={{ marginTop: 12 }}>
+              <p className="footer__col-title">Showroom Hours</p>
+              <p style={{ fontSize: 12, color: "var(--sub)", lineHeight: 1.5 }}>
+                Sat–Thu: 10:00 AM – 10:00 PM<br />
+                Fri: 02:00 PM – 10:00 PM
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Payment Partners Trust Banner */}
+        <div
+          style={{
+            textAlign: "center",
+            padding: "24px 0 16px",
+            borderTop: "1px solid var(--border)",
+            marginTop: 24,
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/paywith_web_versionW.png"
+            alt="Payment Methods: bKash, Nagad, Rocket, Visa, Mastercard, AMEX, Cash on Delivery"
+            style={{
+              maxHeight: 32,
+              maxWidth: "100%",
+              height: "auto",
+              objectFit: "contain",
+              opacity: 0.9,
+            }}
+          />
         </div>
 
         <div className="footer__bottom">

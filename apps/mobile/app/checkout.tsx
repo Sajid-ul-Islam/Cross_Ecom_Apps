@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Linking,
+  Image,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 
@@ -790,6 +791,18 @@ export default function CheckoutScreen() {
               );
             })
           )}
+
+          {/* Genuine DEEN Commerce Payment Partner Trust Badge */}
+          <View style={{ alignItems: "center", marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.borderLight }}>
+            <Text style={{ fontSize: 10, fontWeight: "700", color: colors.sub, letterSpacing: 0.5, marginBottom: 6 }}>
+              100% SECURE PAYMENT PARTNERS
+            </Text>
+            <Image
+              source={require("../assets/paywith.png")}
+              style={{ width: "100%", height: 32 }}
+              resizeMode="contain"
+            />
+          </View>
         </View>
 
         {/* 4. Order Summary */}

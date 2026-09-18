@@ -58,13 +58,54 @@ export default function Header() {
   };
 
   const navLinks = [
-    { href: "/shop", label: "Shop" },
-    { href: "/cart", label: "Cart" },
+    { href: "/shop?category=JEANS", label: "Jeans" },
+    { href: "/shop?category=SHIRT", label: "Shirts" },
+    { href: "/shop?category=PANJABI", label: "Panjabi" },
+    { href: "/shop?category=T-SHIRT", label: "T-Shirts" },
+    { href: "/shop?category=TROUSERS", label: "Trousers" },
+    { href: "/shop?segment=select", label: "DEEN Select ⚡" },
+    { href: "/shop?sort=sale", label: "Sale 🔥" },
     { href: "/orders", label: "Track Order" },
   ];
 
   return (
     <>
+      {/* ── Top Brand Announcement Bar (deencommerce.com vibe) ── */}
+      <div
+        style={{
+          backgroundColor: "#101827",
+          color: "#ffffff",
+          fontSize: "11.5px",
+          fontWeight: 700,
+          letterSpacing: "0.03em",
+          padding: "7px 16px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          borderBottom: "1px solid rgba(255,255,255,0.12)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12, overflow: "hidden" }}>
+          <span style={{ whiteSpace: "nowrap" }}>
+            <strong style={{ color: "#d49439" }}>দেশের প্রথম ডেনিম ব্র্যান্ড</strong> · DEEN
+          </span>
+          <span style={{ opacity: 0.4 }}>|</span>
+          <span style={{ whiteSpace: "nowrap", opacity: 0.85 }}>
+            🚚 Dhaka 24–48h (৳50) · All Bangladesh (৳90)
+          </span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, flexShrink: 0 }}>
+          <a
+            href="https://wa.me/8801952700500"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "#ffffff", display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none" }}
+          >
+            <span>💬 Concierge: +880 1952-700500</span>
+          </a>
+        </div>
+      </div>
+
       <header className="nav">
         <div className="container nav__inner">
           {/* Brand & Hamburger Menu */}
@@ -98,13 +139,12 @@ export default function Header() {
             <Link href="/" className="nav__brand" style={{ display: "flex", alignItems: "center" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/logo.png"
-                alt="DEEN"
+                src={isDark ? "/logo_white.png" : "/logo.png"}
+                alt="DEEN - দেশের প্রথম ডেনিম ব্র্যান্ড"
                 style={{
-                  height: 26,
+                  height: 30,
                   width: "auto",
                   objectFit: "contain",
-                  filter: isDark ? "invert(1) brightness(1.2)" : "none",
                 }}
               />
             </Link>

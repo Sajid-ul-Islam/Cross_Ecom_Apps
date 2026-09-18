@@ -67,8 +67,8 @@ export const TRUST_STORY_CARDS: StoryCardData[] = [
     rightTag: "EST. DHAKA 2020",
     title: "Flagship Stores",
     description: "Visit our outlets for personal fittings and full collection previews.",
-    points: ["Mirpur 12 (Dhaka)", "Wari (Dhaka) · Cumilla"],
-    footerTag: "MIRPUR 12 · WARI · CUMILLA",
+    points: ["Mirpur 12 & Wari (Dhaka)", "Cumilla & Sylhet Showrooms"],
+    footerTag: "MIRPUR 12 · WARI · CUMILLA · SYLHET",
   },
 ];
 
@@ -85,7 +85,7 @@ export const HOME_STORY_CARDS: StoryCardData[] = [
     chips: [
       { emoji: "🧵", title: "Red-Line Selvedge", sub: "13.5oz vintage shuttle loom" },
       { emoji: "✂️", title: "Dhaka Central Studio", sub: "In-house artisan master tailors" },
-      { emoji: "🏬", title: "4 Retail Showrooms", sub: "Mirpur 12, Wari & Cumilla" },
+      { emoji: "🏬", title: "4 Retail Showrooms", sub: "Mirpur 12, Wari, Cumilla & Sylhet" },
       { emoji: "🔄", title: "Doorstep Exchange", sub: "7-day hassle-free size swaps" },
     ],
     cta: {

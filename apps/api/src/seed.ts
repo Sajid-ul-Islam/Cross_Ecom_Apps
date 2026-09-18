@@ -19,6 +19,8 @@ export interface DeenProduct {
   sku: string;
   name: string;
   category: DeenCategory;
+  segment?: "collection" | "select";
+  brand?: string;
   price: number;
   salePrice?: number;
   regularPrice?: number;
@@ -57,7 +59,9 @@ function p(
   b: string,
   fabric: string,
   blurb: string,
-  isNew = false
+  isNew = false,
+  segment: "collection" | "select" = "collection",
+  brand = "DEEN"
 ): DeenProduct {
   const hasSale = typeof salePrice === "number" && salePrice < price;
   const regularPrice = hasSale ? price : undefined;
@@ -67,6 +71,8 @@ function p(
     sku,
     name,
     category,
+    segment,
+    brand,
     price,
     salePrice,
     regularPrice,
@@ -135,6 +141,11 @@ export const SEED_PRODUCTS: DeenProduct[] = [
   p("a3", "109-0201-001", "France World Cup Edition Bottle", "ACCESSORIES", 498, undefined, ["OS"], "2026/06/France-760x1100.jpg", "2026/06/France-760x1100.jpg", "Aluminium, 750 ml", "Match-day aluminium bottle — France edition.", true),
   p("a4", "109-0201-002", "Argentina World Cup Edition Bottle", "ACCESSORIES", 498, undefined, ["OS"], "2026/06/Argentina-1-760x1100.jpg", "2026/06/Argentina-1-760x1100.jpg", "Aluminium, 750 ml", "Match-day aluminium bottle — Argentina edition.", true),
   p("a5", "109-0301-001", "Breathable Face Mask", "ACCESSORIES", 280, undefined, ["OS"], "2025/02/Breathable-Face-Mask-760x1100.webp", "2025/02/Breathable-Face-Mask-2nd-760x1140.webp", "Washable cotton layers", "Reusable, breathable, everyday protection."),
+
+  // DEEN SELECT (Curated International Drops: Springfield, Lefties, Pull & Bear)
+  p("ds1", "103-0100-119", "Springfield Polo Shirt", "POLO", 1590, 1190, ["M", "L", "XL", "2XL"], "2026/09/Springfield-Polo-Shirt-103-0100-119.webp", "2026/09/Springfield-Polo-Shirt-103-0100-118.webp", "100% Piqué Cotton", "Curated international drop from Springfield. Classic contrast collar and breathable piqué knit.", true, "select", "Springfield"),
+  p("ds2", "102-0302-064", "Springfield Full Sleeve Shirt", "SHIRT", 1890, 1490, ["M", "L", "XL", "2XL"], "2026/09/Springfield-Full-Sleeve-Shirt-102-0302-064-2.webp", "2026/09/Springfield-Full-Sleeve-Shirt-102-0302-064-2.webp", "Cotton Oxford Twill", "Imported Springfield long-sleeve casual shirt with structured collar and tailored silhouette.", true, "select", "Springfield"),
+  p("ds3", "104-0402-005", "Lefties Baggy Cargo Trousers", "TROUSERS", 2490, 1990, ["30", "32", "34", "36"], "2026/09/Lefties-Baggy-Cargo-Trousers-DS-104-0402-005-1.webp", "2026/09/Lefties-Baggy-Cargo-Trousers-DS-104-0402-005-1.webp", "Heavyweight Cotton Ripstop", "Authentic Lefties baggy cargo pants with multi-pocket utility layout and articulated knee panels.", true, "select", "Lefties"),
 ];
 
 export const SEED_CATEGORIES: string[] = [

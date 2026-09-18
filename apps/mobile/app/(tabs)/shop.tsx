@@ -35,6 +35,7 @@ export default function ShopScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [deferredQuery, setDeferredQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("default");
+  const [segment, setSegment] = useState<"all" | "collection" | "select">("all");
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -55,10 +56,10 @@ export default function ShopScreen() {
   const loadProducts = useCallback(async () => {
     const sortParam = sort === "default" ? undefined : (sort as "price-asc" | "price-desc" | "name-asc" | "new");
     try {
-      const data = await fetchProducts(selectedCategory, deferredQuery, sortParam);
+      const data = await fetchProducts(selectedCategory, deferredQuery, sortParam, segment);
       setProducts(data);
     } catch {}
-  }, [selectedCategory, deferredQuery, sort]);
+  }, [selectedCategory, deferredQuery, sort, segment]);
 
   // Refresh catalog whenever the shop screen regains focus or the app resumes
   // from background — surfaces live WooCommerce stock/product changes without
@@ -68,7 +69,7 @@ export default function ShopScreen() {
   useEffect(() => {
     setLoading(true);
     loadProducts().finally(() => setLoading(false));
-  }, [selectedCategory, deferredQuery, sort]);
+  }, [selectedCategory, deferredQuery, sort, segment]);
 
   const { refreshing, onRefresh: handleRefresh } = usePullToRefresh(loadProducts);
 
@@ -81,7 +82,7 @@ export default function ShopScreen() {
           <Search size={18} color={colors.sub} />
           <TextInput
             style={[styles.input, { color: colors.ink }]}
-            placeholder="Search jeans, panjabi, shirts, polo, combo..."
+            placeholder="Search by name, SKU, category…"
             placeholderTextColor={colors.faint}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -93,6 +94,52 @@ export default function ShopScreen() {
             </TouchableOpacity>
           )}
         </View>
+      </View>
+
+      {/* Brand Segmented Control — ALL · 💎 COLLECTION · ⚡ SELECT */}
+      <View style={[styles.segmentBar, { backgroundColor: colors.paper }]}>
+        {(
+          [
+            { key: "all", label: "ALL" },
+            { key: "collection", label: "💎 COLLECTION" },
+            { key: "select", label: "⚡ SELECT" },
+          ] as const
+        ).map(({ key, label }) => {
+          const active = segment === key;
+          const isSelect = key === "select";
+          const isCollection = key === "collection";
+          const activeBg = isSelect
+            ? "#92400E"
+            : isCollection
+            ? colors.indigoDark
+            : colors.indigoDark;
+          const activeText = "#FFFFFF";
+          return (
+            <TouchableOpacity
+              key={key}
+              style={[
+                styles.segPill,
+                { backgroundColor: colors.card, borderColor: colors.border },
+                active && { backgroundColor: activeBg, borderColor: activeBg },
+              ]}
+              activeOpacity={0.8}
+              onPress={() => setSegment(key)}
+              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel={`Filter by ${label}`}
+            >
+              <Text
+                style={[
+                  styles.segPillText,
+                  { color: colors.sub },
+                  active && { color: activeText },
+                ]}
+              >
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {/* Visual Category Showcase Tiles */}
@@ -335,6 +382,25 @@ function createStyles(colors: any, s: ReturnType<typeof sharedStyles>) {
       flex: 1,
       fontSize: 13,
       height: "100%",
+    },
+    segmentBar: {
+      flexDirection: "row",
+      gap: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+    },
+    segPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      borderRadius: 20,
+      borderWidth: 1,
+    },
+    segPillText: {
+      fontSize: 11,
+      fontWeight: "800",
+      letterSpacing: 0.5,
     },
     categoriesContainer: {
       paddingBottom: 8,

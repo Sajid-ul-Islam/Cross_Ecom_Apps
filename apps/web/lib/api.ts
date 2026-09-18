@@ -98,6 +98,8 @@ export interface Product {
   name: string;
   sku: string;
   category: string;
+  segment?: "collection" | "select";
+  brand?: string;
   price: number;
   salePrice?: number;
   regularPrice?: number;
@@ -231,26 +233,41 @@ function applyLocalFilters(
   products: Product[],
   category?: string,
   search?: string,
-  sort?: string
+  sort?: string,
+  segment?: string
 ): Product[] {
   // Always filter out out-of-stock and draft products for customers
   let list = [...products].filter(
     (p) => (p.stockStatus || "instock") !== "outofstock"
   );
 
+  // Segment filtering (collection vs select)
+  const normSegment = (segment || "").toLowerCase();
+  if (normSegment === "select" || normSegment === "deen-select" || normSegment === "deen_select") {
+    list = list.filter((p) => p.segment === "select");
+  } else if (normSegment === "collection" || normSegment === "deen-collection" || normSegment === "deen_collection") {
+    list = list.filter((p) => p.segment === "collection" || !p.segment);
+  }
+
   if (category && category !== "ALL") {
-    const cat = category.toUpperCase();
-    list = list.filter((p) => {
-      const pCat = (p.category || "").toUpperCase();
-      if (cat === "JEANS") return pCat.includes("JEAN") || pCat.includes("DENIM");
-      if (cat === "SHIRT") return pCat.includes("SHIRT") && !pCat.includes("T-SHIRT");
-      if (cat === "T-SHIRT") return pCat.includes("T-SHIRT") || pCat.includes("TEE");
-      if (cat === "PANJABI") return pCat.includes("PANJABI") || pCat.includes("PUNJABI");
-      if (cat === "POLO") return pCat.includes("POLO");
-      if (cat === "TROUSERS") return pCat.includes("TROUSER") || pCat.includes("PANT") || pCat.includes("CHINO");
-      if (cat === "COMBO") return pCat.includes("COMBO") || (p.tags && p.tags.some((t) => t.toUpperCase().includes("COMBO")));
-      return pCat.includes(cat);
-    });
+    const cat = category.toUpperCase().replace(/[- ]/g, "_");
+    if (cat === "DEEN_SELECT" || cat === "SELECT") {
+      list = list.filter((p) => p.segment === "select");
+    } else if (cat === "DEEN_COLLECTION" || cat === "COLLECTION") {
+      list = list.filter((p) => p.segment === "collection" || !p.segment);
+    } else {
+      list = list.filter((p) => {
+        const pCat = (p.category || "").toUpperCase();
+        if (cat === "JEANS") return pCat.includes("JEAN") || pCat.includes("DENIM");
+        if (cat === "SHIRT") return pCat.includes("SHIRT") && !pCat.includes("T-SHIRT");
+        if (cat === "T-SHIRT") return pCat.includes("T-SHIRT") || pCat.includes("TEE");
+        if (cat === "PANJABI") return pCat.includes("PANJABI") || pCat.includes("PUNJABI");
+        if (cat === "POLO") return pCat.includes("POLO");
+        if (cat === "TROUSERS") return pCat.includes("TROUSER") || pCat.includes("PANT") || pCat.includes("CHINO");
+        if (cat === "COMBO") return pCat.includes("COMBO") || (p.tags && p.tags.some((t) => t.toUpperCase().includes("COMBO")));
+        return pCat.includes(cat);
+      });
+    }
   }
 
   if (search && search.trim()) {
@@ -260,7 +277,10 @@ function applyLocalFilters(
         p.name.toLowerCase().includes(q) ||
         (p.sku && p.sku.toLowerCase().includes(q)) ||
         (p.category && p.category.toLowerCase().includes(q)) ||
-        (p.description && p.description.toLowerCase().includes(q))
+        (p.description && p.description.toLowerCase().includes(q)) ||
+        (p.brand && p.brand.toLowerCase().includes(q)) ||
+        (q.includes("select") && p.segment === "select") ||
+        (q.includes("collection") && (p.segment === "collection" || !p.segment))
     );
   }
 
@@ -307,6 +327,14 @@ export function mapStoreProductToWeb(p: any): Product {
   const onSale = Boolean(p.on_sale && regularPrice && salePrice && regularPrice > salePrice);
   const catNames = (p.categories || []).map((c: any) => c.name);
   const category = mapStoreCategory(catNames);
+  const isSelect = (p.categories || []).some(
+    (c: any) =>
+      c.id === 1281 ||
+      c.parent === 1281 ||
+      /deen\s*select/i.test(c.name || "") ||
+      /deen-select/i.test(c.slug || "")
+  );
+  const segment: "collection" | "select" = isSelect ? "select" : "collection";
   const pct = onSale && regularPrice && salePrice
     ? Math.round(((regularPrice - salePrice) / regularPrice) * 100)
     : parseDiscountPct(catNames);
@@ -319,12 +347,25 @@ export function mapStoreProductToWeb(p: any): Product {
   const secondaryImg = imgs[1] || primaryImg;
 
   const cleanName = (p.name || "").replace(/&#038;/g, "&").replace(/&amp;/g, "&").replace(/&quot;/g, '"');
+  const brand = /springfield/i.test(cleanName)
+    ? "Springfield"
+    : /lefties/i.test(cleanName)
+    ? "Lefties"
+    : /pull\s*&?\s*bear/i.test(cleanName)
+    ? "Pull & Bear"
+    : /zara/i.test(cleanName)
+    ? "Zara"
+    : isSelect
+    ? "DEEN Select"
+    : "DEEN";
 
   return {
     id: String(p.id),
     sku: p.sku || `DS-${p.id}`,
     name: cleanName,
     category,
+    segment,
+    brand,
     price: regularPrice || currentPrice,
     salePrice: onSale ? salePrice : undefined,
     regularPrice: onSale ? regularPrice : undefined,
@@ -389,6 +430,7 @@ export function startWebGatewayKeepAlive(intervalMs = 4 * 60 * 1000): () => void
  */
 export async function fetchProducts(params?: {
   category?: string;
+  segment?: string;
   search?: string;
   sort?: string;
   per_page?: number;
@@ -397,6 +439,8 @@ export async function fetchProducts(params?: {
     const qs = new URLSearchParams();
     if (params?.category && params.category !== "ALL")
       qs.set("category", params.category);
+    if (params?.segment && params.segment !== "all")
+      qs.set("segment", params.segment);
     if (params?.search) {
       qs.set("search", params.search);
       qs.set("q", params.search);
@@ -426,7 +470,8 @@ export async function fetchProducts(params?: {
         directWp,
         params?.category,
         params?.search,
-        params?.sort
+        params?.sort,
+        params?.segment
       );
       if (params?.per_page && params.per_page > 0) {
         return filtered.slice(0, params.per_page);
@@ -440,7 +485,8 @@ export async function fetchProducts(params?: {
     getBundledProducts(),
     params?.category,
     params?.search,
-    params?.sort
+    params?.sort,
+    params?.segment
   );
   if (params?.per_page && params.per_page > 0) {
     return fallback.slice(0, params.per_page);

@@ -538,5 +538,49 @@ test("Market Basket: Lift >= 2.0 flags STRONG recommendation for high affinity b
   assert.equal(rule.recommendationStrength, "STRONG");
 });
 
+/* ----------------------------- Segmentation Tests ----------------------------- */
+import { SEED_PRODUCTS } from "./seed.js";
 
+test("Segmentation: Seed catalog isolates DEEN Collection from DEEN Select", () => {
+  const collectionProducts = SEED_PRODUCTS.filter((p) => p.segment === "collection" || !p.segment);
+  const selectProducts = SEED_PRODUCTS.filter((p) => p.segment === "select");
 
+  assert.ok(collectionProducts.length > 0, "DEEN Collection should contain core artisanal products");
+  assert.ok(selectProducts.length > 0, "DEEN Select should contain curated international drops");
+
+  // Every DEEN Select product has an international brand
+  for (const sp of selectProducts) {
+    assert.equal(sp.segment, "select");
+    assert.ok(["Springfield", "Lefties", "Pull & Bear", "Zara", "DEEN Select"].includes(sp.brand || ""));
+  }
+
+  // Cross-filtering: Springfield items belong to DEEN Select
+  const springfield = SEED_PRODUCTS.find((p) => (p.name || "").includes("Springfield"));
+  assert.ok(springfield, "Springfield item should exist");
+  assert.equal(springfield.segment, "select");
+
+  // In-house raw denim belongs to DEEN Collection
+  const rawJeans = SEED_PRODUCTS.find((p) => (p.name || "").includes("Raw Washed Jeans"));
+  assert.ok(rawJeans, "Raw Washed Jeans should exist");
+  assert.equal(rawJeans.segment, "collection");
+});
+
+test("Segmentation: Category aliases DEEN_SELECT and DEEN_COLLECTION filter correctly", () => {
+  const filterByAlias = (cat: string) => {
+    const norm = cat.toUpperCase().replace(/[- ]/g, "_");
+    if (norm === "DEEN_SELECT" || norm === "SELECT") {
+      return SEED_PRODUCTS.filter((p) => p.segment === "select");
+    }
+    if (norm === "DEEN_COLLECTION" || norm === "COLLECTION") {
+      return SEED_PRODUCTS.filter((p) => p.segment === "collection" || !p.segment);
+    }
+    return SEED_PRODUCTS.filter((p) => p.category === cat);
+  };
+
+  const selectItems = filterByAlias("DEEN_SELECT");
+  const collectionItems = filterByAlias("DEEN_COLLECTION");
+
+  assert.ok(selectItems.every((p) => p.segment === "select"));
+  assert.ok(collectionItems.every((p) => p.segment === "collection" || !p.segment));
+  assert.equal(selectItems.length + collectionItems.length, SEED_PRODUCTS.length);
+});

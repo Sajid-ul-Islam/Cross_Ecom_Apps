@@ -353,6 +353,18 @@ export default function ProductDetailScreen() {
         {/* Product Meta & Details */}
         <View style={styles.metaContainer}>
           <View style={styles.categoryRow}>
+            {product.segment === "select" && (
+              <View style={[styles.newPill, { backgroundColor: "#1C1917", borderColor: "#92400E" }]}>
+                <Text style={[styles.newPillText, { color: "#D97706" }]}>
+                  ⚡ DEEN SELECT{product.brand && product.brand !== "DEEN" ? ` · ${product.brand.toUpperCase()}` : ""}
+                </Text>
+              </View>
+            )}
+            {product.segment === "collection" && (
+              <View style={[styles.newPill, { backgroundColor: "#1e1b4b", borderColor: "#4338ca" }]}>
+                <Text style={[styles.newPillText, { color: "#818cf8" }]}>💎 DEEN COLLECTION</Text>
+              </View>
+            )}
             <Text style={styles.categoryText}>{product.category}</Text>
             {product.isNew && (
               <View style={styles.newPill}>
@@ -367,6 +379,9 @@ export default function ProductDetailScreen() {
           </View>
 
           <Text style={styles.productName}>{product.name}</Text>
+          {product.sku ? (
+            <Text style={styles.skuRef}>SKU: {product.sku}</Text>
+          ) : null}
 
           {/* Price Row */}
           <View style={styles.priceRow}>
@@ -1013,7 +1028,15 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
       fontWeight: "800",
       color: colors.ink,
       lineHeight: 26,
-      marginBottom: 8,
+      marginBottom: 4,
+    },
+    skuRef: {
+      fontSize: 10,
+      fontFamily: "monospace" as const,
+      color: colors.faint,
+      letterSpacing: 0.3,
+      marginBottom: 10,
+      opacity: 0.8,
     },
     priceRow: {
       flexDirection: "row",

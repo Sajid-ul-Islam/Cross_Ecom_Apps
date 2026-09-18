@@ -1,21 +1,21 @@
 export const LightColors = {
-  // Brand Denim Palette
-  indigo: "#2A3680",
+  // Brand Denim Palette (deencommerce.com aesthetic)
+  indigo: "#046BD2",
   indigoDark: "#1A2350",
-  indigoLight: "#EEF0F8",
+  indigoLight: "#F0F5FA",
   denimStitch: "#D49439",
 
-  // Background & Surfaces
-  paper: "#F7F6F0",
+  // Background & Surfaces (Crisp modern editorial look)
+  paper: "#FFFFFF",
   card: "#FFFFFF",
-  cardSecondary: "#F0EFE8",
-  border: "#E5E2D8",
-  borderLight: "#F0EDE4",
+  cardSecondary: "#F1F5F9",
+  border: "#E2E8F0",
+  borderLight: "#F1F5F9",
 
-  // Typography
-  ink: "#151A2C",
-  sub: "#525A6C",
-  faint: "#7E869B",
+  // Typography (High-contrast slate/navy ink)
+  ink: "#0F172A",
+  sub: "#475569",
+  faint: "#94A3B8",
 
   // Status & Accents
   crimson: "#C93B36",
@@ -28,7 +28,7 @@ export const LightColors = {
   // Bangladeshi Payment Accents
   bkash: "#E2136E",
   nagad: "#F7941D",
-  cod: "#2A3680",
+  cod: "#1A2350",
 };
 
 export const DarkColors: typeof LightColors = {

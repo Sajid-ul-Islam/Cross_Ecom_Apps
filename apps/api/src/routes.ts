@@ -1060,6 +1060,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   /* ---- catalog (filter + search + sort) ---- */
   app.get("/v1/deen/products", async (req, reply) => {
     const category = (req.query as any).category as string | undefined;
+    const segment = (req.query as any).segment as string | undefined;
     const q = (req.query as any).q as string | undefined;
     const sort = (req.query as any).sort as string | undefined;
     // Customers never see out-of-stock products. Opt-in only (admin/debug).
@@ -1068,9 +1069,27 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     if (!includeOOS) {
       list = list.filter((p) => (p.stockStatus || "instock") !== "outofstock");
     }
-    if (category && category !== "ALL" && category !== "OTHER") {
-      list = list.filter((p) => p.category === category);
+
+    // Segment filtering (collection vs select)
+    const normSegment = (segment || "").toLowerCase();
+    if (normSegment === "select" || normSegment === "deen-select" || normSegment === "deen_select") {
+      list = list.filter((p) => p.segment === "select");
+    } else if (normSegment === "collection" || normSegment === "deen-collection" || normSegment === "deen_collection") {
+      list = list.filter((p) => p.segment === "collection" || !p.segment);
     }
+
+    // Category filtering (with DEEN_SELECT / DEEN_COLLECTION aliases)
+    if (category && category !== "ALL" && category !== "OTHER") {
+      const normCat = category.toUpperCase().replace(/[- ]/g, "_");
+      if (normCat === "DEEN_SELECT" || normCat === "SELECT") {
+        list = list.filter((p) => p.segment === "select");
+      } else if (normCat === "DEEN_COLLECTION" || normCat === "COLLECTION") {
+        list = list.filter((p) => p.segment === "collection" || !p.segment);
+      } else {
+        list = list.filter((p) => p.category === category);
+      }
+    }
+
     if (q && q.trim()) {
       const s = q.toLowerCase();
       list = list.filter(
@@ -1078,7 +1097,10 @@ export async function registerDeenRoutes(app: FastifyInstance) {
           p.name.toLowerCase().includes(s) ||
           p.category.toLowerCase().includes(s) ||
           p.sku.toLowerCase().includes(s) ||
-          p.fabric.toLowerCase().includes(s)
+          p.fabric.toLowerCase().includes(s) ||
+          (p.brand && p.brand.toLowerCase().includes(s)) ||
+          (s.includes("select") && p.segment === "select") ||
+          (s.includes("collection") && (p.segment === "collection" || !p.segment))
       );
     }
     if (sort) list = sortProducts(list, sort);

@@ -10,6 +10,7 @@ import ProductCard from "@/components/ProductCard";
 interface ShopClientProps {
   initialProducts: Product[];
   initialCategory: Category;
+  initialSegment?: "all" | "collection" | "select";
   initialSearch: string;
   initialSort: string;
   remoteCovers: Record<string, string>;
@@ -26,6 +27,7 @@ const SORT_OPTIONS = [
 export default function ShopClient({
   initialProducts,
   initialCategory,
+  initialSegment = "all",
   initialSearch,
   initialSort,
   remoteCovers,
@@ -36,35 +38,51 @@ export default function ShopClient({
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [loading, setLoading] = useState(false);
   const [category, setCategory] = useState<Category>(initialCategory);
+  const [segment, setSegment] = useState<"all" | "collection" | "select">(initialSegment);
   const [search, setSearch] = useState(initialSearch);
   const [sort, setSort] = useState(initialSort);
 
-  const handleFilterChange = useCallback(async (newCat: Category, newSearch: string, newSort: string) => {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (newCat !== "ALL") params.set("category", newCat);
-    if (newSearch.trim()) params.set("search", newSearch.trim());
-    if (newSort !== "default") params.set("sort", newSort);
+  const handleFilterChange = useCallback(
+    async (
+      newCat: Category,
+      newSeg: "all" | "collection" | "select",
+      newSearch: string,
+      newSort: string
+    ) => {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (newCat !== "ALL") params.set("category", newCat);
+      if (newSeg !== "all") params.set("segment", newSeg);
+      if (newSearch.trim()) params.set("search", newSearch.trim());
+      if (newSort !== "default") params.set("sort", newSort);
 
-    router.replace(`/shop?${params.toString()}`, { scroll: false });
+      router.replace(`/shop?${params.toString()}`, { scroll: false });
 
-    try {
-      const data = await fetchProducts({
-        category: newCat,
-        search: newSearch,
-        sort: newSort,
-      });
-      setProducts(data);
-    } catch {
-      // Keep existing products if network hiccup occurs
-    } finally {
-      setLoading(false);
-    }
-  }, [router]);
+      try {
+        const data = await fetchProducts({
+          category: newCat,
+          segment: newSeg,
+          search: newSearch,
+          sort: newSort,
+        });
+        setProducts(data);
+      } catch {
+        // Keep existing products if network hiccup occurs
+      } finally {
+        setLoading(false);
+      }
+    },
+    [router]
+  );
 
   const handleCategory = (c: Category) => {
     setCategory(c);
-    handleFilterChange(c, search, sort);
+    handleFilterChange(c, segment, search, sort);
+  };
+
+  const handleSegmentChange = (s: "all" | "collection" | "select") => {
+    setSegment(s);
+    handleFilterChange(category, s, search, sort);
   };
 
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -73,28 +91,120 @@ export default function ShopClient({
     setSearch(val);
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
     searchTimeout.current = setTimeout(() => {
-      handleFilterChange(category, val, sort);
+      handleFilterChange(category, segment, val, sort);
     }, 300);
   };
 
   const handleSortChange = (val: string) => {
     setSort(val);
-    handleFilterChange(category, search, val);
+    handleFilterChange(category, segment, search, val);
   };
 
-  const catInfo = getCategoryInfo(category, remoteCovers);
+  const catInfo =
+    category !== "ALL"
+      ? getCategoryInfo(category, remoteCovers)
+      : segment === "select"
+      ? getCategoryInfo("DEEN_SELECT", remoteCovers)
+      : segment === "collection"
+      ? getCategoryInfo("DEEN_COLLECTION", remoteCovers)
+      : getCategoryInfo("ALL", remoteCovers);
+
+  const showHeroBanner = category !== "ALL" || segment !== "all";
 
   return (
     <div className="container" style={{ paddingBottom: 80 }}>
       {/* Page header */}
-      <div style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: 24, fontWeight: 900, color: "var(--ink)", marginBottom: 4, letterSpacing: "-0.5px" }}>
           CATEGORIES &amp; SHOP
         </h1>
         <p style={{ color: "var(--sub)", fontSize: 13 }}>
           {loading ? "Updating catalog…" : `Showing ${products.length} products`}
-          {category !== "ALL" ? ` in ${category}` : ""}
+          {segment === "select"
+            ? " in DEEN Select (Curated Drops)"
+            : segment === "collection"
+            ? " in DEEN Collection (Artisanal)"
+            : ""}
+          {category !== "ALL" ? ` · ${category}` : ""}
         </p>
+      </div>
+
+      {/* Brand Segment Switcher: DEEN Collection vs DEEN Select */}
+      <div
+        className="segment-pill-bar"
+        style={{
+          display: "flex",
+          gap: 8,
+          marginBottom: 16,
+          background: "var(--surface-2)",
+          padding: 4,
+          borderRadius: 30,
+          border: "1px solid var(--border)",
+          width: "fit-content",
+          maxWidth: "100%",
+          overflowX: "auto",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => handleSegmentChange("all")}
+          style={{
+            padding: "8px 16px",
+            borderRadius: 24,
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: "0.5px",
+            border: "none",
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+            background: segment === "all" ? "var(--ink)" : "transparent",
+            color: segment === "all" ? "var(--paper)" : "var(--sub)",
+          }}
+        >
+          ALL APPAREL
+        </button>
+        <button
+          type="button"
+          onClick={() => handleSegmentChange("collection")}
+          style={{
+            padding: "8px 16px",
+            borderRadius: 24,
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: "0.5px",
+            border: "none",
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+            background: segment === "collection" ? "var(--indigo)" : "transparent",
+            color: segment === "collection" ? "#FFFFFF" : "var(--sub)",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <span>💎</span> DEEN COLLECTION
+        </button>
+        <button
+          type="button"
+          onClick={() => handleSegmentChange("select")}
+          style={{
+            padding: "8px 16px",
+            borderRadius: 24,
+            fontSize: 12,
+            fontWeight: 800,
+            letterSpacing: "0.5px",
+            border: "none",
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+            background: segment === "select" ? "#D97706" : "transparent",
+            color: segment === "select" ? "#FFFFFF" : "var(--sub)",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          <span>⚡</span> DEEN SELECT
+        </button>
       </div>
 
       {/* Visual Category Showcase Carousel — covers from REST API */}
@@ -129,8 +239,8 @@ export default function ShopClient({
         })}
       </div>
 
-      {/* Category Hero Banner — image from REST API */}
-      {category !== "ALL" && (
+      {/* Category or Segment Hero Banner — image from REST API */}
+      {showHeroBanner && (
         <div
           className="category-hero-card"
           style={
@@ -154,7 +264,7 @@ export default function ShopClient({
         <input
           type="search"
           className="search-input"
-          placeholder="Search jeans, panjabi, shirts, polo, combo…"
+          placeholder="Search by name, SKU, category…"
           value={search}
           onChange={(e) => handleSearchChange(e.target.value)}
         />
@@ -188,8 +298,9 @@ export default function ShopClient({
             className="btn btn--primary"
             onClick={() => {
               setCategory("ALL");
+              setSegment("all");
               setSearch("");
-              handleFilterChange("ALL", "", sort);
+              handleFilterChange("ALL", "all", "", sort);
             }}
           >
             SHOW ALL PRODUCTS

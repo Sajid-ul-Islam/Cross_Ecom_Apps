@@ -40,8 +40,21 @@ export default async function HomePage() {
 
   const activePromo = campaign?.activeCampaign;
 
-  // Curate display categories from REST API + standard catalog
-  const primaryCategories = ["JEANS", "SHIRT", "PANJABI", "T-SHIRT", "POLO", "TROUSERS"];
+  // Curate display categories from deencommerce.com official taxonomy
+  const primaryCategories = [
+    "TRENDING",
+    "NEW_ARRIVALS",
+    "JEANS",
+    "SHIRT",
+    "T-SHIRT",
+    "TROUSERS",
+    "PANJABI",
+    "DEEN_SELECT",
+    "VALUE_PACKS",
+    "SALE",
+    "ACCESSORIES",
+    "OTHERS",
+  ];
   const displayCategories = primaryCategories.map((catKey) => {
     const info = getCategoryInfo(catKey, remoteCovers);
     const countObj = categoriesList.find((c) => c.category.toUpperCase() === catKey);
@@ -307,9 +320,8 @@ export default async function HomePage() {
                         <span className="cat-live-dot" />
                         {cat.badge}
                       </span>
-                      <p style={{ color: "#fff", fontSize: 15, fontWeight: 900, letterSpacing: 0.3, lineHeight: 1.2, margin: 0 }}>{cat.label}</p>
-                      <p style={{ color: "rgba(255,255,255,0.75)", fontSize: 11, marginTop: 4, marginBottom: 0 }}>
-                        Shop Collection {cat.count ? `(${cat.count})` : ""} →
+                      <p style={{ color: "rgba(255,255,255,0.85)", fontSize: 11, marginTop: 4, marginBottom: 0 }}>
+                        {cat.subtitle}
                       </p>
                     </div>
                   </div>
