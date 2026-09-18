@@ -12,7 +12,7 @@ import { useVideoPlayer, VideoView } from "expo-video";
 import { useTheme } from "../context/ThemeContext";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const HERO_HEIGHT = Math.round(SCREEN_WIDTH * (9 / 16)); // 16:9 cinematic edge-to-edge ratio
+const HERO_HEIGHT = SCREEN_WIDTH; // 1:1 square native mobile ratio to match 1080x1080 video assets
 
 interface HeroSlide {
   id: string;

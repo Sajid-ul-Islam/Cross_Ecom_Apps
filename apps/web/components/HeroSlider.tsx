@@ -182,24 +182,24 @@ export default function HeroSlider({ bannerData }: HeroSliderProps) {
           background-color: #080c14;
           margin-bottom: 28px;
         }
-        /* Desktop aspect ratio: dynamic responsive widescreen that scales gracefully across screens */
+        /* Desktop aspect ratio: native 16:7 (1920x840) widescreen that scales responsively without vertical clipping */
         @media (min-width: 769px) {
           .hero-slider-clean {
-            aspect-ratio: 21 / 9;
+            aspect-ratio: 16 / 7;
             min-height: 280px;
-            max-height: 480px;
+            max-height: none;
           }
           .hero-slider-clean img {
             object-fit: cover;
             object-position: center 30%;
           }
         }
-        /* Dynamic Mobile screen ratio: 16:9 ratio prevents taking over the whole screen and prevents cut-offs */
+        /* Dynamic Mobile screen ratio: 16:7 (1920x840) ratio preserves lateral edges of widescreen and square slides without cropping */
         @media (max-width: 768px) {
           .hero-slider-clean {
-            aspect-ratio: 16 / 9;
-            min-height: 190px;
-            max-height: 280px;
+            aspect-ratio: 16 / 7;
+            min-height: unset;
+            max-height: none;
             margin-bottom: 18px;
           }
           .hero-slider-clean img {

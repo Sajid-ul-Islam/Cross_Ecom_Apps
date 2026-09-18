@@ -169,12 +169,13 @@ export default function SideNavDrawer({ isOpen, onClose, onOpenStories }: SideNa
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/logo.png"
+              src={isDark ? "/logo_white.png" : "/logo.png"}
               alt="DEEN"
               style={{
                 height: 24,
                 width: "auto",
-                filter: isDark ? "invert(1) brightness(1.2)" : "none",
+                objectFit: "contain",
+                filter: "none",
               }}
             />
             <span

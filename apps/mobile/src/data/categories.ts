@@ -147,7 +147,7 @@ export const getCategoryInfo = (cat: string): CategoryInfo => {
       subtitle: "Handcrafted Men's Apparel Crafted in Bangladesh",
       description: "Discover our artisanal collection crafted with premium materials and ethical tailoring.",
       coverImage:
-        "https://images.unsplash.com/photo-1542272604-780c96856592?w=1200",
+        "https://deencommerce.com/wp-content/uploads/2026/05/DEEN-90s-Blue-Jeans-Slim-Fit-101-0100-138-front.webp",
       craftNote: "Artisanal craftsmanship made with premium cotton and heritage dye techniques.",
       filterTags: ["All", "New Arrivals", "Best Sellers", "Sale"],
     }

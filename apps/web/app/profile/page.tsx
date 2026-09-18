@@ -18,6 +18,7 @@ import {
 import SocialAuthModal from "@/components/SocialAuthModal";
 import AboutDeenDrawer from "@/components/AboutDeenDrawer";
 import ProfileDrawer from "@/components/ProfileDrawer";
+import CustomerAnalyticsKPIs from "@/components/CustomerAnalyticsKPIs";
 
 const PROFILE_STORAGE_KEY = "deen_web_user_profile";
 
@@ -470,6 +471,12 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
+
+      {/* ── Executive Customer Analytics KPI Dashboard (Requirement R3) ── */}
+      <CustomerAnalyticsKPIs
+        orders={orders}
+        onOrdersClick={() => setActiveDrawer("orders")}
+      />
 
       {/* ── Priority for Admin: Executive BI Command Hub ── */}
       {profile.role === "admin" && (

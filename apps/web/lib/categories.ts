@@ -116,6 +116,26 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     metaBadge: "GLOBAL CURATED DROP",
     highlights: ["Authentic International Brands", "Springfield, Lefties & Pull & Bear", "Limited Drop Quantities"],
   },
+  POLO: {
+    slug: "POLO",
+    title: "Knitted Indigo Polos",
+    subtitle: "Honey-Comb Pique & Jacquard Knits with Mother of Pearl Accents",
+    description:
+      "Elevated casual wear crafted from heavyweight cotton pique. Finished with tipped flat-knit collars, mother-of-pearl buttons, and split side hems.",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Polo-103-0200-053-Front.webp",
+    metaBadge: "HONEYCOMB PIQUE",
+    highlights: ["Pique Cotton", "Tipped Collar", "Mother of Pearl Buttons"],
+  },
+  DEEN_COLLECTION: {
+    slug: "DEEN_COLLECTION",
+    title: "DEEN Collection · In-House Craft",
+    subtitle: "Heritage Denim, Dobby Panjabis & 240 GSM Tees — Made in Bangladesh",
+    description:
+      "The full DEEN in-house collection — from cross-hatch denim engineered for authentic fades, to heritage dobby panjabis and heavyweight 240 GSM tees. Crafted with local expertise and premium materials.",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-High-High-End-Vintage-Wash-Jeans-–-Slim-Fit-101-0100-151-Back.webp",
+    metaBadge: "IN-HOUSE CRAFT",
+    highlights: ["Cross-Hatch Denim", "Heritage Dobby Jacquard", "240 GSM Heavy Cotton"],
+  },
   OTHERS: {
     slug: "OTHERS",
     title: "Others",
@@ -135,7 +155,7 @@ export function getCategoryInfo(category: string, remoteCovers?: Record<string, 
       : normalized === "SELECT" || normalized === "DEENSELECT"
       ? "DEEN_SELECT"
       : normalized === "COLLECTION" || normalized === "DEENCOLLECTION"
-      ? "JEANS"
+      ? "DEEN_COLLECTION"
       : normalized === "NEW" || normalized === "NEW_ARRIVAL" || normalized === "NEWARRIVALS"
       ? "NEW_ARRIVALS"
       : normalized === "TRENDING_NOW" || normalized === "TRENDINGNOW"

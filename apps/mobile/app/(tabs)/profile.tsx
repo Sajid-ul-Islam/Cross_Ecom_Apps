@@ -50,6 +50,7 @@ import { ThemeAndNotifications } from "../../src/components/profile/ThemeAndNoti
 import { SecuritySection } from "../../src/components/profile/SecuritySection";
 import { ScreenErrorBoundary } from "../../src/components/ScreenErrorBoundary";
 import { ProfileDrawerModal } from "../../src/components/ProfileDrawerModal";
+import { CustomerAnalyticsKPIs } from "../../src/components/profile/CustomerAnalyticsKPIs";
 
 // Modals
 import { AdminBroadcastModal } from "../../src/components/AdminBroadcastModal";
@@ -231,6 +232,12 @@ export default function ProfileScreen() {
             }}
             onOrdersPress={() => setOrdersModalVisible(true)}
             onAddressPress={() => setAddressModalVisible(true)}
+          />
+
+          {/* ── 1.5 Customer Executive KPI Analytics Dashboard ── */}
+          <CustomerAnalyticsKPIs
+            orders={orders}
+            onOrdersPress={() => setOrdersModalVisible(true)}
           />
 
           {/* Priority 1 for Admin: Executive BI Control Hub */}

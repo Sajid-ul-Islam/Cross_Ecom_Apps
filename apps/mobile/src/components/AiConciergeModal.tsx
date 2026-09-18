@@ -58,6 +58,122 @@ export interface AiChatViewProps {
   isEmbedded?: boolean;
 }
 
+/**
+ * Lightweight, zero-dependency formatted text parser for React Native.
+ * Parses bold tokens (**text**), strikethrough (~~text~~), inline code (`code`),
+ * bullets (•, -, *), and line breaks into styled <Text> tree.
+ */
+export function renderFormattedTextNative(
+  text: string,
+  isUser: boolean,
+  colors: ThemeColors
+): React.ReactNode {
+  if (!text) return null;
+
+  const lines = text.split("\n");
+
+  const parseInline = (lineText: string, keyPrefix: string): React.ReactNode[] => {
+    const parts = lineText.split(/(\*\*[\s\S]+?\*\*|~~[\s\S]+?~~|`[\s\S]+?`)/g);
+    return parts.map((part, idx) => {
+      const key = `${keyPrefix}_${idx}`;
+      if (part.startsWith("**") && part.endsWith("**") && part.length >= 4) {
+        const content = part.slice(2, -2);
+        return (
+          <Text
+            key={key}
+            style={{
+              fontWeight: "700",
+              color: isUser ? "#FFFFFF" : colors.ink,
+            }}
+          >
+            {content}
+          </Text>
+        );
+      }
+      if (part.startsWith("~~") && part.endsWith("~~") && part.length >= 4) {
+        const content = part.slice(2, -2);
+        return (
+          <Text
+            key={key}
+            style={{
+              textDecorationLine: "line-through",
+              opacity: 0.7,
+              color: isUser ? "#FFFFFF" : colors.sub,
+            }}
+          >
+            {content}
+          </Text>
+        );
+      }
+      if (part.startsWith("`") && part.endsWith("`") && part.length >= 2) {
+        const content = part.slice(1, -1);
+        return (
+          <Text
+            key={key}
+            style={{
+              fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+              fontWeight: "600",
+              color: isUser ? "#FFFFFF" : colors.indigo,
+            }}
+          >
+            {content}
+          </Text>
+        );
+      }
+      return (
+        <Text key={key} style={{ color: isUser ? "#FFFFFF" : colors.ink }}>
+          {part}
+        </Text>
+      );
+    });
+  };
+
+  const renderedElements: React.ReactNode[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (line.trim() === "") {
+      renderedElements.push(
+        <Text key={`space_${i}`}>
+          {"\n"}
+        </Text>
+      );
+      continue;
+    }
+
+    const bulletMatch = line.match(/^(\s*)([•\-\*])\s+(.+)$/);
+    if (bulletMatch) {
+      const indent = bulletMatch[1].length > 0 ? "    " : "  ";
+      const bulletContent = bulletMatch[3];
+      renderedElements.push(
+        <Text key={`b_${i}`}>
+          <Text
+            style={{
+              color: isUser ? "#FFFFFF" : colors.indigo,
+              fontWeight: "700",
+            }}
+          >
+            {indent}•{" "}
+          </Text>
+          {parseInline(bulletContent, `b_in_${i}`)}
+          {i < lines.length - 1 ? "\n" : ""}
+        </Text>
+      );
+      continue;
+    }
+
+    renderedElements.push(
+      <Text key={`l_${i}`}>
+        {parseInline(line, `l_in_${i}`)}
+        {i < lines.length - 1 ? "\n" : ""}
+      </Text>
+    );
+  }
+
+  return renderedElements;
+}
+
 export const AiChatView: React.FC<AiChatViewProps> = ({
   onClose,
   isEmbedded = false,
@@ -255,7 +371,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
                       m.sender === "user" ? styles.userBubbleText : styles.aiBubbleText,
                     ]}
                   >
-                    {m.text}
+                    {renderFormattedTextNative(m.text, m.sender === "user", colors)}
                   </Text>
                 </View>
 

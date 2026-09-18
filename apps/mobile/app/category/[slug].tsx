@@ -34,7 +34,7 @@ import { useProfile } from "../../src/context/ProfileContext";
 import { getCategoryInfo } from "../../src/data/categories";
 
 const { width } = Dimensions.get("window");
-const COVER_HEIGHT = 220;
+const COVER_HEIGHT = 250;
 
 type SortOption = "featured" | "price_asc" | "price_desc" | "newest" | "discount";
 
@@ -168,6 +168,11 @@ export default function CategoryLandingScreen() {
 
                 <Text style={styles.heroTitle}>{categoryInfo.title}</Text>
                 <Text style={styles.heroSubtitle}>{categoryInfo.subtitle}</Text>
+                {categoryInfo.description ? (
+                  <Text style={styles.heroDescription} numberOfLines={3}>
+                    {categoryInfo.description}
+                  </Text>
+                ) : null}
 
                 <View style={styles.craftPill}>
                   <Layers size={13} color="#FFFFFF" />
@@ -363,6 +368,12 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
       fontSize: 12,
       marginTop: 4,
       lineHeight: 16,
+    },
+    heroDescription: {
+      color: "rgba(255, 255, 255, 0.9)",
+      fontSize: 11,
+      lineHeight: 15,
+      marginTop: 4,
     },
     craftPill: {
       flexDirection: "row",

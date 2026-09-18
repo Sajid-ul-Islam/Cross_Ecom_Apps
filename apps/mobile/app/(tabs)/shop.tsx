@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -20,7 +20,7 @@ import { sharedStyles } from "../../src/theme/sharedStyles";
 import { usePullToRefresh } from "../../src/hooks/usePullToRefresh";
 import { fetchProducts, CATEGORIES, useCatalogRefreshOnFocus } from "../../src/services/gateway";
 import { Product, DeenCategory } from "../../src/types";
-import { getCategoryInfo } from "../../src/data/categories";
+import { getCategoryInfo, CategoryInfo } from "../../src/data/categories";
 
 type SortKey = "default" | "price-asc" | "price-desc" | "name-asc" | "new";
 
@@ -71,7 +71,41 @@ export default function ShopScreen() {
     loadProducts().finally(() => setLoading(false));
   }, [selectedCategory, deferredQuery, sort, segment]);
 
-  const { refreshing, onRefresh: handleRefresh } = usePullToRefresh(loadProducts);
+  const { refreshing, onRefresh: handleRefresh, refreshControl } = usePullToRefresh(loadProducts);
+
+  const categorizedSections = useMemo(() => {
+    if (selectedCategory !== "ALL" || deferredQuery.trim().length > 0) {
+      return [];
+    }
+    const catList = CATEGORIES.filter((c) => c !== "ALL");
+    const sections: { category: DeenCategory; info: CategoryInfo; items: Product[] }[] = [];
+
+    catList.forEach((cat) => {
+      const items = products.filter(
+        (p) => p.category.toUpperCase() === cat.toUpperCase()
+      );
+      if (items.length > 0) {
+        sections.push({
+          category: cat,
+          info: getCategoryInfo(cat),
+          items,
+        });
+      }
+    });
+
+    const knownCats = new Set(catList.map((c) => c.toUpperCase()));
+    const remaining = products.filter((p) => !knownCats.has(p.category.toUpperCase()));
+    if (remaining.length > 0) {
+      const firstCat = (remaining[0].category as DeenCategory) || "JEANS";
+      sections.push({
+        category: firstCat,
+        info: getCategoryInfo(remaining[0].category),
+        items: remaining,
+      });
+    }
+
+    return sections;
+  }, [products, selectedCategory, deferredQuery]);
 
   return (
     <ScreenShell title="CATEGORIES" showSearch={false}>
@@ -303,6 +337,73 @@ export default function ShopScreen() {
             <Text style={styles.resetBtnText}>SHOW ALL PRODUCTS</Text>
           </TouchableOpacity>
         </View>
+      ) : selectedCategory === "ALL" && deferredQuery.trim().length === 0 && categorizedSections.length > 0 ? (
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={refreshControl}
+        >
+          {categorizedSections.map((section) => (
+            <View key={section.category} style={styles.categorySection}>
+              {/* Category Cover Banner with Title & Poetic Description */}
+              <TouchableOpacity
+                style={[styles.categoryHeroBanner, { backgroundColor: colors.indigoDark }]}
+                activeOpacity={0.88}
+                onPress={() => setSelectedCategory(section.category)}
+              >
+                <Image
+                  source={{ uri: section.info.coverImage }}
+                  style={styles.categoryHeroImage}
+                  resizeMode="cover"
+                />
+                <View style={styles.categoryHeroOverlay} />
+                <View style={styles.categoryHeroContent}>
+                  <View style={styles.categoryHeroTop}>
+                    <Text style={styles.categoryHeroTitle}>
+                      {section.info.title}
+                    </Text>
+                    <View style={[styles.landingPageLink, { backgroundColor: colors.indigo }]}>
+                      <Text style={styles.landingPageLinkText}>View All ({section.items.length})</Text>
+                      <ArrowRight size={12} color="#FFFFFF" />
+                    </View>
+                  </View>
+                  <Text style={styles.categoryHeroSub} numberOfLines={1}>
+                    {section.info.subtitle}
+                  </Text>
+                  {section.info.description ? (
+                    <Text style={styles.categoryHeroDescription} numberOfLines={2}>
+                      {section.info.description}
+                    </Text>
+                  ) : null}
+                </View>
+              </TouchableOpacity>
+
+              {/* Preview Grid of Products (up to 4 items in 2 columns) */}
+              <View style={styles.previewGrid}>
+                {section.items.slice(0, 4).map((item) => (
+                  <View key={item.id} style={styles.previewGridItem}>
+                    <ProductCard product={item} />
+                  </View>
+                ))}
+              </View>
+
+              {/* Explore All Category CTA */}
+              <TouchableOpacity
+                style={[styles.exploreCategoryBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
+                activeOpacity={0.8}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Explore all ${section.info.title} products`}
+                onPress={() => setSelectedCategory(section.category)}
+              >
+                <Text style={[styles.exploreCategoryBtnText, { color: colors.indigo }]}>
+                  EXPLORE ALL {section.info.title.toUpperCase()} ({section.items.length} ITEMS)
+                </Text>
+                <ArrowRight size={13} color={colors.indigo} />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
       ) : (
         <FlatList
           data={products}
@@ -345,9 +446,14 @@ export default function ShopScreen() {
                       <ArrowRight size={12} color="#FFFFFF" />
                     </View>
                   </View>
-                  <Text style={styles.categoryHeroSub} numberOfLines={2}>
+                  <Text style={styles.categoryHeroSub} numberOfLines={1}>
                     {getCategoryInfo(selectedCategory).subtitle}
                   </Text>
+                  {getCategoryInfo(selectedCategory).description ? (
+                    <Text style={styles.categoryHeroDescription} numberOfLines={2}>
+                      {getCategoryInfo(selectedCategory).description}
+                    </Text>
+                  ) : null}
                 </View>
               </TouchableOpacity>
             ) : null
@@ -555,25 +661,24 @@ function createStyles(colors: any, s: ReturnType<typeof sharedStyles>) {
       letterSpacing: 0.8,
     },
     categoryHeroBanner: {
-      height: 120,
+      minHeight: 135,
       borderRadius: 10,
       overflow: "hidden",
       position: "relative",
       marginBottom: 14,
+      justifyContent: "flex-end",
     },
     categoryHeroImage: {
+      ...StyleSheet.absoluteFill,
       width: "100%",
       height: "100%",
     },
     categoryHeroOverlay: {
       ...StyleSheet.absoluteFill,
-      backgroundColor: "rgba(10, 20, 15, 0.6)",
+      backgroundColor: "rgba(10, 20, 15, 0.65)",
     },
     categoryHeroContent: {
-      position: "absolute",
-      bottom: 12,
-      left: 12,
-      right: 12,
+      padding: 12,
     },
     categoryHeroTop: {
       flexDirection: "row",
@@ -606,6 +711,40 @@ function createStyles(colors: any, s: ReturnType<typeof sharedStyles>) {
       color: "rgba(255, 255, 255, 0.85)",
       fontSize: 10,
       lineHeight: 14,
+    },
+    categoryHeroDescription: {
+      color: "rgba(255, 255, 255, 0.92)",
+      fontSize: 11,
+      lineHeight: 15,
+      marginTop: 4,
+    },
+    categorySection: {
+      marginBottom: 24,
+    },
+    previewGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "space-between",
+      marginBottom: 8,
+    },
+    previewGridItem: {
+      width: "48.5%",
+      marginBottom: 8,
+    },
+    exploreCategoryBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingVertical: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      marginBottom: 8,
+    },
+    exploreCategoryBtnText: {
+      fontSize: 11,
+      fontWeight: "800",
+      letterSpacing: 0.6,
     },
   });
 }

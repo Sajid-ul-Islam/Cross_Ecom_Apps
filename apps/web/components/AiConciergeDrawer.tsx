@@ -1,11 +1,129 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { API_URL, bdt, resolveProductImage } from "@/lib/api";
 import { useCart } from "@/lib/cart";
+
+/**
+ * Lightweight, zero-dependency formatted text parser.
+ * Parses **bold**, ~~strikethrough~~, `code`, and \n- / • bullet points into styled elements.
+ */
+function renderFormattedText(text: string, isUser: boolean = false): React.ReactNode {
+  if (!text) return null;
+
+  const lines = text.split("\n");
+
+  const parseInline = (lineText: string, keyPrefix: string): React.ReactNode[] => {
+    const parts = lineText.split(/(\*\*[\s\S]+?\*\*|~~[\s\S]+?~~|`[\s\S]+?`)/g);
+    return parts.map((part, idx) => {
+      const key = `${keyPrefix}_${idx}`;
+      if (part.startsWith("**") && part.endsWith("**") && part.length >= 4) {
+        const content = part.slice(2, -2);
+        return (
+          <strong
+            key={key}
+            style={{
+              fontWeight: 700,
+              color: isUser ? "inherit" : "var(--ink)",
+            }}
+          >
+            {content}
+          </strong>
+        );
+      }
+      if (part.startsWith("~~") && part.endsWith("~~") && part.length >= 4) {
+        const content = part.slice(2, -2);
+        return (
+          <del
+            key={key}
+            style={{
+              textDecoration: "line-through",
+              opacity: 0.75,
+            }}
+          >
+            {content}
+          </del>
+        );
+      }
+      if (part.startsWith("`") && part.endsWith("`") && part.length >= 2) {
+        const content = part.slice(1, -1);
+        return (
+          <code
+            key={key}
+            style={{
+              backgroundColor: isUser ? "rgba(255,255,255,0.22)" : "rgba(128,128,128,0.14)",
+              border: isUser ? "none" : "1px solid var(--border)",
+              padding: "1px 5px",
+              borderRadius: 4,
+              fontSize: "0.9em",
+              fontFamily: "monospace",
+              color: isUser ? "#FFFFFF" : "var(--indigo)",
+            }}
+          >
+            {content}
+          </code>
+        );
+      }
+      return <React.Fragment key={key}>{part}</React.Fragment>;
+    });
+  };
+
+  const renderedLines: React.ReactNode[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (line.trim() === "") {
+      renderedLines.push(<div key={`spacer_${i}`} style={{ height: 6 }} />);
+      continue;
+    }
+
+    const bulletMatch = line.match(/^(\s*)([•\-\*])\s+(.+)$/);
+    if (bulletMatch) {
+      const indent = bulletMatch[1].length;
+      const bulletContent = bulletMatch[3];
+      renderedLines.push(
+        <div
+          key={`bullet_${i}`}
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 6,
+            marginLeft: indent > 0 ? indent * 8 : 2,
+            marginTop: 1,
+            marginBottom: 1,
+            lineHeight: 1.55,
+          }}
+        >
+          <span
+            style={{
+              color: isUser ? "rgba(255,255,255,0.85)" : "var(--indigo)",
+              fontWeight: 800,
+              fontSize: 13,
+              lineHeight: 1.4,
+              userSelect: "none",
+            }}
+          >
+            •
+          </span>
+          <div style={{ flex: 1 }}>{parseInline(bulletContent, `b_${i}`)}</div>
+        </div>
+      );
+      continue;
+    }
+
+    renderedLines.push(
+      <div key={`line_${i}`} style={{ lineHeight: 1.55 }}>
+        {parseInline(line, `l_${i}`)}
+      </div>
+    );
+  }
+
+  return renderedLines;
+}
 
 interface AiMessage {
   id: string;
@@ -39,6 +157,9 @@ export default function AiConciergeDrawer() {
   const { addItem } = useCart();
   const [addedIds, setAddedIds] = useState<Record<string, boolean>>({});
   const router = useRouter();
+  const pathname = usePathname();
+
+  if (pathname === "/chat") return null;
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -387,11 +508,11 @@ export default function AiConciergeDrawer() {
                       color: m.sender === "user" ? "#FFFFFF" : "var(--ink)",
                       fontSize: 13,
                       lineHeight: 1.6,
-                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
                       border: m.sender === "ai" ? "1px solid var(--border)" : "none",
                     }}
                   >
-                    {m.text}
+                    {renderFormattedText(m.text, m.sender === "user")}
                   </div>
 
                   {/* Embedded Suggested Products */}
