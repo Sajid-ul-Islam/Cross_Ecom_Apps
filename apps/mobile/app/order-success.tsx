@@ -56,7 +56,7 @@ export default function OrderSuccessScreen() {
             <Text style={[styles.orderNumber, { color: colors.indigoDark }]}>{params.orderNumber || "N/A"}</Text>
           </View>
 
-          {params.gatewayRef ? (
+          {params.gatewayRef && params.gatewayRef !== params.orderNumber ? (
             <View style={styles.cardRow}>
               <Text style={[styles.label, { color: colors.sub }]}>APP REFERENCE</Text>
               <Text style={[styles.gatewayRef, { color: colors.faint }]}>{params.gatewayRef}</Text>

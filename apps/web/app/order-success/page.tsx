@@ -11,11 +11,13 @@ const PROFILE_STORAGE_KEY = "deen_web_user_profile";
 function OrderSuccessContent() {
   const params = useSearchParams();
   const orderId = params.get("id") || "";
-  const number = params.get("number") || "DC-???";
+  const number = params.get("number") || (params.get("wooId") ? `#${params.get("wooId")}` : "Order");
   const total = Number(params.get("total") || 0);
   const delivery = Number(params.get("delivery") || 50);
   const wooId = params.get("wooId");
   const payment = params.get("payment") || "Cash on Delivery (COD)";
+  const paymentUrl = params.get("paymentUrl") || "";
+  const needsPayment = Boolean(paymentUrl && paymentUrl.trim().length > 0) && !payment.toLowerCase().includes("cash") && payment !== "cod";
   const consignment = params.get("consignment");
   const hasConsignment = Boolean(consignment && consignment.trim().length > 0);
   const [whatsapp, setWhatsapp] = useState("01952700500");
@@ -230,6 +232,15 @@ function OrderSuccessContent() {
 
         {/* Navigation Action Buttons */}
         <div className="success-action-buttons">
+          {needsPayment && (
+            <a
+              href={paymentUrl}
+              className="btn btn-primary btn-full btn-lg"
+              style={{ background: "var(--emerald)", borderColor: "var(--emerald)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+            >
+              <span>💳</span> Complete Online Payment (bKash / Card) →
+            </a>
+          )}
           <Link href="/orders" className="btn btn-primary btn-full btn-lg">
             📋 Track My Orders & History
           </Link>

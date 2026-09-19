@@ -159,8 +159,6 @@ export default function AiConciergeDrawer() {
   const router = useRouter();
   const pathname = usePathname();
 
-  if (pathname === "/chat") return null;
-
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setIsOpen(false);
@@ -261,6 +259,8 @@ export default function AiConciergeDrawer() {
       setAddedIds((prev) => ({ ...prev, [p.id]: false }));
     }, 2000);
   };
+
+  if (pathname === "/chat") return null;
 
   return (
     <>

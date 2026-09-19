@@ -154,6 +154,9 @@ export interface OrderResult {
   id: string;
   number: string;
   wooId?: number;
+  wooNumber?: string;
+  paymentUrl?: string;
+  orderKey?: string;
   total: number;
   subtotal: number;
   delivery: number;
@@ -1714,3 +1717,72 @@ export async function submitReturnRequest(payload: {
     return { success: false, message: err?.message || "Network error submitting return request." };
   }
 }
+
+/* ------------------------- customer comments & reviews ------------ */
+
+export interface ProductComment {
+  id: number;
+  productId: number;
+  authorName: string;
+  authorEmail?: string;
+  content: string;
+  rating: number;
+  date: string;
+  status: "approved" | "pending";
+}
+
+export interface ProductCommentsResponse {
+  productId: number | string;
+  comments: ProductComment[];
+  count: number;
+  averageRating: number;
+}
+
+export interface SubmitCommentPayload {
+  authorName: string;
+  authorEmail?: string;
+  content: string;
+  rating?: number;
+}
+
+export interface SubmitCommentResponse {
+  success: boolean;
+  comment: ProductComment;
+  message: string;
+}
+
+/** Fetch published customer comments & reviews for a product. */
+export async function fetchProductComments(productId: string | number): Promise<ProductCommentsResponse> {
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/products/${productId}/comments`, {
+      cache: "no-store",
+    });
+    if (res.ok) return await res.json();
+  } catch (err) {
+    console.warn(`[api] fetchProductComments failed:`, err);
+  }
+  return {
+    productId,
+    comments: [],
+    count: 0,
+    averageRating: 5,
+  };
+}
+
+/** Submit a new customer review / comment to WordPress. */
+export async function submitProductComment(
+  productId: string | number,
+  payload: SubmitCommentPayload
+): Promise<SubmitCommentResponse> {
+  const res = await apiFetch(`${API_URL}/v1/deen/products/${productId}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.message || `Failed to submit review (HTTP ${res.status})`);
+  }
+  return await res.json();
+}
+

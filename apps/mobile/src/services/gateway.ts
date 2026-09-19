@@ -2229,3 +2229,68 @@ export async function fetchSectionBanners(): Promise<SectionBannerItem[]> {
   } catch {}
   return FALLBACK_SECTION_BANNERS;
 }
+
+/* ------------------------- customer comments & reviews ------------ */
+
+export interface ProductComment {
+  id: number;
+  productId: number;
+  authorName: string;
+  authorEmail?: string;
+  content: string;
+  rating: number;
+  date: string;
+  status: "approved" | "pending";
+}
+
+export interface ProductCommentsResponse {
+  productId: number | string;
+  comments: ProductComment[];
+  count: number;
+  averageRating: number;
+}
+
+export interface SubmitCommentPayload {
+  authorName: string;
+  authorEmail?: string;
+  content: string;
+  rating?: number;
+}
+
+export interface SubmitCommentResponse {
+  success: boolean;
+  comment: ProductComment;
+  message: string;
+}
+
+export async function fetchProductComments(productId: string | number): Promise<ProductCommentsResponse> {
+  try {
+    const res = await request<ProductCommentsResponse>(`/v1/deen/products/${productId}/comments`, undefined, 8000, true);
+    if (res && Array.isArray(res.comments)) return res;
+  } catch (err) {
+    console.warn("[gateway] fetchProductComments error:", err);
+  }
+  return {
+    productId,
+    comments: [],
+    count: 0,
+    averageRating: 5.0,
+  };
+}
+
+export async function submitProductComment(
+  productId: string | number,
+  payload: SubmitCommentPayload
+): Promise<SubmitCommentResponse> {
+  const res = await request<SubmitCommentResponse>(`/v1/deen/products/${productId}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }, 12000, false);
+
+  if (!res || !res.success) {
+    throw new Error((res as any)?.message || "Failed to submit comment to WordPress.");
+  }
+  return res;
+}
+

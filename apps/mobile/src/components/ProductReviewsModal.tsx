@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,11 @@ import { X, Star, CheckCircle2, Camera, ShieldCheck, User } from "./Icons";
 import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { Product } from "../types";
+import {
+  fetchProductComments,
+  submitProductComment,
+  type ProductComment,
+} from "../services/gateway";
 
 const { width, height } = Dimensions.get("window");
 
@@ -27,6 +32,7 @@ interface ReviewItem {
   purchasedSize: string;
   comment: string;
   images: string[];
+  status?: "approved" | "pending";
 }
 
 const INITIAL_REVIEWS: ReviewItem[] = [
@@ -74,36 +80,89 @@ export const ProductReviewsModal: React.FC<ProductReviewsModalProps> = ({
   const styles = createStyles(colors);
   const [reviews, setReviews] = useState<ReviewItem[]>(INITIAL_REVIEWS);
   const [showWriteForm, setShowWriteForm] = useState(false);
-  const [userName, setUserName] = useState("Sajid");
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
   const [userRating, setUserRating] = useState(5);
   const [fitHeight, setFitHeight] = useState("5'11\"");
   const [fitWeight, setFitWeight] = useState("74kg");
   const [reviewText, setReviewText] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [selectedPhotos, setSelectedPhotos] = useState<string[]>([
     "https://image.qwenlm.ai/generated-images/79c9339e-d306-4444-aee3-bc6da2b12cf3/_result.png",
   ]);
 
-  const handleSubmitReview = () => {
+  useEffect(() => {
+    if (!visible || !product?.id) return;
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetchProductComments(product.id);
+        if (active && res && Array.isArray(res.comments) && res.comments.length > 0) {
+          const wpMapped: ReviewItem[] = res.comments.map((c) => ({
+            id: `wp_${c.id}`,
+            name: c.authorName,
+            rating: c.rating,
+            date: c.date ? new Date(c.date).toLocaleDateString() : "Recent",
+            fitInfo: c.status === "pending" ? "Awaiting WordPress Moderation" : "WordPress Verified Buyer",
+            purchasedSize: "Verified Purchase",
+            comment: c.content,
+            images: [],
+            status: c.status,
+          }));
+          setReviews([...wpMapped, ...INITIAL_REVIEWS]);
+        }
+      } catch (e) {
+        console.warn("[ProductReviewsModal] fetch comments failed:", e);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [visible, product?.id]);
+
+  const handleSubmitReview = async () => {
+    if (!userName.trim()) {
+      Alert.alert("Name Required", "Please enter your name to post a review.");
+      return;
+    }
     if (!reviewText.trim()) {
       Alert.alert("Review Required", "Please share a few words about your experience with this garment.");
       return;
     }
 
-    const newRev: ReviewItem = {
-      id: `rev_${Date.now()}`,
-      name: userName || "Verified Shopper",
-      rating: userRating,
-      date: "Just now",
-      fitInfo: `Height: ${fitHeight} · Weight: ${fitWeight}`,
-      purchasedSize: product.sizes[0] || "Standard",
-      comment: reviewText.trim(),
-      images: selectedPhotos,
-    };
+    setSubmitting(true);
+    try {
+      const res = await submitProductComment(product.id, {
+        authorName: userName.trim(),
+        authorEmail: userEmail.trim(),
+        content: reviewText.trim(),
+        rating: userRating,
+      });
 
-    setReviews([newRev, ...reviews]);
-    setShowWriteForm(false);
-    setReviewText("");
-    Alert.alert("Review Posted! ⭐", "Thank you for contributing verified fit feedback for the DEEN community.");
+      const newRev: ReviewItem = {
+        id: `wp_${res.comment.id}`,
+        name: res.comment.authorName,
+        rating: res.comment.rating,
+        date: "Just now",
+        fitInfo: res.comment.status === "pending" ? "Awaiting WordPress Moderation" : "WordPress Verified Buyer",
+        purchasedSize: product.sizes[0] || "Standard",
+        comment: res.comment.content,
+        images: selectedPhotos,
+        status: res.comment.status,
+      };
+
+      setReviews([newRev, ...reviews.filter((r) => r.id !== newRev.id)]);
+      setShowWriteForm(false);
+      setReviewText("");
+      Alert.alert(
+        "Review Saved in WordPress! ⭐",
+        res.message || "Thank you for contributing verified fit feedback for the DEEN community."
+      );
+    } catch (err: any) {
+      Alert.alert("Submission Error", err?.message || "Failed to submit comment to WordPress.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -174,6 +233,30 @@ export const ProductReviewsModal: React.FC<ProductReviewsModalProps> = ({
                   </View>
                 </View>
 
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>Your Name *</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={userName}
+                    onChangeText={setUserName}
+                    placeholder="e.g. Tanvir Ahmed"
+                    placeholderTextColor={colors.faint}
+                  />
+                </View>
+
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>Email Address (Optional)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={userEmail}
+                    onChangeText={setUserEmail}
+                    placeholder="e.g. tanvir@gmail.com"
+                    placeholderTextColor={colors.faint}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
+
                 <View style={styles.rowFields}>
                   <View style={[styles.field, { flex: 1 }]}>
                     <Text style={styles.fieldLabel}>Your Height</Text>
@@ -215,15 +298,19 @@ export const ProductReviewsModal: React.FC<ProductReviewsModalProps> = ({
                   <TouchableOpacity
                     style={styles.cancelBtn}
                     onPress={() => setShowWriteForm(false)}
+                    disabled={submitting}
                   >
                     <Text style={styles.cancelBtnText}>CANCEL</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={styles.submitRevBtn}
+                    style={[styles.submitRevBtn, submitting && { opacity: 0.6 }]}
                     onPress={handleSubmitReview}
+                    disabled={submitting}
                   >
-                    <Text style={styles.submitRevBtnText}>PUBLISH REVIEW</Text>
+                    <Text style={styles.submitRevBtnText}>
+                      {submitting ? "SAVING TO WORDPRESS..." : "PUBLISH REVIEW"}
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -237,9 +324,17 @@ export const ProductReviewsModal: React.FC<ProductReviewsModalProps> = ({
                     <View>
                       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                         <Text style={styles.revName}>{rev.name}</Text>
-                        <View style={styles.verifiedPill}>
-                          <ShieldCheck size={11} color={colors.emerald} />
-                          <Text style={styles.verifiedText}>VERIFIED BUYER</Text>
+                        <View style={[
+                          styles.verifiedPill,
+                          rev.status === "pending" && { backgroundColor: "rgba(245, 158, 11, 0.15)" },
+                        ]}>
+                          <ShieldCheck size={11} color={rev.status === "pending" ? colors.amber : colors.emerald} />
+                          <Text style={[
+                            styles.verifiedText,
+                            rev.status === "pending" && { color: colors.amber },
+                          ]}>
+                            {rev.status === "pending" ? "WP PENDING" : "VERIFIED BUYER"}
+                          </Text>
                         </View>
                       </View>
                       <Text style={styles.revDate}>

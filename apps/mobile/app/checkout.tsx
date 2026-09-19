@@ -202,21 +202,6 @@ export default function CheckoutScreen() {
         unit: i.product.salePrice ?? i.product.price,
       }));
 
-      const isManualMfs = payment.includes("bkash");
-
-      if (isManualMfs) {
-        if (!bkashNumber.trim() || !trxId.trim()) {
-          setErrorMsg("Please enter your bKash mobile number and Transaction ID (TrxID).");
-          scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-          setLoading(false);
-          return;
-        }
-      }
-
-      const finalDeliveryNotes = isManualMfs
-        ? `[bKash Payment]\nSender Phone: ${bkashNumber.trim()}\nRef/TrxID: ${trxId.trim()}\n${deliveryNotes.trim()}`
-        : deliveryNotes.trim();
-
       const created = await placeOrder({
         name: isGift ? (giftName.trim() || name.trim()) : name.trim(),
         phone: isGift ? (giftPhone.replace(/[^0-9]/g, "").slice(-11) || digits) : digits,
@@ -229,9 +214,8 @@ export default function CheckoutScreen() {
         area: selectedArea,
         deliveryOption: selectedArea,
         deliverySlot,
-        deliveryNotes: finalDeliveryNotes || undefined,
+        deliveryNotes: deliveryNotes.trim() || undefined,
         payment,
-        trxId: trxId.trim() || undefined,
         coupon: couponInfo ? couponInfo.code : undefined,
         isGiftOrder: isGift,
         giftRecipientName: isGift ? giftName.trim() : undefined,
@@ -249,22 +233,29 @@ export default function CheckoutScreen() {
       if (redeemPoints && coinDiscountBDT > 0) {
         await redeemCoins(coinDiscountBDT * 2);
       }
-      await earnCoins(total, `Order #${created.number}`);
+      const actualOrderNumber = created.wooNumber || created.number;
+      await earnCoins(total, `Order #${actualOrderNumber}`);
 
       // Dispatch Google Analytics 4 Purchase Event
       Analytics.logPurchase({
-        id: String(created.wooNumber || created.number || created.id),
+        id: String(actualOrderNumber || created.id),
         total: Number(created.total || total),
         deliveryFee: deliveryFee,
         paymentMethod: payment,
       });
 
       clearCart();
+
+      // If online payment gateway (bKash or SSLCommerz), open payment redirect URL
+      if (payment !== "cod" && created.paymentUrl) {
+        Linking.openURL(created.paymentUrl).catch(() => {});
+      }
+
       router.replace({
         pathname: "/order-success",
         params: {
           orderId: created.id,
-          orderNumber: created.wooNumber || created.number,
+          orderNumber: actualOrderNumber,
           gatewayRef: created.number,
           total: String(created.total),
           paymentUrl: created.paymentUrl || "",
@@ -752,41 +743,14 @@ export default function CheckoutScreen() {
                     <View style={styles.payInfo}>
                       <Text style={[styles.payTitle, { color: colors.ink }]}>{m.title}</Text>
                       {m.description ? <Text style={[styles.paySub, { color: colors.sub }]}>{m.description}</Text> : null}
-                      {!isCod && !m.id.includes("bkash") && (
-                        <Text style={[styles.paySub, { color: colors.sub }]}>You'll be taken to the secure {m.title} page to complete payment.</Text>
+                      {!isCod && (
+                        <Text style={[styles.paySub, { color: colors.sub, marginTop: 4 }]}>
+                          You will be redirected to the secure {m.title} page to complete payment.
+                        </Text>
                       )}
                     </View>
                     {isCod && <View style={[styles.payTag, { backgroundColor: colors.indigo }]}><Text style={styles.payTagText}>MOST POPULAR</Text></View>}
                   </TouchableOpacity>
-
-                  {/* Manual bKash Inputs */}
-                  {active && m.id.includes("bkash") && (
-                    <View style={{ padding: 12, backgroundColor: colors.indigoLight, borderBottomLeftRadius: 10, borderBottomRightRadius: 10, borderWidth: 1.5, borderColor: colors.indigo, borderTopWidth: 0, marginTop: -2 }}>
-                      <Text style={{ fontSize: 13, color: colors.ink, marginBottom: 10, fontWeight: "600", lineHeight: 18 }}>
-                        1. Open your bKash App & select Send Money.{"\n"}
-                        2. Send <Text style={{fontWeight: "800", color: colors.indigoDark}}>৳{total.toLocaleString("en-BD")}</Text> to <Text style={{fontWeight: "800", color: colors.indigoDark}}>01952 700 500</Text> (Personal).{"\n"}
-                        3. Enter your sender number and Transaction ID below.
-                      </Text>
-                      
-                      <View style={{ gap: 8 }}>
-                        <TextInput
-                          style={[styles.input, { backgroundColor: colors.paper, borderColor: colors.border, color: colors.ink }]}
-                          value={bkashNumber}
-                          onChangeText={setBkashNumber}
-                          placeholder="Your bKash Number (01XXXXXXXXX)"
-                          placeholderTextColor={colors.faint}
-                          keyboardType="phone-pad"
-                        />
-                        <TextInput
-                          style={[styles.input, { backgroundColor: colors.paper, borderColor: colors.border, color: colors.ink }]}
-                          value={trxId}
-                          onChangeText={setTrxId}
-                          placeholder="Transaction ID (TrxID)"
-                          placeholderTextColor={colors.faint}
-                        />
-                      </View>
-                    </View>
-                  )}
                 </View>
               );
             })

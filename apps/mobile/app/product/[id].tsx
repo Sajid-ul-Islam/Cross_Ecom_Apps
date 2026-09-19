@@ -34,7 +34,7 @@ import {
 import { ThemeColors } from "../../src/theme/colors";
 import { sharedStyles } from "../../src/theme/sharedStyles";
 import { useTheme } from "../../src/context/ThemeContext";
-import { fetchProductById, fetchProducts, fetchDeliveryFees, bdt, type DeliveryFees } from "../../src/services/gateway";
+import { fetchProductById, fetchProducts, fetchDeliveryFees, fetchProductComments, bdt, type DeliveryFees } from "../../src/services/gateway";
 import { Product, Variation } from "../../src/types";
 import { useCart } from "../../src/context/CartContext";
 import { useProfile } from "../../src/context/ProfileContext";
@@ -88,6 +88,8 @@ export default function ProductDetailScreen() {
   const [stockModalVisible, setStockModalVisible] = useState(false);
   const [reviewsModalVisible, setReviewsModalVisible] = useState(false);
   const [careGuideVisible, setCareGuideVisible] = useState(false);
+  const [commentsCount, setCommentsCount] = useState(0);
+  const [averageRating, setAverageRating] = useState(4.9);
 
   const galleryScrollRef = useRef<ScrollView>(null);
 
@@ -143,6 +145,17 @@ export default function ProductDetailScreen() {
     fetchDeliveryFees().then((fees) => {
       setDeliveryFees(fees);
     });
+
+    // Fetch live customer comments count & average rating
+    fetchProductComments(id)
+      .then((cRes) => {
+        if (!isMounted) return;
+        if (cRes && typeof cRes.count === "number") {
+          setCommentsCount(cRes.count);
+          if (cRes.averageRating) setAverageRating(cRes.averageRating);
+        }
+      })
+      .catch(() => {});
 
     return () => {
       isMounted = false;
@@ -603,8 +616,12 @@ export default function ProductDetailScreen() {
             >
               <Star size={15} color={colors.amber} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.featurePillTitle}>FIT REVIEWS (4.9 ⭐)</Text>
-                <Text style={styles.featurePillSub}>Customer fit photos & feedback</Text>
+                <Text style={styles.featurePillTitle}>
+                  FIT REVIEWS ({averageRating.toFixed(1)} ⭐)
+                </Text>
+                <Text style={styles.featurePillSub}>
+                  {commentsCount > 0 ? `${commentsCount} customer reviews` : "Customer fit photos & feedback"}
+                </Text>
               </View>
             </TouchableOpacity>
 

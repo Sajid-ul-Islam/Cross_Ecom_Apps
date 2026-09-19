@@ -42,6 +42,8 @@ import {
   registerOrSyncWooCustomer,
   getWooCustomerByPhoneOrEmail,
   updateWooCustomer,
+  fetchWooProductComments,
+  submitWooProductComment,
 } from "./woo.js";
 import {
   getPathaoToken,
@@ -144,6 +146,20 @@ const REGISTER_BODY_SCHEMA = {
       email: { type: "string", format: "email", maxLength: 254 },
     },
     additionalProperties: false,
+  },
+};
+
+const COMMENT_BODY_SCHEMA = {
+  body: {
+    type: "object",
+    required: ["authorName", "content"],
+    properties: {
+      authorName:  { type: "string", minLength: 1, maxLength: 100 },
+      authorEmail: { type: "string", maxLength: 254 },
+      content:     { type: "string", minLength: 2, maxLength: 3000 },
+      rating:      { type: "number", minimum: 1, maximum: 5 },
+    },
+    additionalProperties: true,
   },
 };
 
@@ -1136,6 +1152,117 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       }
     }
     return reply.send({ ...product, variations });
+  });
+
+  /* ---- product comments & reviews (WordPress persistence & retrieval) ---- */
+  app.get("/v1/deen/products/:id/comments", async (req, reply) => {
+    const pId = (req.params as any).id;
+    try {
+      const comments = await fetchWooProductComments(pId);
+      const approved = comments.filter((c) => c.status === "approved");
+      const avg =
+        approved.length > 0
+          ? Number((approved.reduce((acc, c) => acc + (c.rating || 5), 0) / approved.length).toFixed(1))
+          : comments.length > 0
+          ? Number((comments.reduce((acc, c) => acc + (c.rating || 5), 0) / comments.length).toFixed(1))
+          : 5.0;
+
+      return reply.send({
+        productId: pId,
+        comments,
+        count: comments.length,
+        averageRating: avg,
+      });
+    } catch (err: any) {
+      return reply.code(500).send({ error: "COMMENTS_FETCH_FAILED", message: err?.message || "Failed to fetch comments." });
+    }
+  });
+
+  app.get("/v1/deen/products/:id/reviews", async (req, reply) => {
+    const pId = (req.params as any).id;
+    try {
+      const comments = await fetchWooProductComments(pId);
+      const approved = comments.filter((c) => c.status === "approved");
+      const avg =
+        approved.length > 0
+          ? Number((approved.reduce((acc, c) => acc + (c.rating || 5), 0) / approved.length).toFixed(1))
+          : comments.length > 0
+          ? Number((comments.reduce((acc, c) => acc + (c.rating || 5), 0) / comments.length).toFixed(1))
+          : 5.0;
+
+      return reply.send({
+        productId: pId,
+        reviews: comments,
+        count: comments.length,
+        averageRating: avg,
+      });
+    } catch (err: any) {
+      return reply.code(500).send({ error: "REVIEWS_FETCH_FAILED", message: err?.message || "Failed to fetch reviews." });
+    }
+  });
+
+  app.post("/v1/deen/products/:id/comments", async (req, reply) => {
+    const pId = (req.params as any).id;
+    const body = (req.body as any) || {};
+    const authorName = (body.authorName || body.name || body.author || "").trim();
+    const authorEmail = (body.authorEmail || body.email || "").trim();
+    const content = (body.content || body.comment || body.review || "").trim();
+    const rating = Number(body.rating) || 5;
+
+    if (!authorName) {
+      return reply.code(400).send({ error: "INVALID_INPUT", message: "Name is required." });
+    }
+    if (!content) {
+      return reply.code(400).send({ error: "INVALID_INPUT", message: "Comment text is required." });
+    }
+
+    try {
+      const result = await submitWooProductComment({
+        productId: pId,
+        authorName,
+        authorEmail,
+        content,
+        rating,
+      });
+      return reply.code(201).send(result);
+    } catch (err: any) {
+      return reply.code(400).send({
+        error: "COMMENT_SUBMIT_FAILED",
+        message: err?.message || "Failed to submit comment to WordPress.",
+      });
+    }
+  });
+
+  app.post("/v1/deen/products/:id/reviews", async (req, reply) => {
+    const pId = (req.params as any).id;
+    const body = (req.body as any) || {};
+    const authorName = (body.authorName || body.name || body.author || "").trim();
+    const authorEmail = (body.authorEmail || body.email || "").trim();
+    const content = (body.content || body.comment || body.review || "").trim();
+    const rating = Number(body.rating) || 5;
+
+    if (!authorName) {
+      return reply.code(400).send({ error: "INVALID_INPUT", message: "Name is required." });
+    }
+    if (!content) {
+      return reply.code(400).send({ error: "INVALID_INPUT", message: "Review text is required." });
+    }
+
+    try {
+      const result = await submitWooProductComment({
+        productId: pId,
+        authorName,
+        authorEmail,
+        content,
+        rating,
+      });
+      return reply.code(201).send(result);
+    } catch (err: any) {
+      return reply.code(400).send({
+        error: "REVIEW_SUBMIT_FAILED",
+        message: err?.message || "Failed to submit review to WordPress.",
+      });
+    }
   });
 
   /* ---- analytics: store + sales + category + top sellers (admin only) ---- */
@@ -2318,6 +2445,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
               line_items: items.map((it: any) => ({
                 product_id: Number(it.productId),
                 variation_id: Number(it.variationId) || 0,
+                size: it.size,
                 quantity: it.qty,
               })),
               coupon_lines: [
@@ -2372,9 +2500,11 @@ export async function registerDeenRoutes(app: FastifyInstance) {
         }
       }
 
+      const actualOrderNumber = wooNumber || (wooId ? String(wooId) : orderNumStr);
+
       const order: any = {
         id: `d-${Date.now()}`,
-        number: orderNumStr,
+        number: actualOrderNumber,
         name: String(name).trim().slice(0, 50).replace(/<[^>]*>/g, ""), // SEC-5: cap length, strip HTML
         phone: digits,
         address: String(address).trim().slice(0, 500).replace(/<[^>]*>/g, ""), // SEC-5: cap length, strip HTML
@@ -2402,8 +2532,9 @@ export async function registerDeenRoutes(app: FastifyInstance) {
         createdAt: new Date().toISOString(),
         idempotencyKey,
         wooId,
-        wooNumber,
+        wooNumber: actualOrderNumber,
         wooPaymentUrl,
+        paymentUrl: wooPaymentUrl,
         trxId: trxId ? String(trxId) : undefined,
       };
       if (guestToken) {

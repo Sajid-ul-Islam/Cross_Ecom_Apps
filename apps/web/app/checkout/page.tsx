@@ -83,15 +83,16 @@ const PAYMENT_METHODS = [
     icon: "💵",
   },
   {
-    id: "bkash",
-    title: "bKash Direct / Send Money",
-    description: "Pay securely via bKash personal send-money with instant TrxID entry.",
+    id: "bkash-for-woocommerce",
+    title: "bKash Online Payment",
+    description: "Instant, seamless payment via official bKash merchant gateway.",
+    tag: "INSTANT",
     icon: "📱",
   },
   {
-    id: "card",
+    id: "sslcommerz",
     title: "Debit / Credit Card (SSLCommerz)",
-    description: "256-bit encrypted Visa, Mastercard, Amex, or bank portal.",
+    description: "256-bit encrypted Visa, Mastercard, UnionPay, Amex & internet banking.",
     icon: "💳",
   },
 ];
@@ -406,20 +407,6 @@ function CheckoutContent() {
     setApiError("");
 
     try {
-      const isManualMfs = payment.includes("bkash");
-
-      if (isManualMfs) {
-        if (!bkashNumber.trim() || !trxId.trim()) {
-          setApiError("Please enter your bKash mobile number and Transaction ID (TrxID).");
-          setLoading(false);
-          return;
-        }
-      }
-
-      const finalDeliveryNotes = isManualMfs
-        ? `[bKash Payment]\nSender Phone: ${bkashNumber.trim()}\nTrxID: ${trxId.trim()}\n${deliveryNotes.trim()}`
-        : deliveryNotes.trim();
-
       const orderResult = await placeOrder({
         name: isGift ? (giftName.trim() || name.trim()) : name.trim(),
         phone: isGift ? (giftPhone.replace(/[^0-9]/g, "").slice(-11) || cleanPhoneDigits) : cleanPhoneDigits,
@@ -434,10 +421,9 @@ function CheckoutContent() {
         postcode: getDistrictPostcode(isGift ? giftDistrict.code : district.code),
         area: selectedArea,
         payment,
-        trxId: trxId.trim() || undefined,
         deliverySlot,
-        deliveryNotes: finalDeliveryNotes || undefined,
-        customerNote: finalDeliveryNotes || undefined,
+        deliveryNotes: deliveryNotes.trim() || undefined,
+        customerNote: deliveryNotes.trim() || undefined,
         coupon: couponInfo ? couponInfo.code : undefined,
         isGuestOrder: isGuestMode,
         isGiftOrder: isGift,
@@ -450,9 +436,47 @@ function CheckoutContent() {
         })),
       });
 
+      const actualOrderNumber = orderResult.wooNumber || orderResult.number;
+
+      // Save order record to local storage for order history & tracking
+      try {
+        const rawSaved = localStorage.getItem("deen_web_orders");
+        const existingList = rawSaved ? JSON.parse(rawSaved) : [];
+        const savedOrder = {
+          ...orderResult,
+          id: orderResult.id,
+          number: actualOrderNumber,
+          wooNumber: actualOrderNumber,
+          wooId: orderResult.wooId,
+          total: orderResult.total,
+          delivery: orderResult.delivery,
+          payment: orderResult.paymentTitle || orderResult.payment,
+          paymentUrl: orderResult.paymentUrl,
+          createdAt: new Date().toISOString(),
+          phone: isGift ? (giftPhone.replace(/[^0-9]/g, "").slice(-11) || cleanPhoneDigits) : cleanPhoneDigits,
+          name: isGift ? (giftName.trim() || name.trim()) : name.trim(),
+          lines: items.map((it) => ({
+            name: it.product.name,
+            size: it.size,
+            qty: it.qty,
+            unit: it.product.salePrice ?? it.product.price,
+          })),
+        };
+        existingList.unshift(savedOrder);
+        localStorage.setItem("deen_web_orders", JSON.stringify(existingList.slice(0, 50)));
+      } catch {}
+
       clearCart();
+
+      // If online payment gateway (bKash or SSLCommerz), redirect to the authentic payment gateway
+      if (payment !== "cod" && orderResult.paymentUrl) {
+        window.location.href = orderResult.paymentUrl;
+        return;
+      }
+
+      // If COD (or gateway fallback), navigate to order success screen
       router.push(
-        `/order-success?id=${orderResult.id}&number=${orderResult.number}&total=${orderResult.total}&wooId=${orderResult.wooId || ""}&delivery=${orderResult.delivery}&payment=${encodeURIComponent(orderResult.paymentTitle || orderResult.payment)}&consignment=${orderResult.pathaoConsignmentId || ""}&tracking=${encodeURIComponent(orderResult.pathaoTrackingUrl || "")}&guestName=${encodeURIComponent(isGuestMode ? name.trim() : "")}&guestPhone=${encodeURIComponent(isGuestMode ? cleanPhoneDigits : "")}`
+        `/order-success?id=${orderResult.id}&number=${actualOrderNumber}&total=${orderResult.total}&wooId=${orderResult.wooId || ""}&delivery=${orderResult.delivery}&payment=${encodeURIComponent(orderResult.paymentTitle || orderResult.payment)}&consignment=${orderResult.pathaoConsignmentId || ""}&tracking=${encodeURIComponent(orderResult.pathaoTrackingUrl || "")}&paymentUrl=${encodeURIComponent(orderResult.paymentUrl || "")}&guestName=${encodeURIComponent(isGuestMode ? name.trim() : "")}&guestPhone=${encodeURIComponent(isGuestMode ? cleanPhoneDigits : "")}`
       );
     } catch (err: any) {
       const msg = err instanceof Error ? err.message : "Order failed. Please try again.";
@@ -992,34 +1016,16 @@ function CheckoutContent() {
                 </div>
               ) : payment.includes("bkash") ? (
                 <div className="payment-info-box" style={{ marginTop: 16, background: "var(--indigo-light)", borderColor: "var(--indigo)" }}>
-                  <p className="payment-info-title" style={{ color: "var(--ink)" }}>📱 Manual bKash Send Money</p>
-                  <p className="payment-info-sub" style={{ marginBottom: 12, lineHeight: 1.6 }}>
-                    1. Go to your bKash Menu/App & select <strong>Send Money</strong>.<br/>
-                    2. Send <strong>{bdt(total)}</strong> to <strong>01952 700 500</strong> (Personal).<br/>
-                    3. Enter your bKash number and Transaction ID (TrxID) below:
+                  <p className="payment-info-title" style={{ color: "var(--ink)" }}>📱 Official bKash Gateway</p>
+                  <p className="payment-info-sub" style={{ lineHeight: 1.6 }}>
+                    Upon confirming your order, you will be redirected automatically to the official <strong>bKash Payment Gateway</strong> (<code>payment.bkash.com</code>) to complete payment of <strong>{bdt(total)}</strong>.
                   </p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    <input
-                      className="form-input"
-                      type="text"
-                      placeholder="Your bKash Number (e.g. 017XXXXXXXX)"
-                      value={bkashNumber}
-                      onChange={(e) => setBkashNumber(e.target.value)}
-                    />
-                    <input
-                      className="form-input"
-                      type="text"
-                      placeholder="bKash Transaction ID (TrxID)"
-                      value={trxId}
-                      onChange={(e) => setTrxId(e.target.value)}
-                    />
-                  </div>
                 </div>
               ) : (
                 <div className="payment-info-box" style={{ marginTop: 16 }}>
-                  <p className="payment-info-title">🔒 Digital Merchant Processing</p>
-                  <p className="payment-info-sub">
-                    After confirming your order, you will be redirected to the secure gateway to complete payment.
+                  <p className="payment-info-title">💳 SSLCommerz Secure Digital Payment</p>
+                  <p className="payment-info-sub" style={{ lineHeight: 1.6 }}>
+                    Upon confirming your order, you will be redirected automatically to the secure <strong>SSLCommerz Gateway</strong> to complete payment of <strong>{bdt(total)}</strong> with Visa, Mastercard, AMEX, or Net Banking.
                   </p>
                 </div>
               )}

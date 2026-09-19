@@ -29,7 +29,7 @@ export interface QuickChip {
   query: string;
 }
 
-export const QUICK_SUGGESTION_CHIPS: QuickChip[] = [
+const QUICK_SUGGESTION_CHIPS: QuickChip[] = [
   {
     id: "sizing",
     label: "👖 Jeans Sizing & Fit",
@@ -65,7 +65,7 @@ export const QUICK_SUGGESTION_CHIPS: QuickChip[] = [
 /**
  * Connects to live gateway POST /v1/deen/ai/chat.
  */
-export async function sendAiChatMessage(
+async function sendAiChatMessage(
   message: string,
   history?: Array<{ role: string; content: string }>,
   phone?: string
@@ -91,7 +91,7 @@ export async function sendAiChatMessage(
  * Lightweight, zero-dependency formatted text parser.
  * Parses **bold**, ~~strikethrough~~, `code`, and \n- / • bullet points into styled elements.
  */
-export function renderFormattedText(text: string, isUser: boolean = false): React.ReactNode {
+function renderFormattedText(text: string, isUser: boolean = false): React.ReactNode {
   if (!text) return null;
 
   const lines = text.split("\n");

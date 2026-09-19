@@ -14,6 +14,7 @@ import BankOffersModal from "@/components/BankOffersModal";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ProductCard from "@/components/ProductCard";
 import CompleteTheLook from "@/components/CompleteTheLook";
+import ProductComments from "@/components/ProductComments";
 
 const WASH_OPTIONS = [
   { name: "Raw Indigo", color: "#1c2841" },
@@ -557,6 +558,17 @@ export default function ProductDetailClient({
                 return "📖 Garment Care Guide";
               })()}
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById("customer-reviews");
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="btn btn--outline"
+              style={{ flex: 1, fontSize: 12, padding: "8px 12px", fontWeight: 700 }}
+            >
+              ⭐ Fit Reviews
+            </button>
             <WhatsAppButton
               productName={product.name}
               size={selectedSize}
@@ -627,6 +639,9 @@ export default function ProductDetailClient({
           </div>
         </div>
       </div>
+
+      {/* Verified Customer Reviews & WordPress Comments */}
+      <ProductComments productId={product.id} productName={product.name} />
 
       {/* 1-Tap Curated Outfit Bundling */}
       {related.length > 0 && (

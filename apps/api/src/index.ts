@@ -81,6 +81,7 @@ async function build() {
       path.startsWith("/v1/deen/districts") ||
       path.startsWith("/v1/deen/shipping-zones") ||
       path.startsWith("/v1/deen/settings") ||
+      path.startsWith("/v1/deen/products") ||
       path.startsWith("/v1/deen/pathao/track");
 
     if (isPublic) return;
