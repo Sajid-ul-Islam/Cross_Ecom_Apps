@@ -583,7 +583,7 @@ export default function WebChatPage() {
                               borderRadius: 6,
                               overflow: "hidden",
                               flexShrink: 0,
-                              backgroundColor: "var(--card)",
+                              backgroundColor: "var(--surface)",
                             }}
                           >
                             <Image

@@ -257,7 +257,7 @@ export default function SocialReelsSection({ reels }: SocialReelsSectionProps) {
           >
             <div
               style={{
-                background: "var(--card)",
+                background: "var(--surface)",
                 borderRadius: 18,
                 maxWidth: 480,
                 width: "100%",
@@ -277,7 +277,7 @@ export default function SocialReelsSection({ reels }: SocialReelsSectionProps) {
                   position: "absolute",
                   top: 14,
                   right: 14,
-                  background: "var(--card-secondary)",
+                  background: "var(--surface-2)",
                   border: "none",
                   borderRadius: "50%",
                   width: 32,
@@ -335,7 +335,7 @@ export default function SocialReelsSection({ reels }: SocialReelsSectionProps) {
                     border: "1px solid var(--border)",
                     borderRadius: 12,
                     padding: 12,
-                    background: "var(--card-secondary)",
+                    background: "var(--surface-2)",
                     marginBottom: 16,
                   }}
                 >
@@ -368,7 +368,7 @@ export default function SocialReelsSection({ reels }: SocialReelsSectionProps) {
                       onClick={() => handleQuickAdd(selectedReel)}
                       style={{
                         flex: 1,
-                        background: "var(--card)",
+                        background: "var(--surface)",
                         border: "1px solid var(--border)",
                         padding: "8px 12px",
                         borderRadius: 8,

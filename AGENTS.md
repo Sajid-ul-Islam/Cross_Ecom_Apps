@@ -44,6 +44,11 @@ This codebase contains:
 4. **In-Memory Catalog Caching**:
    - Protect WordPress from flash-sale read traffic by serving 95%+ of catalog queries from Fastify in-memory cache (5-minute TTL with `catalogWarming` single-flight protection).
 
+5. **Social Sign-in Must Prove Client Ownership (`socialAuth.ts`)**:
+   - `POST /v1/auth/google|facebook` may only trust a provider token whose audience/issuing app is ours: Google `aud` must equal `GOOGLE_CLIENT_ID` (plus issuer, expiry, `email_verified`); Facebook must pass `debug_token` with `app_id` match, and profile calls carry `appsecret_proof`.
+   - **Never** mint a session from a request-body `email` — failed verification returns 401. `SOCIAL_AUTH_ALLOW_UNVERIFIED=true` is a local-demo escape hatch that is force-disabled when `NODE_ENV=production`; never treat the client-simulated account sheets in `SocialAuthModal`/`LoginModal` as authenticated.
+   - Session tokens are HMAC-signed with `SESSION_SIGNING_SECRET` (falling back to `WEBHOOK_SECRET`/`GATEWAY_API_KEY`); rotating one must not require logging customers out, so set the dedicated value in production.
+
 ---
 
 ## 3. UI/UX, Design System & Accessibility (WCAG 2.2 AA) Rules
@@ -98,7 +103,7 @@ Domain Context Boundaries:
 
 | Feature Domain | Mobile Screen(s) | Mobile Services / State | Gateway Route(s) | Upstream System | Tests |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Authentication** | `LoginModal.tsx`, `profile.tsx` | `ProfileContext.tsx`, `gateway.ts` | `/v1/auth/*` | WP `/wp-login.php` | `test_auth.ts` |
+| **Authentication** | `LoginModal.tsx`, `profile.tsx` | `ProfileContext.tsx`, `gateway.ts` | `/v1/auth/*` | WP `/wp-login.php` | `test_auth.ts`, `socialAuth.test.ts` |
 | **Catalog & PDP** | `shop.tsx`, `product/[id].tsx` | `gateway.ts`, `categories.ts` | `/v1/deen/catalog/*` | WC `/wp-json/wc/v3/products` | `pricing.test.ts` |
 | **Wishlist & Saved** | `WishlistModal.tsx`, PDP Heart | `WishlistContext.tsx` | Local / Client Storage | In-Memory / Client | Automated Verified |
 | **Cart & Pricing** | `cart.tsx`, `Banner.tsx` | `CartContext.tsx`, `RewardsContext.tsx` | `/v1/deen/coupon/*` | In-Memory Rules | `pricing.test.ts` |

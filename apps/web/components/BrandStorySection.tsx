@@ -149,7 +149,6 @@ export default function BrandStorySection() {
                   </div>
                 ))}
               </div>
-              <div className="story-card__spacer" />
               <span className="story-card__tag">{item.tag}</span>
             </article>
           ))}

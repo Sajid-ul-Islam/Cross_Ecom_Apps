@@ -57,6 +57,7 @@ import {
   createPathaoOrder,
 } from "./pathao.js";
 import { processAiCommerceQuery } from "./ai/agent.js";
+import { verifyGoogleIdToken, verifyFacebookAccessToken } from "./socialAuth.js";
 
 /* ------------------------------------------------------------------ */
 /*  JSON Schema validation (Fastify native AJV) — SEC-6 / request hardening */
@@ -744,8 +745,16 @@ function saveGuestSessions(): void {
 /*  instance in the cluster to verify sessions in O(1) time without    */
 /*  shared disk or database dependencies.                             */
 /* ------------------------------------------------------------------ */
-const SESSION_SIGNING_SECRET =
-  config.webhookSecret || config.apiKey || "deen_commerce_cluster_secret_key_2026";
+const SESSION_SIGNING_SECRET = (() => {
+  if (config.sessionSigningSecret) return config.sessionSigningSecret;
+  const fallback = config.webhookSecret || config.apiKey || "deen_commerce_cluster_secret_key_2026";
+  if (process.env.NODE_ENV === "production") {
+    console.warn(
+      "[gateway] SESSION_SIGNING_SECRET is not set — session tokens are signed with the webhook/api key (whose public default is in the repo). Set a dedicated high-entropy SESSION_SIGNING_SECRET."
+    );
+  }
+  return fallback;
+})();
 
 export interface SessionTokenPayload {
   type: "guest" | "user";
@@ -3774,7 +3783,9 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   });
 
   /* ------------------------------------------------------------------ */
-  /*  Social Auth: Google OAuth / OIDC Identity Token Verification      */
+  /*  Social Auth: Google OIDC Identity Token Verification              */
+  /*  Token audience/issuer/expiry are checked in socialAuth.ts, so a    */
+  /*  token minted for another OAuth client is rejected outright.        */
   /* ------------------------------------------------------------------ */
   app.post("/v1/auth/google", async (req, reply) => {
     const b = (req.body as any) || {};
@@ -3783,38 +3794,58 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const fallbackName = String(b.name || "").trim();
 
     const isProd = process.env.NODE_ENV === "production";
-    if (isProd && !idToken) {
-      return reply.code(400).send({ success: false, error: "VALIDATION", message: "Google idToken is required in production.", fields: ["idToken"] });
-    }
-    if (!idToken && !fallbackEmail) {
-      return reply.code(400).send({ success: false, error: "VALIDATION", message: "Google idToken or email is required.", fields: ["idToken", "email"] });
+    const { googleClientId, allowUnverified } = config.socialAuth;
+    /* Local-dev only. The demo sign-in sheet has no real Google credential, so
+       without this dev databases could not be exercised at all. It is never
+       honoured in production and never replaces a verified token. */
+    const allowDevFallback = allowUnverified && !isProd;
+    const warnDevFallback = (why: string) =>
+      console.warn(`[auth/google] DEV-only unverified social sign-in used (${why}). Set SOCIAL_AUTH_ALLOW_UNVERIFIED=false to disable.`);
+
+    if (!googleClientId) {
+      if (isProd) {
+        audit("auth.google", false, undefined, { reason: "GOOGLE_CLIENT_ID unset" });
+        return reply.code(503).send({ success: false, error: "SERVICE_UNAVAILABLE", message: "Google sign-in is not configured on the gateway." });
+      }
+      console.warn("[auth/google] GOOGLE_CLIENT_ID is not set — the token audience cannot be checked.");
     }
 
-    let verifiedEmail = fallbackEmail;
+    let verified = false;
+    let verifiedEmail = "";
     let verifiedName = fallbackName || "Google User";
-    let verifiedSub = `google_${Date.now()}`;
+    let verifiedSub = "";
     let avatarUrl: string | undefined;
 
     if (idToken) {
-      try {
-        const verifyUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`;
-        const r = await fetch(verifyUrl);
-        if (r.ok) {
-          const payload = (await r.json()) as any;
-          if (payload.email) {
-            verifiedEmail = String(payload.email).toLowerCase();
-            verifiedName = payload.name || payload.given_name || verifiedName;
-            verifiedSub = payload.sub || verifiedSub;
-            avatarUrl = payload.picture;
-          }
+      const result = await verifyGoogleIdToken(idToken, { clientId: googleClientId });
+      if (result.ok) {
+        verified = true;
+        verifiedEmail = result.identity.email;
+        verifiedName = result.identity.name || verifiedName;
+        verifiedSub = result.identity.sub;
+        avatarUrl = result.identity.picture;
+        if (!result.identity.audChecked) {
+          console.warn("[auth/google] token audience was NOT checked (GOOGLE_CLIENT_ID unset).");
         }
-      } catch (err) {
-        console.warn("[auth/google] Google tokeninfo verification error:", (err as Error).message);
+      } else {
+        audit("auth.google", false, maskPhone(fallbackEmail), { reason: result.reason });
+        if (!allowDevFallback || !fallbackEmail) {
+          return reply.code(401).send({ success: false, error: "UNAUTHENTICATED", message: result.reason });
+        }
+        warnDevFallback(result.reason);
       }
     }
 
-    if (!verifiedEmail) {
-      return reply.code(401).send({ success: false, message: "Invalid or expired Google token." });
+    if (!verified) {
+      if (!allowDevFallback) {
+        return reply.code(400).send({ success: false, error: "VALIDATION", message: "Google idToken is required.", fields: ["idToken"] });
+      }
+      if (!fallbackEmail) {
+        return reply.code(400).send({ success: false, error: "VALIDATION", message: "Google idToken or email is required.", fields: ["idToken", "email"] });
+      }
+      warnDevFallback("no verifiable idToken supplied");
+      verifiedEmail = fallbackEmail;
+      verifiedSub = `google_dev_${Buffer.from(verifiedEmail).toString("base64url").slice(0, 24)}`;
     }
 
     // Find or create WooCommerce customer via REST API
@@ -3836,6 +3867,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       accountType: "customer" as const,
       wpUserId: wooCust.id,
       authProvider: "google",
+      authVerified: verified,
       avatarUrl,
     };
 
@@ -3859,6 +3891,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       message: `Signed in with Google as ${user.name}`,
       user,
       token,
+      verified,
       isNewCustomer: wooCust.isNew,
     });
   });
@@ -3873,38 +3906,55 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const fallbackName = String(b.name || "").trim();
 
     const isProd = process.env.NODE_ENV === "production";
-    if (isProd && !accessToken) {
-      return reply.code(400).send({ success: false, error: "VALIDATION", message: "Facebook accessToken is required in production.", fields: ["accessToken"] });
-    }
-    if (!accessToken && !fallbackEmail) {
-      return reply.code(400).send({ success: false, error: "VALIDATION", message: "Facebook accessToken or email is required.", fields: ["accessToken", "email"] });
+    const { facebookAppId, facebookAppSecret, allowUnverified } = config.socialAuth;
+    /* Local-dev only — see the Google handler above for the rationale. */
+    const allowDevFallback = allowUnverified && !isProd;
+    const warnDevFallback = (why: string) =>
+      console.warn(`[auth/facebook] DEV-only unverified social sign-in used (${why}). Set SOCIAL_AUTH_ALLOW_UNVERIFIED=false to disable.`);
+
+    if (!facebookAppId || !facebookAppSecret) {
+      if (isProd) {
+        audit("auth.facebook", false, undefined, { reason: "Facebook app credentials unset" });
+        return reply.code(503).send({ success: false, error: "SERVICE_UNAVAILABLE", message: "Facebook sign-in is not configured on the gateway." });
+      }
+      console.warn("[auth/facebook] FACEBOOK_APP_ID / FACEBOOK_APP_SECRET are not set — tokens cannot be verified as ours.");
     }
 
-    let verifiedEmail = fallbackEmail;
+    let verified = false;
+    let verifiedEmail = "";
     let verifiedName = fallbackName || "Facebook User";
-    let verifiedId = `fb_${Date.now()}`;
+    let verifiedId = "";
     let avatarUrl: string | undefined;
 
     if (accessToken) {
-      try {
-        const graphUrl = `https://graph.facebook.com/me?fields=id,name,email,picture.type(large)&access_token=${encodeURIComponent(accessToken)}`;
-        const r = await fetch(graphUrl);
-        if (r.ok) {
-          const payload = (await r.json()) as any;
-          if (payload.id) {
-            verifiedId = payload.id;
-            verifiedName = payload.name || verifiedName;
-            verifiedEmail = (payload.email ? String(payload.email).toLowerCase() : verifiedEmail) || `${verifiedId}@facebook.deencommerce.com`;
-            avatarUrl = payload.picture?.data?.url;
-          }
+      const result = await verifyFacebookAccessToken(accessToken, { appId: facebookAppId, appSecret: facebookAppSecret });
+      if (result.ok) {
+        verified = true;
+        verifiedId = result.identity.id;
+        verifiedName = result.identity.name || verifiedName;
+        // Facebook returns no email when the user withheld the permission —
+        // fall back to a synthetic, non-deliverable address for the WP customer.
+        verifiedEmail = result.identity.email || `${result.identity.id}@facebook.deencommerce.com`;
+        avatarUrl = result.identity.picture;
+      } else {
+        audit("auth.facebook", false, maskPhone(fallbackEmail), { reason: result.reason });
+        if (!allowDevFallback || !fallbackEmail) {
+          return reply.code(401).send({ success: false, error: "UNAUTHENTICATED", message: result.reason });
         }
-      } catch (err) {
-        console.warn("[auth/facebook] Facebook Graph API error:", (err as Error).message);
+        warnDevFallback(result.reason);
       }
     }
 
-    if (!verifiedEmail) {
-      verifiedEmail = `${verifiedId}@facebook.deencommerce.com`;
+    if (!verified) {
+      if (!allowDevFallback) {
+        return reply.code(400).send({ success: false, error: "VALIDATION", message: "Facebook accessToken is required.", fields: ["accessToken"] });
+      }
+      if (!fallbackEmail) {
+        return reply.code(400).send({ success: false, error: "VALIDATION", message: "Facebook accessToken or email is required.", fields: ["accessToken", "email"] });
+      }
+      warnDevFallback("no verifiable accessToken supplied");
+      verifiedEmail = fallbackEmail;
+      verifiedId = `fb_dev_${Buffer.from(verifiedEmail).toString("base64url").slice(0, 24)}`;
     }
 
     // Find or create WooCommerce customer via REST API
@@ -3926,6 +3976,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       accountType: "customer" as const,
       wpUserId: wooCust.id,
       authProvider: "facebook",
+      authVerified: verified,
       avatarUrl,
     };
 
@@ -3949,6 +4000,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       message: `Signed in with Facebook as ${user.name}`,
       user,
       token,
+      verified,
       isNewCustomer: wooCust.isNew,
     });
   });

@@ -212,10 +212,34 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 /* ── Product Grid ────────────────────────────────── */
+/* Flexbox so a partial (odd-count) last row centers via justify-content,
+   while full rows still tile edge-to-edge (percent bases sum to 100% + gaps). */
 .product-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 20px;
+}
+.product-grid > * {
+  flex: 0 0 calc(25% - 15px);
+  max-width: calc(25% - 15px);
+}
+
+@media (max-width: 1079px) {
+  .product-grid > * {
+    flex: 0 0 calc(33.3333% - 13.334px);
+    max-width: calc(33.3333% - 13.334px);
+  }
+}
+
+@media (max-width: 800px) {
+  .product-grid {
+    gap: 12px;
+  }
+  .product-grid > * {
+    flex: 0 0 calc(50% - 6px);
+    max-width: calc(50% - 6px);
+  }
 }
 
 /* ── Product Card ────────────────────────────────── */
@@ -675,7 +699,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .hero__content { padding: 24px 20px; }
   .hero__title { font-size: 1.8rem; }
   .hero__sub { font-size: 13px; margin-bottom: 20px; }
-  .product-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .product-grid { gap: 8px; }
   .footer__grid { grid-template-columns: 1fr; }
   .trust-bar { grid-template-columns: 1fr; }
   .payment-options { grid-template-columns: 1fr; }
@@ -2402,6 +2426,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 .story-mobile-rail {
   display: flex;
+  align-items: flex-start;
   gap: 12px;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
@@ -2512,9 +2537,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   height: 6px;
   border-radius: 3px;
   flex: none;
-}
-.story-card__spacer {
-  flex: 1;
 }
 .story-card__tag {
   font-size: 9px;
