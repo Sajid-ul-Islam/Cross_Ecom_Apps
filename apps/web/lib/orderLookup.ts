@@ -7,6 +7,8 @@ export interface OrderLookupResult {
   total?: number;
   items?: string;
   date?: string;
+  consignmentId?: string;
+  trackingUrl?: string;
   error?: string;
 }
 
@@ -60,6 +62,13 @@ export async function lookupOrderStatus(
           })
         : "Recent";
 
+      const consignmentId = (order.meta_data || []).find(
+        (m: any) =>
+          m.key === "ptc_consignment_id" ||
+          m.key === "pathao_consignment_id" ||
+          m.key === "_pathao_consignment_id"
+      )?.value;
+
       return {
         found: true,
         orderId: order.id,
@@ -67,6 +76,8 @@ export async function lookupOrderStatus(
         total: Number(order.total) || 0,
         items: itemNames,
         date: dateStr,
+        consignmentId: consignmentId || undefined,
+        trackingUrl: consignmentId ? `https://merchant.pathao.com/tracking?consignment_id=${consignmentId}` : undefined,
       };
     }
   }
@@ -88,6 +99,13 @@ export async function lookupOrderStatus(
           })
         : "Recent";
 
+      const consignmentId = (latest.meta_data || []).find(
+        (m: any) =>
+          m.key === "ptc_consignment_id" ||
+          m.key === "pathao_consignment_id" ||
+          m.key === "_pathao_consignment_id"
+      )?.value;
+
       return {
         found: true,
         orderId: latest.id,
@@ -95,6 +113,8 @@ export async function lookupOrderStatus(
         total: Number(latest.total) || 0,
         items: itemNames,
         date: dateStr,
+        consignmentId: consignmentId || undefined,
+        trackingUrl: consignmentId ? `https://merchant.pathao.com/tracking?consignment_id=${consignmentId}` : undefined,
       };
     }
   }

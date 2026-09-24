@@ -76,6 +76,27 @@ describe("Multilingual Rule-Based Chatbot Engine", () => {
       assert.strictEqual(classifyIntent("কাস্টমার কেয়ার নম্বর দিন", "bn").intent, "HUMAN_HANDOFF");
     });
 
+    test("Knowledge domain intents (delivery, exchange, showrooms, offers, sizing)", () => {
+      assert.strictEqual(classifyIntent("Chittagong delivery charge & time?", "en").intent, "DELIVERY_INFO");
+      assert.strictEqual(classifyIntent("চট্টগ্রামে ডেলিভারি চার্জ কত?", "bn").intent, "DELIVERY_INFO");
+      assert.strictEqual(classifyIntent("delivery charge koto", "banglish").intent, "DELIVERY_INFO");
+
+      assert.strictEqual(classifyIntent("How does the 7-day size exchange work?", "en").intent, "EXCHANGE_POLICY");
+      assert.strictEqual(classifyIntent("৭ দিনের এক্সচেঞ্জ পলিসি কি?", "bn").intent, "EXCHANGE_POLICY");
+      assert.strictEqual(classifyIntent("size exchange policy bolen", "banglish").intent, "EXCHANGE_POLICY");
+
+      assert.strictEqual(classifyIntent("Where are your retail showrooms in Dhaka?", "en").intent, "STORE_LOCATOR");
+      assert.strictEqual(classifyIntent("ধানমন্ডি শোরুমের ঠিকানা কোথায়?", "bn").intent, "STORE_LOCATOR");
+      assert.strictEqual(classifyIntent("showroom kothay ache", "banglish").intent, "STORE_LOCATOR");
+
+      assert.strictEqual(classifyIntent("What is the current offer & discount?", "en").intent, "OFFERS");
+      assert.strictEqual(classifyIntent("বর্তমান অফার ও ক্যাশব্যাক কি?", "bn").intent, "OFFERS");
+      assert.strictEqual(classifyIntent("kono discount offer ache?", "banglish").intent, "OFFERS");
+
+      assert.strictEqual(classifyIntent("Jeans sizing and waist fit guide", "en").intent, "SIZING_GUIDE");
+      assert.strictEqual(classifyIntent("সাইজ গাইড ও মাপজোক", "bn").intent, "SIZING_GUIDE");
+    });
+
     test("Unknown intent falls back with confidence 0", () => {
       const res = classifyIntent("xyz random gibberish 9999", "en");
       assert.strictEqual(res.intent, "UNKNOWN");

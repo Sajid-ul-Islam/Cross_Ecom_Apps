@@ -43,6 +43,83 @@ export async function processDialogTurn(
     case "PRODUCT_SEARCH":
       return handleProductSearch(message, session);
 
+    case "DELIVERY_INFO":
+      return {
+        reply: reply(session.lang, "DELIVERY_INFO"),
+        quickReplies:
+          session.lang === "bn"
+            ? ["অর্ডার করতে চাই", "৭ দিনের এক্সচেঞ্জ", "পণ্য কালেকশন", "কাস্টমার সাপোর্ট"]
+            : session.lang === "banglish"
+            ? ["Order korte chai", "7 diner exchange", "Products dekhan", "Hotline number"]
+            : ["Place an Order", "7-Day Exchange", "Browse Products", "Customer Support"],
+        actions: [
+          { label: "🛍️ Browse Shop", action: "navigate_shop" },
+          { label: "💬 WhatsApp Concierge", action: "open_whatsapp" },
+        ],
+        state: "IDLE",
+      };
+
+    case "EXCHANGE_POLICY":
+      return {
+        reply: reply(session.lang, "EXCHANGE_POLICY"),
+        quickReplies:
+          session.lang === "bn"
+            ? ["সাইজ গাইড", "ডেলিভারি চার্জ", "অর্ডার স্ট্যাটাস", "কাস্টমার সাপোর্ট"]
+            : session.lang === "banglish"
+            ? ["Size guide", "Delivery charge", "Order status", "Hotline e kotha"]
+            : ["Size Guide", "Delivery Fees", "Track Order", "Customer Support"],
+        actions: [
+          { label: "💬 WhatsApp Support", action: "open_whatsapp" },
+        ],
+        state: "IDLE",
+      };
+
+    case "STORE_LOCATOR":
+      return {
+        reply: reply(session.lang, "STORE_LOCATOR"),
+        quickReplies:
+          session.lang === "bn"
+            ? ["কালেকশন দেখুন", "ডেলিভারি চার্জ", "অর্ডার করতে চাই", "হটলাইন"]
+            : session.lang === "banglish"
+            ? ["Collection dekhan", "Delivery charge", "Order korte chai", "Hotline"]
+            : ["Browse Collection", "Delivery Fees", "Place an Order", "Call Hotline"],
+        actions: [
+          { label: "🛍️ Shop Online", action: "navigate_shop" },
+          { label: "💬 WhatsApp Concierge", action: "open_whatsapp" },
+        ],
+        state: "IDLE",
+      };
+
+    case "OFFERS":
+      return {
+        reply: reply(session.lang, "OFFERS"),
+        quickReplies:
+          session.lang === "bn"
+            ? ["সেলভেজ জিন্স", "পাঞ্জাবি কালেকশন", "অর্ডার করতে চাই", "ডেলিভারি চার্জ"]
+            : session.lang === "banglish"
+            ? ["Selvedge Jeans", "Panjabi collection", "Order korte chai", "Delivery charge"]
+            : ["Selvedge Jeans", "Panjabi Collection", "Place an Order", "Delivery Fees"],
+        actions: [
+          { label: "🔥 Shop Sale", action: "navigate_shop" },
+        ],
+        state: "IDLE",
+      };
+
+    case "SIZING_GUIDE":
+      return {
+        reply: reply(session.lang, "SIZING_GUIDE"),
+        quickReplies:
+          session.lang === "bn"
+            ? ["সেলভেজ জিন্স", "শার্ট কালেকশন", "৭ দিনের এক্সচেঞ্জ", "অর্ডার করতে চাই"]
+            : session.lang === "banglish"
+            ? ["Selvedge Jeans", "Shirt collection", "7 diner exchange", "Order korte chai"]
+            : ["Selvedge Jeans", "Shirts Collection", "7-Day Exchange", "Place an Order"],
+        actions: [
+          { label: "👖 Browse Jeans", action: "navigate_shop" },
+        ],
+        state: "IDLE",
+      };
+
     case "HUMAN_HANDOFF":
       return {
         reply: reply(session.lang, "HUMAN_HANDOFF"),

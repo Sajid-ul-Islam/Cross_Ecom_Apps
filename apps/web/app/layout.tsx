@@ -10,10 +10,9 @@ import Footer from "@/components/Footer";
 import DynamicCampaignBanner from "@/components/DynamicCampaignBanner";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import ScrollToTop from "@/components/ScrollToTop";
-import AiConciergeDrawer from "@/components/AiConciergeDrawer";
 import FestivalGreetingModal from "@/components/FestivalGreetingModal";
 import GatewayKeepAlive from "@/components/GatewayKeepAlive";
-import ChatWidget from "@/components/ChatWidget";
+import ChatAssistant from "@/components/ChatAssistant";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://deencommerce.com"),
@@ -98,10 +97,9 @@ export default function RootLayout({
             <Footer />
             <MobileBottomNav />
             <ScrollToTop />
-            <AiConciergeDrawer />
             <FestivalGreetingModal />
             <GatewayKeepAlive />
-            <ChatWidget />
+            <ChatAssistant />
           </WishlistProvider>
         </CartProvider>
       </body>

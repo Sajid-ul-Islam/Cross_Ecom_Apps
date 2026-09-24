@@ -2572,6 +2572,78 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .story-mobile-rail-section {
     display: block;
   }
+  .nav__chat-desktop-only {
+    display: none !important;
+  }
 }
+
+@media (min-width: 769px) {
+  .nav__chat-desktop-only {
+    display: flex !important;
+  }
+  .scroll-to-top-btn {
+    bottom: 88px !important;
+    right: 34px !important;
+  }
+}
+
+/* ── DEEN Unified Chat Assistant & Concierge ──────────────── */
+#chatbot-widget-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 28px;
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, var(--indigo) 0%, #3730a3 100%);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 6px 24px rgba(79, 70, 229, 0.45);
+  cursor: pointer;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+#chatbot-widget-btn:hover {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 10px 30px rgba(79, 70, 229, 0.55);
+}
+#chatbot-widget-btn:active {
+  transform: scale(0.96);
+}
+
+/* Strictly hide floating launcher on mobile (< 768px) to eliminate UI collisions
+   with bottom navigation tabs, ScrollToTop, and sticky PDP Add-to-Bag bars.
+   Mobile users access the assistant via Bottom Nav Tab 4 [ 💬 Chat ]. */
+@media (max-width: 768px) {
+  #chatbot-widget-btn {
+    display: none !important;
+  }
+}
+
+@keyframes chatPanelPop {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes chatSheetUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 
 

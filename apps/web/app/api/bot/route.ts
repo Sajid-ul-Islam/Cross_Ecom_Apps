@@ -5,7 +5,7 @@ import { detectLanguage } from "@/lib/langDetect";
 import { classifyIntent } from "@/lib/intents";
 import { processDialogTurn } from "@/lib/orderFlow";
 import { reply } from "@/lib/responses";
-import { BotResponse } from "@/lib/types";
+import { BotResponse, ProductCard } from "@/lib/types";
 
 // In-memory rate limiting: max 20 messages per session per minute
 const rateLimitMap = new Map<string, { count: number; windowStart: number }>();
@@ -83,11 +83,62 @@ export async function POST(req: NextRequest) {
     });
 
     // 6. Process dialog turn through state machine
-    const botResponse: BotResponse = await processDialogTurn(
+    let botResponse: BotResponse = await processDialogTurn(
       normalizedText,
       session,
       intent
     );
+
+    // If intent was UNKNOWN and session is IDLE, consult gateway AI concierge for live RAG answer & catalog products
+    if (intent === "UNKNOWN" && session.state === "IDLE") {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.deencommerce.com";
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+        const aiRes = await fetch(`${apiUrl}/v1/deen/ai/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            message: rawMessage,
+            phone: session.slots?.phone,
+            history: session.history.slice(-4).map((h) => ({
+              role: h.role === "user" ? "user" : "assistant",
+              content: h.text,
+            })),
+          }),
+        });
+        clearTimeout(timeoutId);
+
+        if (aiRes.ok) {
+          const aiData = await aiRes.json();
+          if (aiData?.reply && !aiData.reply.includes("I'm having trouble connecting")) {
+            const mappedProducts: ProductCard[] | undefined = aiData.suggestedProducts?.map((p: any) => ({
+              id: String(p.id),
+              name: p.name,
+              price: Number(p.price) || 0,
+              salePrice: p.salePrice ? Number(p.salePrice) : undefined,
+              regularPrice: p.regularPrice ? Number(p.regularPrice) : undefined,
+              image: p.image || "/images/placeholder.jpg",
+              category: p.category,
+              sizes: p.sizes || [],
+              in_stock: p.stockStatus ? p.stockStatus === "instock" : true,
+            }));
+
+            botResponse = {
+              reply: aiData.reply,
+              products: mappedProducts && mappedProducts.length > 0 ? mappedProducts : undefined,
+              actions: aiData.suggestedActions,
+              quickReplies: botResponse.quickReplies,
+              state: "IDLE",
+            };
+          }
+        }
+      } catch {
+        // Gateway AI offline/timeout; fallback safely remains in botResponse
+      }
+    }
 
     // 7. Append bot response to history (capped at 20 messages)
     session.history.push({

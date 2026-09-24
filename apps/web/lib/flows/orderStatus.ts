@@ -23,14 +23,23 @@ export async function handleOrderStatusFlow(
       session.slots = {};
 
       if (result.found) {
+        let statusReply = reply(session.lang, "STATUS_FOUND", {
+          orderId: result.orderId || candidateOrder,
+          status: result.status || "PROCESSING",
+          total: result.total || 0,
+          items: result.items || "Apparel",
+          date: result.date || "Recent",
+        });
+
+        if (result.consignmentId && result.trackingUrl) {
+          statusReply +=
+            session.lang === "bn"
+              ? `\n• পাঠাও ট্র্যাকিং: ${result.consignmentId}\n• লাইভ ট্র্যাক লিংক: ${result.trackingUrl}`
+              : `\n• Pathao Tracking: ${result.consignmentId}\n• Live Tracking Link: ${result.trackingUrl}`;
+        }
+
         return {
-          reply: reply(session.lang, "STATUS_FOUND", {
-            orderId: result.orderId || candidateOrder,
-            status: result.status || "PROCESSING",
-            total: result.total || 0,
-            items: result.items || "Apparel",
-            date: result.date || "Recent",
-          }),
+          reply: statusReply,
           quickReplies:
             session.lang === "bn"
               ? ["নতুন পণ্য দেখুন", "কাস্টমার কেয়ার"]
@@ -86,14 +95,23 @@ export async function handleOrderStatusFlow(
     session.slots = {};
 
     if (result.found) {
+      let statusReply = reply(session.lang, "STATUS_FOUND", {
+        orderId: result.orderId || orderNo,
+        status: result.status || "PROCESSING",
+        total: result.total || 0,
+        items: result.items || "Apparel",
+        date: result.date || "Recent",
+      });
+
+      if (result.consignmentId && result.trackingUrl) {
+        statusReply +=
+          session.lang === "bn"
+            ? `\n• পাঠাও ট্র্যাকিং: ${result.consignmentId}\n• লাইভ ট্র্যাক লিংক: ${result.trackingUrl}`
+            : `\n• Pathao Tracking: ${result.consignmentId}\n• Live Tracking Link: ${result.trackingUrl}`;
+      }
+
       return {
-        reply: reply(session.lang, "STATUS_FOUND", {
-          orderId: result.orderId || orderNo,
-          status: result.status || "PROCESSING",
-          total: result.total || 0,
-          items: result.items || "Apparel",
-          date: result.date || "Recent",
-        }),
+        reply: statusReply,
         quickReplies:
           session.lang === "bn"
             ? ["অন্য পণ্য দেখুন", "সহায়তা"]

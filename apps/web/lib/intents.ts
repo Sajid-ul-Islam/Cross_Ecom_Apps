@@ -53,6 +53,87 @@ const INTENT_RULES: IntentRule[] = [
     },
   },
 
+  // 3. DELIVERY_INFO
+  {
+    intent: "DELIVERY_INFO",
+    patterns: [
+      /(?:delivery|shipping|ডেলিভারি|শিপিং)\s*(?:charge|cost|fee|time|koto|কত|চার্জ|খরচ|kobe|কবে|somoy|সময়)/i,
+      /(?:delivery|ডেলিভারি)\s+(?:in|to|inside|outside|dhaka|chittagong|ctg|dhakay|ঢাকার|চট্টগ্রাম)/i,
+      /(?:chittagong|ctg|dhaka|চট্টগ্রাম|খুলনা|রাজশাহী|সিলেট)\s*(?:e\s*)?(?:delivery|ডেলিভারি)/i,
+      /(?:delivery\s*koto|koto\s*taka\s*delivery)/i,
+      /(?:how\s*much\s*is\s*delivery|shipping\s*charges?|delivery\s*charge)/i,
+    ],
+    keywords: {
+      bn: ["ডেলিভারি চার্জ", "ডেলিভারি খরচ", "শিপিং চার্জ", "ডেলিভারি চার্জ কত", "ঢাকার বাইরে ডেলিভারি", "চট্টগ্রাম ডেলিভারি"],
+      en: ["delivery charge", "shipping fee", "delivery time", "delivery cost", "outside dhaka delivery", "shipping rate"],
+      banglish: ["delivery charge", "delivery koto", "shipping charge", "delivery fee koto", "dhakar baire delivery", "delivery somoy"],
+    },
+  },
+
+  // 4. EXCHANGE_POLICY
+  {
+    intent: "EXCHANGE_POLICY",
+    patterns: [
+      /(?:exchange|return|refund|swap|পাল্টানো|পরিবর্তন|ফেরত|বদলি)\s*(?:policy|পলিসি|kivabe|কীভাবে|kora\s*jabe|করা\s*যাবে|korbo|করব)/i,
+      /(?:7\s*days?|seven\s*days?|৭\s*দিন|৭\s*দিনের)\s*(?:exchange|return|doorstep|ডোরস্টেপ|পলিসি)/i,
+      /(?:size\s*(?:change|swap|exchange)|সাইজ\s*(?:পরিবর্তন|বদল|পাল্টানো))/i,
+      /(?:how\s*(?:does|can\s*i)\s*(?:return|exchange)|exchange\s*policy|return\s*policy)/i,
+    ],
+    keywords: {
+      bn: ["এক্সচেঞ্জ পলিসি", "রিটার্ন পলিসি", "সাইজ পরিবর্তন", "৭ দিনের এক্সচেঞ্জ", "সাইজ বদল", "ফেরত পলিসি"],
+      en: ["exchange policy", "return policy", "size exchange", "size swap", "7-day exchange", "return item"],
+      banglish: ["exchange policy", "return policy", "size change", "size swap", "7 diner exchange", "size palte nibo"],
+    },
+  },
+
+  // 5. STORE_LOCATOR
+  {
+    intent: "STORE_LOCATOR",
+    patterns: [
+      /(?:showroom|outlet|store|branch|দোকান|শোরুম|আউটলেট|শাখা)\s*(?:kothay|কোথায়|location|ঠিকানা|address|ache\s*ki|আছে\s*কি)/i,
+      /(?:where\s*(?:is|are)\s*(?:your|the)?\s*(?:retail\s*)?(?:stores?|showrooms?|outlets?))/i,
+      /(?:retail\s+)?(?:showrooms?|outlets?)\s+(?:in|address|location|dhaka)/i,
+      /(?:dhanmondi|uttara|banani|jamuna\s*future\s*park|ধানমন্ডি|উত্তরা|বনানী|যমুনা)\s*(?:showroom|outlet|শোরুম|আউটলেট|branch)/i,
+      /(?:physical\s*store|retail\s*store|শোরুমের\s*ঠিকানা|আউটলেটের\s*ঠিকানা)/i,
+    ],
+    keywords: {
+      bn: ["শোরুম কোথায়", "আউটলেট লোকেশন", "দোকানের ঠিকানা", "শোরুমের ঠিকানা", "ধানমন্ডি আউটলেট", "উত্তরা আউটলেট"],
+      en: ["store location", "showroom address", "where is showroom", "retail outlet", "dhanmondi outlet", "uttara outlet"],
+      banglish: ["showroom kothay", "outlet kothay", "dokander thikana", "showroom address", "dhakay showroom"],
+    },
+  },
+
+  // 6. OFFERS
+  {
+    intent: "OFFERS",
+    patterns: [
+      /(?:offer|discount|promo|cashback|coupon|deal|অফার|ছাড়|ক্যাশব্যাক|কুপন)\s*(?:ki|কী|ache|আছে|koto|কত|cholche|চলছে|\?)/i,
+      /(?:current\s*offers?|todays?\s*offers?|latest\s*discount|cashback\s*offer)/i,
+      /(?:offer\s*ki|discount\s*ache|kono\s*offer\s*ache)/i,
+      /(?:কোনো\s*অফার\s*আছে|ডিসকাউন্ট\s*কত|আজকের\s*অফার|অফারের\s*খবর)/i,
+    ],
+    keywords: {
+      bn: ["অফার কী", "ডিসকাউন্ট আছে", "ক্যাশব্যাক অফার", "বর্তমান অফার", "কোনো অফার আছে", "কুপন কোড"],
+      en: ["current offers", "discount", "cashback offer", "promo code", "any offer", "special deal"],
+      banglish: ["current offer", "kono offer ache", "discount koto", "cashback offer", "promo code ache", "ajker offer"],
+    },
+  },
+
+  // 7. SIZING_GUIDE
+  {
+    intent: "SIZING_GUIDE",
+    patterns: [
+      /(?:size\s*guide|sizing|measurements?|size\s*chart|সাইজ\s*গাইড|মাপের\s*চার্ট|মাপজোক)/i,
+      /(?:how\s*to\s*measure|waist\s*size|inseam\s*length|chest\s*size)/i,
+      /(?:সাইজ\s*কীভাবে\s*বুঝব|কোমরের\s*মাপ|বুকের\s*মাপ)/i,
+    ],
+    keywords: {
+      bn: ["সাইজ গাইড", "সাইজ চার্ট", "কোমরের মাপ", "বুকের মাপ", "মেজারমেন্ট চার্ট"],
+      en: ["size guide", "size chart", "measurement guide", "waist sizing", "how to measure"],
+      banglish: ["size guide", "size chart", "kivabe mapbo", "waist size", "measurement chart"],
+    },
+  },
+
   // 3. PRODUCT_SEARCH
   {
     intent: "PRODUCT_SEARCH",

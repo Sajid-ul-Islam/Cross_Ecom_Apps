@@ -21,6 +21,11 @@ export type Intent =
   | "PRODUCT_SEARCH"
   | "PLACE_ORDER"
   | "ORDER_STATUS"
+  | "DELIVERY_INFO"
+  | "EXCHANGE_POLICY"
+  | "STORE_LOCATOR"
+  | "OFFERS"
+  | "SIZING_GUIDE"
   | "HUMAN_HANDOFF"
   | "UNKNOWN";
 
@@ -97,6 +102,7 @@ export interface BotResponse {
   products?: ProductCard[];
   quickReplies?: string[];
   state: BotState;
+  actions?: Array<{ label: string; action: string; payload?: any }>;
 }
 
 export interface ChatRequestPayload {

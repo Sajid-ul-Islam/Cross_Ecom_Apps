@@ -38,6 +38,9 @@ export async function handleProductSearch(
     reply: reply(session.lang, "HERE_ARE_PRODUCTS"),
     products,
     quickReplies,
+    actions: [
+      { label: "🛍️ Browse All Products", action: "navigate_shop" },
+    ],
     state: "IDLE",
   };
 }
