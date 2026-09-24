@@ -44,6 +44,11 @@ This codebase contains:
 4. **In-Memory Catalog Caching**:
    - Protect WordPress from flash-sale read traffic by serving 95%+ of catalog queries from Fastify in-memory cache (5-minute TTL with `catalogWarming` single-flight protection).
 
+5. **Social Sign-in Must Prove Client Ownership (`socialAuth.ts`)**:
+   - `POST /v1/auth/google|facebook` may only trust a provider token whose audience/issuing app is ours: Google `aud` must equal `GOOGLE_CLIENT_ID` (plus issuer, expiry, `email_verified`); Facebook must pass `debug_token` with `app_id` match, and profile calls carry `appsecret_proof`.
+   - **Never** mint a session from a request-body `email` — failed verification returns 401. `SOCIAL_AUTH_ALLOW_UNVERIFIED=true` is a local-demo escape hatch that is force-disabled when `NODE_ENV=production`; never treat the client-simulated account sheets in `SocialAuthModal`/`LoginModal` as authenticated.
+   - Session tokens are HMAC-signed with `SESSION_SIGNING_SECRET` (falling back to `WEBHOOK_SECRET`/`GATEWAY_API_KEY`); rotating one must not require logging customers out, so set the dedicated value in production.
+
 ---
 
 ## 3. UI/UX, Design System & Accessibility (WCAG 2.2 AA) Rules
@@ -79,7 +84,8 @@ Domain Context Boundaries:
 ├── 3. Cart & Pricing Rules: apps/mobile/src/context/CartContext.tsx, apps/api/src/pricing.test.ts
 ├── 4. Checkout & Orders: apps/mobile/app/checkout.tsx, apps/api/src/routes.ts (/v1/deen/orders)
 ├── 5. Admin & BI Dashboard: apps/mobile/src/components/AdminAnalyticsModal.tsx, apps/api/src/routes.ts (/v1/deen/admin/*)
-└── 6. Shared Design Tokens: apps/mobile/src/theme/colors.ts, apps/mobile/src/theme/sharedStyles.ts
+├── 6. Shared Design Tokens: apps/mobile/src/theme/colors.ts, apps/mobile/src/theme/sharedStyles.ts
+└── 7. Multilingual Chatbot Engine: apps/web/app/api/bot/*, apps/web/lib/orderFlow.ts, apps/web/components/ChatWidget.tsx
 ```
 
 ### Multi-Agent Collision Prevention Rules:
@@ -96,15 +102,16 @@ Domain Context Boundaries:
 
 ## 5. Feature Context Map (Agent Navigation Index)
 
-| Feature Domain | Mobile Screen(s) | Mobile Services / State | Gateway Route(s) | Upstream System | Tests |
+| Feature Domain | Mobile Screen(s) | Mobile Services / State | Gateway / Bot Route(s) | Upstream System | Tests |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Authentication** | `LoginModal.tsx`, `profile.tsx` | `ProfileContext.tsx`, `gateway.ts` | `/v1/auth/*` | WP `/wp-login.php` | `test_auth.ts` |
+| **Authentication** | `LoginModal.tsx`, `profile.tsx` | `ProfileContext.tsx`, `gateway.ts` | `/v1/auth/*` | WP `/wp-login.php` | `test_auth.ts`, `socialAuth.test.ts` |
 | **Catalog & PDP** | `shop.tsx`, `product/[id].tsx` | `gateway.ts`, `categories.ts` | `/v1/deen/catalog/*` | WC `/wp-json/wc/v3/products` | `pricing.test.ts` |
 | **Wishlist & Saved** | `WishlistModal.tsx`, PDP Heart | `WishlistContext.tsx` | Local / Client Storage | In-Memory / Client | Automated Verified |
 | **Cart & Pricing** | `cart.tsx`, `Banner.tsx` | `CartContext.tsx`, `RewardsContext.tsx` | `/v1/deen/coupon/*` | In-Memory Rules | `pricing.test.ts` |
 | **Checkout & Order**| `checkout.tsx`, `order-success.tsx`| `OrderContext.tsx`, `districts.ts` | `/v1/deen/orders` | WC Orders + Pathao API | `pricing.test.ts` |
 | **Order Stepper** | `orders.tsx`, `OrderStatusStepper.tsx` | `OrderContext.tsx` | `/v1/deen/pathao/track/*` | Pathao Logistics API | Automated Verified |
 | **Admin & BI** | `AdminAnalyticsModal.tsx`, `index.tsx`| `gateway.ts` (`fetchAdminAnalytics`) | `/v1/deen/admin/*` | WC Orders + In-Memory | Automated Verified |
+| **Multilingual Chatbot** | `chat.tsx`, `AiConciergeModal.tsx` | `apps/web/lib/orderFlow.ts` | `/api/bot` (Web) / `/v1/deen/ai/chat` | WC REST API v3 | `chatbot.test.ts` (25/25) |
 
 ---
 

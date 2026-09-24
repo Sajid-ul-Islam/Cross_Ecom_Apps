@@ -14,7 +14,7 @@ interface CartCtx {
   items: CartItem[];
   totalItems: number;
   subtotal: number;
-  addItem: (product: Product, size: string) => void;
+  addItem: (product: Product, size: string, qty?: number) => void;
   removeItem: (productId: string, size: string) => void;
   updateQty: (productId: string, size: string, qty: number) => void;
   clearCart: () => void;
@@ -60,7 +60,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items, loaded]);
 
-  const addItem = useCallback((product: Product, size: string) => {
+  const addItem = useCallback((product: Product, size: string, qty: number = 1) => {
+    const addQty = Math.max(1, qty || 1);
     setItems((prev) => {
       const existing = prev.find(
         (i) => i.product.id === product.id && i.size === size
@@ -68,11 +69,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (existing) {
         return prev.map((i) =>
           i.product.id === product.id && i.size === size
-            ? { ...i, qty: i.qty + 1 }
+            ? { ...i, qty: i.qty + addQty }
             : i
         );
       }
-      return [...prev, { product, size, qty: 1 }];
+      return [...prev, { product, size, qty: addQty }];
     });
   }, []);
 

@@ -78,6 +78,23 @@ export const config = {
         "http://localhost:8082",
         "exp://10.0.0.2:19000",
       ],
+  /** ── Social sign-in (Google / Facebook) verification ─────────────────
+      Tokens are verified HERE, so these IDs must match the OAuth clients the
+      apps sign in with. A token minted for any other client/app is rejected,
+      which is what stops a foreign app from vouching for a DEEN account. */
+  socialAuth: {
+    googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
+    facebookAppId: process.env.FACEBOOK_APP_ID ?? "",
+    facebookAppSecret: process.env.FACEBOOK_APP_SECRET ?? "",
+    /** LOCAL-DEV escape hatch only: accept a social sign-in whose provider
+        token is missing/unverifiable (identity then comes from the request
+        body). Always ignored when NODE_ENV=production. */
+    allowUnverified: process.env.SOCIAL_AUTH_ALLOW_UNVERIFIED === "true",
+  },
+  /** Dedicated HMAC key for session tokens. Falls back to WEBHOOK_SECRET /
+      GATEWAY_API_KEY so rotating one secret does not log every customer out,
+      but set it explicitly in production. */
+  sessionSigningSecret: process.env.SESSION_SIGNING_SECRET ?? "",
   /** Rate-limit thresholds (per IP per minute). */
   authRateLimit: Number(process.env.AUTH_RATE_LIMIT ?? 10),
   catalogRateLimit: Number(process.env.CATALOG_RATE_LIMIT ?? 120),
@@ -191,4 +208,6 @@ export function resolveStore(apiKey?: string): StoreConfig | null {
 export const wooEnabled = Boolean(config.woo.consumerKey && config.woo.consumerSecret);
 /** True when Pathao credentials are present. */
 export const pathaoEnabled = Boolean(config.pathao.clientId && config.pathao.clientSecret && config.pathao.username && config.pathao.password);
+/** True when social tokens can be fully verified (audience + app ownership). */
+export const socialAuthConfigured = Boolean(config.socialAuth.googleClientId && config.socialAuth.facebookAppId && config.socialAuth.facebookAppSecret);
 

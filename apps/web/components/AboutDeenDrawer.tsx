@@ -212,7 +212,6 @@ export default function AboutDeenDrawer({ isOpen, onClose }: AboutDeenDrawerProp
                       </div>
                     ))}
                   </div>
-                  <div className="story-card__spacer" />
                   <span className="story-card__tag">{item.tag}</span>
                 </article>
               ))}

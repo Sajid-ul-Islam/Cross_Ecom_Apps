@@ -667,7 +667,7 @@ export default function ProfilePage() {
         style={{
           marginTop: 20,
           marginBottom: 20,
-          background: "var(--card, #101010)",
+          background: "var(--surface, #101010)",
           borderRadius: 16,
           border: "1px solid var(--border, rgba(255, 255, 255, 0.08))",
           padding: 20,

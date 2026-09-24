@@ -1,11 +1,12 @@
-import React from "react";
+import React, { useState, useMemo } from "react";
 import { View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { Product } from "../types";
 import { useTheme } from "../context/ThemeContext";
 import { useWishlist } from "../context/WishlistContext";
 import { Heart } from "./Icons";
-import { bdt } from "../services/gateway";
+import { bdt, getInStockSizes } from "../services/gateway";
+import { QuickAddBottomSheet } from "./QuickAddBottomSheet";
 
 interface ProductCardProps {
   product: Product;
@@ -16,7 +17,9 @@ function ProductCardBase({ product, style }: ProductCardProps) {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { isInWishlist, toggleWishlist } = useWishlist();
-  const [imgLoaded, setImgLoaded] = React.useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [sheetVisible, setSheetVisible] = useState(false);
+  const [preselectSize, setPreselectSize] = useState<string>("");
 
   const isSaved = isInWishlist(product.id);
 
@@ -27,6 +30,9 @@ function ProductCardBase({ product, style }: ProductCardProps) {
     });
   };
 
+  const inStockSizes = useMemo(() => getInStockSizes(product), [product]);
+  const outOfStock = product.stockStatus === "outofstock" || inStockSizes.length === 0;
+
   const currentPrice = product.salePrice ?? product.price;
   const origPrice = product.regularPrice && product.regularPrice > currentPrice
     ? product.regularPrice
@@ -35,7 +41,7 @@ function ProductCardBase({ product, style }: ProductCardProps) {
     : null;
   const hasDiscount = Boolean(origPrice && origPrice > currentPrice);
   const pct = product.salePct ?? (hasDiscount && origPrice ? Math.round(((origPrice - currentPrice) / origPrice) * 100) : 0);
-  const outOfStock = product.stockStatus === "outofstock";
+
   // Use the Woo thumbnail variant for the grid (fast + correct ratio); fall back
   // to the first gallery/full image if thumb is missing. Never host our own image.
   const imageUri =
@@ -43,108 +49,150 @@ function ProductCardBase({ product, style }: ProductCardProps) {
     product.images?.[0] ||
     product.gallery?.[0] ||
     "https://images.unsplash.com/photo-1542272604-780c96856592?w=800";
-  const displaySizes = product.sizes || [];
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.card,
-        { backgroundColor: colors.card, borderColor: colors.border },
-        style,
-        outOfStock && styles.cardOOS,
-      ]}
-      activeOpacity={0.88}
-      onPress={handlePress}
-      disabled={outOfStock}
-    >
-      <View style={[styles.imageWrapper, { backgroundColor: colors.cardSecondary }]}>
-        <Image
-          source={{ uri: imageUri }}
-          style={styles.image}
-          resizeMode="cover"
-          fadeDuration={150}
-          progressiveRenderingEnabled
-          onLoadStart={() => setImgLoaded(false)}
-          onLoadEnd={() => setImgLoaded(true)}
-        />
-        {!imgLoaded && (
-          <View style={[styles.imgPlaceholder, { backgroundColor: colors.cardSecondary }]}>
-            <ActivityIndicator size="small" color={colors.indigo} />
-          </View>
-        )}
-        {product.segment === "select" && (
-          <View style={styles.badgeSelect}>
-            <Text style={styles.badgeSelectText}>⚡ SELECT</Text>
-          </View>
-        )}
-        {product.isNew && (
-          <View style={[styles.badgeNew, { backgroundColor: colors.indigo }, product.segment === "select" && styles.badgeNewOffset]}>
-            <Text style={styles.badgeNewText}>NEW</Text>
-          </View>
-        )}
-        {pct > 0 && (
-          <View style={[styles.badgeSale, { backgroundColor: colors.crimson }]}>
-            <Text style={styles.badgeSaleText}>-{pct}%</Text>
-          </View>
-        )}
-        {outOfStock && (
-          <View style={[styles.badgeOOS, { backgroundColor: colors.ink }]}>
-            <Text style={styles.badgeOOSText}>SOLD OUT</Text>
-          </View>
-        )}
-
-        {/* Wishlist Heart Button */}
-        <TouchableOpacity
-          style={[styles.heartBtn, { backgroundColor: isDark ? "rgba(16, 16, 16, 0.85)" : "rgba(255, 255, 255, 0.85)" }]}
-          onPress={() => toggleWishlist(product)}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          accessibilityRole="button"
-          accessibilityLabel={isSaved ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
-        >
-          <Heart size={15} color={isSaved ? colors.crimson : colors.ink} />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.info}>
-        <Text style={[styles.category, { color: colors.sub }]}>
-          {product.category}
-          {product.brand && product.brand !== "DEEN" ? ` · ${product.brand.toUpperCase()}` : ""}
-        </Text>
-        <Text style={[styles.name, { color: colors.ink }]} numberOfLines={2}>
-          {product.name}
-        </Text>
-        {product.sku ? (
-          <Text style={[styles.sku, { color: colors.faint }]}>SKU: {product.sku}</Text>
-        ) : null}
-
-        <View style={styles.priceRow}>
-          <Text style={[styles.price, { color: isDark ? colors.indigo : colors.indigoDark }]}>
-            {bdt(currentPrice)}
-          </Text>
-          {hasDiscount && origPrice && (
-            <Text style={[styles.originalPrice, { color: colors.faint }]}>{bdt(origPrice)}</Text>
-          )}
-        </View>
-
-        {product.rating > 0 && (
-          <View style={styles.ratingRow}>
-            <Text style={[styles.ratingStar, { color: colors.denimStitch }]}>★</Text>
-            <Text style={[styles.ratingText, { color: colors.sub }]}>{product.rating.toFixed(1)}</Text>
-          </View>
-        )}
-
-        <View style={styles.sizePreviewRow}>
-          {displaySizes.slice(0, 4).map((s) => (
-            <View key={s} style={[styles.sizeChip, { backgroundColor: colors.paper, borderColor: colors.borderLight }]}>
-              <Text style={[styles.sizeChipText, { color: colors.sub }]}>{s}</Text>
+    <>
+      <TouchableOpacity
+        style={[
+          styles.card,
+          { backgroundColor: colors.card, borderColor: colors.border },
+          style,
+          outOfStock && styles.cardOOS,
+        ]}
+        activeOpacity={0.88}
+        onPress={handlePress}
+        disabled={outOfStock}
+      >
+        <View style={[styles.imageWrapper, { backgroundColor: colors.cardSecondary }]}>
+          <Image
+            source={{ uri: imageUri }}
+            style={styles.image}
+            resizeMode="cover"
+            fadeDuration={150}
+            progressiveRenderingEnabled
+            onLoadStart={() => setImgLoaded(false)}
+            onLoadEnd={() => setImgLoaded(true)}
+          />
+          {!imgLoaded && (
+            <View style={[styles.imgPlaceholder, { backgroundColor: colors.cardSecondary }]}>
+              <ActivityIndicator size="small" color={colors.indigo} />
             </View>
-          ))}
-          {displaySizes.length > 4 && (
-            <Text style={[styles.moreSizes, { color: colors.faint }]}>+{displaySizes.length - 4}</Text>
+          )}
+          {product.segment === "select" && (
+            <View style={styles.badgeSelect}>
+              <Text style={styles.badgeSelectText}>⚡ SELECT</Text>
+            </View>
+          )}
+          {product.isNew && (
+            <View style={[styles.badgeNew, { backgroundColor: colors.indigo }, product.segment === "select" && styles.badgeNewOffset]}>
+              <Text style={styles.badgeNewText}>NEW</Text>
+            </View>
+          )}
+          {pct > 0 && (
+            <View style={[styles.badgeSale, { backgroundColor: colors.crimson }]}>
+              <Text style={styles.badgeSaleText}>-{pct}%</Text>
+            </View>
+          )}
+          {outOfStock && (
+            <View style={[styles.badgeOOS, { backgroundColor: colors.ink }]}>
+              <Text style={styles.badgeOOSText}>SOLD OUT</Text>
+            </View>
+          )}
+
+          {/* Quick Add Overlay Button on the Image */}
+          {!outOfStock && (
+            <TouchableOpacity
+              style={[styles.quickAddBtn, { backgroundColor: colors.indigo }]}
+              activeOpacity={0.85}
+              hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+              onPress={(e) => {
+                e.stopPropagation();
+                setPreselectSize("");
+                setSheetVisible(true);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`Quick add ${product.name} to bag`}
+            >
+              <Text style={styles.quickAddBtnText}>
+                {inStockSizes.length === 1 ? `+ QUICK ADD (${inStockSizes[0]})` : "+ QUICK ADD"}
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Wishlist Heart Button */}
+          <TouchableOpacity
+            style={[styles.heartBtn, { backgroundColor: isDark ? "rgba(16, 16, 16, 0.85)" : "rgba(255, 255, 255, 0.85)" }]}
+            onPress={() => toggleWishlist(product)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel={isSaved ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
+          >
+            <Heart size={15} color={isSaved ? colors.crimson : colors.ink} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.info}>
+          <Text style={[styles.category, { color: colors.sub }]}>
+            {product.category}
+            {product.brand && product.brand !== "DEEN" ? ` · ${product.brand.toUpperCase()}` : ""}
+          </Text>
+          <Text style={[styles.name, { color: colors.ink }]} numberOfLines={2}>
+            {product.name}
+          </Text>
+          {product.sku ? (
+            <Text style={[styles.sku, { color: colors.faint }]}>SKU: {product.sku}</Text>
+          ) : null}
+
+          <View style={styles.priceRow}>
+            <Text style={[styles.price, { color: isDark ? colors.indigo : colors.indigoDark }]}>
+              {bdt(currentPrice)}
+            </Text>
+            {hasDiscount && origPrice && (
+              <Text style={[styles.originalPrice, { color: colors.faint }]}>{bdt(origPrice)}</Text>
+            )}
+          </View>
+
+          {product.rating > 0 && (
+            <View style={styles.ratingRow}>
+              <Text style={[styles.ratingStar, { color: colors.denimStitch }]}>★</Text>
+              <Text style={[styles.ratingText, { color: colors.sub }]}>{product.rating.toFixed(1)}</Text>
+            </View>
+          )}
+
+          {inStockSizes.length > 0 && (
+            <View style={styles.sizePreviewRow}>
+              {inStockSizes.slice(0, 4).map((s) => (
+                <TouchableOpacity
+                  key={s}
+                  style={[styles.sizeChip, { backgroundColor: colors.paper, borderColor: colors.borderLight }]}
+                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    setPreselectSize(s);
+                    setSheetVisible(true);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Quick select size ${s}`}
+                >
+                  <Text style={[styles.sizeChipText, { color: colors.sub }]}>{s}</Text>
+                </TouchableOpacity>
+              ))}
+              {inStockSizes.length > 4 && (
+                <Text style={[styles.moreSizes, { color: colors.faint }]}>+{inStockSizes.length - 4}</Text>
+              )}
+            </View>
           )}
         </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+
+      {/* Slide-Up Quick Add Bottom Sheet Modal */}
+      <QuickAddBottomSheet
+        product={product}
+        visible={sheetVisible}
+        onClose={() => setSheetVisible(false)}
+        initialSize={preselectSize}
+      />
+    </>
   );
 }
 
@@ -159,8 +207,9 @@ const styles = StyleSheet.create({
   },
   imageWrapper: {
     width: "100%",
-    aspectRatio: 0.9,
+    aspectRatio: 3 / 4,
     position: "relative",
+    overflow: "hidden",
   },
   image: {
     width: "100%",
@@ -184,13 +233,13 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   badgeNewOffset: {
-    top: 34,
+    top: 32,
   },
   badgeNewText: {
     color: "#FFFFFF",
     fontSize: 9,
     fontWeight: "800",
-    letterSpacing: 0.8,
+    letterSpacing: 0.5,
   },
   badgeSelect: {
     position: "absolute",
@@ -234,6 +283,28 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.5,
   },
+  quickAddBtn: {
+    position: "absolute",
+    bottom: 8,
+    left: 8,
+    right: 46,
+    height: 30,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  quickAddBtnText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
   heartBtn: {
     position: "absolute",
     bottom: 8,
@@ -243,6 +314,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
+    zIndex: 3,
   },
   cardOOS: {
     opacity: 0.55,
@@ -291,14 +363,14 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   sizeChip: {
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 4,
     borderWidth: 1,
   },
   sizeChipText: {
-    fontSize: 9,
-    fontWeight: "600",
+    fontSize: 9.5,
+    fontWeight: "700",
   },
   moreSizes: {
     fontSize: 9,

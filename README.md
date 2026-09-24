@@ -32,9 +32,10 @@
 - **Official OAuth 2.0 Pop-Up Windows**: Clicking "Continue with Google" or "Continue with Facebook" opens a **real, centered browser pop-up** directly to `accounts.google.com` (with account chooser / `prompt=select_account`) or `facebook.com/v19.0/dialog/oauth`.
 - **PostMessage Token Exchange**: The `/auth/callback` page receives the OAuth token from the pop-up and passes it back to the parent window via `postMessage`. No page redirects.
 - **Fastify Token Verification**: Gateway verifies Google OIDC `id_token` via `https://oauth2.googleapis.com/tokeninfo` and Facebook `access_token` via Graph API — real cryptographic verification, not mocks.
+- **Client Ownership Asserted**: Google tokens are rejected unless `aud` matches our `GOOGLE_CLIENT_ID`, issuer/expiry are valid and the email is verified; Facebook tokens are checked with `debug_token` (issuing `app_id` must be ours) before the profile call carries an `appsecret_proof`. A token minted for any other client/app cannot vouch for a DEEN account, and a failed verification always answers 401 — the gateway never falls back to a client-supplied email.
 - **WooCommerce Customer Auto-Provisioning**: Verified email automatically links to or creates a real WooCommerce customer record (`/wp-json/wc/v3/customers`), attaching `customer_id` to every order for lifetime purchase history.
 - **Mobile Account Chooser Sheet**: Native React Native modal mimics the Google / Facebook account selection sheet with avatar badges, saved account list, "Use another account" form, and animated slide-up.
-- **Environment Variables**: `NEXT_PUBLIC_GOOGLE_CLIENT_ID` + `NEXT_PUBLIC_FACEBOOK_APP_ID` in `.env.local` / Vercel for live credentials.
+- **Environment Variables**: `NEXT_PUBLIC_GOOGLE_CLIENT_ID` + `NEXT_PUBLIC_FACEBOOK_APP_ID` in `.env.local` / Vercel for the browser side; `GOOGLE_CLIENT_ID` + `FACEBOOK_APP_ID` + `FACEBOOK_APP_SECRET` on the gateway (Render) for verification. `SOCIAL_AUTH_ALLOW_UNVERIFIED=true` restores the old unverified behaviour for local demos only — it is ignored when `NODE_ENV=production`.
 
 ### 3. OTA (Over-The-Air) Auto-Updates — No APK Rebuilds
 - **expo-updates integration**: The mobile app silently checks for a new JS bundle from EAS Update 3 seconds after launch.
@@ -60,6 +61,13 @@
 - **Physical Outlet Stock Finder**: Live inventory availability for Mirpur 12 Flagship, Wari, Cumilla, and Sylhet with Google Maps links.
 - **Direct WhatsApp Concierge**: Instant 1-tap chat (`https://wa.me/8801952700500`) with prefilled product inquiry.
 - **Promotional Campaigns & BOGO**: Dynamic top banner with auto-rotation, Instant Cashback tiers (৳500 / ৳700), and BOGO 50% discount on lowest-priced denim.
+
+### 6. Multilingual Rule-Based E-Commerce Chatbot (`apps/web`)
+- **Strictly Zero LLM / Zero External AI**: 100% deterministic rule-based conversational agent with zero hallucinations, zero external API costs, and sub-10ms response times.
+- **Trilingual Comprehension**: Native support for **Bangla (`bn`)**, **English (`en`)**, and **Banglish (`banglish`)** with Bengali numeral normalization (`০-৯` ➔ `0-9`) and phonetic keyword mapping.
+- **Multi-Turn State Machine**: Autonomous conversational ordering (`ORDER_PRODUCT ➔ ORDER_SIZE ➔ ORDER_QTY ➔ ORDER_PHONE ➔ ORDER_ADDRESS ➔ ORDER_CONFIRM`) and order status tracking by phone and order ID.
+- **Fuzzy Search & Synonyms**: Fuse.js fuzzy matcher integrated with Bangladeshi apparel dictionaries (`synonyms.json`) and direct WooCommerce REST API v3 fallback.
+- **Comprehensive Architecture Guide**: [`docs/CHATBOT_ARCHITECTURE.md`](./docs/CHATBOT_ARCHITECTURE.md).
 
 ---
 
@@ -141,6 +149,16 @@ cd ../..
 # Required for real Google & Facebook OAuth pop-up login
 NEXT_PUBLIC_GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
 NEXT_PUBLIC_FACEBOOK_APP_ID="your-facebook-app-id"
+```
+
+#### `apps/api/.env` (gateway — verification side; see `.env.example`)
+```env
+# Must match the web/mobile OAuth clients, or tokens are rejected with 401
+GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
+FACEBOOK_APP_ID="your-facebook-app-id"
+FACEBOOK_APP_SECRET="your-facebook-app-secret"
+# Dedicated HMAC key for session tokens (falls back to WEBHOOK_SECRET)
+SESSION_SIGNING_SECRET="random-high-entropy-value"
 ```
 
 #### GitHub Actions Secret (for OTA auto-publish)

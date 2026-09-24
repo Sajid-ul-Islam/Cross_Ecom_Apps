@@ -1,2 +1,150 @@
 npm notice run web@0.1.0 dev
-npm notice run next dev
+npm notice run next dev -p 3000
+ ⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/07/101-0100-150-Front-760x1100.jpg 504
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/07/101-0100-149-Front-760x1100.jpg 504
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/07/101-0100-151-Front-760x1100.jpg 504
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/02/101-0200-151-Front-flat-image-760x1100.jpg 504
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/06/102-0301-013-Flat-Front-760x1100.jpg 504
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/07/101-0100-149-Front-760x1100.jpg 504
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/07/101-0100-150-Front-760x1100.jpg 504
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/02/101-0200-151-Front-flat-image-760x1100.jpg 504
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/07/101-0100-151-Front-760x1100.jpg 504
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/06/102-0301-013-Flat-Front-760x1100.jpg 504
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/05/102-0301-012-Flat-Front-760x1100.jpg 503
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/06/102-0301-004-Flat-Front-760x1100.jpg 503
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/05/102-0302-008-Front-760x1100.jpg 503
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/05/102-0301-001-flat-front-760x1100.jpg 503
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/05/102-0302-001-Front-760x1100.jpg 503
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/05/102-0302-005-Front-760x1100.jpg 404
+[TypeError: fetch failed] {
+  [cause]: Error: read ECONNRESET
+      at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20) {
+    errno: -4077,
+    code: 'ECONNRESET',
+    syscall: 'read'
+  }
+}
+[TypeError: fetch failed] {
+  [cause]: Error: read ECONNRESET
+      at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20) {
+    errno: -4077,
+    code: 'ECONNRESET',
+    syscall: 'read'
+  }
+}
+[TypeError: fetch failed] {
+  [cause]: Error: read ECONNRESET
+      at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20) {
+    errno: -4077,
+    code: 'ECONNRESET',
+    syscall: 'read'
+  }
+}
+[TypeError: fetch failed] {
+  [cause]: Error: read ECONNRESET
+      at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20) {
+    errno: -4077,
+    code: 'ECONNRESET',
+    syscall: 'read'
+  }
+}
+[TypeError: fetch failed] {
+  [cause]: Error: read ECONNRESET
+      at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20) {
+    errno: -4077,
+    code: 'ECONNRESET',
+    syscall: 'read'
+  }
+}
+[TypeError: fetch failed] {
+  [cause]: Error: read ECONNRESET
+      at TLSWrap.onStreamRead (node:internal/stream_base_commons:216:20) {
+    errno: -4077,
+    code: 'ECONNRESET',
+    syscall: 'read'
+  }
+}
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/08/106-0101-133-Flat-Front-image-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2024/11/DCFST024-Front-760x1100.webp 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2025/12/105-0201-032-full-sleeve-t-shirt-Model-for-web-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/02/105-0101-375-Earth-Hemp-T-shirt-Front-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/03/105-0301-005-Front-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/03/105-0301-009-product-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/03/105-0301-008-Product-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/03/105-0401-005-web-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/03/105-0401-004-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/03/105-0401-009-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2025/11/sky-blue1-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2025/11/meroon-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2025/11/fest-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2025/11/110-0101-012-Front--760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2025/05/DCPS112-Front-copy-1-760x1100.webp 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2025/06/Deen-Trifold-Walet-Front-68-copy-760x1100.webp 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/04/109-0104-004-Front-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/06/France-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/06/Argentina-1-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2025/02/Breathable-Face-Mask-760x1100.webp 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/07/101-0100-149-Front-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/06/102-0301-013-Flat-Front-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/05/102-0302-005-Front-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/05/102-0301-012-Flat-Front-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/05/102-0301-001-flat-front-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/05/102-0302-006-Front-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/04/102-0501-002-Flat-Front-n-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/05/102-0302-001-Front-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/05/102-0302-008-Front-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/03/106-0101-135-Flat-Front-image-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/04/102-0501-001-Flat-Front-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/07/101-0100-150-Front-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/07/101-0100-151-Front-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/02/101-0200-151-Front-flat-image-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/06/102-0301-004-Flat-Front-760x1100.jpg 404
+[TypeError: fetch failed] {
+  [cause]: ConnectTimeoutError: Connect Timeout Error (attempted address: image.deencommerce.com:443, timeout: 10000ms)
+      at onConnectTimeout (node:internal/deps/undici/undici:1981:23)
+      at Immediate._onImmediate (node:internal/deps/undici/undici:1947:35)
+      at process.processImmediate (node:internal/timers:504:21) {
+    code: 'UND_ERR_CONNECT_TIMEOUT'
+  }
+}
+[TypeError: fetch failed] {
+  [cause]: SocketError: other side closed
+      at TLSSocket.onHttpSocketEnd (node:internal/deps/undici/undici:7700:26)
+      at TLSSocket.emit (node:events:521:24)
+      at endReadableNT (node:internal/streams/readable:1729:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+    code: 'UND_ERR_SOCKET',
+    socket: {
+      localAddress: '192.168.1.101',
+      localPort: 55858,
+      remoteAddress: '92.223.84.84',
+      remotePort: 443,
+      remoteFamily: 'IPv4',
+      timeout: undefined,
+      bytesWritten: 250,
+      bytesRead: 0
+    }
+  }
+}
+[TypeError: fetch failed] {
+  [cause]: ConnectTimeoutError: Connect Timeout Error (attempted address: image.deencommerce.com:443, timeout: 10000ms)
+      at onConnectTimeout (node:internal/deps/undici/undici:1981:23)
+      at Immediate._onImmediate (node:internal/deps/undici/undici:1947:35)
+      at process.processImmediate (node:internal/timers:504:21) {
+    code: 'UND_ERR_CONNECT_TIMEOUT'
+  }
+}
+[TypeError: fetch failed] {
+  [cause]: Error: getaddrinfo ENOTFOUND image.deencommerce.com
+      at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26) {
+    errno: -3008,
+    code: 'ENOTFOUND',
+    syscall: 'getaddrinfo',
+    hostname: 'image.deencommerce.com'
+  }
+}
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/03/106-0101-111-Front-Flat-image-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/03/106-0101-110-Front-Flat-image-760x1100.jpg 404
+ ⨯ upstream image response failed for https://image.deencommerce.com/wp-content/uploads/2026/08/106-0101-131-Flat-Front-image-760x1100.jpg 404

@@ -81,6 +81,19 @@ PATHAO_CLIENT_ID=
 PATHAO_CLIENT_SECRET=
 PATHAO_USERNAME=
 PATHAO_PASSWORD=
+
+# Social sign-in verification (Google / Facebook). Must match the OAuth clients
+# the apps sign in with: a token minted for another client/app is rejected 401.
+GOOGLE_CLIENT_ID=
+FACEBOOK_APP_ID=
+FACEBOOK_APP_SECRET=
+
+# Local-dev only: accept a social sign-in whose provider token is missing or
+# unverifiable. Ignored when NODE_ENV=production.
+SOCIAL_AUTH_ALLOW_UNVERIFIED=false
+
+# Dedicated HMAC key for session tokens (falls back to WOO_WEBHOOK_SECRET).
+SESSION_SIGNING_SECRET=
 ```
 
 ---

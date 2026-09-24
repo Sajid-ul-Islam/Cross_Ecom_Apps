@@ -93,6 +93,14 @@ export async function fetchOrders(phone?: string): Promise<OrderResult[]> {
   }
 }
 
+export interface Variation {
+  id: number;
+  size: string;
+  stock: string;
+  price: number;
+  regular: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -116,8 +124,35 @@ export interface Product {
   slug?: string;
   tags?: string[];
   isNew?: boolean;
+  variations?: Variation[];
   /** Live WooCommerce sub-category names (e.g. "Regular Fit", "Slim Fit", "Drop Shoulder"). */
   wooSubCategories?: string[];
+}
+
+/**
+ * Resolves strictly in-stock sizes for a product.
+ * Omits any size whose variation stock status is 'outofstock'.
+ * Returns an empty array if the product itself is out of stock.
+ */
+export function getInStockSizes(product: Product | null | undefined): string[] {
+  if (!product || (product.stockStatus || "instock") === "outofstock") {
+    return [];
+  }
+
+  if (Array.isArray(product.variations) && product.variations.length > 0) {
+    const inStock = product.variations
+      .filter((v) => {
+        const s = String(v.stock || "instock").toLowerCase();
+        return s !== "outofstock" && s !== "out-of-stock";
+      })
+      .map((v) => String(v.size || "").trim())
+      .filter(Boolean);
+    if (inStock.length > 0) {
+      return Array.from(new Set(inStock));
+    }
+  }
+
+  return (product.sizes || []).map((s) => String(s || "").trim()).filter(Boolean);
 }
 
 export interface OrderLine {

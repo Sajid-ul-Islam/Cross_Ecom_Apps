@@ -19,7 +19,8 @@ import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useCart } from "../context/CartContext";
 import { useProfile } from "../context/ProfileContext";
-import { bdt, GATEWAY_URL } from "../services/gateway";
+import { bdt, GATEWAY_URL, getInStockSizes } from "../services/gateway";
+import { QuickAddBottomSheet } from "./QuickAddBottomSheet";
 
 const { width, height } = Dimensions.get("window");
 
@@ -260,13 +261,21 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
     }
   };
 
+  const [quickAddProduct, setQuickAddProduct] = useState<any>(null);
+  const [quickAddVisible, setQuickAddVisible] = useState(false);
+
   const handleQuickAdd = (p: any) => {
-    const size = p.sizes?.[0] || "32";
-    addToCart(p, size, 1);
-    setAddedIds((prev) => ({ ...prev, [p.id]: true }));
-    setTimeout(() => {
-      setAddedIds((prev) => ({ ...prev, [p.id]: false }));
-    }, 2000);
+    const inStock = getInStockSizes(p);
+    if (inStock.length === 1) {
+      addToCart(p, inStock[0], 1);
+      setAddedIds((prev) => ({ ...prev, [p.id]: true }));
+      setTimeout(() => {
+        setAddedIds((prev) => ({ ...prev, [p.id]: false }));
+      }, 2000);
+      return;
+    }
+    setQuickAddProduct(p);
+    setQuickAddVisible(true);
   };
 
   const openWhatsApp = async () => {
@@ -504,6 +513,11 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         {content}
+        <QuickAddBottomSheet
+          product={quickAddProduct}
+          visible={quickAddVisible}
+          onClose={() => setQuickAddVisible(false)}
+        />
       </KeyboardAvoidingView>
     );
   }
@@ -514,6 +528,11 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       {content}
+      <QuickAddBottomSheet
+        product={quickAddProduct}
+        visible={quickAddVisible}
+        onClose={() => setQuickAddVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 };
