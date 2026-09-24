@@ -70,25 +70,31 @@ export default function MobileBottomNav() {
   return (
     <nav className="mobile-bottom-nav" aria-label="Mobile Navigation">
       {tabs.map((tab) => {
+        const isActive = tab.href === "#chat" || tab.href === "/chat"
+          ? pathname === "/chat"
+          : pathname === tab.href || (tab.href !== "/" && pathname.startsWith(tab.href));
+
         if (tab.isAction) {
           return (
             <button
               key={tab.label}
               type="button"
-              onClick={() => window.dispatchEvent(new CustomEvent("deen_open_chat"))}
-              className="mobile-tab-btn"
+              onClick={() => {
+                if (pathname === "/chat") return;
+                window.dispatchEvent(new CustomEvent("deen_open_chat"));
+              }}
+              className={`mobile-tab-btn ${isActive ? "mobile-tab-btn--active" : ""}`}
               style={{ background: "transparent", border: "none", cursor: "pointer", padding: 0 }}
               aria-label="Open DEEN Assistant Chat"
             >
               <div className="mobile-tab-icon-wrap">
-                {tab.icon(false)}
+                {tab.icon(isActive)}
               </div>
               <span className="mobile-tab-label">{tab.label}</span>
             </button>
           );
         }
 
-        const isActive = pathname === tab.href || (tab.href !== "/" && pathname.startsWith(tab.href));
         return (
           <Link
             key={tab.href}

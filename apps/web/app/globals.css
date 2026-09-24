@@ -345,23 +345,74 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .nav__link:hover, .nav__link--active {
   background: var(--indigo-light); color: var(--indigo);
 }
-.nav__actions { display: flex; align-items: center; gap: 8px; }
-.nav__icon-btn {
-  width: 44px; height: 44px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 50%; background: var(--surface-2);
-  border: 1px solid var(--border); cursor: pointer;
-  transition: all 0.15s ease; position: relative;
+.nav__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-.nav__icon-btn:hover { background: var(--indigo-light); }
+.nav__icon-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.nav__icon-btn:hover {
+  background: var(--indigo-light);
+  border-color: rgba(99, 102, 241, 0.35);
+  color: var(--indigo);
+  transform: translateY(-1px);
+}
+.nav__icon-btn:active {
+  transform: translateY(0) scale(0.96);
+}
+.nav__icon-btn--active {
+  background: var(--indigo-light);
+  border-color: var(--indigo);
+  color: var(--indigo);
+}
 .nav__profile-desktop { display: flex; }
 .nav__orders-desktop-only { display: flex; }
-.nav__cart-badge {
-  position: absolute; top: -4px; right: -4px;
-  width: 18px; height: 18px; border-radius: 50%;
-  background: var(--indigo); color: #fff;
-  font-size: 9px; font-weight: 800;
-  display: flex; align-items: center; justify-content: center;
+.nav__chat-desktop-only { display: flex; }
+.nav__cart-desktop-only { display: flex; }
+.nav__cart-desktop-only--has-items {
+  border-color: rgba(99, 102, 241, 0.45);
+  color: var(--indigo);
+}
+
+.nav__badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 9px;
+  font-size: 9.5px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  line-height: 1;
+  border: 2px solid var(--surface);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+.nav__badge--crimson {
+  background: var(--crimson);
+  color: #ffffff;
+}
+.nav__badge--indigo {
+  background: var(--indigo);
+  color: #ffffff;
 }
 
 /* ── Hero ───────────────────────────────────────── */
@@ -682,15 +733,21 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 @media (max-width: 768px) {
-  body { padding-bottom: 70px; }
+  body { padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
   .mobile-bottom-nav { display: flex; }
   .nav__profile-desktop { display: none !important; }
   .nav__orders-desktop-only { display: none !important; }
-  .page-content { padding-bottom: 80px; }
+  .nav__chat-desktop-only { display: none !important; }
+  .nav__cart-desktop-only { display: none !important; }
+  .page-content { padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
 }
 
 @media (min-width: 769px) {
   .mobile-bottom-nav { display: none !important; }
+  .nav__profile-desktop { display: flex !important; }
+  .nav__orders-desktop-only { display: flex !important; }
+  .nav__chat-desktop-only { display: flex !important; }
+  .nav__cart-desktop-only { display: flex !important; }
 }
 
 @media (max-width: 600px) {
@@ -796,14 +853,17 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   bottom: 0;
   left: 0;
   right: 0;
-  height: 60px;
+  height: calc(60px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--surface);
   border-top: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-around;
   z-index: 1000;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 .mobile-tab-btn {
   display: flex;
