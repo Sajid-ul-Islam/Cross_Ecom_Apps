@@ -16,8 +16,9 @@ import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useWishlist } from "../context/WishlistContext";
 import { useCart } from "../context/CartContext";
-import { bdt } from "../services/gateway";
+import { bdt, getInStockSizes } from "../services/gateway";
 import { Product } from "../types";
+import { QuickAddBottomSheet } from "./QuickAddBottomSheet";
 
 const { width, height } = Dimensions.get("window");
 
@@ -31,12 +32,19 @@ export const WishlistModal: React.FC<WishlistModalProps> = ({ visible, onClose }
   const { colors, isDark } = useTheme();
   const { wishlist, removeFromWishlist, clearWishlist } = useWishlist();
   const { addToCart } = useCart();
+  const [quickAddProduct, setQuickAddProduct] = React.useState<Product | null>(null);
+  const [quickAddVisible, setQuickAddVisible] = React.useState(false);
   const styles = createStyles(colors);
 
   const handleMoveToBag = (product: Product) => {
-    const selectedSize = product.sizes?.[0] || "FREE";
-    addToCart(product, selectedSize, 1);
-    removeFromWishlist(product.id);
+    const inStock = getInStockSizes(product);
+    if (inStock.length === 1) {
+      addToCart(product, inStock[0], 1);
+      removeFromWishlist(product.id);
+      return;
+    }
+    setQuickAddProduct(product);
+    setQuickAddVisible(true);
   };
 
   const handleMoveAllToBag = () => {
@@ -56,7 +64,8 @@ export const WishlistModal: React.FC<WishlistModalProps> = ({ visible, onClose }
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <>
+      <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={[styles.modalCard, { backgroundColor: colors.paper }]}>
           {/* Header */}
@@ -177,6 +186,13 @@ export const WishlistModal: React.FC<WishlistModalProps> = ({ visible, onClose }
         </View>
       </View>
     </Modal>
+
+    <QuickAddBottomSheet
+      product={quickAddProduct}
+      visible={quickAddVisible}
+      onClose={() => setQuickAddVisible(false)}
+    />
+    </>
   );
 };
 

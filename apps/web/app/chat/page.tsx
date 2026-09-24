@@ -4,8 +4,9 @@ import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { API_URL, bdt, resolveProductImage } from "@/lib/api";
+import { API_URL, bdt, resolveProductImage, getInStockSizes, type Product } from "@/lib/api";
 import { useCart } from "@/lib/cart";
+import QuickAddModal from "@/components/QuickAddModal";
 
 export interface AiMessage {
   id: string;
@@ -280,13 +281,21 @@ export default function WebChatPage() {
     }
   };
 
+  const [quickAddProduct, setQuickAddProduct] = useState<Product | null>(null);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+
   const handleQuickAdd = (p: any) => {
-    const size = p.sizes?.[0] || "32";
-    addItem(p, size);
-    setAddedIds((prev) => ({ ...prev, [p.id]: true }));
-    setTimeout(() => {
-      setAddedIds((prev) => ({ ...prev, [p.id]: false }));
-    }, 2000);
+    const inStock = getInStockSizes(p);
+    if (inStock.length === 1) {
+      addItem(p, inStock[0]);
+      setAddedIds((prev) => ({ ...prev, [p.id]: true }));
+      setTimeout(() => {
+        setAddedIds((prev) => ({ ...prev, [p.id]: false }));
+      }, 2000);
+      return;
+    }
+    setQuickAddProduct(p);
+    setQuickAddOpen(true);
   };
 
   return (
@@ -747,6 +756,12 @@ export default function WebChatPage() {
           </form>
         </div>
       </div>
+
+      <QuickAddModal
+        product={quickAddProduct}
+        isOpen={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
+      />
     </div>
   );
 }

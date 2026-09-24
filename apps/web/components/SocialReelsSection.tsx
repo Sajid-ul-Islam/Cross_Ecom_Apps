@@ -3,8 +3,9 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { SocialReel, OFFICIAL_BRAND_SOCIALS } from "@/lib/socialContent";
-import { bdt } from "@/lib/api";
+import { bdt, type Product } from "@/lib/api";
 import { useCart } from "@/lib/cart";
+import QuickAddModal from "./QuickAddModal";
 
 interface SocialReelsSectionProps {
   reels: SocialReel[];
@@ -12,7 +13,8 @@ interface SocialReelsSectionProps {
 
 export default function SocialReelsSection({ reels }: SocialReelsSectionProps) {
   const [selectedReel, setSelectedReel] = useState<SocialReel | null>(null);
-  const [addedNotice, setAddedNotice] = useState(false);
+  const [quickAddProduct, setQuickAddProduct] = useState<Product | null>(null);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const { addItem } = useCart();
 
   if (!reels || reels.length === 0) return null;
@@ -20,26 +22,23 @@ export default function SocialReelsSection({ reels }: SocialReelsSectionProps) {
   const handleQuickAdd = (reel: SocialReel) => {
     if (!reel.taggedProduct) return;
     const p = reel.taggedProduct;
-    addItem(
-      {
-        id: p.id,
-        sku: `DEEN-${p.id}`,
-        name: p.name,
-        category: p.category as any,
-        price: p.price,
-        regularPrice: p.regularPrice,
-        sizes: ["30", "32", "34"],
-        images: [p.image, p.image],
-        fabric: "100% Cotton",
-        stockStatus: "instock",
-        rating: 4.9,
-        ratingCount: 28,
-        blurb: p.name,
-      },
-      "32"
-    );
-    setAddedNotice(true);
-    setTimeout(() => setAddedNotice(false), 2500);
+    const prod: Product = {
+      id: p.id,
+      sku: `DEEN-${p.id}`,
+      name: p.name,
+      category: p.category as any,
+      price: p.price,
+      regularPrice: p.regularPrice,
+      sizes: ["30", "32", "34", "36"],
+      images: [p.image, p.image],
+      fabric: "100% Cotton",
+      stockStatus: "instock",
+      rating: 4.9,
+      ratingCount: 28,
+      blurb: p.name,
+    };
+    setQuickAddProduct(prod);
+    setQuickAddOpen(true);
   };
 
   return (
@@ -356,12 +355,6 @@ export default function SocialReelsSection({ reels }: SocialReelsSectionProps) {
                     </div>
                   </div>
 
-                  {addedNotice && (
-                    <div style={{ background: "rgba(16, 185, 129, 0.15)", color: "#10B981", fontSize: 12, fontWeight: 800, padding: "6px 10px", borderRadius: 6, marginBottom: 8, textAlign: "center" }}>
-                      ✓ Added to bag! Size 32 selected.
-                    </div>
-                  )}
-
                   <div style={{ display: "flex", gap: 8 }}>
                     <button
                       type="button"
@@ -419,6 +412,12 @@ export default function SocialReelsSection({ reels }: SocialReelsSectionProps) {
           </div>
         )}
       </div>
+
+      <QuickAddModal
+        product={quickAddProduct}
+        isOpen={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
+      />
     </section>
   );
 }
