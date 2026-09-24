@@ -448,6 +448,12 @@ export default function ChatWidget() {
             transform: translateY(0) scale(1);
           }
         }
+        @media (max-width: 768px) {
+          #chatbot-widget-btn {
+            bottom: 76px !important;
+            right: 16px !important;
+          }
+        }
         @media (max-width: 640px) {
           .chatbot-panel {
             width: 100vw !important;
@@ -457,6 +463,7 @@ export default function ChatWidget() {
             bottom: 0 !important;
             right: 0 !important;
             border-radius: 0 !important;
+            z-index: 10001 !important;
           }
         }
       `}</style>

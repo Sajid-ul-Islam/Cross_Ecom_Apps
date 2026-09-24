@@ -23,6 +23,8 @@ apps/mobile/ios/
 apps/api/.env
 apps/mobile/.env
 apps/web/.env.local
+!.env.example
+!**/.env.example
 
 # TypeScript build info
 *.tsbuildinfo

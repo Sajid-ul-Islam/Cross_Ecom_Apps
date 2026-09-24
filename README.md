@@ -62,6 +62,13 @@
 - **Direct WhatsApp Concierge**: Instant 1-tap chat (`https://wa.me/8801952700500`) with prefilled product inquiry.
 - **Promotional Campaigns & BOGO**: Dynamic top banner with auto-rotation, Instant Cashback tiers (৳500 / ৳700), and BOGO 50% discount on lowest-priced denim.
 
+### 6. Multilingual Rule-Based E-Commerce Chatbot (`apps/web`)
+- **Strictly Zero LLM / Zero External AI**: 100% deterministic rule-based conversational agent with zero hallucinations, zero external API costs, and sub-10ms response times.
+- **Trilingual Comprehension**: Native support for **Bangla (`bn`)**, **English (`en`)**, and **Banglish (`banglish`)** with Bengali numeral normalization (`০-৯` ➔ `0-9`) and phonetic keyword mapping.
+- **Multi-Turn State Machine**: Autonomous conversational ordering (`ORDER_PRODUCT ➔ ORDER_SIZE ➔ ORDER_QTY ➔ ORDER_PHONE ➔ ORDER_ADDRESS ➔ ORDER_CONFIRM`) and order status tracking by phone and order ID.
+- **Fuzzy Search & Synonyms**: Fuse.js fuzzy matcher integrated with Bangladeshi apparel dictionaries (`synonyms.json`) and direct WooCommerce REST API v3 fallback.
+- **Comprehensive Architecture Guide**: [`docs/CHATBOT_ARCHITECTURE.md`](./docs/CHATBOT_ARCHITECTURE.md).
+
 ---
 
 ## 🗂️ Monorepo Workspace Structure
