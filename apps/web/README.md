@@ -93,3 +93,155 @@ The Next.js storefront is ready for zero-config deployment on **Vercel**:
 - Root directory: `apps/web` (or root using `vercel.json`)
 - Framework Preset: `Next.js`
 - Set `NEXT_PUBLIC_GATEWAY_URL` and `NEXT_PUBLIC_API_KEY` in Vercel Environment Settings.
+
+---
+
+## 🤖 Multilingual Rule-Based E-Commerce Chatbot
+
+An ultra-reliable, production-grade conversational agent designed specifically for Bangladeshi WooCommerce stores.
+
+> **CRITICAL ARCHITECTURAL CONSTRAINT: ZERO LLM / ZERO EXTERNAL AI**  
+> Built with 100% deterministic logic: regular expressions, Banglish phonetic matching, multi-category synonym expansion, Fuse.js fuzzy matching, and a finite state-machine for multi-turn dialogs. No OpenAI, Claude, Gemini, or local models. Zero API fees, sub-10ms response times, zero hallucinations.
+
+### 📐 Architecture Diagram
+
+```
++---------------------------------------------------------------------------------+
+|                                 Next.js Frontend                                |
+|  [ ChatWidget.tsx ] <--> [ ChatMessage.tsx ] + [ QuickReplies.tsx ]             |
+|                                       │                                         |
+|                                       ▼ POST /api/bot                           |
++---------------------------------------------------------------------------------+
+                                        │
+                                        ▼
++---------------------------------------------------------------------------------+
+|                           Rule-Based Bot Engine (/lib)                          |
+|                                                                                 |
+| 1. Rate Limiter (20 req/min/IP)                                                 |
+| 2. Session Store (Map + SessionStore adapter interface, 30m TTL, bounded LRU)   |
+| 3. Normalizer (Bengali digits ০-৯ ➔ 0-9, trim, whitespace collapse)             |
+| 4. Language Detector (bn [U+0980-U+09FF] | banglish [phonetic dict] | en)       |
+|                                                                                 |
+|                                ┌───────────────┐                                |
+|                                │ Active State? │                                |
+|                                └───────┬───────┘                                |
+|                        Yes             │            No                          |
+|            ┌───────────────────────────┴───────────────────────────┐            |
+|            ▼                                                       ▼            |
+|   [ Multi-Turn State Machine ]                           [ Intent Classifier ]  |
+|   • ORDER_PRODUCT ➔ ORDER_SIZE                           • PLACE_ORDER (1.0)    |
+|     ➔ ORDER_QTY ➔ ORDER_PHONE                            • ORDER_STATUS (1.0)   |
+|     ➔ ORDER_ADDRESS ➔ CONFIRM                            • PRODUCT_SEARCH (0.7) |
+|   • STATUS_PHONE ➔ STATUS_ORDERNO                        • HUMAN_HANDOFF (0.7)  |
+|                                                          • GREETING (0.7)       |
+|                                                          • UNKNOWN (0.0)        |
+|                                                                    │            |
+|                                                                    ▼            |
+|                                                          [ Route to Flow ]      |
++---------------------------------------------------------------------------------+
+         │                                      │                     │
+         ▼                                      ▼                     ▼
++--------------------+                +--------------------+  +-------------------+
+|  Synonym Expander  |                |   Fuse.js Search   |  | WooCommerce REST  |
+|  (synonyms.json)   | ─────────────> |  (productMatch.ts) |  |   API v3 (woo.ts) |
+|  Banglish/Bangla   |                |  Threshold: 0.45   |  |   Basic Auth      |
++--------------------+                +--------------------+  +-------------------+
+```
+
+---
+
+### ⚙️ Environment Configuration (`.env.local`)
+
+Add the following variables to `apps/web/.env.local`:
+
+```env
+# WooCommerce REST API v3 Credentials
+WOO_URL=https://deencommerce.com/wp-json/wc/v3
+WOO_KEY=ck_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+WOO_SECRET=cs_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Bot Store Branding
+NEXT_PUBLIC_STORE_NAME="DEEN Commerce"
+```
+
+---
+
+### 🔑 Obtaining WooCommerce REST API Keys
+
+1. Log into your WordPress Admin Dashboard (`/wp-admin`).
+2. Go to **WooCommerce** ➔ **Settings** ➔ **Advanced** ➔ **REST API**.
+3. Click **Add key** (or **Create an API key**).
+4. Enter the details:
+   - **Description**: `DEEN Next.js Chatbot`
+   - **User**: Select an admin or shop manager user account.
+   - **Permissions**: `Read/Write` (Required to create orders and look up order statuses).
+5. Click **Generate API key**.
+6. Copy the **Consumer Key** (`ck_...`) to `WOO_KEY` and **Consumer Secret** (`cs_...`) to `WOO_SECRET` in `.env.local`.
+
+---
+
+### 🧪 Automated Testing & Verification
+
+The chatbot engine includes an automated test suite verifying all 6 intents, Bengali digit normalization, phonetic Banglish detection, entity extraction, session timeouts, and multi-turn state machines.
+
+```bash
+# Run chatbot test suite
+npx tsx apps/web/lib/chatbot.test.ts
+
+# Run entire monorepo typecheck
+npm run typecheck:all
+```
+
+#### Verification Checklist Cases:
+
+| Language | Test Phrase | Expected Intent / Behavior |
+| :--- | :--- | :--- |
+| **Bangla** | `"হ্যালো"` | `GREETING` |
+| **Bangla** | `"শার্টের দাম কত?"` | `PRODUCT_SEARCH` |
+| **Bangla** | `"আমি একটা শার্ট অর্ডার করতে চাই"` | `PLACE_ORDER` (starts dialog) |
+| **Bangla** | `"০১৭১২৩৪৫৬৭৮"` | Entity extraction (`phone: "01712345678"`) |
+| **English** | `"Hi"` | `GREETING` |
+| **English** | `"Show me panjabi"` | `PRODUCT_SEARCH` |
+| **English** | `"I want to order a shirt"` | `PLACE_ORDER` |
+| **English** | `"What's the status of order #1234"` | `ORDER_STATUS` |
+| **Banglish** | `"assalam vai"` | `GREETING` |
+| **Banglish** | `"sharter dam koto"` | `PRODUCT_SEARCH` |
+| **Banglish** | `"ami ekta shirt order korte chai"` | `PLACE_ORDER` |
+| **Banglish** | `"order status bolen, phone 01712345678 order 1234"` | `ORDER_STATUS` |
+
+---
+
+### 🛠️ Extending the Chatbot
+
+#### 1. Adding New Synonyms (`lib/synonyms.json`)
+To support new Bangladeshi apparel terms, edit `apps/web/lib/synonyms.json`:
+```json
+{
+  "products": {
+    "polo": ["polo t-shirt", "পোলো", "collar tee", "polo shirt"]
+  },
+  "colors": {
+    "maroon": ["মেরুন", "kohl", "wine"]
+  }
+}
+```
+
+#### 2. Adding a New Intent (`lib/intents.ts`)
+1. Add your intent name to `Intent` type in `apps/web/lib/types.ts`.
+2. Register patterns and trilingual keyword dictionaries in `apps/web/lib/intents.ts`:
+```ts
+{
+  intent: "STORE_LOCATIONS",
+  patterns: [
+    /(?:showroom|branch|outlet|location|kothay\s*dokon)/i,
+    /(?:দোকান|শো-?রুম|আউটলেট|কোথায়)/
+  ],
+  keywords: {
+    bn: ["শোরুম", "দোকান", "আউটলেট"],
+    en: ["showroom", "outlet", "branch", "store", "location"],
+    banglish: ["showroom", "outlet", "dokon", "kothay", "thikana"]
+  }
+}
+```
+3. Add trilingual response templates in `apps/web/lib/responses.ts`.
+4. Route the new intent in `apps/web/lib/orderFlow.ts`.
