@@ -41,6 +41,8 @@ export interface DeenProduct {
   ratingCount: number;
   blurb: string;
   isNew?: boolean;
+  /** Live WooCommerce sub-category names the product belongs to (e.g. "Regular Fit", "Slim Fit"). */
+  wooSubCategories?: string[];
 }
 
 export const DELIVERY_FEES = { dhaka: 50, outside: 90, store_pickup: 0 } as const;

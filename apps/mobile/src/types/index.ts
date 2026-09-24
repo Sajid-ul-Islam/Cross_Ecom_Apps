@@ -35,6 +35,8 @@ export interface Product {
   isNew?: boolean;
   fit?: string; // jeans fit from Woo (Regular | Slim | Straight)
   variations?: Variation[];
+  /** Live WooCommerce sub-category names the product belongs to (e.g. "Regular Fit", "Slim Fit"). */
+  wooSubCategories?: string[];
 }
 
 export interface Variation {

@@ -142,6 +142,18 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
   const picks = (p.images || []).map(pickImg).filter((x) => Boolean(x.full));
   const imgs = [picks[0]?.full ?? "", picks[1]?.full ?? picks[0]?.full ?? ""] as [string, string];
   const fabric = p.meta_data?.find((m) => m.key.toLowerCase() === "fabric")?.value ?? "";
+
+  // Collect sub-category names: all WooCommerce category names that are NOT a
+  // top-level mapped category (e.g. "Regular Fit", "Slim Fit", "Drop Shoulder").
+  const TOP_LEVEL_NAMES = new Set([
+    "JEANS", "SHIRTS", "T-SHIRTS", "POLO SHIRTS", "PANJABI", "TROUSERS",
+    "ACCESSORIES", "SWEATSHIRTS", "MEN", "DEEN SELECT", "NEW ARRIVALS",
+    "SALE", "WATERFALL OUTLET",
+  ]);
+  const wooSubCategories = p.categories
+    .map((c) => c.name)
+    .filter((n) => !TOP_LEVEL_NAMES.has(n.toUpperCase()));
+
   return {
     id: String(p.id),
     sku: p.sku,
@@ -165,8 +177,10 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
     rating: Number(p.average_rating) || 0,
     ratingCount: Number(p.rating_count) || 0,
     blurb: (p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220) ?? "",
+    wooSubCategories: wooSubCategories.length > 0 ? wooSubCategories : undefined,
   };
 }
+
 
 export const storeProductVariationsMap = new Map<string, { id: number; size: string }[]>();
 
@@ -200,6 +214,15 @@ function mapStoreProductToDeen(p: any): DeenProduct {
   const cleanName = (p.name || "").replace(/&#038;/g, "&").replace(/&amp;/g, "&").replace(/&quot;/g, '"');
   const brand = detectBrand(cleanName, isSelect);
 
+  const TOP_LEVEL_NAMES = new Set([
+    "JEANS", "SHIRTS", "T-SHIRTS", "POLO SHIRTS", "PANJABI", "TROUSERS",
+    "ACCESSORIES", "SWEATSHIRTS", "MEN", "DEEN SELECT", "NEW ARRIVALS",
+    "SALE", "WATERFALL OUTLET",
+  ]);
+  const wooSubCategories = (p.categories || [])
+    .map((c: any) => c.name as string)
+    .filter((n: string) => !TOP_LEVEL_NAMES.has(n.toUpperCase()));
+
   return {
     id: String(p.id),
     sku: p.sku || `DS-${p.id}`,
@@ -224,6 +247,7 @@ function mapStoreProductToDeen(p: any): DeenProduct {
     ratingCount: Number(p.review_count) || 12,
     blurb: (p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220) || "Authentic DEEN design crafted in Bangladesh.",
     isNew: catNames.some((c: string) => /new/i.test(c)),
+    wooSubCategories: wooSubCategories.length > 0 ? wooSubCategories : undefined,
   };
 }
 
@@ -1891,3 +1915,105 @@ export async function submitWooProductComment(input: SubmitCommentInput): Promis
   };
 }
 
+/* -------- WooCommerce Category Hierarchy Tree -------- */
+
+export interface WooCategoryNode {
+  id: number;
+  name: string;
+  slug: string;
+  count: number;
+  image?: string | null;
+  children: WooCategoryNode[];
+}
+
+let categoryTreeCache: { at: number; data: WooCategoryNode[] } | null = null;
+
+/**
+ * Fetches the full WooCommerce category hierarchy from the Store API and builds
+ * a parent→children tree. Only real WooCommerce category names are used —
+ * no hardcoded or made-up labels.
+ *
+ * Caches for 5 minutes (same TTL as catalog) to prevent hammering WP.
+ */
+export async function fetchWooCategoryTree(): Promise<WooCategoryNode[]> {
+  if (categoryTreeCache && Date.now() - categoryTreeCache.at < CACHE_TTL_MS) {
+    return categoryTreeCache.data;
+  }
+
+  const siteUrl = config.woo.site || "https://deencommerce.com";
+
+  interface RawWooCat {
+    id: number;
+    name: string;
+    slug: string;
+    parent: number;
+    count: number;
+    image?: { src?: string } | null;
+  }
+
+  let allCats: RawWooCat[] = [];
+  try {
+    const res = await fetch(
+      `${siteUrl}/wp-json/wc/store/v1/products/categories?per_page=100`,
+      {
+        headers: { "User-Agent": "DEEN-Commerce-Gateway/1.0" },
+        signal: AbortSignal.timeout(6000),
+      }
+    );
+    if (res.ok) {
+      allCats = (await res.json()) as RawWooCat[];
+    }
+  } catch (e) {
+    console.warn("[woo] fetchWooCategoryTree: Store API failed:", (e as Error).message);
+    // Return empty tree on failure so the endpoint gracefully returns []
+    return [];
+  }
+
+  // Build a map of id → node (without children yet)
+  const nodeMap = new Map<number, WooCategoryNode>();
+  for (const c of allCats) {
+    if (!c.name || c.count === 0) continue; // skip empty/ghost categories
+    nodeMap.set(c.id, {
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+      count: c.count,
+      image: c.image?.src ? normalizeImageUrl(c.image.src) : null,
+      children: [],
+    });
+  }
+
+  // Wire up parent→children
+  const roots: WooCategoryNode[] = [];
+  for (const c of allCats) {
+    if (!nodeMap.has(c.id)) continue;
+    const node = nodeMap.get(c.id)!;
+    if (c.parent === 0) {
+      roots.push(node);
+    } else {
+      const parent = nodeMap.get(c.parent);
+      if (parent) {
+        parent.children.push(node);
+      } else {
+        // Orphaned sub-cat — treat as root
+        roots.push(node);
+      }
+    }
+  }
+
+  // Sort roots and children by count descending
+  roots.sort((a, b) => b.count - a.count);
+  for (const root of roots) {
+    root.children.sort((a, b) => b.count - a.count);
+    for (const child of root.children) {
+      child.children.sort((a, b) => b.count - a.count);
+    }
+  }
+
+  categoryTreeCache = { at: Date.now(), data: roots };
+  return roots;
+}
+
+export function invalidateCategoryTreeCache() {
+  categoryTreeCache = null;
+}

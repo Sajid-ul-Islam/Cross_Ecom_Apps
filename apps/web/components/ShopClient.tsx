@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { fetchProducts, CATEGORIES, type Product, type Category } from "@/lib/api";
+import { fetchProducts, fetchSubCategories, CATEGORIES, type Product, type Category, type WooCategoryNode } from "@/lib/api";
 import { getCategoryInfo } from "@/lib/categories";
 import ProductCard from "@/components/ProductCard";
 
@@ -41,6 +41,30 @@ export default function ShopClient({
   const [segment, setSegment] = useState<"all" | "collection" | "select">(initialSegment);
   const [search, setSearch] = useState(initialSearch);
   const [sort, setSort] = useState(initialSort);
+
+  // Live WooCommerce sub-categories for filter chips
+  const [subCategories, setSubCategories] = useState<WooCategoryNode[]>([]);
+  const [selectedSubCat, setSelectedSubCat] = useState<string>("All");
+
+  // Fetch sub-categories whenever category changes
+  useEffect(() => {
+    setSelectedSubCat("All"); // reset sub-cat filter when category changes
+    if (category !== "ALL") {
+      fetchSubCategories(category)
+        .then((subs) => setSubCategories(subs))
+        .catch(() => setSubCategories([]));
+    } else {
+      setSubCategories([]);
+    }
+  }, [category]);
+
+  // Client-side sub-category filtering on top of server-fetched products
+  const displayedProducts = selectedSubCat === "All"
+    ? products
+    : products.filter((p) =>
+        (p.wooSubCategories && p.wooSubCategories.some((sc) => sc === selectedSubCat)) ||
+        p.name.toLowerCase().includes(selectedSubCat.toLowerCase())
+      );
 
   const handleFilterChange = useCallback(
     async (
@@ -119,13 +143,14 @@ export default function ShopClient({
           CATEGORIES &amp; SHOP
         </h1>
         <p style={{ color: "var(--sub)", fontSize: 13 }}>
-          {loading ? "Updating catalog…" : `Showing ${products.length} products`}
+          {loading ? "Updating catalog…" : `Showing ${displayedProducts.length} products`}
           {segment === "select"
             ? " in DEEN Select (Curated Drops)"
             : segment === "collection"
             ? " in DEEN Collection (Artisanal)"
             : ""}
           {category !== "ALL" ? ` · ${category}` : ""}
+          {selectedSubCat !== "All" ? ` · ${selectedSubCat}` : ""}
         </p>
       </div>
 
@@ -281,13 +306,51 @@ export default function ShopClient({
         </select>
       </div>
 
+      {/* Live WooCommerce Sub-category Filter Chips */}
+      {subCategories.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 8,
+            marginTop: 12,
+            marginBottom: 4,
+          }}
+        >
+          {["All", ...subCategories.map((sc) => sc.name)].map((tag) => {
+            const active = selectedSubCat === tag;
+            return (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => setSelectedSubCat(tag)}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 20,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  border: `1px solid ${active ? "var(--indigo)" : "var(--border)"}`,
+                  background: active ? "var(--indigo)" : "var(--card)",
+                  color: active ? "#FFFFFF" : "var(--ink)",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  letterSpacing: "0.3px",
+                }}
+              >
+                {tag}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Results Grid */}
       {loading ? (
         <div style={{ textAlign: "center", padding: "80px 0" }}>
           <div className="spinner" />
           <p style={{ color: "var(--sub)", fontSize: 14 }}>Updating catalog…</p>
         </div>
-      ) : products.length === 0 ? (
+      ) : displayedProducts.length === 0 ? (
         <div className="empty-state" style={{ textAlign: "center", padding: "60px 20px" }}>
           <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>No products found</h3>
           <p style={{ color: "var(--sub)", fontSize: 13, marginBottom: 20 }}>
@@ -300,6 +363,7 @@ export default function ShopClient({
               setCategory("ALL");
               setSegment("all");
               setSearch("");
+              setSelectedSubCat("All");
               handleFilterChange("ALL", "all", "", sort);
             }}
           >
@@ -308,7 +372,7 @@ export default function ShopClient({
         </div>
       ) : (
         <div className="product-grid" style={{ marginTop: 20 }}>
-          {products.map((p) => (
+          {displayedProducts.map((p) => (
             <ProductCard key={p.id} product={p} />
           ))}
         </div>
@@ -316,3 +380,4 @@ export default function ShopClient({
     </div>
   );
 }
+

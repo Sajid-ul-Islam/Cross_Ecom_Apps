@@ -116,6 +116,8 @@ export interface Product {
   slug?: string;
   tags?: string[];
   isNew?: boolean;
+  /** Live WooCommerce sub-category names (e.g. "Regular Fit", "Slim Fit", "Drop Shoulder"). */
+  wooSubCategories?: string[];
 }
 
 export interface OrderLine {
@@ -362,6 +364,15 @@ export function mapStoreProductToWeb(p: any): Product {
     ? "DEEN Select"
     : "DEEN";
 
+  const TOP_LEVEL_NAMES = new Set([
+    "JEANS", "SHIRTS", "T-SHIRTS", "POLO SHIRTS", "PANJABI", "TROUSERS",
+    "ACCESSORIES", "SWEATSHIRTS", "MEN", "DEEN SELECT", "NEW ARRIVALS",
+    "SALE", "WATERFALL OUTLET",
+  ]);
+  const wooSubCategories = (p.categories || [])
+    .map((c: any) => c.name as string)
+    .filter((n: string) => !TOP_LEVEL_NAMES.has(n.toUpperCase()));
+
   return {
     id: String(p.id),
     sku: p.sku || `DS-${p.id}`,
@@ -384,6 +395,7 @@ export function mapStoreProductToWeb(p: any): Product {
     description: p.description || p.short_description || "",
     slug: p.slug || "",
     isNew: catNames.some((c: string) => /new/i.test(c)),
+    wooSubCategories: wooSubCategories.length > 0 ? wooSubCategories : undefined,
   };
 }
 
@@ -1785,4 +1797,71 @@ export async function submitProductComment(
   }
   return await res.json();
 }
+
+/* -------- WooCommerce Category Hierarchy (Web) -------- */
+
+export interface WooCategoryNode {
+  id: number;
+  name: string;
+  slug: string;
+  count: number;
+  image?: string | null;
+  children: WooCategoryNode[];
+}
+
+let _webCategoryTreeCache: { at: number; data: WooCategoryNode[] } | null = null;
+const WEB_TREE_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Fetches the live WooCommerce category tree via the gateway.
+ * Used to populate sub-category filter chips in ShopClient.
+ */
+export async function fetchCategoryTree(): Promise<WooCategoryNode[]> {
+  if (_webCategoryTreeCache && Date.now() - _webCategoryTreeCache.at < WEB_TREE_TTL) {
+    return _webCategoryTreeCache.data;
+  }
+  try {
+    const res = await apiFetch(`${API_URL}/v1/deen/categories/tree`);
+    if (res.ok) {
+      const tree = await res.json() as WooCategoryNode[];
+      if (Array.isArray(tree) && tree.length > 0) {
+        _webCategoryTreeCache = { at: Date.now(), data: tree };
+        return tree;
+      }
+    }
+  } catch {}
+  return _webCategoryTreeCache?.data ?? [];
+}
+
+/**
+ * Returns sub-categories for a given top-level category name.
+ * e.g. "JEANS" → ["Regular Fit", "Slim Fit"]
+ */
+export async function fetchSubCategories(categoryName: string): Promise<WooCategoryNode[]> {
+  const tree = await fetchCategoryTree();
+  const upper = categoryName.toUpperCase().replace(/_/g, " ");
+
+  const aliasMap: Record<string, string[]> = {
+    "JEANS": ["JEANS"],
+    "T-SHIRT": ["T-SHIRTS", "T-SHIRT"],
+    "SHIRT": ["SHIRTS", "SHIRT"],
+    "POLO": ["POLO SHIRTS", "POLO"],
+    "PANJABI": ["PANJABI"],
+    "TROUSERS": ["TROUSERS"],
+    "ACCESSORIES": ["ACCESSORIES"],
+    "SWEATSHIRTS": ["SWEATSHIRTS"],
+    "DEEN_SELECT": ["DEEN SELECT"],
+    "DEEN SELECT": ["DEEN SELECT"],
+  };
+  const aliases = aliasMap[upper] ?? [upper];
+
+  for (const root of tree) {
+    const rootUpper = root.name.toUpperCase();
+    if (aliases.some((a) => rootUpper === a || rootUpper.includes(a))) {
+      return root.children;
+    }
+  }
+  return [];
+}
+
 

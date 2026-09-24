@@ -28,7 +28,14 @@ import { ProductCard } from "../../src/components/ProductCard";
 import { NavBar } from "../../src/components/NavBar";
 import { ScreenShell } from "../../src/components/ScreenShell";
 import { SizeGuideModal } from "../../src/components/SizeGuideModal";
-import { fetchProducts, isGatewayConfigured, useCatalogRefreshOnFocus, fetchCategoryCovers } from "../../src/services/gateway";
+import {
+  fetchProducts,
+  isGatewayConfigured,
+  useCatalogRefreshOnFocus,
+  fetchCategoryCovers,
+  fetchSubCategories,
+  WooCategoryNode,
+} from "../../src/services/gateway";
 import { Product, DeenCategory } from "../../src/types";
 import { useProfile } from "../../src/context/ProfileContext";
 import { getCategoryInfo } from "../../src/data/categories";
@@ -56,11 +63,22 @@ export default function CategoryLandingScreen() {
   const [sizeGuideVisible, setSizeGuideVisible] = useState(false);
   const [categoryCovers, setCategoryCovers] = useState<Record<string, string>>({});
 
+  // Live WooCommerce sub-categories for filter chips
+  const [subCategories, setSubCategories] = useState<WooCategoryNode[]>([]);
+
   useEffect(() => {
     fetchCategoryCovers()
       .then((c) => setCategoryCovers(c || {}))
       .catch(() => {});
   }, []);
+
+  // Fetch live WooCommerce sub-categories whenever the category slug changes
+  useEffect(() => {
+    setSelectedTag("All"); // reset filter when switching categories
+    fetchSubCategories(slug || "JEANS")
+      .then((subs) => setSubCategories(subs))
+      .catch(() => setSubCategories([]));
+  }, [slug]);
 
   const loadCategoryProducts = useCallback(async () => {
     try {
@@ -89,18 +107,26 @@ export default function CategoryLandingScreen() {
 
   const { refreshControl } = usePullToRefresh(loadCategoryProducts);
 
+  // All filter chip labels: "All" + live WooCommerce sub-category names
+  const filterTags = useMemo<string[]>(() => {
+    if (subCategories.length === 0) return ["All"];
+    return ["All", ...subCategories.map((sc) => sc.name)];
+  }, [subCategories]);
+
   // Filter and Sort items
   const displayedProducts = useMemo(() => {
     let list = [...products];
 
-    // Tag filter
+    // Sub-category filter using live WooCommerce sub-category names
+    // A product is shown if its wooSubCategories array contains the selected tag,
+    // OR (fallback) if the product name/fabric contains the tag text
     if (selectedTag && selectedTag !== "All") {
       const q = selectedTag.toLowerCase();
       list = list.filter(
         (p) =>
+          (p.wooSubCategories && p.wooSubCategories.some((sc) => sc.toLowerCase() === q)) ||
           p.name.toLowerCase().includes(q) ||
-          p.fabric.toLowerCase().includes(q) ||
-          p.blurb?.toLowerCase().includes(q)
+          p.fabric.toLowerCase().includes(q)
       );
     }
 
@@ -197,20 +223,23 @@ export default function CategoryLandingScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Subcategory / Fit Filter Tags */}
-            {categoryInfo.filterTags.length > 0 && (
+            {/* Live WooCommerce Sub-category Filter Chips */}
+            {filterTags.length > 1 && (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.tagsScroll}
               >
-                {categoryInfo.filterTags.map((tag) => {
+                {filterTags.map((tag) => {
                   const active = selectedTag === tag;
                   return (
                     <TouchableOpacity
                       key={tag}
                       style={[styles.tagChip, active && styles.tagChipActive]}
                       onPress={() => setSelectedTag(tag)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Filter by ${tag}`}
+                      hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
                     >
                       <Text style={[styles.tagChipText, active && styles.tagChipTextActive]}>
                         {tag}
@@ -426,6 +455,8 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
       borderRadius: 20,
       borderWidth: 1,
       borderColor: colors.border,
+      minHeight: 34,
+      justifyContent: "center",
     },
     tagChipActive: {
       backgroundColor: colors.indigo,

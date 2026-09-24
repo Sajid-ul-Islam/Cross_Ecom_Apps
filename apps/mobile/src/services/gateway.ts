@@ -2294,3 +2294,82 @@ export async function submitProductComment(
   return res;
 }
 
+/* ---- Live WooCommerce Category Hierarchy ---- */
+
+export interface WooCategoryNode {
+  id: number;
+  name: string;
+  slug: string;
+  count: number;
+  image?: string | null;
+  children: WooCategoryNode[];
+}
+
+let _categoryTreeCache: { at: number; data: WooCategoryNode[] } | null = null;
+const TREE_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Fetches the live WooCommerce category hierarchy (parent→children tree).
+ * Children names are used as filter chip labels on category landing pages.
+ * Only real WooCommerce category names — no made-up labels.
+ */
+export async function fetchCategoryTree(): Promise<WooCategoryNode[]> {
+  if (_categoryTreeCache && Date.now() - _categoryTreeCache.at < TREE_TTL) {
+    return _categoryTreeCache.data;
+  }
+  try {
+    const tree = await request<WooCategoryNode[]>("/v1/deen/categories/tree", undefined, 8000, true);
+    if (Array.isArray(tree) && tree.length > 0) {
+      _categoryTreeCache = { at: Date.now(), data: tree };
+      return tree;
+    }
+  } catch {
+    // Fall through to return cached or empty
+  }
+  return _categoryTreeCache?.data ?? [];
+}
+
+/**
+ * Returns the sub-categories for a given top-level category slug or name.
+ * e.g. "JEANS" → ["Regular Fit", "Slim Fit"]
+ * e.g. "T-SHIRT" → ["Solid T-Shirts", "Full Sleeved T-Shirts", ...]
+ */
+export async function fetchSubCategories(categoryName: string): Promise<WooCategoryNode[]> {
+  const tree = await fetchCategoryTree();
+  const upper = categoryName.toUpperCase().replace(/_/g, " ");
+
+  // Map mobile category names to WooCommerce category names
+  const aliasMap: Record<string, string[]> = {
+    "JEANS": ["JEANS"],
+    "T-SHIRT": ["T-SHIRTS", "T-SHIRT"],
+    "SHIRT": ["SHIRTS", "SHIRT"],
+    "POLO": ["POLO SHIRTS", "POLO"],
+    "PANJABI": ["PANJABI"],
+    "TROUSERS": ["TROUSERS"],
+    "ACCESSORIES": ["ACCESSORIES", "ACCESSORIES"],
+    "SWEATSHIRTS": ["SWEATSHIRTS"],
+    "DEEN SELECT": ["DEEN SELECT"],
+    "MEN": ["MEN"],
+  };
+
+  const aliases = aliasMap[upper] ?? [upper];
+
+  for (const root of tree) {
+    const rootUpper = root.name.toUpperCase();
+    if (aliases.some((a) => rootUpper === a || rootUpper.includes(a))) {
+      return root.children;
+    }
+  }
+
+  // Fallback: search across all roots
+  for (const root of tree) {
+    for (const child of root.children) {
+      const childUpper = child.name.toUpperCase();
+      if (aliases.some((a) => childUpper === a)) {
+        return child.children;
+      }
+    }
+  }
+
+  return [];
+}

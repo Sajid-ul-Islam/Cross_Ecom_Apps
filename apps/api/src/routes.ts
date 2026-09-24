@@ -44,6 +44,7 @@ import {
   updateWooCustomer,
   fetchWooProductComments,
   submitWooProductComment,
+  fetchWooCategoryTree,
 } from "./woo.js";
 import {
   getPathaoToken,
@@ -1313,6 +1314,21 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       return reply.send({});
     }
   });
+
+  /* ---- Live WooCommerce category hierarchy tree ----
+     Returns the full parent→children category tree fetched from WooCommerce.
+     Only real WooCommerce category names — no made-up labels.
+     Mobile and Web use children[].name as filter chip labels.
+     Shape: WooCategoryNode[] (id, name, slug, count, image, children) */
+  app.get("/v1/deen/categories/tree", async (_req, reply) => {
+    try {
+      const tree = await fetchWooCategoryTree();
+      return reply.send(tree);
+    } catch {
+      return reply.send([]);
+    }
+  });
+
 
   /* ---- dynamic main hero / cover banner from live WordPress media ---- */
   app.get("/v1/deen/hero-banner", async (_req, reply) => {
