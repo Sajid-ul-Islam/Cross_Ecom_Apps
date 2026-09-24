@@ -66,15 +66,26 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <Menu size={20} color={colors.ink} />
               </TouchableOpacity>
-              <Image
-                source={isDark ? require("../../assets/logo_white.png") : require("../../assets/logo.png")}
-                style={styles.brandLogo}
-                resizeMode="contain"
-              />
+              <View style={{ flexDirection: "column" }}>
+                <Image
+                  source={isDark ? require("../../assets/logo_white.png") : require("../../assets/logo.png")}
+                  style={styles.brandLogo}
+                  resizeMode="contain"
+                />
+                <Text
+                  style={{
+                    fontSize: 8.5,
+                    fontWeight: "800",
+                    letterSpacing: 1,
+                    textTransform: "uppercase",
+                    color: colors.denimStitch,
+                    marginTop: 1,
+                  }}
+                >
+                  {subtitle || "EST. 2020 · DHAKA"}
+                </Text>
+              </View>
             </View>
-            {subtitle ? (
-              <Text style={[styles.brandSubtitle, { color: colors.sub }]}>{subtitle}</Text>
-            ) : null}
           </View>
         )}
 

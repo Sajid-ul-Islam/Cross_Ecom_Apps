@@ -41,6 +41,7 @@ function ProductCardBase({ product, style }: ProductCardProps) {
     : null;
   const hasDiscount = Boolean(origPrice && origPrice > currentPrice);
   const pct = product.salePct ?? (hasDiscount && origPrice ? Math.round(((origPrice - currentPrice) / origPrice) * 100) : 0);
+  const isSelvedge = (product.category === "JEANS" || /selvedge/i.test(product.name)) && product.segment !== "select";
 
   // Use the Woo thumbnail variant for the grid (fast + correct ratio); fall back
   // to the first gallery/full image if thumb is missing. Never host our own image.
@@ -83,8 +84,13 @@ function ProductCardBase({ product, style }: ProductCardProps) {
               <Text style={styles.badgeSelectText}>⚡ SELECT</Text>
             </View>
           )}
+          {isSelvedge && (
+            <View style={styles.badgeSelvedge}>
+              <Text style={styles.badgeSelvedgeText}>🧵 SELVEDGE</Text>
+            </View>
+          )}
           {product.isNew && (
-            <View style={[styles.badgeNew, { backgroundColor: colors.indigo }, product.segment === "select" && styles.badgeNewOffset]}>
+            <View style={[styles.badgeNew, { backgroundColor: colors.indigo }, (product.segment === "select" || isSelvedge) && styles.badgeNewOffset]}>
               <Text style={styles.badgeNewText}>NEW</Text>
             </View>
           )}
@@ -252,6 +258,29 @@ const styles = StyleSheet.create({
   },
   badgeSelectText: {
     color: "#D97706",
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  badgeSelvedge: {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 4,
+    backgroundColor: "#090D16",
+    borderLeftWidth: 3,
+    borderLeftColor: "#C93B36",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.15)",
+    borderRightWidth: 1,
+    borderRightColor: "rgba(255,255,255,0.15)",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.15)",
+  },
+  badgeSelvedgeText: {
+    color: "#F8FAFC",
     fontSize: 9,
     fontWeight: "800",
     letterSpacing: 0.5,

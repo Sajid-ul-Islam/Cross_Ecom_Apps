@@ -41,6 +41,7 @@ export default function ProductCard({ product }: Props) {
       : 0);
 
   const isSaved = isInWishlist(product.id);
+  const isSelvedge = (product.category === "JEANS" || /selvedge/i.test(product.name) || /selvedge/i.test(product.fabric || "")) && product.segment !== "select";
 
   const primaryImg = resolveProductImage(product.images[0]);
   const secondaryImg = resolveProductImage(product.images[1] || product.images[0]);
@@ -160,10 +161,30 @@ export default function ProductCard({ product }: Props) {
               ⚡ SELECT
             </span>
           )}
+          {isSelvedge && (
+            <span
+              className="product-card__badge"
+              style={{
+                left: 8,
+                top: 8,
+                background: "#090d16",
+                color: "#f8fafc",
+                borderLeft: "3px solid #c93b36",
+                borderTop: "1px solid rgba(255,255,255,0.15)",
+                borderRight: "1px solid rgba(255,255,255,0.15)",
+                borderBottom: "1px solid rgba(255,255,255,0.15)",
+                fontSize: "9.5px",
+                fontWeight: 900,
+                letterSpacing: "0.5px",
+              }}
+            >
+              🧵 SELVEDGE
+            </span>
+          )}
           {product.isNew && (
             <span
               className="product-card__badge product-card__badge--new"
-              style={product.segment === "select" ? { top: 32 } : undefined}
+              style={product.segment === "select" || isSelvedge ? { top: 32 } : undefined}
             >
               NEW
             </span>

@@ -180,17 +180,18 @@ export default function SideNavDrawer({ isOpen, onClose, onOpenStories }: SideNa
             />
             <span
               style={{
-                fontSize: 11,
-                fontWeight: 700,
-                color: "var(--indigo)",
+                fontSize: 10,
+                fontWeight: 800,
+                color: "var(--denim-stitch)",
                 textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                background: "rgba(99, 102, 241, 0.12)",
-                padding: "2px 6px",
+                letterSpacing: "0.1em",
+                background: "rgba(212, 148, 57, 0.12)",
+                border: "1px solid rgba(212, 148, 57, 0.3)",
+                padding: "3px 8px",
                 borderRadius: 4,
               }}
             >
-              EST. 2020
+              EST. 2020 · DHAKA
             </span>
           </div>
 
@@ -534,8 +535,9 @@ export default function SideNavDrawer({ isOpen, onClose, onOpenStories }: SideNa
             </button>
           </div>
 
-          <div style={{ marginTop: 12, fontSize: 11, color: "var(--sub)", textAlign: "center" }}>
-            64 Districts COD · 7-Day Easy Exchange
+          <div style={{ marginTop: 14, fontSize: 11, color: "var(--sub)", textAlign: "center", lineHeight: 1.5 }}>
+            <div style={{ color: "var(--denim-stitch)", fontWeight: 800 }}>দেশের প্রথম ডেনিম ব্র্যান্ড</div>
+            <div>64 Districts COD · 7-Day Easy Exchange</div>
           </div>
         </div>
       </aside>

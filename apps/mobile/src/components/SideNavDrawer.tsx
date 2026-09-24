@@ -92,7 +92,7 @@ export const SideNavDrawer: React.FC<SideNavDrawerProps> = ({
                 <Text style={[styles.brandTitle, { color: isDark ? colors.indigo : colors.indigoDark }]}>
                   DEEN
                 </Text>
-                <Text style={[styles.brandEst, { color: colors.sub }]}>
+                <Text style={[styles.brandEst, { color: colors.denimStitch, fontWeight: "800", letterSpacing: 1 }]}>
                   EST. 2020 · DHAKA
                 </Text>
               </View>
@@ -321,9 +321,14 @@ export const SideNavDrawer: React.FC<SideNavDrawerProps> = ({
                 </TouchableOpacity>
               </View>
 
-              <Text style={[styles.guaranteeText, { color: colors.sub }]}>
-                64 Districts COD · 7-Day Easy Exchange
-              </Text>
+              <View style={{ alignItems: "center", marginTop: 8 }}>
+                <Text style={{ fontSize: 11, fontWeight: "800", color: colors.denimStitch, marginBottom: 2 }}>
+                  দেশের প্রথম ডেনিম ব্র্যান্ড
+                </Text>
+                <Text style={[styles.guaranteeText, { color: colors.sub }]}>
+                  64 Districts COD · 7-Day Easy Exchange
+                </Text>
+              </View>
             </View>
           </ScrollView>
         </View>

@@ -42,11 +42,13 @@ interface AiMessage {
 
 const QUICK_PROMPTS = [
   "🔥 What is the current offer & discount?",
-  "✨ What are the new products?",
-  "👖 Suggest selvedge jeans under ৳2500",
-  "🚚 Chittagong delivery charge & time?",
+  "👖 Suggest 13.5oz selvedge jeans under ৳2500",
+  "🧵 Difference between selvedge & regular denim?",
+  "📏 How to choose my waist size for DEEN jeans?",
   "🔄 How does the 7-day size exchange work?",
+  "🚚 Chittagong delivery charge & time?",
   "📍 Where are your retail showrooms in Dhaka?",
+  "💬 WhatsApp Concierge Hotline",
 ];
 
 export interface AiConciergeModalProps {
@@ -313,8 +315,10 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
             <Sparkles size={18} color="#FFFFFF" />
           </View>
           <View>
-            <Text style={styles.title}>DEEN ASSISTANT</Text>
-            <Text style={styles.sub}>● Online</Text>
+            <Text style={styles.title}>DEEN DENIM CONCIERGE</Text>
+            <Text style={[styles.sub, { color: colors.denimStitch }]}>
+              দেশের প্রথম ডেনিম ব্র্যান্ড · <Text style={{ color: colors.emerald }}>Online</Text>
+            </Text>
           </View>
         </View>
 

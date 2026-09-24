@@ -84,7 +84,7 @@ export default function Header() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          borderBottom: "1px solid rgba(255,255,255,0.12)",
+          borderBottom: "2px solid #c93b36",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12, overflow: "hidden" }}>
@@ -101,9 +101,10 @@ export default function Header() {
             href="https://wa.me/8801952700500"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: "#ffffff", display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "none" }}
+            style={{ color: "#ffffff", display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none" }}
           >
-            <span>💬 Concierge: +880 1952-700500</span>
+            <span style={{ display: "inline-block", width: 7, height: 7, borderRadius: "50%", background: "#10b981", boxShadow: "0 0 6px #10b981" }} />
+            <span>Concierge: +880 1952-700500</span>
           </a>
         </div>
       </div>
@@ -138,17 +139,30 @@ export default function Header() {
               </svg>
             </button>
 
-            <Link href="/" className="nav__brand" style={{ display: "flex", alignItems: "center" }}>
+            <Link href="/" className="nav__brand" style={{ display: "flex", flexDirection: "column", textDecoration: "none", gap: 1 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={isDark ? "/logo_white.png" : "/logo.png"}
                 alt="DEEN - দেশের প্রথম ডেনিম ব্র্যান্ড"
                 style={{
-                  height: 30,
+                  height: 26,
                   width: "auto",
                   objectFit: "contain",
                 }}
               />
+              <span
+                style={{
+                  fontSize: "8px",
+                  fontWeight: 800,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: "var(--denim-stitch)",
+                  lineHeight: 1,
+                  marginTop: "1px",
+                }}
+              >
+                EST. 2020 · DHAKA
+              </span>
             </Link>
           </div>
 

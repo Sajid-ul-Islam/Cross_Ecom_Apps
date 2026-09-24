@@ -13,11 +13,13 @@ export interface ChatAssistantProps {
 
 const QUICK_PROMPTS = [
   "🔥 What is the current offer & discount?",
-  "👖 Suggest selvedge jeans under ৳2500",
+  "👖 Suggest 13.5oz selvedge jeans under ৳2500",
+  "🧵 Difference between selvedge & regular denim?",
+  "📏 How to choose my waist size for DEEN jeans?",
   "📦 Where is my order #1041?",
   "🛒 I want to order a shirt",
-  "🚚 Chittagong delivery charge & time?",
   "🔄 How does the 7-day size exchange work?",
+  "🚚 Chittagong delivery charge & time?",
   "📍 Where are your retail showrooms in Dhaka?",
   "💬 WhatsApp Concierge Hotline",
 ];
@@ -54,13 +56,13 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
     const initialGreeting: MessageItem = {
       id: "msg_init",
       role: "bot",
-      text: "👋 **আসসালামু আলাইকুম! Welcome to DEEN Assistant.**\n\nI can recommend menswear from our live catalog, calculate Bangladesh delivery charges, guide you on sizing, explain our 7-day doorstep size swap, or help you **place an order directly in chat**!\n\nHow can I help you today?",
+      text: "👋 **আসসালামু আলাইকুম! Welcome to DEEN Denim Concierge.**\n\nI can recommend menswear from our live catalog (13.5oz raw selvedge denim, shirts, panjabis), guide you on sizes, explain our 7-day doorstep swap, calculate delivery charges across Bangladesh, or help you **order directly in chat**!\n\nHow can I help you today?",
       quickReplies: [
-        "পাঞ্জাবি কালেকশন",
-        "সেলভেজ জিন্স",
-        "আমি একটা শার্ট অর্ডার করতে চাই",
-        "অর্ডার স্ট্যাটাস চেক",
-        "ডেলিভারি চার্জ কত?",
+        "সেলভেজ জিন্স 👖",
+        "পাঞ্জাবি কালেকশন 🕌",
+        "শার্ট কালেকশন 👔",
+        "সাইজ গাইড 📏",
+        "অর্ডার স্ট্যাটাস চেক 📦",
       ],
       ts: Date.now(),
     };
@@ -317,7 +319,7 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 900, color: "var(--ink)" }}>
-                  DEEN Assistant
+                  DEEN Denim Concierge
                 </h3>
                 <span
                   style={{
@@ -333,7 +335,7 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
                 </span>
               </div>
               <p style={{ margin: 0, fontSize: 11.5, color: "var(--sub)" }}>
-                AI Stylist · Direct Order · Live Pathao Tracking
+                <span style={{ color: "var(--denim-stitch)", fontWeight: 700 }}>দেশের প্রথম ডেনিম ব্র্যান্ড</span> · AI Stylist &amp; Live Tracking
               </p>
             </div>
           </div>
@@ -525,8 +527,8 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
         type="button"
         id="chatbot-widget-btn"
         onClick={() => setIsOpen((prev) => !prev)}
-        aria-label={isOpen ? "Close DEEN Assistant" : "Open DEEN AI Concierge & Chatbot"}
-        title="DEEN Assistant · AI Stylist & Quick Order"
+        aria-label={isOpen ? "Close DEEN Denim Concierge" : "Open DEEN Denim Concierge · AI Stylist & Chat"}
+        title="DEEN Denim Concierge · দেশের প্রথম ডেনিম ব্র্যান্ড"
         style={{
           position: "fixed",
           bottom: 24,
@@ -534,10 +536,10 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
           width: 56,
           height: 56,
           borderRadius: 28,
-          background: "linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)",
+          background: "linear-gradient(135deg, #046bd2 0%, #1a2350 100%)",
           color: "#FFFFFF",
-          border: "none",
-          boxShadow: "0 6px 22px rgba(79, 70, 229, 0.45)",
+          border: "2px solid var(--denim-stitch)",
+          boxShadow: "0 6px 22px rgba(4, 107, 210, 0.45), 0 0 10px rgba(212, 148, 57, 0.35)",
           cursor: "pointer",
           zIndex: 999,
           display: "flex",
@@ -554,14 +556,15 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
             <span
               style={{
                 position: "absolute",
-                top: -2,
-                right: -2,
-                width: 10,
-                height: 10,
+                top: -3,
+                right: -3,
+                width: 11,
+                height: 11,
                 borderRadius: "50%",
-                background: "#10b981",
+                background: "#c93b36",
                 border: "2px solid #ffffff",
               }}
+              title="Signature Red-Line Selvedge"
             />
           </div>
         )}
@@ -622,7 +625,7 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <h4 style={{ margin: 0, fontSize: 14, fontWeight: 900, color: "var(--ink)" }}>
-                    DEEN Concierge
+                    DEEN Denim Concierge
                   </h4>
                   <span
                     style={{
@@ -642,7 +645,7 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
                   </span>
                 </div>
                 <p style={{ margin: 0, fontSize: 11, color: "var(--sub)" }}>
-                  AI Stylist · Direct Order · Live Tracking
+                  <span style={{ color: "var(--denim-stitch)", fontWeight: 700 }}>দেশের প্রথম ডেনিম ব্র্যান্ড</span> · AI Stylist
                 </p>
               </div>
             </div>
