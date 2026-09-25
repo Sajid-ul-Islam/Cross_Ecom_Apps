@@ -17,6 +17,7 @@ interface CartCtx {
   addItem: (product: Product, size: string, qty?: number) => void;
   removeItem: (productId: string, size: string) => void;
   updateQty: (productId: string, size: string, qty: number) => void;
+  updateSize: (productId: string, oldSize: string, newSize: string) => void;
   clearCart: () => void;
 }
 
@@ -98,6 +99,37 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     [removeItem]
   );
 
+  const updateSize = useCallback(
+    (productId: string, oldSize: string, newSize: string) => {
+      const cleanNew = String(newSize || "").trim();
+      if (!cleanNew || oldSize === cleanNew) return;
+      setItems((prev) => {
+        const itemToChange = prev.find(
+          (i) => i.product.id === productId && i.size === oldSize
+        );
+        if (!itemToChange) return prev;
+        const existing = prev.find(
+          (i) => i.product.id === productId && i.size === cleanNew
+        );
+        if (existing) {
+          return prev
+            .filter((i) => !(i.product.id === productId && i.size === oldSize))
+            .map((i) =>
+              i.product.id === productId && i.size === cleanNew
+                ? { ...i, qty: i.qty + itemToChange.qty }
+                : i
+            );
+        }
+        return prev.map((i) =>
+          i.product.id === productId && i.size === oldSize
+            ? { ...i, size: cleanNew }
+            : i
+        );
+      });
+    },
+    []
+  );
+
   const clearCart = useCallback(() => setItems([]), []);
 
   const totalItems = items.reduce((s, i) => s + i.qty, 0);
@@ -115,6 +147,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         addItem,
         removeItem,
         updateQty,
+        updateSize,
         clearCart,
       }}
     >

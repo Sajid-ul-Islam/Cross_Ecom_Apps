@@ -21,6 +21,10 @@ import {
   Check,
   Lock,
   MapPin,
+  Trash2,
+  Plus,
+  Minus,
+  ChevronDown,
 } from "../src/components/Icons";
 import { useTheme } from "../src/context/ThemeContext";
 import { sharedStyles } from "../src/theme/sharedStyles";
@@ -36,6 +40,7 @@ import { Analytics } from "../src/services/analytics";
 import {
   DeliveryOptionKey,
   DeliverySlot,
+  CartItem,
 } from "../src/types";
 
 const DELIVERY_SLOTS: { key: DeliverySlot; label: string; time: string }[] = [
@@ -50,13 +55,14 @@ export default function CheckoutScreen() {
   const params = useLocalSearchParams<{ area?: string }>();
   const { colors, isDark } = useTheme();
   const s = sharedStyles(colors);
-  const { cart, subtotal, clearCart, cashbackAmount = 0, bogoDiscount = 0 } = useCart();
+  const { cart, subtotal, clearCart, cashbackAmount = 0, bogoDiscount = 0, removeFromCart, updateQty, updateSize } = useCart();
   const { placeOrder } = useOrders();
   const { profile } = useProfile();
   const { coins, tierLabel, redeemCoins, earnCoins } = useRewards();
   const insets = useSafeAreaInsets();
   const styles = createStyles(colors, s);
 
+  const [sizeModalItem, setSizeModalItem] = useState<CartItem | null>(null);
   const scrollViewRef = React.useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -771,18 +777,101 @@ export default function CheckoutScreen() {
 
         {/* 4. Order Summary */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.stepTitle, { color: colors.indigoDark }]}>4. ORDER REVIEW</Text>
+          <View style={styles.reviewHeaderRow}>
+            <Text style={[styles.stepTitle, { color: colors.indigoDark, marginBottom: 0 }]}>4. ORDER REVIEW</Text>
+            <Text style={{ fontSize: 11, fontWeight: "700", color: colors.sub }}>
+              {cart.reduce((sum, it) => sum + it.qty, 0)} {cart.reduce((sum, it) => sum + it.qty, 0) === 1 ? "item" : "items"}
+            </Text>
+          </View>
 
-          {cart.map((item) => (
-            <View key={`${item.productId}-${item.size}`} style={styles.reviewItem}>
-              <Text style={[styles.reviewItemName, { color: colors.ink }]} numberOfLines={1}>
-                {item.qty}x {item.product.name} ({item.size})
-              </Text>
-              <Text style={[styles.reviewItemPrice, { color: colors.ink }]}>
-                {bdt((item.product.salePrice ?? item.product.price) * item.qty)}
-              </Text>
-            </View>
-          ))}
+          {cart.map((item) => {
+            const unitPrice = item.product.salePrice ?? item.product.price;
+            const itemImageUri =
+              item.product.thumb ||
+              item.product.images?.[0] ||
+              item.product.gallery?.[0] ||
+              "https://images.unsplash.com/photo-1542272604-780c96856592?w=800";
+
+            return (
+              <View
+                key={`${item.productId}-${item.size}`}
+                style={[styles.checkoutItemCard, { backgroundColor: colors.paper, borderColor: colors.borderLight }]}
+              >
+                <Image
+                  source={{ uri: itemImageUri }}
+                  style={styles.checkoutItemImg}
+                  resizeMode="cover"
+                />
+
+                <View style={styles.checkoutItemDetails}>
+                  <View style={styles.checkoutItemTop}>
+                    <Text style={[styles.checkoutItemName, { color: colors.ink }]} numberOfLines={1}>
+                      {item.product.name}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => removeFromCart(item.productId, item.size)}
+                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove ${item.product.name} (Size ${item.size}) from order`}
+                      style={styles.checkoutRemoveBtn}
+                    >
+                      <Trash2 size={16} color={colors.crimson} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.checkoutItemControls}>
+                    {/* Size Changer Chip */}
+                    <TouchableOpacity
+                      style={[styles.checkoutSizeBadge, { backgroundColor: colors.card, borderColor: colors.border }]}
+                      onPress={() => setSizeModalItem(item)}
+                      activeOpacity={0.75}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Change size for ${item.product.name}, currently size ${item.size}`}
+                    >
+                      <Text style={[styles.checkoutSizeTag, { color: colors.sub }]}>SIZE</Text>
+                      <Text style={[styles.checkoutSizeVal, { color: colors.indigoDark }]}>{item.size}</Text>
+                      <ChevronDown size={11} color={colors.indigoDark} />
+                    </TouchableOpacity>
+
+                    {/* Quantity Stepper */}
+                    <View style={[styles.checkoutStepper, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                      <TouchableOpacity
+                        style={styles.checkoutStepBtn}
+                        onPress={() => updateQty(item.productId, item.size, -1)}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Decrease quantity of ${item.product.name}`}
+                      >
+                        <Minus size={13} color={colors.ink} />
+                      </TouchableOpacity>
+                      <Text style={[styles.checkoutStepQty, { color: colors.ink }]}>{item.qty}</Text>
+                      <TouchableOpacity
+                        style={styles.checkoutStepBtn}
+                        onPress={() => updateQty(item.productId, item.size, 1)}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Increase quantity of ${item.product.name}`}
+                      >
+                        <Plus size={13} color={colors.ink} />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Line Total */}
+                    <View style={styles.checkoutPriceCol}>
+                      <Text style={[styles.checkoutLineTotal, { color: colors.indigoDark }]}>
+                        {bdt(unitPrice * item.qty)}
+                      </Text>
+                      {item.qty > 1 && (
+                        <Text style={[styles.checkoutUnitSmall, { color: colors.sub }]}>
+                          {bdt(unitPrice)} ea
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                </View>
+              </View>
+            );
+          })}
 
           {/* 3.5 DEEN VIP Club Loyalty Point Redemption */}
           {coins > 0 && maxCoinDiscount > 0 && (
@@ -1048,6 +1137,105 @@ export default function CheckoutScreen() {
                 );
               })}
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Size Selection Bottom Sheet Modal */}
+      <Modal
+        visible={Boolean(sizeModalItem)}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSizeModalItem(null)}
+      >
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
+          <View
+            style={{
+              backgroundColor: colors.paper,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              padding: 20,
+              paddingBottom: Math.max(insets.bottom, 20),
+            }}
+          >
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <View style={{ flex: 1, paddingRight: 10 }}>
+                <Text style={{ fontSize: 16, fontWeight: "900", color: colors.ink }}>
+                  SELECT SIZE
+                </Text>
+                <Text style={{ fontSize: 12, color: colors.sub }} numberOfLines={1}>
+                  {sizeModalItem?.product.name}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={{ padding: 6 }}
+                onPress={() => setSizeModalItem(null)}
+                accessibilityRole="button"
+                accessibilityLabel="Close size modal"
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={{ fontSize: 18, fontWeight: "800", color: colors.ink }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 11, fontWeight: "800", color: colors.sub, letterSpacing: 0.5, marginBottom: 12 }}>
+              AVAILABLE SIZES:
+            </Text>
+
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
+              {(() => {
+                if (!sizeModalItem) return null;
+                const cat = (sizeModalItem.product.category || "").toUpperCase();
+                const fallbackSizes =
+                  cat === "JEANS" || cat === "TROUSERS"
+                    ? ["28", "30", "32", "34", "36", "38"]
+                    : ["S", "M", "L", "XL", "XXL"];
+                const rawSizes =
+                  sizeModalItem.product.sizes && sizeModalItem.product.sizes.length > 0
+                    ? sizeModalItem.product.sizes
+                    : fallbackSizes;
+                const availableSizes = Array.from(
+                  new Set([sizeModalItem.size, ...rawSizes].filter(Boolean))
+                );
+
+                return availableSizes.map((s) => {
+                  const isCurrent = s === sizeModalItem.size;
+                  return (
+                    <TouchableOpacity
+                      key={s}
+                      style={{
+                        minWidth: 54,
+                        height: 44,
+                        paddingHorizontal: 14,
+                        borderRadius: 8,
+                        borderWidth: 1.5,
+                        borderColor: isCurrent ? colors.indigo : colors.border,
+                        backgroundColor: isCurrent ? colors.indigoLight : colors.card,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                      activeOpacity={0.75}
+                      onPress={() => {
+                        updateSize(sizeModalItem.productId, sizeModalItem.size, s);
+                        setSizeModalItem(null);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Select size ${s}`}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          fontWeight: isCurrent ? "800" : "600",
+                          color: isCurrent ? colors.indigoDark : colors.ink,
+                        }}
+                      >
+                        {s}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                });
+              })()}
+            </View>
           </View>
         </View>
       </Modal>
@@ -1331,6 +1519,99 @@ function createStyles(colors: any, s: ReturnType<typeof sharedStyles>) {
     reviewItemPrice: {
       fontSize: 12,
       fontWeight: "700",
+    },
+    reviewHeaderRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    checkoutItemCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      marginBottom: 10,
+      gap: 10,
+    },
+    checkoutItemImg: {
+      width: 52,
+      height: 64,
+      borderRadius: 6,
+    },
+    checkoutItemDetails: {
+      flex: 1,
+      justifyContent: "space-between",
+    },
+    checkoutItemTop: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: 6,
+      marginBottom: 6,
+    },
+    checkoutItemName: {
+      fontSize: 12.5,
+      fontWeight: "700",
+      flex: 1,
+    },
+    checkoutRemoveBtn: {
+      padding: 4,
+    },
+    checkoutItemControls: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+    },
+    checkoutSizeBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 8,
+      paddingVertical: 5,
+      borderRadius: 6,
+      borderWidth: 1,
+      gap: 4,
+    },
+    checkoutSizeTag: {
+      fontSize: 9,
+      fontWeight: "800",
+    },
+    checkoutSizeVal: {
+      fontSize: 11.5,
+      fontWeight: "800",
+    },
+    checkoutStepper: {
+      flexDirection: "row",
+      alignItems: "center",
+      borderRadius: 6,
+      borderWidth: 1,
+      overflow: "hidden",
+    },
+    checkoutStepBtn: {
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      minWidth: 26,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    checkoutStepQty: {
+      fontSize: 12,
+      fontWeight: "700",
+      paddingHorizontal: 4,
+      minWidth: 20,
+      textAlign: "center",
+    },
+    checkoutPriceCol: {
+      alignItems: "flex-end",
+    },
+    checkoutLineTotal: {
+      fontSize: 13,
+      fontWeight: "800",
+    },
+    checkoutUnitSmall: {
+      fontSize: 9.5,
     },
     coinsCard: {
       borderRadius: 8,

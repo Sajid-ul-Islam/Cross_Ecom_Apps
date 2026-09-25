@@ -102,7 +102,7 @@ const PROFILE_STORAGE_KEY = "deen_web_user_profile";
 function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { items, subtotal, clearCart, addItem } = useCart();
+  const { items, subtotal, clearCart, addItem, removeItem, updateQty, updateSize } = useCart();
 
   // User Profile & Guest mode
   const [isGuestMode, setIsGuestMode] = useState<boolean>(true);
@@ -491,7 +491,7 @@ function CheckoutContent() {
         <div className="empty-state" style={{ padding: "120px 24px" }}>
           <div className="empty-state__icon">🛒</div>
           <h2 className="empty-state__title">Your bag is empty</h2>
-          <p className="empty-state__sub">Add selvedge jeans, shirts, or accessories before proceeding.</p>
+          <p className="empty-state__sub">Add denim jeans, shirts, or accessories before proceeding.</p>
           <Link href="/shop" className="btn btn-primary btn-lg">Browse Products</Link>
         </div>
       </div>
@@ -1041,6 +1041,19 @@ function CheckoutContent() {
               <div className="checkout-items-list">
                 {items.map((item) => {
                   const unitPrice = item.product.salePrice ?? item.product.price;
+                  const cat = (item.product.category || "").toUpperCase();
+                  const fallbackSizes =
+                    cat === "JEANS" || cat === "TROUSERS"
+                      ? ["28", "30", "32", "34", "36", "38"]
+                      : ["S", "M", "L", "XL", "XXL"];
+                  const rawSizes =
+                    item.product.sizes && item.product.sizes.length > 0
+                      ? item.product.sizes
+                      : fallbackSizes;
+                  const availableSizes = Array.from(
+                    new Set([item.size, ...rawSizes].filter(Boolean))
+                  );
+
                   return (
                     <div key={`${item.product.id}-${item.size}`} className="checkout-item-row">
                       {item.product.images[0] ? (
@@ -1054,12 +1067,71 @@ function CheckoutContent() {
                         <div className="checkout-item-img-placeholder">👖</div>
                       )}
                       <div className="checkout-item-details">
-                        <p className="checkout-item-name">{item.product.name}</p>
-                        <p className="checkout-item-meta">
-                          Size: <strong>{item.size}</strong> · Qty: {item.qty}
-                        </p>
+                        <div className="checkout-item-header">
+                          <p className="checkout-item-name">{item.product.name}</p>
+                          <button
+                            type="button"
+                            className="checkout-item-remove-btn"
+                            onClick={() => removeItem(item.product.id, item.size)}
+                            aria-label={`Remove ${item.product.name} (Size ${item.size}) from order`}
+                            title="Remove item"
+                          >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                              <line x1="10" y1="11" x2="10" y2="17" />
+                              <line x1="14" y1="11" x2="14" y2="17" />
+                            </svg>
+                          </button>
+                        </div>
+
+                        <div className="checkout-item-controls">
+                          {/* Size Selector */}
+                          <div className="checkout-size-pill">
+                            <span className="checkout-size-tag">SIZE</span>
+                            <select
+                              value={item.size}
+                              onChange={(e) => updateSize(item.product.id, item.size, e.target.value)}
+                              className="checkout-size-select"
+                              aria-label={`Change size for ${item.product.name}`}
+                            >
+                              {availableSizes.map((s) => (
+                                <option key={s} value={s}>
+                                  {s}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Quantity Stepper */}
+                          <div className="checkout-stepper">
+                            <button
+                              type="button"
+                              className="checkout-stepper-btn"
+                              onClick={() => updateQty(item.product.id, item.size, item.qty - 1)}
+                              aria-label={`Decrease quantity of ${item.product.name}`}
+                            >
+                              −
+                            </button>
+                            <span className="checkout-stepper-qty">{item.qty}</span>
+                            <button
+                              type="button"
+                              className="checkout-stepper-btn"
+                              onClick={() => updateQty(item.product.id, item.size, item.qty + 1)}
+                              aria-label={`Increase quantity of ${item.product.name}`}
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          {/* Price Total */}
+                          <div className="checkout-item-price-col">
+                            <span className="checkout-item-total">{bdt(unitPrice * item.qty)}</span>
+                            {item.qty > 1 && (
+                              <span className="checkout-item-unit-price">{bdt(unitPrice)} ea</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <span className="checkout-item-total">{bdt(unitPrice * item.qty)}</span>
                     </div>
                   );
                 })}
