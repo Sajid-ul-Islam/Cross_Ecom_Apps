@@ -30,6 +30,7 @@ import {
   CASHBACK_TIERS,
   getCashbackAmount,
 } from "./api";
+import { getDistrictPostcode } from "../data/districts";
 export {
   DELIVERY_FEES,
   DELIVERY_OPTIONS,
@@ -767,7 +768,9 @@ export async function createOrder(
     city: (orderData as any).city || "Dhaka",
     district: (orderData as any).district || (orderData as any).state || "BD-13",
     state: (orderData as any).state || (orderData as any).district || "BD-13",
-    postcode: (orderData as any).postcode || "1200",
+    postcode: (orderData as any).postcode && (orderData as any).postcode !== "1200"
+      ? (orderData as any).postcode
+      : getDistrictPostcode((orderData as any).state || (orderData as any).district || "BD-13"),
     area: areaMap[String(orderData.area)] || orderData.area || "dhaka",
     payment: orderData.payment,
     trxId: (orderData as any).trxId || undefined,

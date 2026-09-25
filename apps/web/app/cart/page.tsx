@@ -36,7 +36,7 @@ const DELIVERY_OPTIONS = [
 ];
 
 export default function CartPage() {
-  const { items, subtotal, updateQty, removeItem, totalItems } = useCart();
+  const { items, subtotal, updateQty, updateSize, removeItem, totalItems } = useCart();
   const [deliveryArea, setDeliveryArea] = useState("dhaka_standard");
   // Live delivery fees from GET /v1/deen/shipping (Woo zones + express surcharge).
   const [liveFees, setLiveFees] = useState<DeliveryFees>({
@@ -95,23 +95,31 @@ export default function CartPage() {
   const [couponError, setCouponError] = useState("");
   const [validatingCoupon, setValidatingCoupon] = useState(false);
 
-  // BOGO: buy 2+ same category → cheapest is free (matches API calculateBogo)
+  // BOGO: buy 2+ same category → cheapest pairs are free (matches API calculateBogo)
   const bogoByCat = new Map<string, { unit: number; qty: number }[]>();
   items.forEach((it) => {
     const cat = (it.product.category || "OTHER").toUpperCase();
     const unit = it.product.salePrice ?? it.product.price;
     const existing = bogoByCat.get(cat) || [];
-    existing.push({ unit, qty: it.qty });
+    existing.push({ unit, qty: Math.max(1, it.qty) });
     bogoByCat.set(cat, existing);
   });
   let bogoDiscount = 0;
   Array.from(bogoByCat.values()).forEach((catItems) => {
-    if (catItems.length < 2) return;
-    let cheapestIdx = 0;
-    for (let i = 1; i < catItems.length; i++) {
-      if (catItems[i].unit < catItems[cheapestIdx].unit) cheapestIdx = i;
+    const totalUnits = catItems.reduce((sum, it) => sum + it.qty, 0);
+    const maxFree = Math.floor(totalUnits / 2);
+    if (maxFree <= 0) return;
+
+    const unitList: number[] = [];
+    for (const it of catItems) {
+      for (let q = 0; q < it.qty; q++) {
+        unitList.push(it.unit);
+      }
     }
-    bogoDiscount += catItems[cheapestIdx].unit * catItems[cheapestIdx].qty;
+    unitList.sort((a, b) => a - b);
+    for (let i = 0; i < maxFree; i++) {
+      bogoDiscount += unitList[i];
+    }
   });
 
   // Instant Cashback Tiers — ONLY if enabled in the REST API
@@ -385,9 +393,60 @@ export default function CartPage() {
                       </span>
                     )}
                   </div>
-                  <p className="cart-item__meta">
-                    Size: <strong>{item.size}</strong> · SKU: {item.product.sku}
-                  </p>
+                  {(() => {
+                    const cat = (item.product.category || "").toUpperCase();
+                    const fallbackSizes =
+                      cat === "JEANS" || cat === "TROUSERS"
+                        ? ["28", "30", "32", "34", "36", "38"]
+                        : ["S", "M", "L", "XL", "XXL"];
+                    const rawSizes =
+                      item.product.sizes && item.product.sizes.length > 0
+                        ? item.product.sizes
+                        : fallbackSizes;
+                    const availableSizes = Array.from(
+                      new Set([item.size, ...rawSizes].filter(Boolean))
+                    );
+
+                    return (
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "6px 0 8px", flexWrap: "wrap" }}>
+                        <div
+                          className="checkout-size-pill"
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            background: "var(--indigo-light)",
+                            border: "1.5px solid var(--indigo)",
+                            borderRadius: 6,
+                            padding: "3px 8px",
+                            gap: 6,
+                          }}
+                        >
+                          <span style={{ fontSize: 10, fontWeight: 900, color: "var(--indigo)", letterSpacing: 0.5 }}>SIZE</span>
+                          <select
+                            value={item.size}
+                            onChange={(e) => updateSize(item.product.id, item.size, e.target.value)}
+                            aria-label={`Change size for ${item.product.name}`}
+                            style={{
+                              background: "transparent",
+                              border: "none",
+                              fontSize: 12,
+                              fontWeight: 800,
+                              color: "var(--ink)",
+                              cursor: "pointer",
+                              outline: "none",
+                            }}
+                          >
+                            {availableSizes.map((s) => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <span style={{ fontSize: 11, color: "var(--sub)" }}>SKU: {item.product.sku}</span>
+                      </div>
+                    );
+                  })()}
                   <p className="cart-item__price">{bdt(unitPrice * item.qty)}</p>
                   {item.qty > 1 && (
                     <p style={{ fontSize: 11, color: "var(--sub)", margin: 0 }}>
@@ -514,7 +573,7 @@ export default function CartPage() {
 
           {bogoDiscount > 0 && (
             <div className="summary-row" style={{ color: "var(--indigo)", fontWeight: 700 }}>
-              <span>🔥 BOGO Selvedge Discount</span><span>-{bdt(bogoDiscount)}</span>
+              <span>🔥 BOGO Discount</span><span>-{bdt(bogoDiscount)}</span>
             </div>
           )}
 

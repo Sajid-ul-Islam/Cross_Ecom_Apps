@@ -162,7 +162,7 @@ export default function AboutDeenDrawer({ isOpen, onClose }: AboutDeenDrawerProp
           {/* Brand Intro Hero Banner */}
           <div
             style={{
-              background: "linear-gradient(135deg, var(--indigo) 0%, #171d47 100%)",
+              background: "linear-gradient(135deg, var(--indigo) 0%, #7c2d12 100%)",
               borderRadius: 12,
               padding: "18px 16px",
               color: "#FFFFFF",

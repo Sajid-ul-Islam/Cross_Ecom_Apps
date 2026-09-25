@@ -171,14 +171,14 @@ export default function ChatMessage({
               width: 20,
               height: 20,
               borderRadius: "50%",
-              background: "linear-gradient(135deg, var(--indigo) 0%, #3b82f6 100%)",
+              background: "linear-gradient(135deg, var(--indigo) 0%, #ea580c 100%)",
               color: "#FFFFFF",
               fontSize: 11,
               fontWeight: 900,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 2px 6px rgba(79, 70, 229, 0.3)",
+              boxShadow: "0 2px 6px rgba(224, 83, 5, 0.3)",
             }}
           >
             👖

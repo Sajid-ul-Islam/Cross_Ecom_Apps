@@ -1,5 +1,6 @@
 import { config } from "./config.js";
 import type { DeenProduct, DeenCategory } from "./seed.js";
+import { getDistrictPostcode } from "./districts.js";
 
 /* ------------------------------------------------------------------ */
 /*  WooCommerce REST v3 client.                                        */
@@ -1496,7 +1497,7 @@ export async function registerOrSyncWooCustomer(params: {
           city: params.city || "Dhaka",
           state: params.district || "BD-13",
           country: "BD",
-          postcode: "1200",
+          postcode: getDistrictPostcode(params.district || "BD-13"),
         },
         shipping: {
           first_name: firstName,
@@ -1506,7 +1507,7 @@ export async function registerOrSyncWooCustomer(params: {
           city: params.city || "Dhaka",
           state: params.district || "BD-13",
           country: "BD",
-          postcode: "1200",
+          postcode: getDistrictPostcode(params.district || "BD-13"),
         },
         meta_data: [
           { key: "_registered_via", value: "deen_mobile_web_app" },

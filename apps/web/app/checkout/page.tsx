@@ -278,23 +278,31 @@ function CheckoutContent() {
   const deliveryOpt = deliveryOptions[selectedArea] || deliveryOptions.dhaka_standard;
   const deliveryFee = deliveryOpt.fee;
 
-  // BOGO: buy 2+ same category → cheapest is free (matches API calculateBogo)
+  // BOGO: buy 2+ same category → cheapest pairs are free (matches API calculateBogo)
   const bogoByCat = new Map<string, { unit: number; qty: number }[]>();
   items.forEach((it) => {
     const cat = (it.product.category || "OTHER").toUpperCase();
     const unit = it.product.salePrice ?? it.product.price;
     const existing = bogoByCat.get(cat) || [];
-    existing.push({ unit, qty: it.qty });
+    existing.push({ unit, qty: Math.max(1, it.qty) });
     bogoByCat.set(cat, existing);
   });
   let bogoDiscount = 0;
   Array.from(bogoByCat.values()).forEach((catItems) => {
-    if (catItems.length < 2) return;
-    let cheapestIdx = 0;
-    for (let i = 1; i < catItems.length; i++) {
-      if (catItems[i].unit < catItems[cheapestIdx].unit) cheapestIdx = i;
+    const totalUnits = catItems.reduce((sum, it) => sum + it.qty, 0);
+    const maxFree = Math.floor(totalUnits / 2);
+    if (maxFree <= 0) return;
+
+    const unitList: number[] = [];
+    for (const it of catItems) {
+      for (let q = 0; q < it.qty; q++) {
+        unitList.push(it.unit);
+      }
     }
-    bogoDiscount += catItems[cheapestIdx].unit * catItems[cheapestIdx].qty;
+    unitList.sort((a, b) => a - b);
+    for (let i = 0; i < maxFree; i++) {
+      bogoDiscount += unitList[i];
+    }
   });
 
   // Instant Cashback Tiers — ONLY if enabled in the REST API
@@ -390,6 +398,19 @@ function CheckoutContent() {
     }
     if (selectedArea !== "store_pickup" && (!address.trim() || address.trim().length < 8)) {
       errs.address = "Full delivery address required (house #, road #, sector/area)";
+    }
+    if (isGift) {
+      if (!giftName.trim()) {
+        errs.giftName = "Recipient full name is required";
+      }
+      let gDigits = giftPhone.replace(/[^0-9]/g, "");
+      if (gDigits.startsWith("880") && gDigits.length === 13) gDigits = gDigits.slice(2);
+      if (gDigits.length !== 11 || !gDigits.startsWith("01") || !/^01[3-9]\d{8}$/.test(gDigits)) {
+        errs.giftPhone = "Recipient phone must be an 11-digit Bangladeshi mobile number (01XXXXXXXXX)";
+      }
+      if (!giftAddress.trim() || giftAddress.trim().length < 8) {
+        errs.giftAddress = "Full gift delivery address required (house #, road #, sector/area)";
+      }
     }
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -754,30 +775,42 @@ function CheckoutContent() {
                       <label className="form-label">Recipient Full Name *</label>
                       <input
                         type="text"
-                        className="form-input"
+                        className={`form-input ${errors.giftName ? "form-input--error" : ""}`}
                         placeholder="e.g. Rahim Ahmed"
                         value={giftName}
-                        onChange={(e) => setGiftName(e.target.value)}
+                        onChange={(e) => {
+                          setGiftName(e.target.value);
+                          if (errors.giftName) setErrors((prev) => ({ ...prev, giftName: "" }));
+                        }}
                       />
+                      {errors.giftName && <p className="form-error">{errors.giftName}</p>}
                     </div>
                     <div className="form-group">
                       <label className="form-label">Recipient Phone *</label>
                       <input
                         type="tel"
-                        className="form-input"
+                        className={`form-input ${errors.giftPhone ? "form-input--error" : ""}`}
                         placeholder="01XXXXXXXXX"
                         value={giftPhone}
-                        onChange={(e) => setGiftPhone(e.target.value)}
+                        onChange={(e) => {
+                          setGiftPhone(e.target.value);
+                          if (errors.giftPhone) setErrors((prev) => ({ ...prev, giftPhone: "" }));
+                        }}
                       />
+                      {errors.giftPhone && <p className="form-error">{errors.giftPhone}</p>}
                     </div>
                     <div className="form-group" style={{ gridColumn: "1 / -1" }}>
                       <label className="form-label">Gift Shipping Address *</label>
                       <textarea
-                        className="form-textarea"
+                        className={`form-textarea ${errors.giftAddress ? "form-input--error" : ""}`}
                         placeholder="House / Flat #, Road #, Sector / Area details for the recipient…"
                         value={giftAddress}
-                        onChange={(e) => setGiftAddress(e.target.value)}
+                        onChange={(e) => {
+                          setGiftAddress(e.target.value);
+                          if (errors.giftAddress) setErrors((prev) => ({ ...prev, giftAddress: "" }));
+                        }}
                       />
+                      {errors.giftAddress && <p className="form-error">{errors.giftAddress}</p>}
                     </div>
                     <div className="form-group">
                       <label className="form-label">City / Thana *</label>

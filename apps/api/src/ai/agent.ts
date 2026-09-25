@@ -303,7 +303,7 @@ export async function processAiCommerceQuery(
               (trackingStatus ? `• **কুরিয়ার লাইভ ট্র্যাকিং:** ${trackingStatus}\n` : "") +
               `• **লাইভ ট্র্যাকিং লিংক:** ${trackingUrl}\n\n` +
               `আপনার পার্সেলটি পাঠাও কুরিয়ারের মাধ্যমে ডেলিভারির প্রক্রিয়ায় রয়েছে। নিচের বাটনে ট্যাপ করে যেকোনো সময় সরাসরি লাইভ কুরিয়ার লোকেশন দেখতে পারেন!`
-            : `\n✨ আপনার পার্সেলটি আমাদের মিরপুর সেন্ট্রাল স্টুডিও থেকে পাঠাও কুরিয়ারে হস্তান্তরের প্রস্তুতি চলছে। কুরিয়ারে হ্যান্ডওভার হওয়ার সাথে সাথে এসএমএস ও কনসাইনমেন্ট ট্র্যাকিং লিংক পেয়ে যাবেন।`);
+            : `\n✨ আপনার পার্সেলটি আমাদের ঢাকা ফুলফিলমেন্ট সেন্টার থেকে পাঠাও কুরিয়ারে হস্তান্তরের প্রস্তুতি চলছে। কুরিয়ারে হ্যান্ডওভার হওয়ার সাথে সাথে এসএমএস ও কনসাইনমেন্ট ট্র্যাকিং লিংক পেয়ে যাবেন।`);
       } else {
         reply =
           `📦 **Real-Time Status for Order #${orderNum}:**\n\n` +
@@ -771,7 +771,7 @@ export async function processAiCommerceQuery(
       { label: isBn ? "📦 অর্ডার ট্র্যাক করুন" : "📦 Track My Order", action: "navigate_orders" },
       { label: isBn ? "👖 সেলভেজ জিন্স" : "👖 Best Seller Jeans", action: "search_jeans" },
       { label: isBn ? "🚚 ডেলিভারি পলিসি" : "🚚 Shipping Policies", action: "search_delivery" },
-      { label: isBn ? "📍 শোরুম লোকেশন" : "📍 Store Locations", action: "open_outlets" },
+      { label: isBn ? "🔄 সাইজ এক্সচেঞ্জ" : "🔄 Size Exchange", action: "open_exchange" },
     ],
   };
 }

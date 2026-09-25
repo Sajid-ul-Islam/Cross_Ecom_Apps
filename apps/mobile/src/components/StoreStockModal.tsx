@@ -63,7 +63,7 @@ export const StoreStockModal: React.FC<StoreStockModalProps> = ({
               </View>
               <View>
                 <Text style={[styles.title, { color: colors.ink }]}>PHYSICAL STORE AVAILABILITY</Text>
-                <Text style={[styles.subtitle, { color: colors.sub }]}>Check real-time stock at DEEN Dhaka outlets</Text>
+                <Text style={[styles.subtitle, { color: colors.sub }]}>Store availability & delivery information</Text>
               </View>
             </View>
 

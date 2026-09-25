@@ -4,21 +4,21 @@
    ================================================================ */
 
 :root {
-  /* Brand (deencommerce.com aesthetic) */
+  /* Brand (deencommerce.com orange aesthetic) */
   --brand: var(--indigo);
   --muted: var(--sub);
   --emerald-light: #ecfdf5;
-  --indigo: #046bd2;
-  --indigo-hover: #0356a8;
-  --indigo-dark: #1a2350;
-  --indigo-light: #f0f5fa;
-  --denim-stitch: #d49439;
+  --indigo: #e05305;
+  --indigo-hover: #c2410c;
+  --indigo-dark: #7c2d12;
+  --indigo-light: #fff7ed;
+  --denim-stitch: #c27803;
 
   /* Backgrounds & Clean Surfaces */
   --bg: #ffffff;
   --surface: #ffffff;
   --surface-1: #ffffff;
-  --surface-2: #f1f5f9;
+  --surface-2: #fdf9f5;
   --border: #e2e8f0;
   --border-light: #f1f5f9;
 
@@ -44,10 +44,11 @@
   --brand: var(--indigo);
   --muted: var(--sub);
   --emerald-light: #064e3b;
-  --indigo: #5b6ee1;
-  --indigo-hover: #7384ea;
-  --indigo-light: #161622;
-  --denim-stitch: #eaa74b;
+  --indigo: #fb923c;
+  --indigo-hover: #fdba74;
+  --indigo-dark: #ea580c;
+  --indigo-light: #261308;
+  --denim-stitch: #fdba74;
 
   --bg: #000000;
   --surface: #101010;
@@ -885,11 +886,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 /* Jakob's Law: Emphasize center/primary tab for core action (Cart in e-commerce) */
 .mobile-tab-btn--primary {
-  background: linear-gradient(135deg, var(--indigo) 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, var(--indigo) 0%, #ea580c 100%);
   border-radius: 12px;
   padding: 6px 0 8px;
   margin-top: -4px;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.35);
   transform: translateY(-2px);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -2771,10 +2772,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   width: 56px;
   height: 56px;
   border-radius: 28px;
-  background: linear-gradient(135deg, var(--indigo) 0%, #3730a3 100%);
+  background: linear-gradient(135deg, var(--indigo) 0%, #c2410c 100%);
   color: #ffffff;
   border: none;
-  box-shadow: 0 6px 24px rgba(79, 70, 229, 0.45);
+  box-shadow: 0 6px 24px rgba(224, 83, 5, 0.45);
   cursor: pointer;
   z-index: 999;
   display: flex;

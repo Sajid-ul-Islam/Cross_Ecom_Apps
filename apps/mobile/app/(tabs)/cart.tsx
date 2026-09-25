@@ -6,17 +6,18 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
+  Modal,
 } from "react-native";
 import { useRouter } from "expo-router";
 
-import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, ShieldCheck, Clock, Package, Truck } from "../../src/components/Icons";
+import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, ShieldCheck, Clock, Package, Truck, ChevronDown } from "../../src/components/Icons";
 import { ScreenShell } from "../../src/components/ScreenShell";
 import { CashbackBanner } from "../../src/components/Banner";
 import { useTheme } from "../../src/context/ThemeContext";
 import { useCart } from "../../src/context/CartContext";
 import { useOrders } from "../../src/context/OrderContext";
 import { bdt, DELIVERY_OPTIONS } from "../../src/services/gateway";
-import { DeliveryArea, DeliveryOptionKey } from "../../src/types";
+import { DeliveryArea, DeliveryOptionKey, CartItem } from "../../src/types";
 import { ThemeColors } from "../../src/theme/colors";
 import { sharedStyles } from "../../src/theme/sharedStyles";
 
@@ -27,6 +28,7 @@ export default function BagScreen() {
   const {
     cart,
     updateQty,
+    updateSize,
     removeFromCart,
     subtotal,
     getDeliveryFee,
@@ -34,6 +36,7 @@ export default function BagScreen() {
   } = useCart();
   const { orders } = useOrders();
   const [selectedArea, setSelectedArea] = useState<DeliveryArea>("dhaka_standard");
+  const [sizeModalItem, setSizeModalItem] = useState<CartItem | null>(null);
   const styles = createStyles(colors, s);
 
   const deliveryFee = getDeliveryFee(selectedArea);
@@ -208,9 +211,16 @@ export default function BagScreen() {
                   </Text>
 
                   <View style={styles.itemMetaRow}>
-                    <View style={[styles.sizeBadge, { backgroundColor: colors.paper, borderColor: colors.borderLight }]}>
+                    <TouchableOpacity
+                      style={[styles.sizeBadge, { backgroundColor: colors.paper, borderColor: colors.indigo, flexDirection: "row", alignItems: "center", gap: 3 }]}
+                      onPress={() => setSizeModalItem(item)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Change size, current size is ${item.size}`}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
                       <Text style={[styles.sizeBadgeText, { color: colors.indigoDark }]}>SIZE: {item.size}</Text>
-                    </View>
+                      <ChevronDown size={11} color={colors.indigoDark} />
+                    </TouchableOpacity>
                     <Text style={[styles.itemPrice, { color: colors.sub }]}>{bdt(unitPrice)}</Text>
                   </View>
 
@@ -440,6 +450,112 @@ export default function BagScreen() {
           <ArrowRight size={16} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
+
+      {/* Size Selection Modal */}
+      <Modal
+        visible={Boolean(sizeModalItem)}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSizeModalItem(null)}
+      >
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}
+          activeOpacity={1}
+          onPress={() => setSizeModalItem(null)}
+        >
+          <TouchableOpacity
+            style={{
+              backgroundColor: colors.card,
+              borderTopLeftRadius: 16,
+              borderTopRightRadius: 16,
+              padding: 20,
+              paddingBottom: 36,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}
+            activeOpacity={1}
+          >
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <View style={{ flex: 1, paddingRight: 10 }}>
+                <Text style={{ fontSize: 16, fontWeight: "900", color: colors.ink }}>
+                  SELECT SIZE
+                </Text>
+                <Text style={{ fontSize: 12, color: colors.sub }} numberOfLines={1}>
+                  {sizeModalItem?.product.name}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={{ padding: 6 }}
+                onPress={() => setSizeModalItem(null)}
+                accessibilityRole="button"
+                accessibilityLabel="Close size modal"
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={{ fontSize: 18, fontWeight: "800", color: colors.ink }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 11, fontWeight: "800", color: colors.sub, letterSpacing: 0.5, marginBottom: 12 }}>
+              AVAILABLE SIZES:
+            </Text>
+
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
+              {(() => {
+                if (!sizeModalItem) return null;
+                const cat = (sizeModalItem.product.category || "").toUpperCase();
+                const fallbackSizes =
+                  cat === "JEANS" || cat === "TROUSERS"
+                    ? ["28", "30", "32", "34", "36", "38"]
+                    : ["S", "M", "L", "XL", "XXL"];
+                const rawSizes =
+                  sizeModalItem.product.sizes && sizeModalItem.product.sizes.length > 0
+                    ? sizeModalItem.product.sizes
+                    : fallbackSizes;
+                const availableSizes = Array.from(
+                  new Set([sizeModalItem.size, ...rawSizes].filter(Boolean))
+                );
+
+                return availableSizes.map((s) => {
+                  const isCurrent = s === sizeModalItem.size;
+                  return (
+                    <TouchableOpacity
+                      key={s}
+                      style={{
+                        minWidth: 54,
+                        height: 44,
+                        paddingHorizontal: 14,
+                        borderRadius: 8,
+                        borderWidth: 1.5,
+                        borderColor: isCurrent ? colors.indigo : colors.border,
+                        backgroundColor: isCurrent ? colors.indigoLight : colors.card,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                      activeOpacity={0.75}
+                      onPress={() => {
+                        updateSize(sizeModalItem.productId, sizeModalItem.size, s);
+                        setSizeModalItem(null);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Select size ${s}`}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          fontWeight: isCurrent ? "800" : "600",
+                          color: isCurrent ? colors.indigoDark : colors.ink,
+                        }}
+                      >
+                        {s}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                });
+              })()}
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </ScreenShell>
   );
 }

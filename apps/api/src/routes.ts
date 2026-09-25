@@ -46,6 +46,7 @@ import {
   submitWooProductComment,
   fetchWooCategoryTree,
 } from "./woo.js";
+import { getDistrictPostcode } from "./districts.js";
 import {
   getPathaoToken,
   getPathaoTrackingInfo,
@@ -1666,22 +1667,37 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     discount: number;
     freeIndexes: number[];
   } {
-    const byCat = new Map<string, number[]>();
+    const byCat = new Map<string, { unit: number; qty: number; originalIndex: number }[]>();
     lines.forEach((l, i) => {
-      const cat = l.category || "OTHER";
+      const cat = (l.category || "OTHER").toUpperCase();
       if (!byCat.has(cat)) byCat.set(cat, []);
-      byCat.get(cat)!.push(i);
+      byCat.get(cat)!.push({
+        unit: Number(l.unit || 0),
+        qty: Math.max(1, Number(l.qty || 1)),
+        originalIndex: i,
+      });
     });
     let discount = 0;
     const freeIndexes: number[] = [];
-    for (const idxs of byCat.values()) {
-      if (idxs.length < 2) continue; // need 2+ in the same category
-      // cheapest line is free (its full unit price * qty)
-      let cheapest = idxs[0];
-      for (const i of idxs) if ((lines[i].unit) < (lines[cheapest].unit)) cheapest = i;
-      const qty = lines[cheapest].qty ?? 1;
-      discount += lines[cheapest].unit * qty;
-      freeIndexes.push(cheapest);
+    for (const items of byCat.values()) {
+      const totalUnits = items.reduce((sum, it) => sum + it.qty, 0);
+      const maxFree = Math.floor(totalUnits / 2);
+      if (maxFree <= 0) continue;
+
+      const unitList: { unit: number; originalIndex: number }[] = [];
+      for (const it of items) {
+        for (let q = 0; q < it.qty; q++) {
+          unitList.push({ unit: it.unit, originalIndex: it.originalIndex });
+        }
+      }
+      unitList.sort((a, b) => a.unit - b.unit);
+
+      for (let i = 0; i < maxFree; i++) {
+        discount += unitList[i].unit;
+        if (!freeIndexes.includes(unitList[i].originalIndex)) {
+          freeIndexes.push(unitList[i].originalIndex);
+        }
+      }
     }
     return { discount, freeIndexes };
   }
@@ -2378,7 +2394,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       const pathaoTrackingUrl = pathaoConsignmentId ? `https://merchant.pathao.com/tracking?consignment_id=${pathaoConsignmentId}` : undefined;
       const courier = pathaoConsignmentId ? "Pathao Courier" : (area === "store_pickup" || area === "pickup" ? "Store Pickup" : "Home Delivery");
 
-      const paymentTitle = payment === "cod" ? "Cash on delivery"
+      const paymentTitle = payment === "cod" ? "Cash on Delivery (COD)"
         : payment === "bkash" || payment === "bkash-for-woocommerce" ? "bKash"
         : payment === "sslcommerz" || payment === "card" || payment === "online" ? "Pay Online (Cards / SSLCommerz)"
         : "Online Payment";
@@ -2388,7 +2404,9 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       // CRITICAL: the live site stores Woo state as "BD-XX" codes, never the district
       // name. Normalize whatever the app sends (name or code) to the canonical BD-XX.
       const resolvedState = normalizeState(state || district || (area === "outside" ? "BD-10" : "BD-13"));
-      const resolvedPostcode = String(postcode || "1200").trim();
+      const resolvedPostcode = (postcode && String(postcode).trim().length > 0 && !(String(postcode).trim() === "1200" && resolvedState !== "BD-13" && resolvedState !== "BD-33"))
+        ? String(postcode).trim()
+        : getDistrictPostcode(resolvedState);
 
       let wooId: number | undefined;
       let wooNumber: string | undefined;

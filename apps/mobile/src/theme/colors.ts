@@ -1,14 +1,14 @@
 export const LightColors = {
-  // Brand Denim Palette (deencommerce.com aesthetic)
-  indigo: "#046BD2",
-  indigoDark: "#1A2350",
-  indigoLight: "#F0F5FA",
-  denimStitch: "#D49439",
+  // Brand Artisanal Orange Palette (deencommerce.com brand vibe)
+  indigo: "#E05305",
+  indigoDark: "#7C2D12",
+  indigoLight: "#FFF7ED",
+  denimStitch: "#C27803",
 
   // Background & Surfaces (Crisp modern editorial look)
   paper: "#FFFFFF",
   card: "#FFFFFF",
-  cardSecondary: "#F1F5F9",
+  cardSecondary: "#FDF9F5",
   border: "#E2E8F0",
   borderLight: "#F1F5F9",
 
@@ -28,15 +28,15 @@ export const LightColors = {
   // Bangladeshi Payment Accents
   bkash: "#E2136E",
   nagad: "#F7941D",
-  cod: "#1A2350",
+  cod: "#7C2D12",
 };
 
 export const DarkColors: typeof LightColors = {
-  // Brand Denim Palette
-  indigo: "#5B6EE1",
-  indigoDark: "#4354BF",
-  indigoLight: "#161622",
-  denimStitch: "#EAA74B",
+  // Brand Artisanal Orange Palette
+  indigo: "#FB923C",
+  indigoDark: "#EA580C",
+  indigoLight: "#261308",
+  denimStitch: "#FDBA74",
 
   // Background & Surfaces (True AMOLED Deep Black)
   paper: "#000000",
@@ -61,7 +61,7 @@ export const DarkColors: typeof LightColors = {
   // Bangladeshi Payment Accents
   bkash: "#FF3388",
   nagad: "#FFA63D",
-  cod: "#5B6EE1",
+  cod: "#FB923C",
 };
 
 export type ThemeColors = typeof LightColors;

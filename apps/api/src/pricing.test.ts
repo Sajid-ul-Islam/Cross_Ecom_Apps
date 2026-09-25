@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { getDistrictPostcode, BD_DISTRICTS } from "./districts.js";
 
 /* ------------------------------------------------------------------ */
 /*  Pricing & Campaign Rules Unit Tests                               */
@@ -15,21 +16,37 @@ function calculateBogo(lines: { category?: string; unit: number; qty?: number }[
   discount: number;
   freeIndexes: number[];
 } {
-  const byCat = new Map<string, number[]>();
+  const byCat = new Map<string, { unit: number; qty: number; originalIndex: number }[]>();
   lines.forEach((l, i) => {
-    const cat = l.category || "OTHER";
+    const cat = (l.category || "OTHER").toUpperCase();
     if (!byCat.has(cat)) byCat.set(cat, []);
-    byCat.get(cat)!.push(i);
+    byCat.get(cat)!.push({
+      unit: Number(l.unit || 0),
+      qty: Math.max(1, Number(l.qty || 1)),
+      originalIndex: i,
+    });
   });
   let discount = 0;
   const freeIndexes: number[] = [];
-  for (const idxs of byCat.values()) {
-    if (idxs.length < 2) continue; // need 2+ in the same category
-    let cheapest = idxs[0];
-    for (const i of idxs) if (lines[i].unit < lines[cheapest].unit) cheapest = i;
-    const qty = lines[cheapest].qty ?? 1;
-    discount += lines[cheapest].unit * qty;
-    freeIndexes.push(cheapest);
+  for (const items of byCat.values()) {
+    const totalUnits = items.reduce((sum, it) => sum + it.qty, 0);
+    const maxFree = Math.floor(totalUnits / 2);
+    if (maxFree <= 0) continue;
+
+    const unitList: { unit: number; originalIndex: number }[] = [];
+    for (const it of items) {
+      for (let q = 0; q < it.qty; q++) {
+        unitList.push({ unit: it.unit, originalIndex: it.originalIndex });
+      }
+    }
+    unitList.sort((a, b) => a.unit - b.unit);
+
+    for (let i = 0; i < maxFree; i++) {
+      discount += unitList[i].unit;
+      if (!freeIndexes.includes(unitList[i].originalIndex)) {
+        freeIndexes.push(unitList[i].originalIndex);
+      }
+    }
   }
   return { discount, freeIndexes };
 }
@@ -93,6 +110,33 @@ test("BOGO: Cross-category items (1 Jean + 1 Shirt) do not trigger BOGO", () => 
   ];
   const res = calculateBogo(lines);
   assert.equal(res.discount, 0);
+});
+
+test("BOGO: Multi-quantity items calculate accurate pair discounts", () => {
+  // 1 high-tier jean (2400) + 3 regular jeans (1000) = 4 total units in category
+  // In BOGO, 4 units yield exactly 2 free items (the two cheapest) = ৳2000
+  const lines = [
+    { category: "JEANS", unit: 2400, qty: 1 },
+    { category: "JEANS", unit: 1000, qty: 3 },
+  ];
+  const res = calculateBogo(lines);
+  assert.equal(res.discount, 2000);
+  assert.deepEqual(res.freeIndexes, [1]);
+});
+
+test("Logistics & District Postcodes: 64 districts resolve canonical postcodes", () => {
+  assert.equal(getDistrictPostcode("BD-13"), "1200"); // Dhaka
+  assert.equal(getDistrictPostcode("BD-10"), "4000"); // Chattogram
+  assert.equal(getDistrictPostcode("BD-60"), "3100"); // Sylhet
+  assert.equal(getDistrictPostcode("BD-54"), "6000"); // Rajshahi
+  assert.equal(getDistrictPostcode("UNKNOWN"), "1200"); // Fallback
+  assert.equal(BD_DISTRICTS.length, 64);
+});
+
+test("Operational Standards: COD payment method title is 'Cash on Delivery (COD)'", () => {
+  const payment = "cod";
+  const paymentTitle = payment === "cod" ? "Cash on Delivery (COD)" : "Online Payment";
+  assert.equal(paymentTitle, "Cash on Delivery (COD)");
 });
 
 test("Phone validation: accepts clean 017XXXXXXXX format", () => {

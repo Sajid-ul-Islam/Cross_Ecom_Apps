@@ -374,8 +374,8 @@ export default function ProductDetailScreen() {
               </View>
             )}
             {product.segment === "collection" && (
-              <View style={[styles.newPill, { backgroundColor: "#1e1b4b", borderColor: "#4338ca" }]}>
-                <Text style={[styles.newPillText, { color: "#818cf8" }]}>💎 DEEN COLLECTION</Text>
+              <View style={[styles.newPill, { backgroundColor: "#2A1408", borderColor: "#7C2D12" }]}>
+                <Text style={[styles.newPillText, { color: "#FB923C" }]}>💎 DEEN COLLECTION</Text>
               </View>
             )}
             <Text style={styles.categoryText}>{product.category}</Text>
@@ -606,8 +606,8 @@ export default function ProductDetailScreen() {
             >
               <Store size={15} color={colors.indigoDark} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.featurePillTitle}>OUTLET INVENTORY</Text>
-                <Text style={styles.featurePillSub}>Check stock at 4 Outlets</Text>
+                <Text style={styles.featurePillTitle}>STORE AVAILABILITY</Text>
+                <Text style={styles.featurePillSub}>Online Store · 64 Districts</Text>
               </View>
             </TouchableOpacity>
 

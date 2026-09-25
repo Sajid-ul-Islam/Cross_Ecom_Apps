@@ -35,7 +35,7 @@ import { useProfile } from "../src/context/ProfileContext";
 import { useRewards } from "../src/context/RewardsContext";
 import { bdt, DELIVERY_OPTIONS, createGuestSession, getGuestSession, fetchPaymentMethods, fetchCoupon, getCashbackAmount, fetchDistricts, type BdDistrict } from "../src/services/gateway";
 
-import { BD_DISTRICTS } from "../src/data/districts";
+import { BD_DISTRICTS, getDistrictPostcode } from "../src/data/districts";
 import { Analytics } from "../src/services/analytics";
 import {
   DeliveryOptionKey,
@@ -192,6 +192,27 @@ export default function CheckoutScreen() {
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       return;
     }
+    if (isGift) {
+      if (!giftName.trim()) {
+        setErrorMsg("Please provide the gift recipient's full name");
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        return;
+      }
+      let gDigits = giftPhone.replace(/[^0-9]/g, "");
+      if (gDigits.startsWith("880") && gDigits.length === 13) {
+        gDigits = gDigits.slice(2);
+      }
+      if (gDigits.length !== 11 || !gDigits.startsWith("0") || !/^01[3-9]\d{8}$/.test(gDigits)) {
+        setErrorMsg("Recipient phone must be an 11-digit Bangladeshi mobile number (01XXXXXXXXX)");
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        return;
+      }
+      if (!giftAddress.trim() || giftAddress.trim().length < 8) {
+        setErrorMsg("Please enter full gift delivery address (house/flat, road, area)");
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        return;
+      }
+    }
 
     setErrorMsg("");
     setLoading(true);
@@ -216,7 +237,7 @@ export default function CheckoutScreen() {
         city: selectedArea === "store_pickup" ? "Dhaka" : isGift ? (giftCity.trim() || giftDistrict.name) : (city.trim() || district.name),
         district: isGift ? giftDistrict.code : district.code,
         state: isGift ? giftDistrict.code : district.code,
-        postcode: "1200",
+        postcode: getDistrictPostcode(isGift ? giftDistrict.code : district.code),
         area: selectedArea,
         deliveryOption: selectedArea,
         deliverySlot,
