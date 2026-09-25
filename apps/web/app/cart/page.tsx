@@ -30,7 +30,7 @@ const DELIVERY_OPTIONS = [
   {
     id: "pickup",
     label: "Store Pickup",
-    sub: "Mirpur 12 Outlet — Ready in 2h",
+    sub: "Dhaka Hub — Ready in 2h",
     icon: "🏪",
   },
 ];
@@ -231,7 +231,7 @@ export default function CartPage() {
         <div className="empty-state" style={{ padding: "80px 24px" }}>
           <div className="empty-state__icon">🛒</div>
           <h2 className="empty-state__title">Your bag is empty</h2>
-          <p className="empty-state__sub">Explore our selvedge denim, shirts and new seasonal drops.</p>
+          <p className="empty-state__sub">Explore our premium denim, shirts and new seasonal drops.</p>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
             <Link href="/shop" className="btn btn-primary btn-lg">
               Browse Products

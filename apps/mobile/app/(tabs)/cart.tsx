@@ -47,7 +47,7 @@ export default function BagScreen() {
         </View>
         <Text style={[styles.emptyTitle, { color: colors.ink }]}>Your Cart is Empty</Text>
         <Text style={[styles.emptySub, { color: colors.sub }]}>
-          Explore our artisanal selvedge jeans, dobby panjabis, and heavyweight tees.
+          Explore our premium denim, panjabis, and contemporary menswear collections.
         </Text>
         <TouchableOpacity
           style={[styles.shopBtn, { backgroundColor: colors.indigo }]}

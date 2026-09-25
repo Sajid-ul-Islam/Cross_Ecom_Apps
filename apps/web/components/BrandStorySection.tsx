@@ -54,10 +54,10 @@ export default function BrandStorySection() {
             </div>
 
             <div style={{ background: "var(--surface-2)", padding: 20, borderRadius: 14, border: "1px solid var(--border)" }}>
-              <div style={{ fontSize: 24, marginBottom: 8 }}>🏬</div>
-              <h3 style={{ fontSize: 14, fontWeight: 800, color: "var(--ink)", marginBottom: 4 }}>4 Retail Showrooms</h3>
+              <div style={{ fontSize: 24, marginBottom: 8 }}>🚚</div>
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "var(--ink)", marginBottom: 4 }}>Nationwide Delivery</h3>
               <p style={{ fontSize: 12, color: "var(--sub)", lineHeight: 1.5 }}>
-                Visit us in Mirpur 12, Wari (Dhaka), and Cumilla for personalized fittings.
+                Fast home delivery across all 64 districts in Bangladesh with Cash on Delivery (COD).
               </p>
             </div>
 
@@ -123,9 +123,9 @@ export default function BrandStorySection() {
               type="button"
               className="story-card__cta"
               onClick={() => setAboutOpen(true)}
-              aria-label="Read full DEEN heritage story and store locations"
+              aria-label="Read full DEEN heritage story"
             >
-              DISCOVER OUR STORY &amp; SHOWROOMS <ArrowRightIcon size={14} />
+              DISCOVER OUR STORY <ArrowRightIcon size={14} />
             </button>
           </article>
 

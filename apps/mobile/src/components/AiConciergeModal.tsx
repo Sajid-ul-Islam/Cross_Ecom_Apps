@@ -42,12 +42,11 @@ interface AiMessage {
 
 const QUICK_PROMPTS = [
   "🔥 What is the current offer & discount?",
-  "👖 Suggest 13.5oz selvedge jeans under ৳2500",
-  "🧵 Difference between selvedge & regular denim?",
+  "👖 Suggest jeans under ৳2500",
   "📏 How to choose my waist size for DEEN jeans?",
   "🔄 How does the 7-day size exchange work?",
   "🚚 Chittagong delivery charge & time?",
-  "📍 Where are your retail showrooms in Dhaka?",
+  "📍 Do you have retail outlets or showrooms?",
   "💬 WhatsApp Concierge Hotline",
 ];
 
@@ -195,7 +194,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
     {
       id: "welcome",
       sender: "ai",
-      text: "👋 Welcome to **DEEN Assistant**! I can recommend menswear outfits from our live catalog, calculate Bangladesh delivery charges, explain our 7-day doorstep size exchange, or locate our 4 retail showrooms.\n\nHow can I help you today?",
+      text: "👋 Welcome to **DEEN Assistant**! I can recommend menswear outfits from our live catalog, calculate Bangladesh delivery charges, explain our 7-day doorstep size exchange, or answer questions about our brand and orders.\n\nHow can I help you today?",
     },
   ]);
 

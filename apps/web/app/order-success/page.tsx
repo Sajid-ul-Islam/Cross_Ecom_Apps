@@ -77,7 +77,7 @@ function OrderSuccessContent() {
 
         <h1 className="order-success-title">ORDER PLACED SUCCESSFULLY!</h1>
         <p className="order-success-sub">
-          Thank you for shopping with DEEN. Your parcel is now queued for fulfillment and dispatch at our Mirpur central studio.
+          Thank you for shopping with DEEN. Your parcel is now queued for fulfillment and dispatch at our Dhaka fulfillment center.
         </p>
 
         {/* Order Details Card */}

@@ -40,14 +40,13 @@ const DEEN_SYSTEM_PROMPT = `You are DEEN Assistant — the friendly AI shopping 
 - VISA/Mastercard 0% EMI (3/6/12 months).
 - Online card via SSL Commerz.
 
-## Physical Outlets
-- Mirpur 12 Flagship: Level 3, Ramzannesa Super Market (Daily 10AM–9:30PM). Store pickup available.
-- Wari: 41 A.K Famous Tower, Rankin Street (Daily 10:30AM–9:30PM).
-- Cumilla: 4th Floor, QR Tower, Badurtola, Kandirpar (Daily 10:30AM–9PM).
-- Sylhet: 54/A Level 2, Kumarpara, Zindabazar (Daily 10:30AM–9:30PM).
+## Store & Operations
+- Online-First Fashion Brand: deencommerce.com (No walk-in retail showrooms or physical outlets).
+- Nationwide Doorstep Delivery: All 64 districts in Bangladesh via express courier.
+- Cash on Delivery (COD) and 7-day doorstep size exchange nationwide.
 
 ## Contact
-- Hotline: 09617-700500 | WhatsApp: 01952-700500 | Messenger: m.me/deencommerce`;
+- Hotline & WhatsApp: 01952-700500 | Messenger: m.me/deencommerce | Email: hello@deencommerce.com`;
 
 let _genAI: GoogleGenerativeAI | null = null;
 

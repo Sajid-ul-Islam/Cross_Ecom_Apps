@@ -414,7 +414,7 @@ export default function AboutDeenDrawer({ isOpen, onClose }: AboutDeenDrawerProp
               </h5>
             </div>
             <p style={{ margin: "0 0 10px", fontSize: 12, lineHeight: 1.6, color: "var(--sub)" }}>
-              We are constantly growing! If you are passionate about apparel design, textile merchandising, web engineering, or showroom styling:
+              We are constantly growing! If you are passionate about apparel design, textile merchandising, web engineering, or fashion styling:
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <a
@@ -459,7 +459,7 @@ export default function AboutDeenDrawer({ isOpen, onClose }: AboutDeenDrawerProp
             </div>
           </div>
 
-          {/* Section 4: Flagship Retail Showrooms */}
+          {/* Section 4: Operations & Fulfillment Hub */}
           <div
             style={{
               background: "var(--surface-2)",
@@ -469,54 +469,91 @@ export default function AboutDeenDrawer({ isOpen, onClose }: AboutDeenDrawerProp
             }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <span style={{ fontSize: 16 }}>🏬</span>
+              <span style={{ fontSize: 16 }}>🚚</span>
               <h5 style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "var(--ink)", textTransform: "uppercase" }}>
-                Retail Showrooms &amp; Outlets
+                {outlets.length > 0 ? "Retail Showrooms & Outlets" : "Nationwide Delivery & Operations"}
               </h5>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {outlets.map((outlet) => {
-                const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(outlet.mapQuery || outlet.address)}`;
-                return (
-                  <div
-                    key={outlet.id}
+            {outlets.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {outlets.map((outlet) => {
+                  const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(outlet.mapQuery || outlet.address)}`;
+                  return (
+                    <div
+                      key={outlet.id}
+                      style={{
+                        padding: 12,
+                        borderRadius: 8,
+                        backgroundColor: "var(--surface)",
+                        border: "1px solid var(--border)",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                        <strong style={{ fontSize: 12.5, color: "var(--ink)" }}>📍 {outlet.name}</strong>
+                        <span style={{ fontSize: 9, fontWeight: 800, background: "var(--indigo-light)", color: "var(--indigo)", padding: "2px 6px", borderRadius: 4 }}>
+                          {outlet.tag || "SHOWROOM"}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: 11.5, color: "var(--sub)", margin: "0 0 6px", lineHeight: 1.4 }}>
+                        {outlet.address}
+                      </p>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontSize: 10.5, color: "var(--faint)" }}>🕒 {outlet.hours}</span>
+                        <a
+                          href={mapUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            fontSize: 10.5,
+                            fontWeight: 800,
+                            color: "var(--indigo)",
+                            textDecoration: "none",
+                          }}
+                        >
+                          Google Maps ↗
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div
+                style={{
+                  padding: 12,
+                  borderRadius: 8,
+                  backgroundColor: "var(--surface)",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <strong style={{ fontSize: 12.5, color: "var(--ink)" }}>📍 Dhaka Operations & Dispatch Hub</strong>
+                  <span style={{ fontSize: 9, fontWeight: 800, background: "var(--emerald-light)", color: "var(--emerald)", padding: "2px 6px", borderRadius: 4 }}>
+                    ONLINE EXCLUSIVE
+                  </span>
+                </div>
+                <p style={{ fontSize: 11.5, color: "var(--sub)", margin: "0 0 6px", lineHeight: 1.4 }}>
+                  DEEN operates online-first with direct doorstep delivery across all 64 districts in Bangladesh. No physical walk-in retail showrooms.
+                </p>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 10.5, color: "var(--faint)" }}>🕒 10:00 AM – 10:00 PM Daily</span>
+                  <a
+                    href={`https://wa.me/${waDigits}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     style={{
-                      padding: 12,
-                      borderRadius: 8,
-                      backgroundColor: "var(--surface)",
-                      border: "1px solid var(--border)",
+                      fontSize: 10.5,
+                      fontWeight: 800,
+                      color: "var(--indigo)",
+                      textDecoration: "none",
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                      <strong style={{ fontSize: 12.5, color: "var(--ink)" }}>📍 {outlet.name}</strong>
-                      <span style={{ fontSize: 9, fontWeight: 800, background: "var(--indigo-light)", color: "var(--indigo)", padding: "2px 6px", borderRadius: 4 }}>
-                        {outlet.tag || "SHOWROOM"}
-                      </span>
-                    </div>
-                    <p style={{ fontSize: 11.5, color: "var(--sub)", margin: "0 0 6px", lineHeight: 1.4 }}>
-                      {outlet.address}
-                    </p>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: 10.5, color: "var(--faint)" }}>🕒 {outlet.hours}</span>
-                      <a
-                        href={mapUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          fontSize: 10.5,
-                          fontWeight: 800,
-                          color: "var(--indigo)",
-                          textDecoration: "none",
-                        }}
-                      >
-                        Google Maps ↗
-                      </a>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                    WhatsApp Support ↗
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Privacy & Support */}

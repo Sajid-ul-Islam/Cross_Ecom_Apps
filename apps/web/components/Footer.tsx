@@ -165,9 +165,9 @@ export default async function Footer() {
             <p className="footer__col-title">Customer Service</p>
             <ul className="footer__links">
               <li style={{ color: "var(--sub)", fontSize: 13, lineHeight: 1.5 }}>
-                📍 <strong>Flagship:</strong> {outlets.length > 0 ? outlets[0].address : "Level 3, Ramzannesa Super Market, Mirpur 12, Dhaka"}<br />
+                📍 <strong>Headquarters:</strong> Dhaka, Bangladesh<br />
                 <span style={{ fontSize: 11, color: "var(--brand)" }}>
-                  Showrooms: {outlets.map((o) => o.name.replace("DEEN ", "").replace(" Outlet", "").replace(" (Flagship Outlet)", "")).join(" · ") || "Mirpur 12 · Wari · Cumilla · Sylhet"}
+                  Online Store · Nationwide Delivery Across 64 Districts
                 </span>
               </li>
               <li style={{ marginTop: 8 }}>
@@ -182,10 +182,10 @@ export default async function Footer() {
               </li>
             </ul>
             <div style={{ marginTop: 12 }}>
-              <p className="footer__col-title">Showroom Hours</p>
+              <p className="footer__col-title">Online Concierge Hours</p>
               <p style={{ fontSize: 12, color: "var(--sub)", lineHeight: 1.5 }}>
-                Sat–Thu: 10:00 AM – 10:00 PM<br />
-                Fri: 02:00 PM – 10:00 PM
+                Everyday: 10:00 AM – 10:00 PM<br />
+                Doorstep Delivery &amp; 7-Day Size Exchange
               </p>
             </div>
           </div>

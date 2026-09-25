@@ -13,14 +13,13 @@ export interface ChatAssistantProps {
 
 const QUICK_PROMPTS = [
   "🔥 What is the current offer & discount?",
-  "👖 Suggest 13.5oz selvedge jeans under ৳2500",
-  "🧵 Difference between selvedge & regular denim?",
+  "👖 Suggest jeans under ৳2500",
   "📏 How to choose my waist size for DEEN jeans?",
   "📦 Where is my order #1041?",
   "🛒 I want to order a shirt",
   "🔄 How does the 7-day size exchange work?",
   "🚚 Chittagong delivery charge & time?",
-  "📍 Where are your retail showrooms in Dhaka?",
+  "📍 Do you have retail outlets or showrooms?",
   "💬 WhatsApp Concierge Hotline",
 ];
 
@@ -56,9 +55,9 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
     const initialGreeting: MessageItem = {
       id: "msg_init",
       role: "bot",
-      text: "👋 **আসসালামু আলাইকুম! Welcome to DEEN Denim Concierge.**\n\nI can recommend menswear from our live catalog (13.5oz raw selvedge denim, shirts, panjabis), guide you on sizes, explain our 7-day doorstep swap, calculate delivery charges across Bangladesh, or help you **order directly in chat**!\n\nHow can I help you today?",
+      text: "👋 **আসসালামু আলাইকুম! Welcome to DEEN Denim Concierge.**\n\nI can recommend menswear from our live catalog (premium denim jeans, shirts, panjabis), guide you on sizes, explain our 7-day doorstep swap, calculate delivery charges across Bangladesh, or help you **order directly in chat**!\n\nHow can I help you today?",
       quickReplies: [
-        "সেলভেজ জিন্স 👖",
+        "জিন্স কালেকশন 👖",
         "পাঞ্জাবি কালেকশন 🕌",
         "শার্ট কালেকশন 👔",
         "সাইজ গাইড 📏",

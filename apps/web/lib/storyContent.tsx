@@ -37,7 +37,7 @@ export function ArrowRightIcon({ size = 14 }: { size?: number }) {
 export const CHIPS = [
   { emoji: "🧵", title: "Red-Line Selvedge", sub: "13.5oz vintage shuttle loom" },
   { emoji: "✂️", title: "Dhaka Central Studio", sub: "In-house artisan master tailors" },
-  { emoji: "🏬", title: "4 Retail Showrooms", sub: "Mirpur 12, Wari, Cumilla & Sylhet" },
+  { emoji: "🚚", title: "64 Districts Delivery", sub: "Doorstep courier with COD" },
   { emoji: "🔄", title: "Doorstep Exchange", sub: "7-day hassle-free size swaps" },
 ];
 
@@ -71,12 +71,12 @@ export const TRUST_ITEMS: TrustItem[] = [
     tag: "OFFICIAL E-COMMERCE",
   },
   {
-    id: "flagship_stores",
+    id: "nationwide_delivery",
     icon: <MapPinIcon size={18} />,
     tone: "var(--crimson)",
-    title: "Flagship Stores",
-    desc: "Visit our outlets for personal fittings and full collection previews.",
-    points: ["Mirpur 12 & Wari (Dhaka)", "Cumilla & Sylhet Showrooms"],
-    tag: "MIRPUR 12 · WARI · CUMILLA · SYLHET",
+    title: "Nationwide Delivery",
+    desc: "Doorstep delivery across all 64 districts in Bangladesh with Cash on Delivery.",
+    points: ["All 64 districts covered", "7-Day doorstep size exchange"],
+    tag: "64 DISTRICTS · CASH ON DELIVERY",
   },
 ];

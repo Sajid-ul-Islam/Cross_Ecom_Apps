@@ -206,7 +206,7 @@ export default function CheckoutScreen() {
         name: isGift ? (giftName.trim() || name.trim()) : name.trim(),
         phone: isGift ? (giftPhone.replace(/[^0-9]/g, "").slice(-11) || digits) : digits,
         email: email.trim() || undefined,
-        address: selectedArea === "store_pickup" ? "DEEN Flagship Outlet, Ramzannesa Super Market, Mirpur 12, Dhaka (Store Pickup)" : isGift ? giftAddress.trim() : address.trim(),
+        address: selectedArea === "store_pickup" ? "DEEN Dhaka Hub (Store Pickup)" : isGift ? giftAddress.trim() : address.trim(),
         city: selectedArea === "store_pickup" ? "Dhaka" : isGift ? (giftCity.trim() || giftDistrict.name) : (city.trim() || district.name),
         district: isGift ? giftDistrict.code : district.code,
         state: isGift ? giftDistrict.code : district.code,
@@ -666,9 +666,9 @@ export default function CheckoutScreen() {
             </View>
           ) : (
             <View style={[styles.pickupNotice, { backgroundColor: colors.emeraldLight, borderColor: colors.emerald }]}>
-              <Text style={[styles.pickupNoticeTitle, { color: colors.emerald }]}>📍 Outlet Collection Point:</Text>
+              <Text style={[styles.pickupNoticeTitle, { color: colors.emerald }]}>📍 Hub Collection Point:</Text>
               <Text style={[styles.pickupNoticeText, { color: colors.ink }]}>
-                DEEN Mirpur 12 Outlet, 2nd Floor, Ramzannesa Super Market, Mirpur 12, Dhaka-1216. Open 10 AM - 9:30 PM daily.
+                DEEN Dhaka Dispatch Hub (Store Pickup), Dhaka. Open 10:00 AM – 8:00 PM daily.
               </Text>
             </View>
           )}

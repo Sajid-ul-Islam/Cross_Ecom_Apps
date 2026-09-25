@@ -315,7 +315,7 @@ export async function processAiCommerceQuery(
               (trackingStatus ? `• **Courier Movement:** ${trackingStatus}\n` : "") +
               `• **Live Tracking:** ${trackingUrl}\n\n` +
               `Your order is in transit with Pathao Courier. Tap the tracking button below to view real-time rider coordinates!`
-            : `\n✨ Your parcel is currently being prepared for dispatch at our Mirpur Central Studio. You will receive live Pathao consignment tracking as soon as it is picked up.`);
+            : `\n✨ Your parcel is currently being prepared for dispatch at our Dhaka fulfillment center. You will receive live Pathao consignment tracking as soon as it is picked up.`);
       }
 
       const actions: Array<{ label: string; action: string; payload?: any }> = [];
@@ -424,15 +424,15 @@ export async function processAiCommerceQuery(
 
     const reply = isBn
       ? `DEEN-এ বর্তমানে চলমান স্পেশাল অফার ও ডিসকাউন্টসমূহ:\n\n` +
-        `🔥 **ফ্ল্যাট আপ টু ৫০% ছাড়**: সিলেক্টেড সেলভেজ জিন্স ও প্রিমিয়াম শার্টে ৪০%-৫০% পর্যন্ত মূল্যছাড় চলছে।\n` +
+        `🔥 **ফ্ল্যাট আপ টু ৫০% ছাড়**: সিলেক্টেড ডেনিম ও প্রিমিয়াম শার্টে ৪০%-৫০% পর্যন্ত মূল্যছাড় চলছে।\n` +
         `💸 **ইনস্ট্যান্ট ক্যাশব্যাক**: ৳২৫০০+ অর্ডারে ৳৫০০ এবং ৳৩০০০+ অর্ডারে ৳৭০০ ইনস্ট্যান্ট ক্যাশব্যাক চেকআউটে স্বয়ংক্রিয়ভাবে প্রযোজ্য।\n` +
-        `🚚 **ডেলিভারি অফার**: ঢাকা মেট্রোয় মাত্র ৳৫০ এবং ঢাকার বাইরে ৳৯০। যেকোনো শোরুম থেকে সেলফ-পিকআপ সম্পূর্ণ ফ্রি (৳০)।\n` +
+        `🚚 **ডেলিভারি চার্জ**: ঢাকা সিটিতে মাত্র ৳৫০ এবং ঢাকার বাইরে ৳৯০। ঢাকা হাব থেকে সেলফ-পিকআপ সম্পূর্ণ ফ্রি (৳০)।\n` +
         `💳 **০% ইএমআই ও ব্যাংক ছাড়**: সিলেক্টেড ক্রেডিট কার্ডে ৩, ৬ ও ১২ মাসের ০% ইএমআই সুবিধা।\n\n` +
         (saleItems.length > 0 ? `নিচে বর্তমান অফারের সেরা কয়েকটি প্রোডাক্ট দেওয়া হলো:` : `চেকআউটে ডিসকাউন্ট স্বয়ংক্রিয়ভাবে যুক্ত হয়ে যাবে!`)
       : `Here are the active campaigns, offers, and discounts currently live at DEEN Commerce:\n\n` +
-        `🔥 **Flat Up to 50% Off**: Season Clearance discount on selected selvedge denim & artisanal shirts.\n` +
+        `🔥 **Flat Up to 50% Off**: Season Clearance discount on selected denim & artisanal shirts.\n` +
         `💸 **Instant Tiered Cashback**: Get ৳500 instant cashback on orders ৳2500+, and ৳700 cashback on orders ৳3000+ (applied automatically at checkout).\n` +
-        `🚚 **Affordable Delivery**: ৳50 inside Dhaka Metro, ৳90 across all 64 districts nationwide. Showroom pickup is 100% FREE.\n` +
+        `🚚 **Affordable Delivery**: ৳50 inside Dhaka Metro, ৳90 across all 64 districts nationwide. Dhaka hub pickup is 100% FREE.\n` +
         `💳 **0% EMI & Bank Discounts**: 3, 6, and 12-month 0% EMI available on major credit cards via SSLCommerz.\n\n` +
         (saleItems.length > 0 ? `Check out these featured deal items from our live catalog below:` : `All discounts apply automatically at checkout!`);
 
@@ -472,8 +472,9 @@ export async function processAiCommerceQuery(
       reply: isBn ? outletKb.contentBn : outletKb.contentEn,
       intent: "store_locator",
       suggestedActions: [
-        { label: isBn ? "📍 শোরুম লোকেশন দেখুন" : "📍 View Showroom Locations", action: "open_outlets" },
-        { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" }, { label: isBn ? "💬 মেসেঞ্জার" : "💬 Messenger", action: "open_messenger" },
+        { label: isBn ? "🛍️ অনলাইন কালেকশন দেখুন" : "🛍️ Shop Online", action: "navigate_shop" },
+        { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" },
+        { label: isBn ? "💬 মেসেঞ্জার" : "💬 Messenger", action: "open_messenger" },
       ],
     };
   }
@@ -489,8 +490,8 @@ export async function processAiCommerceQuery(
     let specificReply = isBn ? deliveryKb.contentBn : deliveryKb.contentEn;
     if (isInsideDhaka) {
       specificReply = isBn
-        ? "ঢাকা সিটির মধ্যে ডেলিভারি চার্জ মাত্র ৳৫০ (২৪-৪৮ ঘণ্টার মধ্যে পাঠাও এক্সপ্রেস হোম ডেলিভারি)। এছাড়া আমাদের ৪টি ফ্ল্যাগশিপ শোরুম থেকে পিকআপ সম্পূর্ণ ফ্রি (৳০)। ক্যাশ অন ডেলিভারি সুবিধা রয়েছে।"
-        : "Delivery inside Dhaka is only ৳50 via 24–48h Pathao Express home delivery. Showroom pickup from any of our 4 retail studios is 100% FREE (৳0). Cash on Delivery is available.";
+        ? "ঢাকা সিটির মধ্যে ডেলিভারি চার্জ মাত্র ৳৫০ (২৪-৪৮ ঘণ্টার মধ্যে পাঠাও এক্সপ্রেস হোম ডেলিভারি)। ঢাকা হাব থেকে সেলফ-পিকআপ সম্পূর্ণ ফ্রি (৳০)। ক্যাশ অন ডেলিভারি সুবিধা রয়েছে।"
+        : "Delivery inside Dhaka is only ৳50 via 24–48h Pathao Express home delivery. Store pickup from Dhaka dispatch hub is 100% FREE (৳0). Cash on Delivery is available.";
     } else if (isOutsideDhaka) {
       specificReply = isBn
         ? "ঢাকার বাইরে বাংলাদেশের যেকোনো জেলায় ডেলিভারি চার্জ মাত্র ৳৯০ (২-৪ কার্যদিবসের মধ্যে সরাসরি হোম ডেলিভারি)। রেগুলার অর্ডারে কোনো অগ্রিম পেমেন্ট ছাড়াই ক্যাশ অন ডেলিভারিতে (COD) পণ্য হাতে পেয়ে মূল্য পরিশোধ করতে পারবেন।"

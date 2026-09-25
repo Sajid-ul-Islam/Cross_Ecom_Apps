@@ -446,7 +446,9 @@ export default function ProductDetailScreen() {
               <Text style={[styles.washSectionTitle, { color: colors.ink }]}>
                 WASH & TONE: <Text style={{ color: colors.indigoDark }}>{selectedWash}</Text>
               </Text>
-              <Text style={{ fontSize: 11, color: colors.sub }}>13.5 oz Selvedge</Text>
+              <Text style={{ fontSize: 11, color: colors.sub }}>
+                {product.fabric ? product.fabric.slice(0, 24) : "Washed Finish"}
+              </Text>
             </View>
             <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
               {WASH_OPTIONS.map((w) => {
@@ -683,7 +685,7 @@ export default function ProductDetailScreen() {
                     }
                     const cat = (product.category || "").toUpperCase();
                     if (cat.includes("JEAN") || cat.includes("DENIM")) {
-                      return `• Composition: 13.5 oz Raw Selvedge Denim\n• Dye Process: Traditional deep rope-dyed pure indigo\n• Hardware: Solid embossed copper rivets & YKK brass zipper\n• Stitching: High-tensile poly-core tobacco stitch thread\n• Origin: Proudly woven & crafted in Bangladesh`;
+                      return `• Composition: ${product.fabric || "Premium Cotton Denim"}\n• Dye Process: Traditional deep rope-dyed indigo\n• Hardware: Solid embossed copper rivets & YKK brass zipper\n• Stitching: High-tensile poly-core thread\n• Origin: Proudly woven & crafted in Bangladesh`;
                     }
                     if (cat.includes("PANJABI") || cat.includes("PUNJABI")) {
                       return `• Composition: 100% Egyptian Giza Combed Cotton & Dobby Jacquard\n• Motif: Dense artisanal thread embroidery\n• Trims: Natural coconut & mother-of-pearl buttons\n• Collar: Structured tailored band collar\n• Origin: Master crafted in Bangladesh`;
@@ -765,7 +767,7 @@ export default function ProductDetailScreen() {
                   • Home Delivery: {bdt(deliveryFees.insideDhaka)} (2-3 Days){"\n"}
                   • Express Home Delivery: {bdt(deliveryFees.express)} (Within 24 Hours){"\n"}
                   • Outside Dhaka (Home Delivery): {bdt(deliveryFees.outsideDhaka)} (Nationwide Courier · 3-5 Days){"\n"}
-                  • Store Pickup: FREE (Mirpur 12 Flagship Outlet){"\n"}
+                  • Store Pickup: FREE (Dhaka Dispatch Hub){"\n"}
                   • 7-Day Hassle-Free Size Exchange Guaranteed
                 </Text>
               </View>

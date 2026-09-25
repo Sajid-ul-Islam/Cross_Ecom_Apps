@@ -61,14 +61,14 @@ export const TRUST_STORY_CARDS: StoryCardData[] = [
     footerTag: "OFFICIAL E-COMMERCE",
   },
   {
-    id: "flagship_stores",
+    id: "nationwide_delivery",
     tone: "crimson",
     icon: MapPin,
     rightTag: "EST. DHAKA 2020",
-    title: "Flagship Stores",
-    description: "Visit our outlets for personal fittings and full collection previews.",
-    points: ["Mirpur 12 & Wari (Dhaka)", "Cumilla & Sylhet Showrooms"],
-    footerTag: "MIRPUR 12 · WARI · CUMILLA · SYLHET",
+    title: "Nationwide Delivery",
+    description: "Doorstep delivery across all 64 districts in Bangladesh with Cash on Delivery.",
+    points: ["All 64 districts covered", "7-Day doorstep size exchange"],
+    footerTag: "64 DISTRICTS · CASH ON DELIVERY",
   },
 ];
 
@@ -85,12 +85,12 @@ export const HOME_STORY_CARDS: StoryCardData[] = [
     chips: [
       { emoji: "🧵", title: "Red-Line Selvedge", sub: "13.5oz vintage shuttle loom" },
       { emoji: "✂️", title: "Dhaka Central Studio", sub: "In-house artisan master tailors" },
-      { emoji: "🏬", title: "4 Retail Showrooms", sub: "Mirpur 12, Wari, Cumilla & Sylhet" },
+      { emoji: "🚚", title: "64 Districts Delivery", sub: "Doorstep courier with COD" },
       { emoji: "🔄", title: "Doorstep Exchange", sub: "7-day hassle-free size swaps" },
     ],
     cta: {
-      label: "DISCOVER OUR STORY & SHOWROOMS",
-      accessibilityLabel: "Read full DEEN heritage story and store locations",
+      label: "DISCOVER OUR STORY & POLICIES",
+      accessibilityLabel: "Read full DEEN heritage story and policies",
     },
   },
   ...TRUST_STORY_CARDS,

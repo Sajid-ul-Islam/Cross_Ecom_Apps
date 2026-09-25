@@ -1660,48 +1660,7 @@ export interface Outlet {
   units?: number;
 }
 
-export const DEFAULT_OUTLETS: Outlet[] = [
-  {
-    id: "mirpur-12",
-    name: "DEEN Mirpur 12 (Flagship Outlet)",
-    tag: "CENTRAL STUDIO & STORE PICKUP",
-    address: "Level 3, Ramzannesa Super Market, Mirpur 12 Bus Stand, Dhaka-1216",
-    hours: "Open Daily: 10:00 AM – 09:30 PM",
-    phone: "01972-627981",
-    mapQuery: "Ramzannesa+Super+Market+Mirpur+12+Dhaka",
-    pickup: true,
-  },
-  {
-    id: "wari-outlet",
-    name: "DEEN Wari Outlet",
-    tag: "DHAKA SOUTH SHOWROOM",
-    address: "Ground Floor, 41 A.K Famous Tower, Rankin Street, Wari, Dhaka-1203",
-    hours: "Open Daily: 10:30 AM – 09:30 PM",
-    phone: "01972-627983",
-    mapQuery: "Rankin+Street+Wari+Dhaka",
-    pickup: false,
-  },
-  {
-    id: "cumilla-outlet",
-    name: "DEEN Cumilla Outlet",
-    tag: "CUMILLA REGIONAL SHOWROOM",
-    address: "4th Floor, QR Tower, Badurtola (Dharmasagor Side), Kandirpar, Cumilla-3500",
-    hours: "Open Daily: 10:30 AM – 09:00 PM",
-    phone: "01972-627984",
-    mapQuery: "QR+Tower+Badurtola+Cumilla",
-    pickup: false,
-  },
-  {
-    id: "sylhet-outlet",
-    name: "DEEN Sylhet Outlet",
-    tag: "SYLHET REGIONAL SHOWROOM",
-    address: "54/A, Level 2, Block-A, Kumarpara, Zindabazar, Sylhet",
-    hours: "Open Daily: 10:30 AM – 09:30 PM",
-    phone: "01972-627985",
-    mapQuery: "Kumarpara+Sylhet",
-    pickup: false,
-  },
-];
+export const DEFAULT_OUTLETS: Outlet[] = [];
 
 /** Fetch physical retail outlets from the gateway. */
 export async function fetchOutlets(): Promise<Outlet[]> {

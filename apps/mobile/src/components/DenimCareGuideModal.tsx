@@ -58,9 +58,9 @@ export const MOBILE_CARE_GUIDES: Record<string, MobileCareGuide> = {
       },
       {
         num: "04",
-        title: "CHAINSTITCH HEMMING & REPAIRS",
-        sub: "DEEN Outlet Craft & Repair Services",
-        body: "Need your selvedge inseam hemmed with authentic vintage chainstitching? Drop by our Mirpur 12 Studio or physical outlets for complimentary chainstitch hemming and crotch repairs.",
+        title: "CARE & FIT ASSISTANCE",
+        sub: "DEEN Customer Concierge Services",
+        body: "Have questions about fit, washing, or caring for your denim? Reach out directly to our WhatsApp concierge (+880 1952-700500) for personalized assistance.",
       },
     ],
   },

@@ -60,8 +60,8 @@ const DELIVERY_OPTION_META: Record<string, Omit<DeliveryOption, "fee">> = {
   },
   store_pickup: {
     id: "store_pickup",
-    name: "Store Pickup (Mirpur 12)",
-    sub: "Ready in 2h · Ramzannesa Super Market, Mirpur 12",
+    name: "Store Pickup (Dhaka Hub)",
+    sub: "Ready in 2h · DEEN Dhaka Dispatch Hub",
     badge: "FREE",
     icon: "🏪",
   },
@@ -413,7 +413,7 @@ function CheckoutContent() {
         email: email.trim() || undefined,
         address:
           selectedArea === "store_pickup"
-            ? "DEEN Flagship Outlet, Ramzannesa Super Market, Mirpur 12, Dhaka (Store Pickup)"
+            ? "DEEN Dhaka Hub (Store Pickup)"
             : isGift ? giftAddress.trim() : address.trim(),
         city: selectedArea === "store_pickup" ? "Dhaka" : isGift ? (giftCity.trim() || giftDistrict.name) : (city.trim() || district.name),
         district: isGift ? giftDistrict.code : district.code,
@@ -909,12 +909,12 @@ function CheckoutContent() {
               ) : (
                 <div className="store-pickup-banner" style={{ marginTop: 20 }}>
                   <div className="pickup-banner-header">
-                    <span>📍 Outlet Collection Point:</span>
+                    <span>📍 Hub Collection Point:</span>
                   </div>
                   <p className="pickup-banner-text">
-                    <strong>DEEN Mirpur 12 Outlet:</strong> 2nd Floor, Ramzannesa Super Market, Mirpur 12, Dhaka-1216.
+                    <strong>DEEN Dhaka Dispatch Hub:</strong> Dhaka (Store Pickup).
                     <br />
-                    Open 10:00 AM – 9:30 PM daily. Parcel will be ready for pickup in 2 hours.
+                    Open 10:00 AM – 8:00 PM daily. Parcel will be ready for pickup in 2 hours.
                   </p>
                 </div>
               )}

@@ -46,7 +46,7 @@ export default function OrderSuccessScreen() {
 
         <Text style={[styles.title, { color: colors.ink }]}>ORDER PLACED SUCCESSFULLY!</Text>
         <Text style={[styles.subtitle, { color: colors.sub }]}>
-          Thank you for choosing DEEN. Your parcel is now queued for dispatch at our Mirpur fulfillment center.
+          Thank you for choosing DEEN. Your parcel is now queued for dispatch at our Dhaka fulfillment center.
         </Text>
 
         {/* Order Details Card */}

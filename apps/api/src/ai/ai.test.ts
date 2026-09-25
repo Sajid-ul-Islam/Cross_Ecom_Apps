@@ -115,17 +115,14 @@ describe("DEEN AI Commerce Concierge & RAG Tests", () => {
     assert.match(res.reply, /৳50/);
   });
 
-  it("Showroom Locator: retrieves 4 retail showrooms with hotline", async () => {
+  it("Showroom Locator: explains online store model with nationwide delivery and hotline", async () => {
     const res = await processAiCommerceQuery(
       "আউটলেটগুলোর ঠিকানা দিন",
       MOCK_CATALOG
     );
 
     assert.equal(res.intent, "store_locator");
-    assert.match(res.reply, /মিরপুর ১২/);
-    assert.match(res.reply, /ওয়ারী/);
-    assert.match(res.reply, /কুমিল্লা/);
-    assert.match(res.reply, /সিলেট/);
+    assert.match(res.reply, /অনলাইন|৬৪ জেলা/);
     assert.match(res.reply, /01952-700500/);
   });
 
@@ -282,13 +279,13 @@ describe("DEEN AI Commerce Concierge & RAG Tests", () => {
     assert.match(res.reply, /7-day|exchange/i);
   });
 
-  it("Suggested Prompt 6: answers 'Where are your retail showrooms in Dhaka?'", async () => {
+  it("Suggested Prompt 6: answers 'Where are your retail showrooms in Dhaka?' truthfully", async () => {
     const res = await processAiCommerceQuery(
       "Where are your retail showrooms in Dhaka?",
       MOCK_CATALOG
     );
 
     assert.equal(res.intent, "store_locator");
-    assert.match(res.reply, /Mirpur|Wari/i);
+    assert.match(res.reply, /online|64 districts|doorstep|01952-700500/i);
   });
 });

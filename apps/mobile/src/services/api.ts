@@ -48,8 +48,8 @@ export const DELIVERY_OPTIONS: Record<DeliveryOptionKey, DeliveryOption> = {
   },
   store_pickup: {
     id: "store_pickup",
-    name: "Store Pickup (Mirpur 12 Outlet)",
-    sub: "Ready within 2 hours · Free collection from store",
+    name: "Store Pickup (Dhaka Hub)",
+    sub: "Ready within 2 hours · Free collection from Dhaka dispatch hub",
     fee: 0,
     estimatedDays: "Ready in 2h",
     badge: "FREE",

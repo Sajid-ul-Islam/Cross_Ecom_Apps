@@ -140,9 +140,9 @@ export const COMMERCE_KNOWLEDGE: KnowledgeItem[] = [
       "ময়মনসিংহ",
     ],
     contentBn:
-      "DEEN দেশব্যাপী ৬৪ জেলাতেই নির্ভরযোগ্য ডেলিভারি সেবা প্রদান করে:\n• ঢাকা সিটির ভেতর: ৳৫০ ডেলিভারি চার্জ (২৪-৪৮ ঘণ্টার মধ্যে পাঠাও এক্সপ্রেস হোম ডেলিভারি)।\n• ঢাকার বাইরে দেশব্যাপী ৬৪ জেলায়: ৳৯০ ডেলিভারি চার্জ (২-৪ কার্যদিবসের মধ্যে সরাসরি হোম ডেলিভারি)।\n• ফ্ল্যাগশিপ শোরুম পিকআপ: সম্পূর্ণ ফ্রি (৳০)।\nক্যাশ অন ডেলিভারি (COD) সুবিধা রয়েছে। রেগুলার অর্ডারে কোনো অগ্রিম ডেলিভারি ফি লাগে না!",
+      "DEEN দেশব্যাপী ৬৪ জেলাতেই নির্ভরযোগ্য ডেলিভারি সেবা প্রদান করে:\n• ঢাকা সিটির ভেতর: ৳৫০ ডেলিভারি চার্জ (২৪-৪৮ ঘণ্টার মধ্যে পাঠাও এক্সপ্রেস হোম ডেলিভারি)।\n• ঢাকার বাইরে দেশব্যাপী ৬৪ জেলায়: ৳৯০ ডেলিভারি চার্জ (২-৪ কার্যদিবসের মধ্যে সরাসরি হোম ডেলিভারি)।\nক্যাশ অন ডেলিভারি (COD) ও ৭ দিনের ডোরস্টেপ সাইজ এক্সচেঞ্জ সুবিধা রয়েছে। রেগুলার অর্ডারে কোনো অগ্রিম ডেলিভারি ফি লাগে না!",
     contentEn:
-      "DEEN delivers to all 64 districts across Bangladesh via Pathao Logistics:\n• Inside Dhaka Metro: ৳50 delivery fee (24–48 hours via Pathao Express Home Delivery).\n• Outside Dhaka (all 64 districts): ৳90 delivery fee (2–4 business days doorstep delivery).\n• Flagship Showroom Pickup: 100% FREE (৳0) from any of our 4 retail studios.\nCash on Delivery (COD) is available nationwide with zero advance fee on standard deliveries!",
+      "DEEN delivers to all 64 districts across Bangladesh via Pathao Logistics:\n• Inside Dhaka Metro: ৳50 delivery fee (24–48 hours via Pathao Express Home Delivery).\n• Outside Dhaka (all 64 districts): ৳90 delivery fee (2–4 business days doorstep delivery).\nCash on Delivery (COD) and 7-day doorstep size exchange are available nationwide with zero advance fee on standard deliveries!",
   },
   {
     id: "kb_return_exchange",
@@ -170,7 +170,7 @@ export const COMMERCE_KNOWLEDGE: KnowledgeItem[] = [
   {
     id: "kb_outlets",
     topic: "outlets",
-    title: "4 Retail Flagship Showrooms & Store Hours",
+    title: "Online Store & 64-District Nationwide Delivery",
     keywords: [
       "outlet",
       "store",
@@ -180,6 +180,7 @@ export const COMMERCE_KNOWLEDGE: KnowledgeItem[] = [
       "branch",
       "hours",
       "open",
+      "physical store",
       "আউটলেট",
       "শোরুম",
       "দোকান",
@@ -188,15 +189,15 @@ export const COMMERCE_KNOWLEDGE: KnowledgeItem[] = [
       "কুমিল্লা",
       "সিলেট",
       "মিরপুর ১২",
-      "wari",
-      "cumilla",
-      "sylhet",
-      "মিরপুর শোরুম",
+      "ধানমন্ডি",
+      "উত্তরা",
+      "বনানী",
+      "ঠিকানা",
     ],
     contentBn:
-      "DEEN-এর ৪টি প্রিমিয়াম ফ্ল্যাগশিপ শোরুম রয়েছে:\n১. মিরপুর ১২ সেন্ট্রাল স্টুডিও: লেভেল ৩, রমজাননেছা সুপার মার্কেট, মিরপুর ১২ বাস স্ট্যান্ড, ঢাকা।\n২. ওয়ারী শোরুম: গ্রাউন্ড ফ্লোর, ৪১ র‍্যাংকিন স্ট্রিট, ওয়ারী, ঢাকা দক্ষিণ।\n৩. কুমিল্লা শোরুম: ৪র্থ তলা, কিউআর টাওয়ার, বাদুড়তলা, কান্দিরপাড়, কুমিল্লা।\n৪. সিলেট শোরুম: ৫৪/এ, লেভেল ২, কুমারপাড়া, জিন্দাবাজার, সিলেট।\nসবগুলো শোরুম সপ্তাহে ৭ দিন সকাল ১০:০০ থেকে রাত ৯:৩০ পর্যন্ত খোলা। হেল্পলাইন ও হোয়াটসঅ্যাপ: 01952-700500।",
+      "DEEN Commerce (deencommerce.com) একটি অনলাইন-ফার্স্ট ফ্যাশন স্টার্টআপ (ঢাকা, ট্রেড লাইসেন্স: ২২৪৪৭৮, টিআইএন: ১২১৮৪০২২৩৩৬২)।\nবর্তমানে আমাদের কোনো ফিজিক্যাল রিটেল শোরুম বা আউটলেট নেই।\nআমরা সারাদেশের ৬৪ জেলায় সরাসরি ক্যাশ অন ডেলিভারিতে হোম ডেলিভারি এবং ৭ দিনের সহজ ডোরস্টেপ সাইজ এক্সচেঞ্জ সুবিধা দিয়ে থাকি।\nযেকোনো প্রশ্ন বা সহায়তার জন্য আমাদের হটলাইন বা হোয়াটসঅ্যাপে যোগাযোগ করুন: 01952-700500 (প্রতিদিন সকাল ১০টা - রাত ১০টা)।",
     contentEn:
-      "DEEN operates 4 retail flagship showrooms in Bangladesh:\n1. Mirpur 12 Central Studio: Level 3, Ramzannesa Super Market, Mirpur 12 Bus Stand, Dhaka.\n2. Wari Showroom: Ground Floor, 41 Rankin Street, Wari, Dhaka South.\n3. Cumilla Showroom: 4th Floor, QR Tower, Badurtola, Kandirpar, Cumilla.\n4. Sylhet Showroom: 54/A, Level 2, Block-A, Kumarpara, Zindabazar, Sylhet.\nAll retail outlets are open 7 days a week from 10:00 AM – 9:30 PM. Hotline & WhatsApp: 01952-700500.",
+      "DEEN Commerce (deencommerce.com) is an online-first fashion e-commerce brand based in Dhaka (Trade License: 224468, TIN: 121840223362).\nCurrently, we operate exclusively online and do not maintain physical walk-in retail showrooms or outlets.\nWe deliver directly to your doorstep across all 64 districts in Bangladesh with Cash on Delivery (COD) and a 7-day hassle-free doorstep size exchange guarantee.\nFor styling advice or assistance, connect with our concierge on WhatsApp or call our hotline: 01952-700500 (10 AM – 10 PM daily).",
   },
   {
     id: "kb_fabric_care",
@@ -308,9 +309,9 @@ export const COMMERCE_KNOWLEDGE: KnowledgeItem[] = [
       "সেভিংস",
     ],
     contentBn:
-      "DEEN-এর চলমান আকর্ষণীয় ডিসকাউন্ট ও ক্যাশব্যাক অফারসমূহ:\n১. ইনস্ট্যান্ট ক্যাশব্যাক টিয়ার (চেকআউটে অটোমেটিক প্রযোজ্য):\n   • ৳২,৫০০+ অর্ডারে ৳৫০০ ইনস্ট্যান্ট ক্যাশব্যাক!\n   • ৳৩,০০০+ অর্ডারে ৳৭০০ ইনস্ট্যান্ট ক্যাশব্যাক!\n২. ব্যাংক কার্ড ডিসকাউন্ট:\n   • সিটি ব্যাংক অ্যামেক্স (City Amex): ১০% ছাড় (কুপন কোড: AMEXDEEN, সর্বোচ্চ ৳৫০০)।\n   • ব্র্যাক ব্যাংক কার্ড (BRAC Bank): ১০% ছাড় (কুপন কোড: BRAC10, সর্বোচ্চ ৳৬০০)।\n   • ইস্টার্ন ব্যাংক (EBL): ১০% ছাড় (কুপন কোড: EBL10, সর্বোচ্চ ৳৫০০)।\n৩. আউটলেট পিকআপে ডেলিভারি চার্জ সম্পূর্ণ ফ্রি (৳০)।",
+      "DEEN-এর চলমান আকর্ষণীয় ডিসকাউন্ট ও ক্যাশব্যাক অফারসমূহ:\n১. ইনস্ট্যান্ট ক্যাশব্যাক টিয়ার (চেকআউটে অটোমেটিক প্রযোজ্য):\n   • ৳২,৫০০+ অর্ডারে ৳৫০০ ইনস্ট্যান্ট ক্যাশব্যাক!\n   • ৳৩,০০০+ অর্ডারে ৳৭০০ ইনস্ট্যান্ট ক্যাশব্যাক!\n২. ব্যাংক কার্ড ডিসকাউন্ট:\n   • সিটি ব্যাংক অ্যামেক্স (City Amex): ১০% ছাড় (কুপন কোড: AMEXDEEN, সর্বোচ্চ ৳৫০০)।\n   • ব্র্যাক ব্যাংক কার্ড (BRAC Bank): ১০% ছাড় (কুপন কোড: BRAC10, সর্বোচ্চ ৳৬০০)।\n   • ইস্টার্ন ব্যাংক (EBL): ১০% ছাড় (কুপন কোড: EBL10, সর্বোচ্চ ৳৫০০)।\n৩. ঢাকা হাব থেকে সেলফ-পিকআপে ডেলিভারি চার্জ সম্পূর্ণ ফ্রি (৳০)।",
     contentEn:
-      "DEEN's active campaigns and automated tier savings:\n1. Instant Checkout Cashback (applied automatically at checkout):\n   • Spend ৳2,500+ → Receive ৳500 Instant Cashback!\n   • Spend ৳3,000+ → Receive ৳700 Instant Cashback!\n2. Bank Card Partner Savings:\n   • City Bank Amex: 10% instant discount (Coupon: AMEXDEEN, up to ৳500 savings).\n   • BRAC Bank: 10% instant discount (Coupon: BRAC10, up to ৳600 savings).\n   • Eastern Bank (EBL): 10% instant discount (Coupon: EBL10, up to ৳500 savings).\n3. In-store showroom pickup has zero delivery fee (৳0).",
+      "DEEN's active campaigns and automated tier savings:\n1. Instant Checkout Cashback (applied automatically at checkout):\n   • Spend ৳2,500+ → Receive ৳500 Instant Cashback!\n   • Spend ৳3,000+ → Receive ৳700 Instant Cashback!\n2. Bank Card Partner Savings:\n   • City Bank Amex: 10% instant discount (Coupon: AMEXDEEN, up to ৳500 savings).\n   • BRAC Bank: 10% instant discount (Coupon: BRAC10, up to ৳600 savings).\n   • Eastern Bank (EBL): 10% instant discount (Coupon: EBL10, up to ৳500 savings).\n3. Store pickup from Dhaka dispatch hub has zero delivery fee (৳0).",
   },
   {
     id: "kb_corporate_b2b",
@@ -357,8 +358,8 @@ export const COMMERCE_KNOWLEDGE: KnowledgeItem[] = [
       "কথা বলতে চাই",
     ],
     contentBn:
-      "DEEN কাস্টমার কেয়ার ও স্টাইলিস্টদের সাথে সরাসরি যোগাযোগ করার মাধ্যমসমূহ:\n• সরাসরি হটলাইন: 01952-700500 (প্রতিদিন সকাল ১০:০০ থেকে রাত ১০:০০)।\n• অফিসিয়াল হোয়াটসঅ্যাপ: https://wa.me/8801952700500\n• ইমেইল: support@deencommerce.com\n• প্রধান কার্যালয়: মিরপুর ১২ সেন্ট্রাল স্টুডিও, ঢাকা।",
+      "DEEN কাস্টমার কেয়ার ও স্টাইলিস্টদের সাথে সরাসরি যোগাযোগ করার মাধ্যমসমূহ:\n• সরাসরি হটলাইন: 01952-700500 (প্রতিদিন সকাল ১০:০০ থেকে রাত ১০:০০)।\n• অফিসিয়াল হোয়াটসঅ্যাপ: https://wa.me/8801952700500\n• ইমেইল: support@deencommerce.com\n• প্রধান কার্যালয়: ঢাকা, বাংলাদেশ (ট্রেড লাইসেন্স: ২২৪৪৭৮)।",
     contentEn:
-      "Connect with DEEN Personal Stylists & Customer Concierge:\n• Dedicated Hotline: 01952-700500 (Open daily from 10:00 AM – 10:00 PM).\n• Official WhatsApp Chat: https://wa.me/8801952700500\n• Official Email: support@deencommerce.com\n• Central Studio: Level 3, Ramzannesa Super Market, Mirpur 12 Bus Stand, Dhaka.",
+      "Connect with DEEN Personal Stylists & Customer Concierge:\n• Dedicated Hotline: 01952-700500 (Open daily from 10:00 AM – 10:00 PM).\n• Official WhatsApp Chat: https://wa.me/8801952700500\n• Official Email: support@deencommerce.com\n• Corporate Headquarters: Dhaka, Bangladesh (Trade License: 224468).",
   },
 ];

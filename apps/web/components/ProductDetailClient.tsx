@@ -323,7 +323,9 @@ export default function ProductDetailClient({
               <span style={{ fontSize: 12, fontWeight: 800, color: "var(--ink)", textTransform: "uppercase", letterSpacing: 0.5 }}>
                 Wash &amp; Tone: <strong>{selectedWash}</strong>
               </span>
-              <span style={{ fontSize: 11, color: "var(--sub)" }}>Pre-shrunk 13.5 oz</span>
+              <span style={{ fontSize: 11, color: "var(--sub)" }}>
+                {product.fabric ? product.fabric.slice(0, 24) : "Washed Finish"}
+              </span>
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {WASH_OPTIONS.map((w) => {
@@ -595,7 +597,7 @@ export default function ProductDetailClient({
                     if (product.fabric && product.fabric.trim().length > 10) return product.fabric;
                     const cat = (product.category || "").toUpperCase();
                     if (cat.includes("JEAN") || cat.includes("DENIM")) {
-                      return "Crafted from 13.5 oz artisanal raw selvedge denim woven on vintage shuttle looms. Features genuine redline selvedge ID, antique brass donut buttons, and copper rivets.";
+                      return "Crafted from premium washed cotton denim with authentic fading, sturdy rivets, and reinforced stitching for daily endurance.";
                     }
                     if (cat.includes("PANJABI") || cat.includes("PUNJABI")) {
                       return "Crafted from 100% Egyptian Giza combed cotton & dobby jacquard weaves. Features high-density artisanal embroidery, tailored band collar, and natural coconut buttons.";

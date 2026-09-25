@@ -144,9 +144,9 @@ export const RESPONSES: Record<ResponseKey, Record<Lang, string>> = {
     banglish: "Amader customer support representative er sathe direct kotha bolte WhatsApp e knock din: +8801952700500 ba call korun.",
   },
   DELIVERY_INFO: {
-    bn: "🚚 **DEEN ডেলিভারি চার্জ ও সময়সীমা:**\n• **ঢাকা মেট্রো:** ৳৫০ (২৪–৪৮ ঘণ্টার মধ্যে হোম ডেলিভারি)\n• **ঢাকার বাইরে (সারা বাংলাদেশ):** ৳৯০ (৩–৫ কার্যদিবস)\n• **শোরুম পিকআপ:** ৳০ (সম্পূর্ণ ফ্রি)\n\nসারা বাংলাদেশে ক্যাশ অন ডেলিভারি (COD) উপলব্ধ!",
-    en: "🚚 **DEEN Delivery Charges & Timelines:**\n• **Dhaka Metro:** ৳50 (24–48 hours home delivery)\n• **Outside Dhaka (All Bangladesh):** ৳90 (3–5 business days)\n• **Showroom Pickup:** ৳0 (100% Free)\n\nCash on Delivery (COD) available nationwide!",
-    banglish: "🚚 **Delivery charge & time:**\n• Dhaka Metro: ৳50 (24-48 hours)\n• Outside Dhaka: ৳90 (3-5 days)\n• Showroom Pickup: ৳0 Free\n\nCash on Delivery available nationwide!",
+    bn: "🚚 **DEEN ডেলিভারি চার্জ ও সময়সীমা:**\n• **ঢাকা মেট্রো:** ৳৫০ (২৪–৪৮ ঘণ্টার মধ্যে হোম ডেলিভারি)\n• **ঢাকার বাইরে (সারা বাংলাদেশ):** ৳৯০ (৩–৫ কার্যদিবস)\n\nসারা বাংলাদেশে ক্যাশ অন ডেলিভারি (COD) ও ৭ দিনের ডোরস্টেপ সাইজ এক্সচেঞ্জ সুবিধা রয়েছে!",
+    en: "🚚 **DEEN Delivery Charges & Timelines:**\n• **Dhaka Metro:** ৳50 (24–48 hours home delivery)\n• **Outside Dhaka (All Bangladesh):** ৳90 (3–5 business days)\n\nCash on Delivery (COD) & 7-day doorstep size exchange available nationwide!",
+    banglish: "🚚 **Delivery charge & time:**\n• Dhaka Metro: ৳50 (24-48 hours)\n• Outside Dhaka: ৳90 (3-5 days)\n\nCash on Delivery & 7-day doorstep size exchange available nationwide!",
   },
   EXCHANGE_POLICY: {
     bn: "🔄 **৭ দিনের ডোরস্টেপ সাইজ এক্সচেঞ্জ পলিসি:**\n• সাইজ ঠিক না হলে ডেলিভারির ৭ দিনের মধ্যে সম্পূর্ণ ফ্রিতে সাইজ পরিবর্তন করতে পারবেন।\n• শর্ত: প্রোডাক্টটি অব্যবহৃত, আনওয়াশড এবং আসল ট্যাগ ও বারকোডযুক্ত থাকতে হবে।\n• হটলাইন: +880 1952-700500",
@@ -154,9 +154,9 @@ export const RESPONSES: Record<ResponseKey, Record<Lang, string>> = {
     banglish: "🔄 **7-Day Doorstep Size Exchange:**\n• Size e problem hole 7 diner moddhe doorstep size swap paben.\n• Conditions: Unworn, unwashed with original tags intact thakle hobe.\n• Hotline: +880 1952-700500",
   },
   STORE_LOCATOR: {
-    bn: "📍 **DEEN রিটেল শোরুমসমূহ (ঢাকা):**\n1. **ধানমন্ডি আউটলেট:** রোড ২৭ (পুরাতন), ধানমন্ডি, ঢাকা\n2. **উত্তরা আউটলেট:** সেক্টর ৩, জসিমউদ্দিন এভিনিউ, উত্তরা, ঢাকা\n3. **বনানী আউটলেট:** ব্লক ই, রোড ১১, বনানী, ঢাকা\n4. **যমুনা ফিউচার পার্ক:** গ্রাউন্ড ফ্লোর (সেন্ট্রাল কোর্ট), কুড়িল, ঢাকা\n\n⏰ সময়সূচী: প্রতিদিন সকাল ১০:০০ – রাত ৯:০০ | হটলাইন: 01952-700500",
-    en: "📍 **DEEN Showroom Locations (Dhaka):**\n1. **Dhanmondi Outlet:** Road 27 (Old), Dhanmondi, Dhaka\n2. **Uttara Outlet:** Sector 3, Jasimuddin Ave, Uttara, Dhaka\n3. **Banani Outlet:** Block E, Road 11, Banani, Dhaka\n4. **Jamuna Future Park:** Ground Floor, Central Court, Kuril, Dhaka\n\n⏰ Hours: Daily 10:00 AM – 9:00 PM | Hotline: +880 1952-700500",
-    banglish: "📍 **DEEN Retail Showroom Locations (Dhaka):**\n1. Dhanmondi: Road 27 (Old)\n2. Uttara: Sector 3, Jasimuddin Ave\n3. Banani: Block E, Road 11\n4. Jamuna Future Park: Ground Floor, Kuril\n\n⏰ Shomoy: 10:00 AM - 9:00 PM | Hotline: 01952-700500",
+    bn: "📍 **DEEN অনলাইন শপ (deencommerce.com):**\nDEEN একটি অনলাইন-ফার্স্ট ফ্যাশন ব্র্যান্ড (ঢাকা, ট্রেড লাইসেন্স: ২২৪৪৭৮)। বর্তমানে আমাদের কোনো ফিজিক্যাল রিটেল আউটলেট বা শোরুম নেই।\n\n🚚 আমরা সারাদেশে ৬৪ জেলায় ক্যাশ অন ডেলিভারিতে সরাসরি হোম ডেলিভারি এবং ৭ দিনের ডোরস্টেপ সাইজ এক্সচেঞ্জ সুবিধা দিয়ে থাকি।\n💬 যেকোনো সহায়তায় আমাদের অনলাইন কনসিয়ার্জে WhatsApp / হটলাইনে যোগাযোগ করুন: +880 1952-700500।",
+    en: "📍 **DEEN Online Store (deencommerce.com):**\nDEEN is an online-first e-commerce fashion brand based in Dhaka (Trade License: 224468). Currently, we do not operate walk-in retail showrooms or outlets.\n\n🚚 We deliver right to your doorstep across all 64 districts in Bangladesh with Cash on Delivery (COD) and 7-day hassle-free doorstep size exchanges.\n💬 For any assistance, reach our concierge on WhatsApp / Hotline: +880 1952-700500.",
+    banglish: "📍 **DEEN Online Store (deencommerce.com):**\nDEEN ekta online e-commerce fashion brand (Dhaka, Trade License: 224468). Amader kono physical retail showroom ba outlet nei.\n\n🚚 Amra shara Bangladesh-er 64 zillay Cash on Delivery (COD) ebong 7-diner doorstep size exchange shubidha diye thaki.\n💬 Jekono proyojone WhatsApp / Hotline e knock din: +880 1952-700500.",
   },
   OFFERS: {
     bn: "🔥 **বর্তমান লাইভ অফার ও ক্যাম্পেইন:**\n• ৳২,৫০০ – ৳২,৯৯৯ অর্ডারে **৳৫০০ ইন্সট্যান্ট ক্যাশব্যাক**!\n• ৳৩,০০০+ অর্ডারে **৳৭০০ ইন্সট্যান্ট ক্যাশব্যাক**!\n• ঢাকা মেট্রোতে ডেলিভারি চার্জ মাত্র ৳৫০\n• পার্টনার ব্যাংক কার্ডে ১০% পর্যন্ত অতিরিক্ত ছাড়!",
