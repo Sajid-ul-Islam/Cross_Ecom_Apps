@@ -121,31 +121,73 @@ function detectBrand(name: string, isSelect: boolean): string {
  */
 export function decodeHtmlEntities(str: string): string {
   if (!str) return "";
-  return str
-    // Apostrophes & Single Quotes
-    .replace(/&#8217;|&#8216;|&rsquo;|&lsquo;|&#039;|&apos;/g, "'")
-    // Double Quotes
-    .replace(/&#8220;|&#8221;|&ldquo;|&rdquo;|&quot;/g, '"')
-    // Ampersands
-    .replace(/&#038;|&amp;/g, "&")
-    // Em dash / En dash
+  let s = str
+    .replace(/&amp;#/g, "&#")
+    // Named quotes & apostrophes
+    .replace(/&rsquo;|&lsquo;|&#8217;|&#8216;/g, "'")
+    .replace(/&rdquo;|&ldquo;|&#8220;|&#8221;/g, '"')
+    .replace(/&apos;|&#039;|&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    // Dashes & ellipses
     .replace(/&#8211;|&ndash;/g, "–")
     .replace(/&#8212;|&mdash;/g, "—")
-    // Non-breaking spaces and angle brackets
-    .replace(/&nbsp;/g, " ")
+    .replace(/&#8230;|&hellip;/g, "…")
+    // Ampersands
+    .replace(/&#038;|&amp;/g, "&")
+    // Numeric decimal entities
+    .replace(/&#(\d+);?/g, (_, dec) => {
+      try {
+        const code = Number(dec);
+        return code ? String.fromCharCode(code) : _;
+      } catch {
+        return _;
+      }
+    })
+    // Numeric hex entities
+    .replace(/&#x([0-9a-f]+);?/gi, (_, hex) => {
+      try {
+        const code = parseInt(hex, 16);
+        return code ? String.fromCharCode(code) : _;
+      } catch {
+        return _;
+      }
+    })
+    // Angle brackets & whitespace
     .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">");
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Second pass in case of double-encoded entities
+  if (/&#\d+|&[a-z]+;/i.test(s)) {
+    s = s
+      .replace(/&#8211;?/g, "–")
+      .replace(/&#8212;?/g, "—")
+      .replace(/&#8216;?/g, "'")
+      .replace(/&#8217;?/g, "'")
+      .replace(/&#8220;?/g, '"')
+      .replace(/&#8221;?/g, '"')
+      .replace(/&#038;?/g, "&")
+      .replace(/&#39;?/g, "'")
+      .replace(/&ndash;/g, "–")
+      .replace(/&mdash;/g, "—")
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&amp;/g, "&");
+  }
+  return s;
 }
 
 function mapWooToDeen(p: WooProduct): DeenProduct | null {
   // Skip draft/pending products — customers should never see them
   if (p.status && p.status !== "publish" && p.status !== "private") return null;
+  const cleanName = decodeHtmlEntities(p.name || "");
   const catNames = p.categories.map((c) => c.name);
   const category = mapCategory(catNames);
   const isSelect = isDeenSelectCategory(p.categories || []);
   const segment: "collection" | "select" = isSelect ? "select" : "collection";
-  const decodedName = decodeHtmlEntities(p.name);
-  const brand = detectBrand(decodedName, isSelect);
+  const brand = detectBrand(cleanName, isSelect);
   const sizes = getSizes(p);
   const pct = parseDiscountPct(catNames);
   const current = Number(p.price) || 0;
@@ -182,7 +224,7 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
   return {
     id: String(p.id),
     sku: p.sku,
-    name: decodedName,
+    name: cleanName,
     category,
     segment,
     brand,
@@ -201,7 +243,7 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
     stockStatus: (p.stock_status as DeenProduct["stockStatus"]) ?? "instock",
     rating: Number(p.average_rating) || 0,
     ratingCount: Number(p.rating_count) || 0,
-    blurb: (p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220) ?? "",
+    blurb: decodeHtmlEntities((p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220)) ?? "",
     wooSubCategories: wooSubCategories.length > 0 ? wooSubCategories : undefined,
   };
 }
@@ -270,7 +312,7 @@ function mapStoreProductToDeen(p: any): DeenProduct {
     stockStatus: p.is_in_stock ? "instock" : "outofstock",
     rating: Number(p.average_rating) || 4.9,
     ratingCount: Number(p.review_count) || 12,
-    blurb: (p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220) || "Authentic DEEN design crafted in Bangladesh.",
+    blurb: decodeHtmlEntities((p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220)) || "Authentic DEEN design crafted in Bangladesh.",
     isNew: catNames.some((c: string) => /new/i.test(c)),
     wooSubCategories: wooSubCategories.length > 0 ? wooSubCategories : undefined,
   };
@@ -701,6 +743,11 @@ export const CANONICAL_CATEGORY_COVERS: Record<string, string> = {
   SWEATSHIRTS: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Sweat-Shirt-108-0101-007-Front.webp",
   DEEN_SELECT: "https://deencommerce.com/wp-content/uploads/2026/09/Springfield-Polo-Shirt-103-0100-119.webp",
   DEEN_COLLECTION: "https://deencommerce.com/wp-content/uploads/2026/05/DEEN-90s-Blue-Jeans-Slim-Fit-101-0100-138-front.webp",
+  SALE: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
+  TRENDING: "https://deencommerce.com/wp-content/uploads/2026/08/DEEN-Tropical-Cuban-Collar-Shirt-102-0302-005-Front.webp",
+  NEW_ARRIVALS: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Burgundy-Floral-Casual-Half-Shirt-102-0301-001-Model-1.webp",
+  VALUE_PACKS: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Orlando-Relaxed-Graphic-Tank-Top-105-0401-004-Front.webp",
+  OTHERS: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Sweat-Shirt-108-0101-007-Model-Front.webp",
 };
 
 export async function fetchWooCategoryImages(): Promise<Record<string, string>> {
@@ -730,6 +777,10 @@ export async function fetchWooCategoryImages(): Promise<Record<string, string>> 
         else if (s === "sweatshirts" || s === "winter") out.SWEATSHIRTS = normalizeImageUrl(src);
         else if (s === "deen-select" || s === "deen_select") out.DEEN_SELECT = normalizeImageUrl(src);
         else if (s === "men" || s === "all-products") out.DEEN_COLLECTION = normalizeImageUrl(src);
+        else if (s === "sale" || s === "offers" || s === "discount") out.SALE = normalizeImageUrl(src);
+        else if (s === "trending" || s === "trending-now") out.TRENDING = normalizeImageUrl(src);
+        else if (s === "new-arrivals" || s === "new-arrival" || s === "new") out.NEW_ARRIVALS = normalizeImageUrl(src);
+        else if (s === "tank-top" || s === "boxer" || s === "value-packs") out.VALUE_PACKS = normalizeImageUrl(src);
       }
     }
   } catch (e) {
@@ -790,15 +841,27 @@ const DEFAULT_SLIDES: DeenHeroSlide[] = [
     actionLabel: "Explore Season Sale →",
   },
   {
-    id: "slide_curated_drops",
-    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/Springfield-Polo-Shirt-103-0100-119-600x750.webp",
-    mobile: "https://deencommerce.com/wp-content/uploads/2026/09/Springfield-Polo-Shirt-103-0100-119-600x750.webp",
-    badge: "DEEN SELECT · CURATED DROPS",
-    title: "Curated International Labels.",
-    headline: "SPRINGFIELD, LEFTIES & PULL & BEAR",
-    subtitle: "European casual cuts, breathable pique polos, and utility twill pants.",
-    actionUrl: "/shop?segment=select",
-    actionLabel: "Discover DEEN Select →",
+    id: "slide_web_motion",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/06/Mobile-Banner-Web.mp4",
+    videoUrl: "https://deencommerce.com/wp-content/uploads/2026/06/web-motion-banner.mp4",
+    badge: "DEEN MOTION · 2026",
+    title: "Modern Lifestyle & Motion.",
+    headline: "CONTEMPORARY RESORT & CASUAL LIVING",
+    subtitle: "Lightweight tailoring engineered for modern lifestyle and effortless mobility.",
+    actionUrl: "/shop",
+    actionLabel: "Explore New Arrivals →",
+  },
+  {
+    id: "slide_official_cover_banner",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
+    badge: "OFFICIAL STORE BANNER",
+    title: "Tailored Comfort & Modern Classics.",
+    headline: "THE ORIGINAL SELVEDGE DENIM",
+    subtitle: "Enduring silhouettes, reinforced bar-tacking, and supreme cotton craftsmanship.",
+    actionUrl: "/shop",
+    actionLabel: "Discover All Pieces →",
   },
 ];
 

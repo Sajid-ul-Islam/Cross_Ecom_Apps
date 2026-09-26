@@ -264,9 +264,8 @@ export async function fetchProductImages(id: string): Promise<{
 
 export function getBundledProducts(): Product[] {
   const data = catalogSnapshot as unknown as { products?: Product[] } | Product[];
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data?.products)) return data.products;
-  return [];
+  const list = Array.isArray(data) ? data : Array.isArray(data?.products) ? data.products : [];
+  return list.map(sanitizeProduct);
 }
 
 function applyLocalFilters(
@@ -366,20 +365,74 @@ function mapStoreCategory(catNames: string[]): string {
  */
 export function decodeHtmlEntities(str: string): string {
   if (!str) return "";
-  return str
-    // Apostrophes & Single Quotes
-    .replace(/&#8217;|&#8216;|&rsquo;|&lsquo;|&#039;|&apos;/g, "'")
-    // Double Quotes
-    .replace(/&#8220;|&#8221;|&ldquo;|&rdquo;|&quot;/g, '"')
-    // Ampersands
-    .replace(/&#038;|&amp;/g, "&")
-    // Em dash / En dash
-    .replace(/&#8211;|&ndash;/g, "–")
-    .replace(/&#8212;|&mdash;/g, "—")
-    // Non-breaking spaces and angle brackets
-    .replace(/&nbsp;/g, " ")
+  let s = str
+    .replace(/&amp;#/g, "&#")
+    .replace(/&#8211;?/g, "–")
+    .replace(/&#8212;?/g, "—")
+    .replace(/&#8216;?/g, "'")
+    .replace(/&#8217;?/g, "'")
+    .replace(/&#8220;?/g, '"')
+    .replace(/&#8221;?/g, '"')
+    .replace(/&#8230;?/g, "…")
+    .replace(/&#038;?/g, "&")
+    .replace(/&#039;?/g, "'")
+    .replace(/&#39;?/g, "'")
+    .replace(/&#(\d+);?/g, (_, dec) => {
+      try {
+        const code = Number(dec);
+        return code ? String.fromCharCode(code) : _;
+      } catch {
+        return _;
+      }
+    })
+    .replace(/&#x([0-9a-f]+);?/gi, (_, hex) => {
+      try {
+        const code = parseInt(hex, 16);
+        return code ? String.fromCharCode(code) : _;
+      } catch {
+        return _;
+      }
+    })
+    .replace(/&ndash;/g, "–")
+    .replace(/&mdash;/g, "—")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">");
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&hellip;/g, "…")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // If numeric or named entities remain (e.g. double-encoded), do one more pass
+  if (/&#\d+|&[a-z]+;/i.test(s)) {
+    s = s
+      .replace(/&#8211;?/g, "–")
+      .replace(/&#8212;?/g, "—")
+      .replace(/&#8216;?/g, "'")
+      .replace(/&#8217;?/g, "'")
+      .replace(/&#8220;?/g, '"')
+      .replace(/&#8221;?/g, '"')
+      .replace(/&#038;?/g, "&")
+      .replace(/&#39;?/g, "'")
+      .replace(/&ndash;/g, "–")
+      .replace(/&mdash;/g, "—")
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&amp;/g, "&");
+  }
+  return s;
+}
+
+export function sanitizeProduct<T extends Partial<Product>>(p: T): T {
+  if (!p) return p;
+  return {
+    ...p,
+    ...(p.name ? { name: decodeHtmlEntities(p.name) } : {}),
+    ...(p.blurb ? { blurb: decodeHtmlEntities(p.blurb) } : {}),
+    ...(p.description ? { description: decodeHtmlEntities(p.description) } : {}),
+  };
 }
 
 export function mapStoreProductToWeb(p: any): Product {
@@ -448,8 +501,8 @@ export function mapStoreProductToWeb(p: any): Product {
     stockStatus: p.is_in_stock ? "instock" : "outofstock",
     rating: Number(p.average_rating) || 4.9,
     ratingCount: Number(p.review_count) || 12,
-    blurb: (p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220) || "Authentic DEEN design crafted in Bangladesh.",
-    description: p.description || p.short_description || "",
+    blurb: decodeHtmlEntities((p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220)) || "Authentic DEEN design crafted in Bangladesh.",
+    description: decodeHtmlEntities(p.description || p.short_description || ""),
     slug: p.slug || "",
     isNew: catNames.some((c: string) => /new/i.test(c)),
     wooSubCategories: wooSubCategories.length > 0 ? wooSubCategories : undefined,
@@ -529,7 +582,7 @@ export async function fetchProducts(params?: {
       if (Array.isArray(data) && data.length > 0) {
         return data
           .filter((p) => (p.stockStatus || "instock") !== "outofstock")
-          .map((p) => ({ ...p, name: decodeHtmlEntities(p.name) }));
+          .map(sanitizeProduct);
       }
     }
   } catch {
@@ -546,7 +599,7 @@ export async function fetchProducts(params?: {
         params?.search,
         params?.sort,
         params?.segment
-      ).map((p) => ({ ...p, name: decodeHtmlEntities(p.name) }));
+      ).map(sanitizeProduct);
       if (params?.per_page && params.per_page > 0) {
         return filtered.slice(0, params.per_page);
       }
@@ -561,7 +614,7 @@ export async function fetchProducts(params?: {
     params?.search,
     params?.sort,
     params?.segment
-  ).map((p) => ({ ...p, name: decodeHtmlEntities(p.name) }));
+  ).map(sanitizeProduct);
   if (params?.per_page && params.per_page > 0) {
     return fallback.slice(0, params.per_page);
   }
@@ -579,9 +632,7 @@ export async function fetchProduct(id: string): Promise<Product | null> {
     });
     if (res.ok) {
       const product = await res.json();
-      if (product && product.id) {
-        return { ...product, name: decodeHtmlEntities(product.name) };
-      }
+      if (product && product.id) return sanitizeProduct(product);
     }
   } catch {
     // Network or timeout failure — fallback
@@ -602,7 +653,7 @@ export async function fetchProduct(id: string): Promise<Product | null> {
       clearTimeout(timeoutId);
       if (res.ok) {
         const raw = await res.json();
-        if (raw && raw.id) return mapStoreProductToWeb(raw);
+        if (raw && raw.id) return sanitizeProduct(mapStoreProductToWeb(raw));
       }
     } catch {}
   }
@@ -610,7 +661,7 @@ export async function fetchProduct(id: string): Promise<Product | null> {
   // Fallback to snapshot search by ID or slug
   const all = getBundledProducts();
   const found = all.find((p) => String(p.id) === String(id) || p.slug === id);
-  return found || null;
+  return found ? sanitizeProduct(found) : null;
 }
 
 /**
@@ -850,12 +901,24 @@ const DEFAULT_BANNER_SLIDES: HeroSlide[] = [
     actionLabel: "Shop Summer Shirts →",
   },
   {
-    id: "slide_tailoring",
+    id: "slide_web_motion_video",
+    videoUrl: "https://deencommerce.com/wp-content/uploads/2026/06/web-motion-banner.mp4",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/06/Mobile-Banner-Web.mp4",
+    badge: "DEEN MOTION · 2026",
+    title: "Modern Lifestyle & Motion.",
+    headline: "CONTEMPORARY RESORT & CASUAL LIVING",
+    subtitle: "Lightweight tailoring engineered for modern lifestyle and effortless mobility.",
+    actionUrl: "/shop",
+    actionLabel: "Explore New Arrivals →",
+  },
+  {
+    id: "slide_official_cover_image",
     desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
     mobile: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
-    badge: "BESPOKE EVERYDAY LIVING",
+    badge: "OFFICIAL STORE BANNER",
     title: "Tailored Comfort & Modern Classics.",
-    headline: "CARGO TROUSERS & HERITAGE PANJABIS",
+    headline: "THE ORIGINAL SELVEDGE DENIM",
     subtitle: "Enduring silhouettes, reinforced bar-tacking, and supreme cotton craftsmanship.",
     actionUrl: "/shop",
     actionLabel: "Discover All Pieces →",
@@ -881,6 +944,18 @@ export async function fetchHeroBanner(): Promise<HeroBannerState> {
     if (res.ok) {
       const data = await res.json();
       if (data?.desktop) {
+        if (Array.isArray(data.slides)) {
+          // Strictly reject any product photos or non-cover media
+          data.slides = data.slides.filter((s: HeroSlide) => {
+            if (s.videoUrl && s.videoUrl.endsWith(".mp4")) return true;
+            if (!s.desktop) return false;
+            const url = s.desktop.toLowerCase();
+            if (url.includes("600x750") || url.includes("product") || url.includes("front") || url.includes("back") || url.includes("model")) {
+              return false;
+            }
+            return true;
+          });
+        }
         if (!data.slides || data.slides.length === 0) {
           data.slides = DEFAULT_BANNER_SLIDES;
         }

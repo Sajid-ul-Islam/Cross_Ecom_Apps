@@ -6,6 +6,8 @@ export interface CategoryInfo {
   coverImage: string;
   metaBadge: string;
   highlights: string[];
+  orientation?: "landscape" | "portrait" | "square";
+  aspectRatio?: number;
 }
 
 export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
@@ -17,6 +19,8 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     coverImage: "https://deencommerce.com/wp-content/uploads/2026/08/DEEN-Tropical-Cuban-Collar-Shirt-102-0302-005-Front.webp",
     metaBadge: "HOT & TRENDING",
     highlights: ["Highest Demand", "Seasonal Drops", "Limited Stock"],
+    orientation: "portrait",
+    aspectRatio: 0.8,
   },
   NEW_ARRIVALS: {
     slug: "NEW_ARRIVALS",
@@ -26,6 +30,8 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     coverImage: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Burgundy-Floral-Casual-Half-Shirt-102-0301-001-Model-1.webp",
     metaBadge: "JUST ADDED",
     highlights: ["Fresh Silhouettes", "Latest Cuts", "First Edition Batches"],
+    orientation: "portrait",
+    aspectRatio: 0.8,
   },
   JEANS: {
     slug: "JEANS",
@@ -33,9 +39,11 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     subtitle: "Denim styles made for every day.",
     description:
       "Engineered with signature cross-hatch warp and weft textures, reinforced chain-stitched hems, custom oxidized copper rivets, and tailored ergonomic tapers.",
-    coverImage: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-High-High-End-Vintage-Wash-Jeans-–-Slim-Fit-101-0100-151-Back.webp",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2026/05/DEEN-90s-Blue-Jeans-Slim-Fit-101-0100-138-front.webp",
     metaBadge: "13.5 OZ CROSS HATCH",
     highlights: ["12.5oz–14.5oz Cross Hatch Denim", "YKK Solid Brass Zippers", "Vintage & Raw Washed Fits"],
+    orientation: "portrait",
+    aspectRatio: 0.8,
   },
   SHIRT: {
     slug: "SHIRT",
@@ -43,9 +51,11 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     subtitle: "Classic styles, made to stand out.",
     description:
       "Versatile shirting from boardroom presentations to weekend getaways. Cut with single-needle tailoring, reinforced side gussets, and pre-washed soft textures.",
-    coverImage: "https://deencommerce.com/wp-content/uploads/2026/08/DEEN-Classic-Stripe-Executive-Formal-Shirt-102-0501-003-Front.webp",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Checkmate-Executive-Formal-Shirt-102-0501-005-Front.webp",
     metaBadge: "100% COTTON",
     highlights: ["High-Count 80s & 100s 2-Ply Cotton", "Wrinkle-Resistant Weaves", "Mother-of-Pearl Buttons"],
+    orientation: "portrait",
+    aspectRatio: 0.8,
   },
   "T-SHIRT": {
     slug: "T-SHIRT",
@@ -53,9 +63,11 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     subtitle: "Everyday comfort, effortless style.",
     description:
       "Zero-shrink, drop-shoulder and classic tailored crew necks crafted from dense combed cotton with bound double-ribbed necklines.",
-    coverImage: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-City-Code-Print-Drop-Shoulder-T-Shirt-105-0301-006-Front.webp",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Warm-Spice-T-shirt-105-0101-377-Front.webp",
     metaBadge: "240 GSM ZERO-TORQUE",
     highlights: ["220–240 GSM Heavy Cotton", "Pre-Shrunk Bio-Washed", "Durable Ribbed Collar"],
+    orientation: "portrait",
+    aspectRatio: 0.8,
   },
   TROUSERS: {
     slug: "TROUSERS",
@@ -66,6 +78,8 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     coverImage: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Teal-Trousers-110-0101-015-Model-Front.webp",
     metaBadge: "COTTON RIPSTOP",
     highlights: ["High-Density Military Weave", "Articulated Knees", "Reinforced Stress Points"],
+    orientation: "portrait",
+    aspectRatio: 0.8,
   },
   PANJABI: {
     slug: "PANJABI",
@@ -76,6 +90,8 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     coverImage: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Gold-Semi-Formal-Panjabi-106-0101-123-close-2.webp",
     metaBadge: "HERITAGE DOBBY",
     highlights: ["100% Combed Cotton Dobby", "Artisanal Thread Embroidery", "Slim & Traditional Cuts"],
+    orientation: "portrait",
+    aspectRatio: 0.8,
   },
   VALUE_PACKS: {
     slug: "VALUE_PACKS",
@@ -86,15 +102,19 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     coverImage: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Orlando-Relaxed-Graphic-Tank-Top-105-0401-004-Front.webp",
     metaBadge: "MULTI-BUY SAVINGS",
     highlights: ["Bundled Discount", "Curated Packs", "Everyday Basics"],
+    orientation: "portrait",
+    aspectRatio: 0.8,
   },
   SALE: {
     slug: "SALE",
-    title: "Sale & Offers",
+    title: "Sale & Special Offers",
     subtitle: "Big savings, limited time.",
     description: "Special clearance pricing up to 50% off on authentic artisanal denim and seasonal apparel.",
-    coverImage: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
     metaBadge: "UP TO 50% OFF",
     highlights: ["Flat Discounts", "End of Season Clearance", "While Stocks Last"],
+    orientation: "landscape",
+    aspectRatio: 2.29,
   },
   ACCESSORIES: {
     slug: "ACCESSORIES",
@@ -102,9 +122,11 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     subtitle: "Complete your everyday look.",
     description:
       "Artisanal leather accessories handcrafted by master leatherworkers in Old Dhaka. Solid brass hardware that patinas gracefully with age.",
-    coverImage: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Chocolate-Premium-Leather-Belt-109-0402-051.webp",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Wallet-109-0102-071-Side-view.webp",
     metaBadge: "VEG-TAN LEATHER",
     highlights: ["Full-Grain Cowhide", "Solid Brass Buckles", "Handcrafted in Old Dhaka"],
+    orientation: "portrait",
+    aspectRatio: 0.8,
   },
   DEEN_SELECT: {
     slug: "DEEN_SELECT",
@@ -112,9 +134,11 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     subtitle: "Curated international drops.",
     description:
       "Exclusive curated drops sourced directly from renowned international fashion houses (Springfield, Lefties, Pull & Bear) with modern cuts.",
-    coverImage: "https://deencommerce.com/wp-content/uploads/2026/09/Springfield-Polo-Shirt-103-0100-119-600x750.webp",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2026/09/Springfield-Polo-Shirt-103-0100-119.webp",
     metaBadge: "GLOBAL CURATED DROP",
     highlights: ["Authentic International Brands", "Springfield, Lefties & Pull & Bear", "Limited Drop Quantities"],
+    orientation: "portrait",
+    aspectRatio: 0.8,
   },
   POLO: {
     slug: "POLO",
@@ -125,6 +149,8 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     coverImage: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Polo-103-0200-053-Front.webp",
     metaBadge: "HONEYCOMB PIQUE",
     highlights: ["Pique Cotton", "Tipped Collar", "Mother of Pearl Buttons"],
+    orientation: "portrait",
+    aspectRatio: 0.8,
   },
   DEEN_COLLECTION: {
     slug: "DEEN_COLLECTION",
@@ -132,9 +158,11 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     subtitle: "Heritage Denim, Dobby Panjabis & 240 GSM Tees — Made in Bangladesh",
     description:
       "The full DEEN in-house collection — from cross-hatch denim engineered for authentic fades, to heritage dobby panjabis and heavyweight 240 GSM tees. Crafted with local expertise and premium materials.",
-    coverImage: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-High-High-End-Vintage-Wash-Jeans-–-Slim-Fit-101-0100-151-Back.webp",
+    coverImage: "https://deencommerce.com/wp-content/uploads/2026/05/DEEN-90s-Blue-Jeans-Slim-Fit-101-0100-138-front.webp",
     metaBadge: "IN-HOUSE CRAFT",
     highlights: ["Cross-Hatch Denim", "Heritage Dobby Jacquard", "240 GSM Heavy Cotton"],
+    orientation: "portrait",
+    aspectRatio: 0.8,
   },
   OTHERS: {
     slug: "OTHERS",
@@ -144,6 +172,8 @@ export const CATEGORY_DETAILS: Record<string, CategoryInfo> = {
     coverImage: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Sweat-Shirt-108-0101-007-Model-Front.webp",
     metaBadge: "SPECIAL EDITIONS",
     highlights: ["Sweatshirts", "Seasonal Knits", "Limited Editions"],
+    orientation: "portrait",
+    aspectRatio: 0.8,
   },
 };
 

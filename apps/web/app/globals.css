@@ -88,11 +88,12 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* ── Layout ─────────────────────────────────────── */
+/* ── Layout (Edge-to-Edge Responsive Layout) ────── */
 .container {
-  max-width: 1200px;
+  width: 100%;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 clamp(16px, 2.5vw, 48px);
 }
 
 .site-header-wrapper {
@@ -215,15 +216,31 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 /* ── Product Grid ────────────────────────────────── */
 /* Flexbox so a partial (odd-count) last row centers via justify-content,
    while full rows still tile edge-to-edge (percent bases sum to 100% + gaps). */
+/* ── Product Grid (Edge-to-Edge Responsive Layout) ── */
 .product-grid {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 20px;
+  width: 100%;
 }
 .product-grid > * {
   flex: 0 0 calc(25% - 15px);
   max-width: calc(25% - 15px);
+}
+
+@media (min-width: 1440px) {
+  .product-grid > * {
+    flex: 0 0 calc(20% - 16px);
+    max-width: calc(20% - 16px);
+  }
+}
+
+@media (min-width: 1800px) {
+  .product-grid > * {
+    flex: 0 0 calc(16.6666% - 16.67px);
+    max-width: calc(16.6666% - 16.67px);
+  }
 }
 
 @media (max-width: 1079px) {
@@ -2763,7 +2780,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   }
 }
 
-/* ── DEEN Unified Chat Assistant & Concierge ──────────────── */
+/* ── DEEN Unified Facebook-Style Chat Assistant & Concierge ──────────────── */
 #chatbot-widget-btn {
   position: fixed;
   bottom: 24px;
@@ -2773,7 +2790,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   border-radius: 28px;
   background: linear-gradient(135deg, var(--indigo) 0%, #c2410c 100%);
   color: #ffffff;
-  border: none;
+  border: 2px solid var(--denim-stitch);
   box-shadow: 0 6px 24px rgba(224, 83, 5, 0.45);
   cursor: pointer;
   z-index: 999;
@@ -2784,7 +2801,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 #chatbot-widget-btn:hover {
   transform: translateY(-2px) scale(1.04);
-  box-shadow: 0 10px 30px rgba(79, 70, 229, 0.55);
+  box-shadow: 0 10px 30px rgba(224, 83, 5, 0.55);
 }
 #chatbot-widget-btn:active {
   transform: scale(0.96);
@@ -2799,10 +2816,243 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   }
 }
 
-@keyframes chatPanelPop {
+/* Facebook-Style Floating Chatbox Window (Desktop ≥ 769px) */
+.fb-chatbox-window {
+  position: fixed;
+  bottom: 20px;
+  right: 24px;
+  width: 380px;
+  height: 550px;
+  max-height: calc(100vh - 40px);
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1000;
+  animation: fbChatPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: box-shadow 0.2s ease;
+}
+
+/* Mobile Non-Fullscreen Card & Backdrop (< 769px) */
+.fb-chatbox-backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .fb-chatbox-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(2px);
+    z-index: 9998;
+    animation: fbFadeIn 0.2s ease;
+  }
+  .fb-chatbox-window {
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: 440px;
+    margin: 0 auto;
+    height: 82vh;
+    max-height: 560px;
+    border-radius: 20px;
+    z-index: 9999;
+    animation: fbSheetUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+/* Facebook-Style Minimized Docked Tab / Pill */
+.fb-chatbox-minimized {
+  position: fixed;
+  bottom: 20px;
+  right: 24px;
+  height: 48px;
+  min-width: 250px;
+  max-width: 290px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px 0 10px;
+  z-index: 1000;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  animation: fbChatPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+.fb-chatbox-minimized:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+}
+@media (max-width: 768px) {
+  .fb-chatbox-minimized {
+    bottom: 84px;
+    right: 16px;
+    max-width: 260px;
+    z-index: 9999;
+  }
+}
+
+/* Header Action Buttons */
+.fb-header-icon-btn {
+  background: transparent;
+  border: none;
+  font-size: 15px;
+  color: var(--sub);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.fb-header-icon-btn:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+/* Typing Indicator (FB Messenger 3 Bouncing Dots) */
+.fb-typing-bubble {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 8px 12px;
+  width: fit-content;
+}
+.fb-typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sub);
+  animation: fbTypingBounce 1.2s infinite ease-in-out;
+}
+.fb-typing-dot:nth-child(1) { animation-delay: 0s; }
+.fb-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.fb-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes fbTypingBounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  30% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
+
+/* Quick Prompts Carousel */
+.fb-chatbox-prompts {
+  padding: 8px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+.fb-chatbox-prompts::-webkit-scrollbar {
+  display: none;
+}
+.fb-prompt-pill {
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+.fb-prompt-pill:hover {
+  border-color: var(--indigo);
+  color: var(--indigo);
+  background: var(--surface);
+}
+
+/* Composer Controls */
+.fb-composer-icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 17px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+  flex-shrink: 0;
+}
+.fb-composer-icon-btn:hover {
+  transform: scale(1.06);
+  background: var(--surface);
+}
+
+.fb-composer-input {
+  flex: 1;
+  padding: 9px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.fb-composer-input:focus {
+  border-color: var(--indigo);
+  background: var(--surface);
+}
+
+.fb-composer-send-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  background: var(--border);
+  color: var(--sub);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  transition: background 0.15s ease, transform 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+.fb-composer-send-btn.active {
+  background: var(--indigo);
+  color: #ffffff;
+  cursor: pointer;
+}
+.fb-composer-send-btn.active:hover {
+  transform: scale(1.08);
+}
+.fb-composer-send-btn.active:active {
+  transform: scale(0.95);
+}
+
+@keyframes fbChatPop {
   from {
     opacity: 0;
-    transform: translateY(18px) scale(0.96);
+    transform: translateY(16px) scale(0.96);
   }
   to {
     opacity: 1;
@@ -2810,7 +3060,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   }
 }
 
-@keyframes chatSheetUp {
+@keyframes fbSheetUp {
   from {
     opacity: 0;
     transform: translateY(100%);
@@ -2820,6 +3070,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     transform: translateY(0);
   }
 }
+
+@keyframes fbFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 
 
 
