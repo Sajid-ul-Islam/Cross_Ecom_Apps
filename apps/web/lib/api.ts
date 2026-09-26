@@ -185,6 +185,8 @@ export interface OrderPayload {
   guestToken?: string;
   idempotencyKey?: string;
   trxId?: string;
+  shipping?: any;
+  billing?: any;
 }
 
 export interface OrderResult {

@@ -182,7 +182,7 @@ export const OrderStatusStepper: React.FC<OrderStatusStepperProps> = ({ order, o
       </View>
 
       {/* Pathao Logistics Live Tracking Box */}
-      {hasPathao && (
+      {hasPathao ? (
         <View style={[styles.pathaoBox, { borderTopColor: colors.borderLight }]}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
             <Truck size={14} color={colors.indigo} />
@@ -216,7 +216,21 @@ export const OrderStatusStepper: React.FC<OrderStatusStepperProps> = ({ order, o
             )}
           </View>
         </View>
-      )}
+      ) : !isCancelled && !isFailed ? (
+        <View style={[styles.pathaoBox, { borderTopColor: colors.borderLight }]}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
+            <Truck size={14} color={colors.sub} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.pathaoTitle, { color: colors.ink }]}>
+                COURIER: <Text style={{ color: colors.sub, fontWeight: "700" }}>Preparing Dispatch</Text>
+              </Text>
+              <Text style={[styles.pathaoSub, { color: colors.sub }]} numberOfLines={1}>
+                Tracking details will appear once booked by logistics desk
+              </Text>
+            </View>
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 };

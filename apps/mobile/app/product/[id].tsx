@@ -265,7 +265,7 @@ export default function ProductDetailScreen() {
       {addedNotice && (
         <View style={styles.toastBanner}>
           <Text style={styles.toastText}>
-            ✓ Added {product.name} ({selectedSize}) to cart!
+            ✓ Added {decodeHtmlEntities(product.name)} ({selectedSize}) to cart!
           </Text>
         </View>
       )}
@@ -412,7 +412,7 @@ export default function ProductDetailScreen() {
           </View>
 
           {/* Blurb */}
-          <Text style={styles.blurb}>{product.blurb}</Text>
+          <Text style={styles.blurb}>{decodeHtmlEntities(product.blurb)}</Text>
 
           {/* Fabric Badge */}
           <View style={styles.fabricHighlight}>
@@ -593,7 +593,7 @@ export default function ProductDetailScreen() {
 
           {/* WhatsApp Stylist Concierge */}
           <WhatsAppConciergeButton
-            productName={product.name}
+            productName={decodeHtmlEntities(product.name)}
             category={product.category}
           />
 
@@ -785,7 +785,7 @@ export default function ProductDetailScreen() {
             onPress={() => {
               Alert.alert(
                 "Restock Alert Registered",
-                `We will notify you via in-app notification when ${product.name} (Size: ${selectedSize}) is restocked at deencommerce.com!`
+                `We will notify you via in-app notification when ${decodeHtmlEntities(product.name)} (Size: ${selectedSize}) is restocked at deencommerce.com!`
               );
             }}
             accessibilityRole="button"
@@ -801,7 +801,7 @@ export default function ProductDetailScreen() {
               activeOpacity={0.85}
               onPress={handleAddToCart}
               accessibilityRole="button"
-              accessibilityLabel={`Add ${product.name} to shopping bag`}
+              accessibilityLabel={`Add ${decodeHtmlEntities(product.name)} to shopping bag`}
             >
               <ShoppingBag size={18} color={colors.indigoDark} />
               <Text style={styles.addToCartBtnText}>ADD TO BAG</Text>
@@ -837,7 +837,7 @@ export default function ProductDetailScreen() {
         onClose={() => setLightboxVisible(false)}
         images={zoomImages}
         initialIndex={activeImageIdx}
-        productName={product.name}
+        productName={decodeHtmlEntities(product.name)}
       />
       {/* Store Stock Modal */}
       {product && (
@@ -863,7 +863,7 @@ export default function ProductDetailScreen() {
         visible={careGuideVisible}
         onClose={() => setCareGuideVisible(false)}
         category={product.category}
-        productName={product.name}
+        productName={decodeHtmlEntities(product.name)}
       />
     </ScreenShell>
   );

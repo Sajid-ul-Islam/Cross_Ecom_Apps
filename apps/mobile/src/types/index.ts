@@ -164,6 +164,8 @@ export interface Order {
   /** Gateway-issued anonymous guest session token (when placed as a guest). */
   guestToken?: string;
   idempotencyKey?: string;
+  shipping?: any;
+  billing?: any;
   createdAt: string;
 }
 

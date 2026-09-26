@@ -429,17 +429,17 @@ function CheckoutContent() {
 
     try {
       const orderResult = await placeOrder({
-        name: isGift ? (giftName.trim() || name.trim()) : name.trim(),
-        phone: isGift ? (giftPhone.replace(/[^0-9]/g, "").slice(-11) || cleanPhoneDigits) : cleanPhoneDigits,
+        name: name.trim(),
+        phone: cleanPhoneDigits,
         email: email.trim() || undefined,
         address:
           selectedArea === "store_pickup"
             ? "DEEN Dhaka Hub (Store Pickup)"
-            : isGift ? giftAddress.trim() : address.trim(),
-        city: selectedArea === "store_pickup" ? "Dhaka" : isGift ? (giftCity.trim() || giftDistrict.name) : (city.trim() || district.name),
-        district: isGift ? giftDistrict.code : district.code,
-        state: isGift ? giftDistrict.code : district.code,
-        postcode: getDistrictPostcode(isGift ? giftDistrict.code : district.code),
+            : address.trim(),
+        city: selectedArea === "store_pickup" ? "Dhaka" : (city.trim() || district.name),
+        district: district.code,
+        state: district.code,
+        postcode: getDistrictPostcode(district.code),
         area: selectedArea,
         payment,
         deliverySlot,
@@ -450,8 +450,18 @@ function CheckoutContent() {
         isGiftOrder: isGift,
         giftRecipientName: isGift ? giftName.trim() : undefined,
         giftRecipientPhone: isGift ? giftPhone.replace(/[^0-9]/g, "").slice(-11) : undefined,
+        shipping: isGift ? {
+          first_name: giftName.trim(),
+          phone: giftPhone.replace(/[^0-9]/g, "").slice(-11),
+          address_1: giftAddress.trim(),
+          city: giftCity.trim() || giftDistrict.name,
+          state: giftDistrict.code,
+          postcode: getDistrictPostcode(giftDistrict.code),
+          country: "BD",
+        } : undefined,
         items: items.map((i) => ({
-          productId: i.product.id,
+          productId: String(i.product.id),
+          variationId: i.variationId || i.product.variations?.find((v: any) => String(v.size || "").toLowerCase() === String(i.size || "").toLowerCase())?.id,
           size: i.size,
           qty: i.qty,
         })),
@@ -474,8 +484,8 @@ function CheckoutContent() {
           payment: orderResult.paymentTitle || orderResult.payment,
           paymentUrl: orderResult.paymentUrl,
           createdAt: new Date().toISOString(),
-          phone: isGift ? (giftPhone.replace(/[^0-9]/g, "").slice(-11) || cleanPhoneDigits) : cleanPhoneDigits,
-          name: isGift ? (giftName.trim() || name.trim()) : name.trim(),
+          phone: cleanPhoneDigits,
+          name: name.trim(),
           lines: items.map((it) => ({
             name: it.product.name,
             size: it.size,

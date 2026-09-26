@@ -793,6 +793,11 @@ export async function createOrder(
     coupon: (orderData as any).coupon || undefined,
     items: cleanItems,
     idempotencyKey,
+    isGiftOrder: (orderData as any).isGiftOrder,
+    giftRecipientName: (orderData as any).giftRecipientName,
+    giftRecipientPhone: (orderData as any).giftRecipientPhone,
+    shipping: (orderData as any).shipping,
+    billing: (orderData as any).billing,
     ...(orderData.guestToken ? { guestToken: orderData.guestToken } : {}),
   };
 
@@ -979,7 +984,42 @@ export async function fetchPricing(items: { productId: string; qty: number }[], 
     }, 6000, true);
     return res;
   } catch {
-    return { subtotal: 0, cashback: 0, nextTierAt: null, bogoDiscount: 0, bogoFreeIndexes: [], deliveryFees: { insideDhaka: 50, outsideDhaka: 90, express: 120, storePickup: 0 }, total: 0, currency: "BDT" };
+    const deliveryFees = { insideDhaka: 50, outsideDhaka: 90, express: 120, storePickup: 0 };
+    const deliveryFee =
+      area === "outside" || area === "outside_standard"
+        ? deliveryFees.outsideDhaka
+        : area === "dhaka_express"
+        ? deliveryFees.express
+        : area === "store_pickup" || area === "pickup"
+        ? deliveryFees.storePickup
+        : deliveryFees.insideDhaka;
+
+    const catalog = getBundledProducts();
+    let subtotal = 0;
+    for (const it of items) {
+      const prod = catalog.find((p: any) => String(p.id) === String(it.productId));
+      const price = prod ? (prod.salePrice ?? prod.price ?? 0) : 0;
+      subtotal += price * (it.qty || 1);
+    }
+    const cashback = getCashbackAmount(subtotal);
+    const nextTierAt =
+      subtotal < CASHBACK_TIERS.tier1.minSpend
+        ? CASHBACK_TIERS.tier1.minSpend
+        : subtotal < CASHBACK_TIERS.tier2.minSpend
+        ? CASHBACK_TIERS.tier2.minSpend
+        : null;
+    const total = Math.max(0, subtotal - cashback + deliveryFee);
+
+    return {
+      subtotal,
+      cashback,
+      nextTierAt,
+      bogoDiscount: 0,
+      bogoFreeIndexes: [],
+      deliveryFees,
+      total,
+      currency: "BDT",
+    };
   }
 }
 

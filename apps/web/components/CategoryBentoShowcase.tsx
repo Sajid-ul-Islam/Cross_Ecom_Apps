@@ -51,6 +51,9 @@ export default function CategoryBentoShowcase({ categories }: CategoryBentoShowc
   };
 
   const handleOpenChat = () => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("deen_open_chat"));
+    }
     const chatBtn = document.getElementById("chatbot-widget-btn");
     if (chatBtn) chatBtn.click();
   };

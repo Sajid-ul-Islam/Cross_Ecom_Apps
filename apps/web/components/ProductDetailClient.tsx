@@ -273,7 +273,7 @@ export default function ProductDetailClient({
           {/* Blurb */}
           {product.blurb && (
             <p style={{ fontSize: 14, color: "var(--sub)", lineHeight: 1.7, marginBottom: 16 }}>
-              {product.blurb}
+              {decodeHtmlEntities(product.blurb)}
             </p>
           )}
 

@@ -2408,6 +2408,26 @@ export async function registerDeenRoutes(app: FastifyInstance) {
         ? String(postcode).trim()
         : getDistrictPostcode(resolvedState);
 
+      const isGift = Boolean(body.isGiftOrder || body.giftRecipientName || body.giftAddress);
+      const rawBilling = body.billing && typeof body.billing === "object" ? body.billing : {};
+      const rawShipping = body.shipping && typeof body.shipping === "object" ? body.shipping : {};
+
+      const billingFirstName = String(rawBilling.first_name || body.billingName || name || "").trim();
+      const billingLastName = String(rawBilling.last_name || lastName || billingFirstName).trim();
+      const billingPhone = String(rawBilling.phone || body.billingPhone || digits || "").trim();
+      const billingAddress = String(rawBilling.address_1 || body.billingAddress || address || "").trim();
+      const billingCity = String(rawBilling.city || body.billingCity || resolvedCity || "Dhaka").trim();
+      const billingState = normalizeState(rawBilling.state || body.billingState || body.billingDistrict || resolvedState);
+      const billingPostcode = String(rawBilling.postcode || body.billingPostcode || getDistrictPostcode(billingState)).trim();
+
+      const shippingFirstName = String(rawShipping.first_name || (isGift ? body.giftRecipientName : undefined) || name || "").trim();
+      const shippingLastName = String(rawShipping.last_name || (isGift ? (body.giftRecipientLastName || body.giftRecipientName) : undefined) || lastName || shippingFirstName).trim();
+      const shippingPhone = String(rawShipping.phone || (isGift ? body.giftRecipientPhone : undefined) || digits || "").trim();
+      const shippingAddress = String(rawShipping.address_1 || (isGift ? body.giftAddress : undefined) || address || "").trim();
+      const shippingCity = String(rawShipping.city || (isGift ? body.giftCity : undefined) || resolvedCity || "Dhaka").trim();
+      const shippingState = normalizeState(rawShipping.state || (isGift ? (body.giftDistrict || body.giftState) : undefined) || resolvedState);
+      const shippingPostcode = String(rawShipping.postcode || (isGift ? body.giftPostcode : undefined) || getDistrictPostcode(shippingState)).trim();
+
       let wooId: number | undefined;
       let wooNumber: string | undefined;
       let wooPaymentUrl: string | undefined;
@@ -2456,6 +2476,17 @@ export async function registerDeenRoutes(app: FastifyInstance) {
             const authSession = resolveAuthSession(authHeader);
             const resolvedCustomerId = authSession?.userId ? Number(authSession.userId) : (body.customerId ? Number(body.customerId) : undefined);
 
+            if (isGift) {
+              orderMeta.push(
+                { key: "is_gift", value: "yes" },
+                { key: "gift_recipient_name", value: shippingFirstName },
+                { key: "gift_recipient_phone", value: shippingPhone }
+              );
+              if (body.giftMessage) {
+                orderMeta.push({ key: "gift_message", value: String(body.giftMessage).trim() });
+              }
+            }
+
             const r = await pushWooOrder({
               customer_id: resolvedCustomerId && resolvedCustomerId > 0 ? resolvedCustomerId : undefined,
               created_via: "checkout",
@@ -2464,25 +2495,25 @@ export async function registerDeenRoutes(app: FastifyInstance) {
               payment_method_title: paymentTitle,
               set_paid: payment !== "cod",
               billing: {
-                first_name: name,
-                last_name: lastName || name,
+                first_name: billingFirstName,
+                last_name: billingLastName,
                 email: email || `${digits}@deencommerce.com`,
-                phone: digits,
-                address_1: address,
-                city: resolvedCity,
-                state: resolvedState,
-                postcode: resolvedPostcode,
+                phone: billingPhone,
+                address_1: billingAddress,
+                city: billingCity,
+                state: billingState,
+                postcode: billingPostcode,
                 country: "BD",
               },
               shipping: {
-                first_name: name,
-                last_name: lastName || name,
+                first_name: shippingFirstName,
+                last_name: shippingLastName,
                 email: email || `${digits}@deencommerce.com`,
-                phone: digits,
-                address_1: address,
-                city: resolvedCity,
-                state: resolvedState,
-                postcode: resolvedPostcode,
+                phone: shippingPhone,
+                address_1: shippingAddress,
+                city: shippingCity,
+                state: shippingState,
+                postcode: shippingPostcode,
                 country: "BD",
               },
               line_items: items.map((it: any) => ({
@@ -2579,6 +2610,29 @@ export async function registerDeenRoutes(app: FastifyInstance) {
         wooPaymentUrl,
         paymentUrl: wooPaymentUrl,
         trxId: trxId ? String(trxId) : undefined,
+        isGiftOrder: isGift,
+        giftRecipientName: isGift ? shippingFirstName : undefined,
+        giftRecipientPhone: isGift ? shippingPhone : undefined,
+        shipping: {
+          first_name: shippingFirstName,
+          last_name: shippingLastName,
+          phone: shippingPhone,
+          address_1: shippingAddress,
+          city: shippingCity,
+          state: shippingState,
+          postcode: shippingPostcode,
+          country: "BD",
+        },
+        billing: {
+          first_name: billingFirstName,
+          last_name: billingLastName,
+          phone: billingPhone,
+          address_1: billingAddress,
+          city: billingCity,
+          state: billingState,
+          postcode: billingPostcode,
+          country: "BD",
+        },
       };
       if (guestToken) {
         const session = resolveGuestSession(guestToken);
