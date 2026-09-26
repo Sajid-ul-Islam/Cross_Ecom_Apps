@@ -264,9 +264,8 @@ export async function fetchProductImages(id: string): Promise<{
 
 export function getBundledProducts(): Product[] {
   const data = catalogSnapshot as unknown as { products?: Product[] } | Product[];
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data?.products)) return data.products;
-  return [];
+  const list = Array.isArray(data) ? data : Array.isArray(data?.products) ? data.products : [];
+  return list.map(sanitizeProduct);
 }
 
 function applyLocalFilters(
@@ -360,6 +359,78 @@ function mapStoreCategory(catNames: string[]): string {
   return "OTHER";
 }
 
+export function decodeHtmlEntities(str: string): string {
+  if (!str) return "";
+  let s = str
+    .replace(/&amp;#/g, "&#")
+    .replace(/&#8211;?/g, "–")
+    .replace(/&#8212;?/g, "—")
+    .replace(/&#8216;?/g, "'")
+    .replace(/&#8217;?/g, "'")
+    .replace(/&#8220;?/g, '"')
+    .replace(/&#8221;?/g, '"')
+    .replace(/&#8230;?/g, "…")
+    .replace(/&#038;?/g, "&")
+    .replace(/&#039;?/g, "'")
+    .replace(/&#39;?/g, "'")
+    .replace(/&#(\d+);?/g, (_, dec) => {
+      try {
+        const code = Number(dec);
+        return code ? String.fromCharCode(code) : _;
+      } catch {
+        return _;
+      }
+    })
+    .replace(/&#x([0-9a-f]+);?/gi, (_, hex) => {
+      try {
+        const code = parseInt(hex, 16);
+        return code ? String.fromCharCode(code) : _;
+      } catch {
+        return _;
+      }
+    })
+    .replace(/&ndash;/g, "–")
+    .replace(/&mdash;/g, "—")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&hellip;/g, "…")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // If numeric or named entities remain (e.g. double-encoded), do one more pass
+  if (/&#\d+|&[a-z]+;/i.test(s)) {
+    s = s
+      .replace(/&#8211;?/g, "–")
+      .replace(/&#8212;?/g, "—")
+      .replace(/&#8216;?/g, "'")
+      .replace(/&#8217;?/g, "'")
+      .replace(/&#8220;?/g, '"')
+      .replace(/&#8221;?/g, '"')
+      .replace(/&#038;?/g, "&")
+      .replace(/&#39;?/g, "'")
+      .replace(/&ndash;/g, "–")
+      .replace(/&mdash;/g, "—")
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&amp;/g, "&");
+  }
+  return s;
+}
+
+export function sanitizeProduct<T extends Partial<Product>>(p: T): T {
+  if (!p) return p;
+  return {
+    ...p,
+    ...(p.name ? { name: decodeHtmlEntities(p.name) } : {}),
+    ...(p.blurb ? { blurb: decodeHtmlEntities(p.blurb) } : {}),
+    ...(p.description ? { description: decodeHtmlEntities(p.description) } : {}),
+  };
+}
+
 export function mapStoreProductToWeb(p: any): Product {
   const regularPrice = p.prices?.regular_price ? Number(p.prices.regular_price) : undefined;
   const salePrice = p.prices?.sale_price ? Number(p.prices.sale_price) : undefined;
@@ -386,7 +457,7 @@ export function mapStoreProductToWeb(p: any): Product {
   const primaryImg = imgs[0] || "https://deencommerce.com/wp-content/uploads/2026/05/jeans-1.jpg";
   const secondaryImg = imgs[1] || primaryImg;
 
-  const cleanName = (p.name || "").replace(/&#038;/g, "&").replace(/&amp;/g, "&").replace(/&quot;/g, '"');
+  const cleanName = decodeHtmlEntities(p.name || "");
   const brand = /springfield/i.test(cleanName)
     ? "Springfield"
     : /lefties/i.test(cleanName)
@@ -426,8 +497,8 @@ export function mapStoreProductToWeb(p: any): Product {
     stockStatus: p.is_in_stock ? "instock" : "outofstock",
     rating: Number(p.average_rating) || 4.9,
     ratingCount: Number(p.review_count) || 12,
-    blurb: (p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220) || "Authentic DEEN design crafted in Bangladesh.",
-    description: p.description || p.short_description || "",
+    blurb: decodeHtmlEntities((p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220)) || "Authentic DEEN design crafted in Bangladesh.",
+    description: decodeHtmlEntities(p.description || p.short_description || ""),
     slug: p.slug || "",
     isNew: catNames.some((c: string) => /new/i.test(c)),
     wooSubCategories: wooSubCategories.length > 0 ? wooSubCategories : undefined,
@@ -505,7 +576,9 @@ export async function fetchProducts(params?: {
     if (res.ok) {
       const data: Product[] = await res.json();
       if (Array.isArray(data) && data.length > 0) {
-        return data.filter((p) => (p.stockStatus || "instock") !== "outofstock");
+        return data
+          .filter((p) => (p.stockStatus || "instock") !== "outofstock")
+          .map(sanitizeProduct);
       }
     }
   } catch {
@@ -524,9 +597,9 @@ export async function fetchProducts(params?: {
         params?.segment
       );
       if (params?.per_page && params.per_page > 0) {
-        return filtered.slice(0, params.per_page);
+        return filtered.slice(0, params.per_page).map(sanitizeProduct);
       }
-      return filtered;
+      return filtered.map(sanitizeProduct);
     }
   } catch {}
 
@@ -539,9 +612,9 @@ export async function fetchProducts(params?: {
     params?.segment
   );
   if (params?.per_page && params.per_page > 0) {
-    return fallback.slice(0, params.per_page);
+    return fallback.slice(0, params.per_page).map(sanitizeProduct);
   }
-  return fallback;
+  return fallback.map(sanitizeProduct);
 }
 
 /**
@@ -555,7 +628,7 @@ export async function fetchProduct(id: string): Promise<Product | null> {
     });
     if (res.ok) {
       const product = await res.json();
-      if (product && product.id) return product;
+      if (product && product.id) return sanitizeProduct(product);
     }
   } catch {
     // Network or timeout failure — fallback
@@ -576,7 +649,7 @@ export async function fetchProduct(id: string): Promise<Product | null> {
       clearTimeout(timeoutId);
       if (res.ok) {
         const raw = await res.json();
-        if (raw && raw.id) return mapStoreProductToWeb(raw);
+        if (raw && raw.id) return sanitizeProduct(mapStoreProductToWeb(raw));
       }
     } catch {}
   }
@@ -584,7 +657,7 @@ export async function fetchProduct(id: string): Promise<Product | null> {
   // Fallback to snapshot search by ID or slug
   const all = getBundledProducts();
   const found = all.find((p) => String(p.id) === String(id) || p.slug === id);
-  return found || null;
+  return found ? sanitizeProduct(found) : null;
 }
 
 /**

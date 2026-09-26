@@ -114,14 +114,76 @@ function detectBrand(name: string, isSelect: boolean): string {
   return isSelect ? "DEEN Select" : "DEEN";
 }
 
+export function decodeHtmlEntities(str: string): string {
+  if (!str) return "";
+  let s = str
+    .replace(/&amp;#/g, "&#")
+    .replace(/&#8211;?/g, "–")
+    .replace(/&#8212;?/g, "—")
+    .replace(/&#8216;?/g, "'")
+    .replace(/&#8217;?/g, "'")
+    .replace(/&#8220;?/g, '"')
+    .replace(/&#8221;?/g, '"')
+    .replace(/&#8230;?/g, "…")
+    .replace(/&#038;?/g, "&")
+    .replace(/&#039;?/g, "'")
+    .replace(/&#39;?/g, "'")
+    .replace(/&#(\d+);?/g, (_, dec) => {
+      try {
+        const code = Number(dec);
+        return code ? String.fromCharCode(code) : _;
+      } catch {
+        return _;
+      }
+    })
+    .replace(/&#x([0-9a-f]+);?/gi, (_, hex) => {
+      try {
+        const code = parseInt(hex, 16);
+        return code ? String.fromCharCode(code) : _;
+      } catch {
+        return _;
+      }
+    })
+    .replace(/&ndash;/g, "–")
+    .replace(/&mdash;/g, "—")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&hellip;/g, "…")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (/&#\d+|&[a-z]+;/i.test(s)) {
+    s = s
+      .replace(/&#8211;?/g, "–")
+      .replace(/&#8212;?/g, "—")
+      .replace(/&#8216;?/g, "'")
+      .replace(/&#8217;?/g, "'")
+      .replace(/&#8220;?/g, '"')
+      .replace(/&#8221;?/g, '"')
+      .replace(/&#038;?/g, "&")
+      .replace(/&#39;?/g, "'")
+      .replace(/&ndash;/g, "–")
+      .replace(/&mdash;/g, "—")
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&amp;/g, "&");
+  }
+  return s;
+}
+
 function mapWooToDeen(p: WooProduct): DeenProduct | null {
   // Skip draft/pending products — customers should never see them
   if (p.status && p.status !== "publish" && p.status !== "private") return null;
+  const cleanName = decodeHtmlEntities(p.name || "");
   const catNames = p.categories.map((c) => c.name);
   const category = mapCategory(catNames);
   const isSelect = isDeenSelectCategory(p.categories || []);
   const segment: "collection" | "select" = isSelect ? "select" : "collection";
-  const brand = detectBrand(p.name, isSelect);
+  const brand = detectBrand(cleanName, isSelect);
   const sizes = getSizes(p);
   const pct = parseDiscountPct(catNames);
   const current = Number(p.price) || 0;
@@ -158,7 +220,7 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
   return {
     id: String(p.id),
     sku: p.sku,
-    name: p.name,
+    name: cleanName,
     category,
     segment,
     brand,
@@ -177,7 +239,7 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
     stockStatus: (p.stock_status as DeenProduct["stockStatus"]) ?? "instock",
     rating: Number(p.average_rating) || 0,
     ratingCount: Number(p.rating_count) || 0,
-    blurb: (p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220) ?? "",
+    blurb: decodeHtmlEntities((p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220)) ?? "",
     wooSubCategories: wooSubCategories.length > 0 ? wooSubCategories : undefined,
   };
 }
@@ -212,7 +274,7 @@ function mapStoreProductToDeen(p: any): DeenProduct {
   const primaryImg = imgs[0] || "https://images.unsplash.com/photo-1542272604-780c96856592?w=800";
   const secondaryImg = imgs[1] || primaryImg;
 
-  const cleanName = (p.name || "").replace(/&#038;/g, "&").replace(/&amp;/g, "&").replace(/&quot;/g, '"');
+  const cleanName = decodeHtmlEntities(p.name || "");
   const brand = detectBrand(cleanName, isSelect);
 
   const TOP_LEVEL_NAMES = new Set([
@@ -246,7 +308,7 @@ function mapStoreProductToDeen(p: any): DeenProduct {
     stockStatus: p.is_in_stock ? "instock" : "outofstock",
     rating: Number(p.average_rating) || 4.9,
     ratingCount: Number(p.review_count) || 12,
-    blurb: (p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220) || "Authentic DEEN design crafted in Bangladesh.",
+    blurb: decodeHtmlEntities((p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220)) || "Authentic DEEN design crafted in Bangladesh.",
     isNew: catNames.some((c: string) => /new/i.test(c)),
     wooSubCategories: wooSubCategories.length > 0 ? wooSubCategories : undefined,
   };

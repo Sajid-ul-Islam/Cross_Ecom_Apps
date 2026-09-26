@@ -1,5 +1,5 @@
 import { ProductCard } from "./types";
-import { getBundledProducts, resolveProductImage } from "./api";
+import { getBundledProducts, resolveProductImage, decodeHtmlEntities } from "./api";
 
 const WOO_URL = (process.env.WOO_URL || "https://deencommerce.com/wp-json/wc/v3").replace(/\/$/, "");
 const WOO_KEY = process.env.WOO_KEY || "";
@@ -271,7 +271,7 @@ function mapWooProductToCard(raw: any): ProductCard {
 
   return {
     id: raw.id,
-    name: (raw.name || "").replace(/&#038;/g, "&").replace(/&quot;/g, '"'),
+    name: decodeHtmlEntities(raw.name || ""),
     price: currentPrice,
     regularPrice,
     salePrice,

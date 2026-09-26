@@ -379,6 +379,76 @@ function mapStoreCategory(catNames: string[]): Exclude<DeenCategory, "ALL"> {
   return "OTHER";
 }
 
+export function decodeHtmlEntities(str: string): string {
+  if (!str) return "";
+  let s = str
+    .replace(/&amp;#/g, "&#")
+    .replace(/&#8211;?/g, "–")
+    .replace(/&#8212;?/g, "—")
+    .replace(/&#8216;?/g, "'")
+    .replace(/&#8217;?/g, "'")
+    .replace(/&#8220;?/g, '"')
+    .replace(/&#8221;?/g, '"')
+    .replace(/&#8230;?/g, "…")
+    .replace(/&#038;?/g, "&")
+    .replace(/&#039;?/g, "'")
+    .replace(/&#39;?/g, "'")
+    .replace(/&#(\d+);?/g, (_, dec) => {
+      try {
+        const code = Number(dec);
+        return code ? String.fromCharCode(code) : _;
+      } catch {
+        return _;
+      }
+    })
+    .replace(/&#x([0-9a-f]+);?/gi, (_, hex) => {
+      try {
+        const code = parseInt(hex, 16);
+        return code ? String.fromCharCode(code) : _;
+      } catch {
+        return _;
+      }
+    })
+    .replace(/&ndash;/g, "–")
+    .replace(/&mdash;/g, "—")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&hellip;/g, "…")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (/&#\d+|&[a-z]+;/i.test(s)) {
+    s = s
+      .replace(/&#8211;?/g, "–")
+      .replace(/&#8212;?/g, "—")
+      .replace(/&#8216;?/g, "'")
+      .replace(/&#8217;?/g, "'")
+      .replace(/&#8220;?/g, '"')
+      .replace(/&#8221;?/g, '"')
+      .replace(/&#038;?/g, "&")
+      .replace(/&#39;?/g, "'")
+      .replace(/&ndash;/g, "–")
+      .replace(/&mdash;/g, "—")
+      .replace(/&quot;/g, '"')
+      .replace(/&apos;/g, "'")
+      .replace(/&amp;/g, "&");
+  }
+  return s;
+}
+
+export function sanitizeProduct<T extends Partial<Product>>(p: T): T {
+  if (!p) return p;
+  return {
+    ...p,
+    ...(p.name ? { name: decodeHtmlEntities(p.name) } : {}),
+    ...(p.blurb ? { blurb: decodeHtmlEntities(p.blurb) } : {}),
+  };
+}
+
 export function mapStoreProductToMobile(p: any): Product {
   const regularPrice = p.prices?.regular_price ? Number(p.prices.regular_price) : undefined;
   const salePrice = p.prices?.sale_price ? Number(p.prices.sale_price) : undefined;
@@ -413,13 +483,14 @@ export function mapStoreProductToMobile(p: any): Product {
       /deen-select/i.test(c.slug || "")
   );
   const segment: "collection" | "select" = isSelect ? "select" : "collection";
-  const brand = /springfield/i.test(p.name)
+  const cleanName = decodeHtmlEntities(p.name || "");
+  const brand = /springfield/i.test(cleanName)
     ? "Springfield"
-    : /lefties/i.test(p.name)
+    : /lefties/i.test(cleanName)
     ? "Lefties"
-    : /pull\s*&?\s*bear/i.test(p.name)
+    : /pull\s*&?\s*bear/i.test(cleanName)
     ? "Pull & Bear"
-    : /zara/i.test(p.name)
+    : /zara/i.test(cleanName)
     ? "Zara"
     : isSelect
     ? "DEEN Select"
@@ -428,7 +499,7 @@ export function mapStoreProductToMobile(p: any): Product {
   return {
     id: String(p.id),
     sku: p.sku || `DS-${p.id}`,
-    name: p.name,
+    name: cleanName,
     category,
     segment,
     brand,
@@ -447,7 +518,7 @@ export function mapStoreProductToMobile(p: any): Product {
     stockStatus: p.is_in_stock ? "instock" : "outofstock",
     rating: Number(p.average_rating) || 4.9,
     ratingCount: Number(p.review_count) || 12,
-    blurb: (p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220) || "Authentic DEEN design crafted in Bangladesh.",
+    blurb: decodeHtmlEntities((p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220)) || "Authentic DEEN design crafted in Bangladesh.",
     isNew: catNames.some((c: string) => /new/i.test(c)),
   };
 }
@@ -514,7 +585,8 @@ export async function fetchProducts(
     );
     if (Array.isArray(list) && list.length > 0) {
       const filtered = applyFilters(list, category, query, segment);
-      return sort ? sortProductsLocal(filtered, sort) : filtered;
+      const res = sort ? sortProductsLocal(filtered, sort) : filtered;
+      return res.map((p) => sanitizeProduct(p) as Product);
     }
   } catch {
     // Network failure — fallback to direct WP or bundled
@@ -525,13 +597,15 @@ export async function fetchProducts(
     const directWp = await fetchDirectStoreProducts(100);
     if (Array.isArray(directWp) && directWp.length > 0) {
       const filtered = applyFilters(directWp, category, query, segment);
-      return sort ? sortProductsLocal(filtered, sort) : filtered;
+      const res = sort ? sortProductsLocal(filtered, sort) : filtered;
+      return res.map((p) => sanitizeProduct(p) as Product);
     }
   } catch {}
 
   // Tier 3: Fallback to bundled snapshot
   const bundled = applyFilters(getBundledProducts(), category, query, segment);
-  return sort ? sortProductsLocal(bundled, sort) : bundled;
+  const res = sort ? sortProductsLocal(bundled, sort) : bundled;
+  return res.map((p) => sanitizeProduct(p) as Product);
 }
 
 export async function fetchStats(): Promise<Stats | null> {
@@ -595,7 +669,7 @@ export async function fetchCategoryCovers(): Promise<Record<string, string>> {
 export async function fetchProductById(id: string): Promise<Product | undefined> {
   try {
     const p = await request<Product>(`/v1/deen/products/${id}`, undefined, 6000);
-    if (p && p.id) return p;
+    if (p && p.id) return sanitizeProduct(p) as Product;
   } catch {}
 
   // Direct WP Store API fallback if numeric id
@@ -610,7 +684,7 @@ export async function fetchProductById(id: string): Promise<Product | undefined>
       clearTimeout(timeoutId);
       if (res.ok) {
         const raw = await res.json();
-        if (raw && raw.id) return mapStoreProductToMobile(raw);
+        if (raw && raw.id) return sanitizeProduct(mapStoreProductToMobile(raw)) as Product;
       }
     } catch {}
   }
@@ -621,17 +695,18 @@ export async function fetchProductById(id: string): Promise<Product | undefined>
     if (cached) {
       const list = JSON.parse(cached) as Product[];
       const match = list.find((p) => String(p.id) === String(id));
-      if (match) return match;
+      if (match) return sanitizeProduct(match) as Product;
     }
   } catch {}
 
   // 2. Search bundled products
   const bundled = getBundledProducts();
   const matchBundled = bundled.find((p) => String(p.id) === String(id));
-  if (matchBundled) return matchBundled;
+  if (matchBundled) return sanitizeProduct(matchBundled) as Product;
 
   // 3. Search seed catalog
-  return PRODUCTS_CATALOG.find((p) => String(p.id) === String(id));
+  const matchCatalog = PRODUCTS_CATALOG.find((p) => String(p.id) === String(id));
+  return matchCatalog ? (sanitizeProduct(matchCatalog) as Product) : undefined;
 }
 
 /* ------------------------------ orders ----------------------------- */
