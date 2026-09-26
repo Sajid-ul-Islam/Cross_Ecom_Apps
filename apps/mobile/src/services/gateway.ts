@@ -29,6 +29,7 @@ import {
   FREE_TEE_THRESHOLD,
   CASHBACK_TIERS,
   getCashbackAmount,
+  decodeHtmlEntities,
 } from "./api";
 import { getDistrictPostcode } from "../data/districts";
 export {
@@ -43,6 +44,7 @@ export {
   FREE_TEE_THRESHOLD,
   CASHBACK_TIERS,
   getCashbackAmount,
+  decodeHtmlEntities,
 };
 import { getBundledProducts } from "./catalog";
 import { fetchOrCache, checkCacheVersion, loadCacheVersion, TTL } from "./cache";

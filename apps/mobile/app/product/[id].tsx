@@ -34,7 +34,7 @@ import {
 import { ThemeColors } from "../../src/theme/colors";
 import { sharedStyles } from "../../src/theme/sharedStyles";
 import { useTheme } from "../../src/context/ThemeContext";
-import { fetchProductById, fetchProducts, fetchDeliveryFees, fetchProductComments, bdt, type DeliveryFees } from "../../src/services/gateway";
+import { fetchProductById, fetchProducts, fetchDeliveryFees, fetchProductComments, bdt, decodeHtmlEntities, type DeliveryFees } from "../../src/services/gateway";
 import { Product, Variation } from "../../src/types";
 import { useCart } from "../../src/context/CartContext";
 import { useProfile } from "../../src/context/ProfileContext";
@@ -391,7 +391,7 @@ export default function ProductDetailScreen() {
             )}
           </View>
 
-          <Text style={styles.productName}>{product.name}</Text>
+          <Text style={styles.productName}>{decodeHtmlEntities(product.name)}</Text>
           {product.sku ? (
             <Text style={styles.skuRef}>SKU: {product.sku}</Text>
           ) : null}

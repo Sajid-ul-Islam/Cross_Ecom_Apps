@@ -36,6 +36,7 @@ export interface AiAssistantResponse {
     | "general";
   suggestedProducts?: AiAssistantProductSummary[];
   suggestedActions?: Array<{ label: string; action: string; payload?: any }>;
+  quickReplies?: string[];
 }
 
 export interface AiCommerceOptions {
@@ -343,6 +344,9 @@ export async function processAiCommerceQuery(
         reply,
         intent: "order_track",
         suggestedActions: actions,
+        quickReplies: isBn
+          ? ["ডেলিভারি চার্জ কত?", "৭ দিনের সাইজ এক্সচেঞ্জ", "হোয়াটসঅ্যাপ সাপোর্ট"]
+          : ["Delivery charges?", "7-day size exchange", "WhatsApp Support"],
       };
     }
 
@@ -357,6 +361,9 @@ export async function processAiCommerceQuery(
           { label: isBn ? "📦 আমার অর্ডার দেখুন" : "📦 My Orders", action: "navigate_orders" },
           { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" }, { label: isBn ? "💬 মেসেঞ্জার" : "💬 Messenger", action: "open_messenger" },
         ],
+        quickReplies: isBn
+          ? ["আমার ফোন নম্বর দিয়ে খুঁজুন", "হোয়াটসঅ্যাপ সাপোর্ট", "নতুন কালেকশন দেখুন"]
+          : ["Search by my phone", "WhatsApp Support", "Browse New Drops"],
       };
     }
 
@@ -371,6 +378,9 @@ export async function processAiCommerceQuery(
           { label: isBn ? "📦 অর্ডার পেজে যান" : "📦 Go to Orders", action: "navigate_orders" },
           { label: isBn ? "📞 কাস্টমার কেয়ার" : "📞 Call Concierge", action: "contact_support" },
         ],
+        quickReplies: isBn
+          ? ["#১০৪১ অর্ডার খুঁজুন", "হোয়াটসঅ্যাপ সাপোর্ট", "নতুন কালেকশন"]
+          : ["Search #1041", "WhatsApp Support", "New Collection"],
       };
     }
 
@@ -384,6 +394,9 @@ export async function processAiCommerceQuery(
         { label: isBn ? "📦 আমার অর্ডার দেখুন" : "📦 View My Orders", action: "navigate_orders" },
         { label: isBn ? "📞 কাস্টমার কেয়ার" : "📞 Call Concierge", action: "contact_support" },
       ],
+      quickReplies: isBn
+        ? ["#১০৪১ অর্ডার ট্র্যাক", "হোয়াটসঅ্যাপ সাপোর্ট", "জিন্স কালেকশন"]
+        : ["Track Order #1041", "WhatsApp Support", "Jeans Collection"],
     };
   }
 
@@ -411,6 +424,9 @@ export async function processAiCommerceQuery(
         { label: isBn ? "🔥 বর্তমান অফার দেখুন" : "🔥 View Active Offers", action: "search_delivery" },
         { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" },
       ],
+      quickReplies: isBn
+        ? ["জিন্স কালেকশন 👖", "সাইজ ৩২ আছে?", "ডেলিভারি চার্জ কত?", "ক্যাশ অন ডেলিভারি"]
+        : ["Jeans Collection 👖", "Size 32 available?", "Delivery charge?", "Cash on Delivery"],
     };
   }
 
@@ -445,6 +461,9 @@ export async function processAiCommerceQuery(
         { label: isBn ? "💳 ব্যাংক অফার দেখুন" : "💳 Bank Card Offers", action: "open_bank_offers" },
         { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" },
       ],
+      quickReplies: isBn
+        ? ["জিন্স কালেকশন", "পাঞ্জাবি কালেকশন", "শার্ট কালেকশন", "ক্যাশ অন ডেলিভারি"]
+        : ["Jeans Collection", "Panjabi Collection", "Shirt Collection", "Cash on Delivery"],
     };
   }
 
@@ -460,6 +479,9 @@ export async function processAiCommerceQuery(
         { label: isBn ? "🔄 এক্সচেঞ্জ রিকোয়েস্ট" : "🔄 Initiate Exchange", action: "navigate_returns" },
         { label: isBn ? "🛍️ নতুন কালেকশন দেখুন" : "🛍️ Shop Catalog", action: "navigate_shop" },
       ],
+      quickReplies: isBn
+        ? ["সাইজ গাইড 📏", "ডেলিভারি চার্জ কত?", "হোয়াটসঅ্যাপ সাপোর্ট"]
+        : ["Size Guide 📏", "Delivery charges?", "WhatsApp Support"],
     };
   }
 
@@ -476,6 +498,9 @@ export async function processAiCommerceQuery(
         { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" },
         { label: isBn ? "💬 মেসেঞ্জার" : "💬 Messenger", action: "open_messenger" },
       ],
+      quickReplies: isBn
+        ? ["ডেলিভারি চার্জ কত?", "সাইজ এক্সচেঞ্জ সুবিধা", "হোয়াটসঅ্যাপ সাপোর্ট"]
+        : ["Delivery charges?", "Size exchange policy", "WhatsApp Support"],
     };
   }
 
@@ -504,6 +529,9 @@ export async function processAiCommerceQuery(
       suggestedActions: [
         { label: isBn ? "🛒 চেকআউটে যান" : "🛒 Go to Checkout", action: "navigate_checkout" },
       ],
+      quickReplies: isBn
+        ? ["ক্যাশ অন ডেলিভারি আছে?", "৭ দিনের সাইজ এক্সচেঞ্জ", "জিন্স কালেকশন"]
+        : ["Cash on Delivery?", "7-day size exchange", "Jeans Collection"],
     };
   }
 
@@ -519,6 +547,9 @@ export async function processAiCommerceQuery(
         { label: isBn ? "👖 সেলভেজ কালেকশন দেখুন" : "👖 Shop Selvedge Jeans", action: "search_jeans" },
         { label: isBn ? "🧼 ওয়াশ ও কেয়ার গাইড" : "🧼 Denim Care Guide", action: "open_care_guide" },
       ],
+      quickReplies: isBn
+        ? ["সাইজ গাইড 📏", "ডেলিভারি চার্জ কত?", "হোয়াটসঅ্যাপ সাপোর্ট"]
+        : ["Size Guide 📏", "Delivery charge?", "WhatsApp Support"],
     };
   }
 
@@ -534,6 +565,9 @@ export async function processAiCommerceQuery(
         { label: isBn ? "💳 ব্যাংক অফার দেখুন" : "💳 Bank Card Offers", action: "open_bank_offers" },
         { label: isBn ? "🛍️ কেনাকাটা করুন" : "🛍️ Shop Catalog", action: "navigate_shop" },
       ],
+      quickReplies: isBn
+        ? ["ডেলিভারি চার্জ কত?", "ক্যাশ অন ডেলিভারি", "বর্তমান অফার"]
+        : ["Delivery charges?", "Cash on Delivery", "Current Offers"],
     };
   }
 
@@ -548,6 +582,9 @@ export async function processAiCommerceQuery(
       suggestedActions: [
         { label: isBn ? "🧼 ডেনিম কেয়ার দেখুন" : "🧼 Full Care Guide", action: "open_care_guide" },
       ],
+      quickReplies: isBn
+        ? ["সেলভেজ জিন্স কালেকশন", "সাইজ গাইড", "হোয়াটসঅ্যাপ সাপোর্ট"]
+        : ["Selvedge Jeans Collection", "Size Guide", "WhatsApp Support"],
     };
   }
 
@@ -577,6 +614,9 @@ export async function processAiCommerceQuery(
         { label: isBn ? "📐 সাইজ চার্ট দেখুন" : "📐 View Size Chart", action: "open_size_guide" },
         { label: isBn ? "🛍️ কালেকশন দেখুন" : "🛍️ Shop Collection", action: "navigate_shop" },
       ],
+      quickReplies: isBn
+        ? ["সাইজ ৩২ জিন্স দেখান", "৭ দিনের সাইজ এক্সচেঞ্জ", "হোয়াটসঅ্যাপ সাপোর্ট"]
+        : ["Show size 32 jeans", "7-day doorstep exchange", "WhatsApp Support"],
     };
   }
 
@@ -712,6 +752,9 @@ export async function processAiCommerceQuery(
           { label: isBn ? "🛒 শপ ক্যাটালগ দেখুন" : "🛒 Browse Full Shop", action: "navigate_shop" },
           { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" }, { label: isBn ? "💬 মেসেঞ্জার" : "💬 Messenger", action: "open_messenger" },
         ],
+        quickReplies: isBn
+          ? ["সাইজ ৩২ আছে?", "সাইজ ৩৪ আছে?", "ডেলিভারি চার্জ কত?", "ক্যাশ অন ডেলিভারি"]
+          : ["Size 32 available?", "Size 34 available?", "Delivery charge?", "Cash on Delivery"],
       };
     }
   }
@@ -730,6 +773,9 @@ export async function processAiCommerceQuery(
         { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" },
         { label: isBn ? "💬 মেসেঞ্জার" : "💬 Messenger", action: "open_messenger" },
       ],
+      quickReplies: isBn
+        ? ["জিন্স কালেকশন", "সাইজ গাইড 📏", "ডেলিভারি চার্জ কত?", "হোয়াটসঅ্যাপ"]
+        : ["Jeans Collection", "Size Guide 📏", "Delivery charge?", "WhatsApp Support"],
     };
   }
 
@@ -752,6 +798,9 @@ export async function processAiCommerceQuery(
             { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" },
             { label: isBn ? "💬 মেসেঞ্জার" : "💬 Messenger", action: "open_messenger" },
           ],
+          quickReplies: isBn
+            ? ["জিন্স কালেকশন 👖", "বর্তমান অফার 🔥", "ডেলিভারি চার্জ 🚚", "হোয়াটসঅ্যাপ 💬"]
+            : ["Jeans Collection 👖", "Active Offers 🔥", "Delivery Charge 🚚", "WhatsApp 💬"],
         };
       }
     } catch (err) {
@@ -773,5 +822,8 @@ export async function processAiCommerceQuery(
       { label: isBn ? "🚚 ডেলিভারি পলিসি" : "🚚 Shipping Policies", action: "search_delivery" },
       { label: isBn ? "🔄 সাইজ এক্সচেঞ্জ" : "🔄 Size Exchange", action: "open_exchange" },
     ],
+    quickReplies: isBn
+      ? ["জিন্স কালেকশন 👖", "পাঞ্জাবি কালেকশন 🕌", "সাইজ গাইড 📏", "অর্ডার স্ট্যাটাস 📦"]
+      : ["Jeans Collection 👖", "Panjabi Collection 🕌", "Size Guide 📏", "Track My Order 📦"],
   };
 }

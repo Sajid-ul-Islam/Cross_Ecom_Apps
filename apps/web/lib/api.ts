@@ -360,6 +360,28 @@ function mapStoreCategory(catNames: string[]): string {
   return "OTHER";
 }
 
+/**
+ * Universal HTML entity decoder for product titles & text.
+ * Safely decodes WordPress/WooCommerce typographic entities (`&#8217;`, `&#8221;`, `&#038;`, etc.).
+ */
+export function decodeHtmlEntities(str: string): string {
+  if (!str) return "";
+  return str
+    // Apostrophes & Single Quotes
+    .replace(/&#8217;|&#8216;|&rsquo;|&lsquo;|&#039;|&apos;/g, "'")
+    // Double Quotes
+    .replace(/&#8220;|&#8221;|&ldquo;|&rdquo;|&quot;/g, '"')
+    // Ampersands
+    .replace(/&#038;|&amp;/g, "&")
+    // Em dash / En dash
+    .replace(/&#8211;|&ndash;/g, "–")
+    .replace(/&#8212;|&mdash;/g, "—")
+    // Non-breaking spaces and angle brackets
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
+
 export function mapStoreProductToWeb(p: any): Product {
   const regularPrice = p.prices?.regular_price ? Number(p.prices.regular_price) : undefined;
   const salePrice = p.prices?.sale_price ? Number(p.prices.sale_price) : undefined;
@@ -386,7 +408,7 @@ export function mapStoreProductToWeb(p: any): Product {
   const primaryImg = imgs[0] || "https://deencommerce.com/wp-content/uploads/2026/05/jeans-1.jpg";
   const secondaryImg = imgs[1] || primaryImg;
 
-  const cleanName = (p.name || "").replace(/&#038;/g, "&").replace(/&amp;/g, "&").replace(/&quot;/g, '"');
+  const cleanName = decodeHtmlEntities(p.name || "");
   const brand = /springfield/i.test(cleanName)
     ? "Springfield"
     : /lefties/i.test(cleanName)
@@ -505,7 +527,9 @@ export async function fetchProducts(params?: {
     if (res.ok) {
       const data: Product[] = await res.json();
       if (Array.isArray(data) && data.length > 0) {
-        return data.filter((p) => (p.stockStatus || "instock") !== "outofstock");
+        return data
+          .filter((p) => (p.stockStatus || "instock") !== "outofstock")
+          .map((p) => ({ ...p, name: decodeHtmlEntities(p.name) }));
       }
     }
   } catch {
@@ -522,7 +546,7 @@ export async function fetchProducts(params?: {
         params?.search,
         params?.sort,
         params?.segment
-      );
+      ).map((p) => ({ ...p, name: decodeHtmlEntities(p.name) }));
       if (params?.per_page && params.per_page > 0) {
         return filtered.slice(0, params.per_page);
       }
@@ -537,7 +561,7 @@ export async function fetchProducts(params?: {
     params?.search,
     params?.sort,
     params?.segment
-  );
+  ).map((p) => ({ ...p, name: decodeHtmlEntities(p.name) }));
   if (params?.per_page && params.per_page > 0) {
     return fallback.slice(0, params.per_page);
   }
@@ -555,7 +579,9 @@ export async function fetchProduct(id: string): Promise<Product | null> {
     });
     if (res.ok) {
       const product = await res.json();
-      if (product && product.id) return product;
+      if (product && product.id) {
+        return { ...product, name: decodeHtmlEntities(product.name) };
+      }
     }
   } catch {
     // Network or timeout failure — fallback

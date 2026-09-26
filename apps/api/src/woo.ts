@@ -114,6 +114,29 @@ function detectBrand(name: string, isSelect: boolean): string {
   return isSelect ? "DEEN Select" : "DEEN";
 }
 
+/**
+ * Universal HTML entity decoder for product titles & text.
+ * Safely decodes WordPress/WooCommerce typographic entities (`&#8217;`, `&#8221;`, `&#038;`, etc.)
+ * across Node.js runtime, SSR, and client.
+ */
+export function decodeHtmlEntities(str: string): string {
+  if (!str) return "";
+  return str
+    // Apostrophes & Single Quotes
+    .replace(/&#8217;|&#8216;|&rsquo;|&lsquo;|&#039;|&apos;/g, "'")
+    // Double Quotes
+    .replace(/&#8220;|&#8221;|&ldquo;|&rdquo;|&quot;/g, '"')
+    // Ampersands
+    .replace(/&#038;|&amp;/g, "&")
+    // Em dash / En dash
+    .replace(/&#8211;|&ndash;/g, "–")
+    .replace(/&#8212;|&mdash;/g, "—")
+    // Non-breaking spaces and angle brackets
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
+
 function mapWooToDeen(p: WooProduct): DeenProduct | null {
   // Skip draft/pending products — customers should never see them
   if (p.status && p.status !== "publish" && p.status !== "private") return null;
@@ -121,7 +144,8 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
   const category = mapCategory(catNames);
   const isSelect = isDeenSelectCategory(p.categories || []);
   const segment: "collection" | "select" = isSelect ? "select" : "collection";
-  const brand = detectBrand(p.name, isSelect);
+  const decodedName = decodeHtmlEntities(p.name);
+  const brand = detectBrand(decodedName, isSelect);
   const sizes = getSizes(p);
   const pct = parseDiscountPct(catNames);
   const current = Number(p.price) || 0;
@@ -158,7 +182,7 @@ function mapWooToDeen(p: WooProduct): DeenProduct | null {
   return {
     id: String(p.id),
     sku: p.sku,
-    name: p.name,
+    name: decodedName,
     category,
     segment,
     brand,
@@ -212,7 +236,7 @@ function mapStoreProductToDeen(p: any): DeenProduct {
   const primaryImg = imgs[0] || "https://images.unsplash.com/photo-1542272604-780c96856592?w=800";
   const secondaryImg = imgs[1] || primaryImg;
 
-  const cleanName = (p.name || "").replace(/&#038;/g, "&").replace(/&amp;/g, "&").replace(/&quot;/g, '"');
+  const cleanName = decodeHtmlEntities(p.name || "");
   const brand = detectBrand(cleanName, isSelect);
 
   const TOP_LEVEL_NAMES = new Set([
@@ -633,7 +657,7 @@ export async function fetchWooStats(): Promise<DeenStats> {
     const topReport = (await wooFetch("reports/products", { period: "month", per_page: "10" })) as any[];
     topSellers = (topReport || []).map((t) => ({
       productId: Number(t.product_id),
-      name: String(t.product_name),
+      name: decodeHtmlEntities(String(t.product_name)),
       itemsSold: Number(t.items_sold) || 0,
       revenue: Number(t.total) || 0,
     }));

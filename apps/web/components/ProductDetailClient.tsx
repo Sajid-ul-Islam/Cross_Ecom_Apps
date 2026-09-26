@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { bdt, resolveProductImage, type Product, type DeliveryFees } from "@/lib/api";
+import { bdt, resolveProductImage, type Product, type DeliveryFees, decodeHtmlEntities } from "@/lib/api";
 import { useCart } from "@/lib/cart";
 import { useWishlist } from "@/lib/wishlist";
 import SizeGuideModal from "@/components/SizeGuideModal";
@@ -86,7 +86,7 @@ export default function ProductDetailClient({
         <span>/</span>
         <Link href={`/shop?category=${product.category}`}>{product.category}</Link>
         <span>/</span>
-        <span style={{ color: "var(--ink)", fontWeight: 600 }}>{product.name}</span>
+        <span style={{ color: "var(--ink)", fontWeight: 600 }}>{decodeHtmlEntities(product.name)}</span>
       </nav>
 
       <div
@@ -230,7 +230,7 @@ export default function ProductDetailClient({
           </div>
 
           <h1 style={{ fontSize: 28, fontWeight: 900, color: "var(--ink)", lineHeight: 1.25, marginBottom: 6 }}>
-            {product.name}
+            {decodeHtmlEntities(product.name)}
           </h1>
 
           {product.sku && (
@@ -747,7 +747,7 @@ export default function ProductDetailClient({
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {product.name}
+              {decodeHtmlEntities(product.name)}
             </div>
             <div style={{ fontSize: 13, fontWeight: 900, color: "var(--indigo)" }}>
               {bdt(price)}

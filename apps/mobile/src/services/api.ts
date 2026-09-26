@@ -21,6 +21,28 @@ export function getCashbackAmount(subtotal: number): number {
   return 0;
 }
 
+/**
+ * Universal HTML entity decoder for product titles & text.
+ * Safely decodes WordPress/WooCommerce typographic entities (`&#8217;`, `&#8221;`, `&#038;`, etc.).
+ */
+export function decodeHtmlEntities(str: string): string {
+  if (!str) return "";
+  return str
+    // Apostrophes & Single Quotes
+    .replace(/&#8217;|&#8216;|&rsquo;|&lsquo;|&#039;|&apos;/g, "'")
+    // Double Quotes
+    .replace(/&#8220;|&#8221;|&ldquo;|&rdquo;|&quot;/g, '"')
+    // Ampersands
+    .replace(/&#038;|&amp;/g, "&")
+    // Em dash / En dash
+    .replace(/&#8211;|&ndash;/g, "–")
+    .replace(/&#8212;|&mdash;/g, "—")
+    // Non-breaking spaces and angle brackets
+    .replace(/&nbsp;/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
+
 export const FREE_TEE_THRESHOLD = 2500; // Deprecated backward compat
 
 export const DELIVERY_OPTIONS: Record<DeliveryOptionKey, DeliveryOption> = {

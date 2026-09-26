@@ -14,7 +14,7 @@ import { useRouter } from "expo-router";
 import { useTheme } from "../context/ThemeContext";
 import { useCart } from "../context/CartContext";
 import { useProfile } from "../context/ProfileContext";
-import { bdt, getInStockSizes, fetchProductById } from "../services/gateway";
+import { bdt, getInStockSizes, fetchProductById, decodeHtmlEntities } from "../services/gateway";
 import { Product, Variation } from "../types";
 import { X, Check, Sparkles, Plus, Minus } from "./Icons";
 
@@ -223,7 +223,7 @@ export const QuickAddBottomSheet: React.FC<QuickAddBottomSheetProps> = ({
                     style={[styles.productName, { color: colors.ink }]}
                     numberOfLines={2}
                   >
-                    {product.name}
+                    {decodeHtmlEntities(product.name)}
                   </Text>
 
                   <View style={styles.priceRow}>

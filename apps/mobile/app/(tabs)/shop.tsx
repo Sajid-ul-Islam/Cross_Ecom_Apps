@@ -18,7 +18,7 @@ import { ProductCard } from "../../src/components/ProductCard";
 import { useTheme } from "../../src/context/ThemeContext";
 import { sharedStyles } from "../../src/theme/sharedStyles";
 import { usePullToRefresh } from "../../src/hooks/usePullToRefresh";
-import { fetchProducts, CATEGORIES, useCatalogRefreshOnFocus } from "../../src/services/gateway";
+import { fetchProducts, CATEGORIES, useCatalogRefreshOnFocus, fetchSubCategories, type WooCategoryNode } from "../../src/services/gateway";
 import { Product, DeenCategory } from "../../src/types";
 import { getCategoryInfo, CategoryInfo } from "../../src/data/categories";
 
@@ -38,6 +38,22 @@ export default function ShopScreen() {
   const [segment, setSegment] = useState<"all" | "collection" | "select">("all");
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Live WooCommerce sub-categories for filter chips
+  const [subCategories, setSubCategories] = useState<WooCategoryNode[]>([]);
+  const [selectedSubCat, setSelectedSubCat] = useState("All");
+
+  // Fetch sub-categories whenever selectedCategory changes
+  useEffect(() => {
+    setSelectedSubCat("All");
+    if (selectedCategory !== "ALL") {
+      fetchSubCategories(selectedCategory)
+        .then((subs) => setSubCategories(subs))
+        .catch(() => setSubCategories([]));
+    } else {
+      setSubCategories([]);
+    }
+  }, [selectedCategory]);
 
   const styles = createStyles(colors, s);
 
@@ -60,6 +76,17 @@ export default function ShopScreen() {
       setProducts(data);
     } catch {}
   }, [selectedCategory, deferredQuery, sort, segment]);
+
+  // Client-side sub-category filtering on top of category products
+  const displayedProducts = useMemo(() => {
+    if (selectedSubCat === "All") return products;
+    const subClean = selectedSubCat.toLowerCase();
+    return products.filter((p) => {
+      const matchInSubCats = p.wooSubCategories?.some((sc) => sc.toLowerCase() === subClean);
+      const matchInName = p.name.toLowerCase().includes(subClean);
+      return matchInSubCats || matchInName;
+    });
+  }, [products, selectedSubCat]);
 
   // Refresh catalog whenever the shop screen regains focus or the app resumes
   // from background — surfaces live WooCommerce stock/product changes without
@@ -223,6 +250,46 @@ export default function ShopScreen() {
         </ScrollView>
       </View>
 
+      {/* Live WooCommerce Sub-Category Filter Chips */}
+      {selectedCategory !== "ALL" && subCategories.length > 0 && (
+        <View style={[styles.subCatBar, { backgroundColor: colors.paper, borderBottomColor: colors.borderLight }]}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.subCatScroll}
+          >
+            {["All", ...subCategories.map((s) => s.name)].map((subName) => {
+              const active = selectedSubCat === subName;
+              return (
+                <TouchableOpacity
+                  key={subName}
+                  style={[
+                    styles.subCatPill,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                    active && [styles.subCatPillActive, { backgroundColor: colors.indigoDark, borderColor: colors.indigoDark }],
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={() => setSelectedSubCat(subName)}
+                  hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Filter by subcategory ${subName}`}
+                >
+                  <Text
+                    style={[
+                      styles.subCatText,
+                      { color: colors.sub },
+                      active && [styles.subCatTextActive, { color: "#FFFFFF" }],
+                    ]}
+                  >
+                    {subName}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
       {/* Sort Bar */}
       <View style={styles.sortBar}>
         <TouchableOpacity
@@ -300,13 +367,15 @@ export default function ShopScreen() {
       {/* Header with Result Count */}
       <View style={styles.metaRow}>
         <Text style={[styles.resultCount, { color: colors.sub }]}>
-          SHOWING {products.length} {products.length === 1 ? "PRODUCT" : "PRODUCTS"}
+          SHOWING {displayedProducts.length} {displayedProducts.length === 1 ? "PRODUCT" : "PRODUCTS"}
+          {selectedSubCat !== "All" ? ` · ${selectedSubCat}` : ""}
         </Text>
-        {(selectedCategory !== "ALL" || searchQuery.length > 0) && (
+        {(selectedCategory !== "ALL" || searchQuery.length > 0 || selectedSubCat !== "All") && (
           <TouchableOpacity
             style={styles.clearBtn}
             onPress={() => {
               setSelectedCategory("ALL");
+              setSelectedSubCat("All");
               setSearchQuery("");
             }}
           >
@@ -321,7 +390,7 @@ export default function ShopScreen() {
           <ActivityIndicator size="large" color={colors.indigo} />
           <Text style={[styles.loadingText, { color: colors.sub }]}>Fetching DEEN catalog...</Text>
         </View>
-      ) : products.length === 0 ? (
+      ) : displayedProducts.length === 0 ? (
         <View style={[styles.emptyContainer, { flex: 1 }]}>
           <Text style={[styles.emptyTitle, { color: colors.ink }]}>No products found</Text>
           <Text style={[styles.emptySub, { color: colors.sub }]}>
@@ -331,6 +400,7 @@ export default function ShopScreen() {
             style={[styles.resetBtn, { backgroundColor: colors.indigo }]}
             onPress={() => {
               setSelectedCategory("ALL");
+              setSelectedSubCat("All");
               setSearchQuery("");
             }}
           >
@@ -406,7 +476,7 @@ export default function ShopScreen() {
         </ScrollView>
       ) : (
         <FlatList
-          data={products}
+          data={displayedProducts}
           keyExtractor={(p) => p.id}
           numColumns={2}
           columnWrapperStyle={styles.row}
@@ -569,6 +639,30 @@ function createStyles(colors: any, s: ReturnType<typeof sharedStyles>) {
     },
     categoryChipTextActive: {
       color: "#FFFFFF",
+    },
+    subCatBar: {
+      paddingVertical: 8,
+      borderBottomWidth: 1,
+    },
+    subCatScroll: {
+      paddingHorizontal: 10,
+      gap: 8,
+    },
+    subCatPill: {
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 18,
+      borderWidth: 1,
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    subCatPillActive: {},
+    subCatText: {
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    subCatTextActive: {
+      fontWeight: "800",
     },
     sortBar: {
       flexDirection: "row",

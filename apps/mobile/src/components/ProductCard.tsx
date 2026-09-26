@@ -5,7 +5,7 @@ import { Product } from "../types";
 import { useTheme } from "../context/ThemeContext";
 import { useWishlist } from "../context/WishlistContext";
 import { Heart } from "./Icons";
-import { bdt, getInStockSizes } from "../services/gateway";
+import { bdt, getInStockSizes, decodeHtmlEntities } from "../services/gateway";
 import { QuickAddBottomSheet } from "./QuickAddBottomSheet";
 
 interface ProductCardProps {
@@ -137,7 +137,7 @@ function ProductCardBase({ product, style }: ProductCardProps) {
             {product.brand && product.brand !== "DEEN" ? ` · ${product.brand.toUpperCase()}` : ""}
           </Text>
           <Text style={[styles.name, { color: colors.ink }]} numberOfLines={2}>
-            {product.name}
+            {decodeHtmlEntities(product.name)}
           </Text>
           {product.sku ? (
             <Text style={[styles.sku, { color: colors.faint }]}>SKU: {product.sku}</Text>

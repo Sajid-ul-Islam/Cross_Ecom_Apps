@@ -6,7 +6,7 @@ import { useState, useMemo } from "react";
 import { useCart } from "@/lib/cart";
 import { useWishlist } from "@/lib/wishlist";
 import type { Product } from "@/lib/api";
-import { bdt, resolveProductImage, getInStockSizes } from "@/lib/api";
+import { bdt, resolveProductImage, getInStockSizes, decodeHtmlEntities } from "@/lib/api";
 import QuickAddModal from "./QuickAddModal";
 
 interface Props {
@@ -358,7 +358,7 @@ export default function ProductCard({ product }: Props) {
               </span>
             )}
           </div>
-          <p className="product-card__name">{product.name}</p>
+          <p className="product-card__name">{decodeHtmlEntities(product.name)}</p>
           {product.sku && (
             <p style={{ fontSize: 10, color: "var(--sub)", fontFamily: "monospace", letterSpacing: 0.3, marginBottom: 4, opacity: 0.75 }}>
               SKU: {product.sku}

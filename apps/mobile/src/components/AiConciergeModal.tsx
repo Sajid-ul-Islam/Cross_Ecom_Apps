@@ -38,6 +38,7 @@ interface AiMessage {
     sizes: string[];
   }>;
   actions?: Array<{ label: string; action: string; payload?: any }>;
+  quickReplies?: string[];
 }
 
 const QUICK_PROMPTS = [
@@ -194,7 +195,14 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
     {
       id: "welcome",
       sender: "ai",
-      text: "👋 Welcome to **DEEN Assistant**! I can recommend menswear outfits from our live catalog, calculate Bangladesh delivery charges, explain our 7-day doorstep size exchange, or answer questions about our brand and orders.\n\nHow can I help you today?",
+      text: "👋 Welcome to **DEEN Denim Concierge**! I can recommend menswear outfits from our live catalog, calculate Bangladesh delivery charges, guide you on waist & chest sizing, explain our 7-day doorstep size exchange, or check your live order tracking.\n\nHow can I help you today?",
+      quickReplies: [
+        "জিন্স কালেকশন 👖",
+        "পাঞ্জাবি কালেকশন 🕌",
+        "শার্ট কালেকশন 👔",
+        "সাইজ গাইড 📏",
+        "অর্ডার স্ট্যাটাস চেক 📦",
+      ],
     },
   ]);
 
@@ -245,6 +253,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
         text: data.reply,
         products: data.suggestedProducts,
         actions: data.suggestedActions,
+        quickReplies: data.quickReplies,
       };
 
       setMessages((prev) => [...prev, aiMsg]);
@@ -342,17 +351,23 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
             <MessageCircle size={15} color="#0084FF" />
           </TouchableOpacity>
 
-          {!isEmbedded && onClose && (
-            <TouchableOpacity
-              style={styles.closeBtn}
-              onPress={onClose}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityRole="button"
-              accessibilityLabel="Close AI Concierge"
-            >
-              <X size={20} color={colors.ink} />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={styles.closeBtn}
+            onPress={() => {
+              if (onClose) {
+                onClose();
+              } else if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace("/(tabs)");
+              }
+            }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Leave chat"
+          >
+            <X size={20} color={colors.ink} />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -457,6 +472,24 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
                     ))}
                   </View>
                 )}
+
+                {/* Interactive Quick Reply Pills */}
+                {m.sender === "ai" && m.quickReplies && m.quickReplies.length > 0 && (
+                  <View style={styles.quickRepliesRow}>
+                    {m.quickReplies.map((qr, qIdx) => (
+                      <TouchableOpacity
+                        key={`qr_${m.id}_${qIdx}`}
+                        style={styles.quickReplyPill}
+                        activeOpacity={0.8}
+                        onPress={() => handleSend(qr)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Quick reply: ${qr}`}
+                      >
+                        <Text style={styles.quickReplyText}>{qr}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
             ))}
 
@@ -530,6 +563,13 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
       style={styles.overlay}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
+      <TouchableOpacity
+        style={StyleSheet.absoluteFill}
+        activeOpacity={1}
+        onPress={onClose}
+        accessibilityRole="button"
+        accessibilityLabel="Dismiss chat modal"
+      />
       {content}
       <QuickAddBottomSheet
         product={quickAddProduct}
@@ -553,20 +593,27 @@ function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
     overlay: {
       flex: 1,
-      backgroundColor: "rgba(0,0,0,0.6)",
+      backgroundColor: "rgba(0,0,0,0.55)",
       justifyContent: "flex-end",
     },
     sheet: {
       backgroundColor: colors.paper,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-      height: Math.round(height * 0.85),
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      height: Math.round(height * 0.82),
+      maxWidth: 600,
+      width: "100%",
+      alignSelf: "center",
       display: "flex",
       flexDirection: "column",
+      overflow: "hidden",
     },
     sheetEmbedded: {
       backgroundColor: colors.paper,
       flex: 1,
+      maxWidth: 600,
+      width: "100%",
+      alignSelf: "center",
       display: "flex",
       flexDirection: "column",
     },
@@ -731,6 +778,25 @@ function createStyles(colors: ThemeColors) {
       borderColor: colors.border,
     },
     actionChipText: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.indigo,
+    },
+    quickRepliesRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 6,
+      marginTop: 8,
+    },
+    quickReplyPill: {
+      paddingHorizontal: 11,
+      paddingVertical: 6,
+      borderRadius: 16,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.indigo,
+    },
+    quickReplyText: {
       fontSize: 11,
       fontWeight: "700",
       color: colors.indigo,
