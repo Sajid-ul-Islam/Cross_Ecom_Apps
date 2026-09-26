@@ -381,67 +381,6 @@ function mapStoreCategory(catNames: string[]): Exclude<DeenCategory, "ALL"> {
   return "OTHER";
 }
 
-export function decodeHtmlEntities(str: string): string {
-  if (!str) return "";
-  let s = str
-    .replace(/&amp;#/g, "&#")
-    .replace(/&#8211;?/g, "–")
-    .replace(/&#8212;?/g, "—")
-    .replace(/&#8216;?/g, "'")
-    .replace(/&#8217;?/g, "'")
-    .replace(/&#8220;?/g, '"')
-    .replace(/&#8221;?/g, '"')
-    .replace(/&#8230;?/g, "…")
-    .replace(/&#038;?/g, "&")
-    .replace(/&#039;?/g, "'")
-    .replace(/&#39;?/g, "'")
-    .replace(/&#(\d+);?/g, (_, dec) => {
-      try {
-        const code = Number(dec);
-        return code ? String.fromCharCode(code) : _;
-      } catch {
-        return _;
-      }
-    })
-    .replace(/&#x([0-9a-f]+);?/gi, (_, hex) => {
-      try {
-        const code = parseInt(hex, 16);
-        return code ? String.fromCharCode(code) : _;
-      } catch {
-        return _;
-      }
-    })
-    .replace(/&ndash;/g, "–")
-    .replace(/&mdash;/g, "—")
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&hellip;/g, "…")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  if (/&#\d+|&[a-z]+;/i.test(s)) {
-    s = s
-      .replace(/&#8211;?/g, "–")
-      .replace(/&#8212;?/g, "—")
-      .replace(/&#8216;?/g, "'")
-      .replace(/&#8217;?/g, "'")
-      .replace(/&#8220;?/g, '"')
-      .replace(/&#8221;?/g, '"')
-      .replace(/&#038;?/g, "&")
-      .replace(/&#39;?/g, "'")
-      .replace(/&ndash;/g, "–")
-      .replace(/&mdash;/g, "—")
-      .replace(/&quot;/g, '"')
-      .replace(/&apos;/g, "'")
-      .replace(/&amp;/g, "&");
-  }
-  return s;
-}
-
 export function sanitizeProduct<T extends Partial<Product>>(p: T): T {
   if (!p) return p;
   return {
