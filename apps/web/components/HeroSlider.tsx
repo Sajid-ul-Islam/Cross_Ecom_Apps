@@ -85,47 +85,74 @@ function HeroVideoItem({ videoUrl, poster, isActive, isFirst, onEnded }: HeroVid
   );
 }
 
+const CANONICAL_COVER_SLIDES: HeroSlide[] = [
+  {
+    id: "slide_denim",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
+    videoUrl: "https://deencommerce.com/wp-content/uploads/2026/09/Denim-Web-Banner_1920x840pxl.mp4",
+    badge: "দেশের প্রথম ডেনিম ব্র্যান্ড · DEEN",
+    title: "Raw Washed. Selvedge Heritage.",
+    headline: "ARTISANAL INDIGO & CROSS HATCH DENIM",
+    subtitle: "Woven on Vintage Shuttle Looms with Deep Rope-Dyed Indigo & Artisanal Precision.",
+    actionUrl: "/shop?category=JEANS",
+    actionLabel: "Explore Denim Collection →",
+  },
+  {
+    id: "slide_season_clearance",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
+    videoUrl: "https://deencommerce.com/wp-content/uploads/2026/09/END-OF-THE-SESSION-2_1920x8401.mp4",
+    badge: "END OF SEASON DROP · 2026",
+    title: "Artisanal Tailoring & Comfort.",
+    headline: "SEASON CLEARANCE IS LIVE",
+    subtitle: "Flat discounts on selected artisanal denim, resort shirts & tailored comfort.",
+    actionUrl: "/shop?sort=sale",
+    actionLabel: "Explore Season Sale →",
+  },
+  {
+    id: "slide_web_motion",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/06/Mobile-Banner-Web.mp4",
+    videoUrl: "https://deencommerce.com/wp-content/uploads/2026/06/web-motion-banner.mp4",
+    badge: "DEEN MOTION · 2026",
+    title: "Modern Lifestyle & Motion.",
+    headline: "CONTEMPORARY RESORT & CASUAL LIVING",
+    subtitle: "Lightweight tailoring engineered for modern lifestyle and effortless mobility.",
+    actionUrl: "/shop",
+    actionLabel: "Explore New Arrivals →",
+  },
+  {
+    id: "slide_official_cover_image",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
+    badge: "OFFICIAL STORE BANNER",
+    title: "Bespoke Everyday Living.",
+    headline: "THE ORIGINAL SELVEDGE DENIM",
+    subtitle: "Enduring silhouettes, reinforced bar-tacking, and supreme cotton craftsmanship.",
+    actionUrl: "/shop",
+    actionLabel: "Discover All Pieces →",
+  },
+];
+
 export default function HeroSlider({ bannerData }: HeroSliderProps) {
-  const slides: HeroSlide[] =
-    bannerData?.slides && bannerData.slides.length > 0
-      ? bannerData.slides
-      : [
-          {
-            id: "slide_denim",
-            desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
-            mobile: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
-            videoUrl: "https://deencommerce.com/wp-content/uploads/2026/09/Denim-Web-Banner_1920x840pxl.mp4",
-            badge: "দেশের প্রথম ডেনিম ব্র্যান্ড · DEEN",
-            title: "Raw Washed. Selvedge Heritage.",
-            headline: "ARTISANAL INDIGO & CROSS HATCH DENIM",
-            subtitle: "Woven on Vintage Shuttle Looms with Deep Rope-Dyed Indigo & Artisanal Precision.",
-            actionUrl: "/shop?category=JEANS",
-            actionLabel: "Explore Denim Collection →",
-          },
-          {
-            id: "slide_season_clearance",
-            desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
-            mobile: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
-            videoUrl: "https://deencommerce.com/wp-content/uploads/2026/09/END-OF-THE-SESSION-2_1920x8401.mp4",
-            badge: "END OF SEASON SALE · UP TO 50% OFF",
-            title: "Artisanal Tailoring & Comfort.",
-            headline: "SEASON CLEARANCE IS LIVE",
-            subtitle: "Flat discounts on selected artisanal denim, resort shirts & tailored comfort.",
-            actionUrl: "/shop?sort=sale",
-            actionLabel: "Explore Season Sale →",
-          },
-          {
-            id: "slide_curated_drops",
-            desktop: "https://deencommerce.com/wp-content/uploads/2026/09/Springfield-Polo-Shirt-103-0100-119-600x750.webp",
-            mobile: "https://deencommerce.com/wp-content/uploads/2026/09/Springfield-Polo-Shirt-103-0100-119-600x750.webp",
-            badge: "DEEN SELECT · CURATED DROPS",
-            title: "Curated International Labels.",
-            headline: "SPRINGFIELD, LEFTIES & PULL & BEAR",
-            subtitle: "European casual cuts, breathable pique polos, and utility twill pants.",
-            actionUrl: "/shop?segment=select",
-            actionLabel: "Discover DEEN Select →",
-          },
-        ];
+  // Strictly filter incoming slides to guarantee ONLY authentic widescreen cover images or cover videos are shown.
+  // Rejects any product photos, thumbnails, or non-cover media.
+  const isStrictCoverMedia = (s: HeroSlide): boolean => {
+    if (!s) return false;
+    // Cover video is valid
+    if (s.videoUrl && s.videoUrl.endsWith(".mp4")) return true;
+    // Cover image must exist and not be a product photo
+    if (!s.desktop) return false;
+    const url = s.desktop.toLowerCase();
+    if (url.includes("600x750") || url.includes("product") || url.includes("front") || url.includes("back") || url.includes("model")) {
+      return false;
+    }
+    return url.includes("banner") || url.includes("hero") || url.includes("sale");
+  };
+
+  const candidateSlides = (bannerData?.slides || []).filter(isStrictCoverMedia);
+  const slides: HeroSlide[] = candidateSlides.length > 0 ? candidateSlides : CANONICAL_COVER_SLIDES;
 
   const [current, setCurrent] = useState(0);
   const [isPaused, setIsPaused] = useState(false);

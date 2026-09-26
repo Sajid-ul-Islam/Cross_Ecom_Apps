@@ -25,6 +25,8 @@ const QUICK_PROMPTS = [
 
 export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps) {
   const [isOpen, setIsOpen] = useState(isEmbedded);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [sessionId, setSessionId] = useState<string>("");
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [input, setInput] = useState("");
@@ -34,12 +36,13 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
   const [quickAddProduct, setQuickAddProduct] = useState<Product | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const desktopInputRef = useRef<HTMLInputElement | null>(null);
-  const mobileInputRef = useRef<HTMLInputElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const embeddedInputRef = useRef<HTMLInputElement | null>(null);
+  const isMinimizedRef = useRef(isMinimized);
+  isMinimizedRef.current = isMinimized;
+
   const router = useRouter();
   const pathname = usePathname();
-
-
 
   // Initialize or restore sessionId from localStorage
   useEffect(() => {
@@ -73,32 +76,27 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // Lock background scroll on mobile when full-screen sheet is open
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (isOpen && window.innerWidth < 769) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isOpen]);
-
-  // Global events to open / close chat from anywhere in the app
+  // Global events to open / close / minimize chat from anywhere in the app
   useEffect(() => {
     const handleOpen = () => {
       setIsOpen(true);
+      setIsMinimized(false);
+      setUnreadCount(0);
     };
-    const handleClose = () => setIsOpen(false);
+    const handleClose = () => {
+      setIsOpen(false);
+    };
 
     window.addEventListener("deen_open_chat", handleOpen);
     window.addEventListener("deen_close_chat", handleClose);
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
-        setIsOpen(false);
+        if (!isMinimized) {
+          setIsMinimized(true);
+        } else {
+          setIsOpen(false);
+        }
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -108,20 +106,21 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
       window.removeEventListener("deen_close_chat", handleClose);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen]);
+  }, [isOpen, isMinimized]);
 
-  // Focus input when open
+  // Focus input when chatbox is opened or restored
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => {
-        if (window.innerWidth < 769) {
-          mobileInputRef.current?.focus();
+    if (isOpen && !isMinimized) {
+      const timer = setTimeout(() => {
+        if (isEmbedded) {
+          embeddedInputRef.current?.focus();
         } else {
-          desktopInputRef.current?.focus();
+          inputRef.current?.focus();
         }
-      }, 180);
+      }, 160);
+      return () => clearTimeout(timer);
     }
-  }, [isOpen]);
+  }, [isOpen, isMinimized, isEmbedded]);
 
   const sendMessage = useCallback(
     async (textToSend: string) => {
@@ -182,6 +181,11 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
         };
 
         setMessages((prev) => [...prev, botMsg]);
+
+        // If chatbox is currently minimized, increment unread badge
+        if (isMinimizedRef.current) {
+          setUnreadCount((c) => c + 1);
+        }
       } catch (err) {
         console.error("[ChatAssistant] Send error:", err);
         setErrorMsg("Connection issue. Please try again or chat via WhatsApp (+8801952700500).");
@@ -218,6 +222,7 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
           ts: Date.now(),
         },
       ]);
+      setUnreadCount(0);
     } catch (e) {
       console.warn("Reset failed:", e);
     }
@@ -228,7 +233,6 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
   };
 
   const handleAddToCart = (product: ProductCard) => {
-    // Convert ProductCard to Product for QuickAddModal
     const fullProd: Product = {
       id: String(product.id),
       name: product.name,
@@ -267,6 +271,7 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
     return null;
   }
 
+  // ── Standalone Dedicated Embedded Page (/chat) ──
   if (isEmbedded) {
     return (
       <div
@@ -365,35 +370,13 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
         </div>
 
         {/* Quick Prompts Carousel */}
-        <div
-          style={{
-            padding: "10px 16px",
-            background: "var(--surface)",
-            borderBottom: "1px solid var(--border)",
-            display: "flex",
-            gap: 8,
-            overflowX: "auto",
-            whiteSpace: "nowrap",
-            scrollbarWidth: "none",
-            flexShrink: 0,
-          }}
-        >
+        <div className="fb-chatbox-prompts">
           {QUICK_PROMPTS.map((prompt) => (
             <button
               key={prompt}
               type="button"
               onClick={() => sendMessage(prompt)}
-              style={{
-                background: "var(--surface-2)",
-                color: "var(--ink)",
-                border: "1px solid var(--border)",
-                borderRadius: 16,
-                padding: "6px 14px",
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
+              className="fb-prompt-pill"
             >
               {prompt}
             </button>
@@ -424,11 +407,28 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
           ))}
 
           {loading && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px" }}>
-              <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
-              <span style={{ fontSize: 12, color: "var(--sub)", fontStyle: "italic" }}>
-                DEEN Assistant is checking catalog &amp; orders…
-              </span>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 8, margin: "8px 0" }}>
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, var(--indigo) 0%, #c2410c 100%)",
+                  color: "#ffffff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 14,
+                  flexShrink: 0,
+                }}
+              >
+                👖
+              </div>
+              <div className="fb-typing-bubble" aria-label="DEEN Assistant is checking catalog...">
+                <span className="fb-typing-dot" />
+                <span className="fb-typing-dot" />
+                <span className="fb-typing-dot" />
+              </div>
             </div>
           )}
 
@@ -468,7 +468,7 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
           }}
         >
           <input
-            ref={desktopInputRef}
+            ref={embeddedInputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -519,37 +519,22 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
     );
   }
 
+  // ── Global Floating Facebook-Style Chat Assistant ──
   return (
     <>
-      {/* ── Desktop Floating Circular Toggle Button (Strictly HIDDEN on Mobile <768px) ── */}
-      <button
-        type="button"
-        id="chatbot-widget-btn"
-        onClick={() => setIsOpen((prev) => !prev)}
-        aria-label={isOpen ? "Close DEEN Denim Concierge" : "Open DEEN Denim Concierge · AI Stylist & Chat"}
-        title="DEEN Denim Concierge · দেশের প্রথম ডেনিম ব্র্যান্ড"
-        style={{
-          position: "fixed",
-          bottom: 24,
-          right: 28,
-          width: 56,
-          height: 56,
-          borderRadius: 28,
-          background: "linear-gradient(135deg, var(--indigo) 0%, #c2410c 100%)",
-          color: "#FFFFFF",
-          border: "2px solid var(--denim-stitch)",
-          boxShadow: "0 6px 22px rgba(224, 83, 5, 0.45), 0 0 10px rgba(194, 120, 3, 0.35)",
-          cursor: "pointer",
-          zIndex: 999,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          transition: "transform 0.2s ease, box-shadow 0.2s ease",
-        }}
-      >
-        {isOpen ? (
-          <span style={{ fontSize: 22, fontWeight: 900, lineHeight: 1 }}>✕</span>
-        ) : (
+      {/* ── Circular Launcher Floating Button (when closed, strictly hidden on mobile < 768px) ── */}
+      {!isOpen && (
+        <button
+          type="button"
+          id="chatbot-widget-btn"
+          onClick={() => {
+            setIsOpen(true);
+            setIsMinimized(false);
+            setUnreadCount(0);
+          }}
+          aria-label="Open DEEN Denim Concierge · AI Stylist & Chat"
+          title="DEEN Denim Concierge · দেশের প্রথম ডেনিম ব্র্যান্ড"
+        >
           <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{ fontSize: 24 }}>💬</span>
             <span
@@ -566,564 +551,425 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
               title="Signature Red-Line Selvedge"
             />
           </div>
-        )}
-      </button>
+        </button>
+      )}
 
-      {/* ── DESKTOP Floating Window Panel (≥ 769px) ── */}
-      {isOpen && (
+      {/* ── Facebook-Style Minimized Docked Tab / Pill (when minimized) ── */}
+      {isOpen && isMinimized && (
         <div
-          className="chatbot-panel chatbot-panel--desktop"
-          style={{
-            position: "fixed",
-            bottom: 90,
-            right: 28,
-            width: 420,
-            height: 640,
-            maxHeight: "calc(100vh - 110px)",
-            background: "var(--surface)",
-            borderRadius: 20,
-            boxShadow: "0 20px 50px rgba(0, 0, 0, 0.25)",
-            border: "1px solid var(--border)",
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-            zIndex: 1000,
-            animation: "chatPanelPop 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
+          className="fb-chatbox-minimized"
+          onClick={() => {
+            setIsMinimized(false);
+            setUnreadCount(0);
           }}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              setIsMinimized(false);
+              setUnreadCount(0);
+            }
+          }}
+          aria-label="Restore DEEN Denim Concierge Chat"
+          title="Click to restore chat"
         >
-          {/* Header */}
-          <div
-            style={{
-              padding: "12px 16px",
-              background: "var(--surface-2)",
-              borderBottom: "1px solid var(--border)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexShrink: 0,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1 }}>
+            <div style={{ position: "relative", width: 28, height: 28, flexShrink: 0 }}>
               <div
                 style={{
-                  width: 36,
-                  height: 36,
+                  width: 28,
+                  height: 28,
                   borderRadius: "50%",
-                  background: "linear-gradient(135deg, var(--indigo) 0%, #ea580c 100%)",
-                  color: "#FFFFFF",
+                  background: "linear-gradient(135deg, var(--indigo) 0%, #c2410c 100%)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: 18,
-                  fontWeight: 900,
-                  boxShadow: "0 2px 8px rgba(224, 83, 5, 0.35)",
+                  fontSize: 14,
+                  color: "#ffffff",
                 }}
               >
                 👖
               </div>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <h4 style={{ margin: 0, fontSize: 14, fontWeight: 900, color: "var(--ink)" }}>
-                    DEEN Denim Concierge
-                  </h4>
-                  <span
-                    style={{
-                      fontSize: 9.5,
-                      fontWeight: 800,
-                      background: "rgba(16, 185, 129, 0.15)",
-                      color: "#10b981",
-                      padding: "1px 6px",
-                      borderRadius: 10,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 4,
-                    }}
-                  >
-                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981" }} />
-                    LIVE
-                  </span>
-                </div>
-                <p style={{ margin: 0, fontSize: 11, color: "var(--sub)" }}>
-                  <span style={{ color: "var(--denim-stitch)", fontWeight: 700 }}>দেশের প্রথম ডেনিম ব্র্যান্ড</span> · AI Stylist
-                </p>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              {/* Language pill */}
               <span
                 style={{
-                  fontSize: 10,
-                  fontWeight: 800,
-                  background: "var(--surface)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 12,
-                  padding: "2px 7px",
-                  color: "var(--sub)",
+                  position: "absolute",
+                  bottom: -1,
+                  right: -1,
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: "#10b981",
+                  border: "1.5px solid var(--surface)",
                 }}
-              >
-                {detectedLang}
-              </span>
-
-              {/* Reset session button */}
-              <button
-                type="button"
-                onClick={handleResetSession}
-                title="Restart conversation (clean session)"
-                aria-label="Restart conversation"
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  fontSize: 16,
-                  color: "var(--sub)",
-                  cursor: "pointer",
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                ↺
-              </button>
-
-              {/* Close button */}
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                title="Close chat (Esc)"
-                aria-label="Close chat"
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  fontSize: 17,
-                  color: "var(--sub)",
-                  cursor: "pointer",
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-
-          {/* Quick Prompts Carousel Bar */}
-          <div
-            style={{
-              padding: "8px 12px",
-              background: "var(--surface)",
-              borderBottom: "1px solid var(--border)",
-              display: "flex",
-              gap: 6,
-              overflowX: "auto",
-              whiteSpace: "nowrap",
-              scrollbarWidth: "none",
-              flexShrink: 0,
-            }}
-          >
-            {QUICK_PROMPTS.map((prompt) => (
-              <button
-                key={prompt}
-                type="button"
-                onClick={() => sendMessage(prompt)}
-                style={{
-                  background: "var(--surface-2)",
-                  color: "var(--ink)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 14,
-                  padding: "4px 10px",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  flexShrink: 0,
-                  transition: "all 0.15s ease",
-                }}
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
-
-          {/* Messages Body */}
-          <div
-            style={{
-              flex: 1,
-              padding: 16,
-              overflowY: "auto",
-              background: "var(--surface)",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            {messages.map((msg, index) => (
-              <ChatMessage
-                key={msg.id}
-                message={msg}
-                onOrderProduct={handleOrderProduct}
-                onAddToCart={handleAddToCart}
-                onAction={handleAction}
-                onSelectQuickReply={(reply) => sendMessage(reply)}
-                isLatest={index === messages.length - 1}
               />
-            ))}
-
-            {loading && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px" }}>
-                <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
-                <span style={{ fontSize: 12, color: "var(--sub)", fontStyle: "italic" }}>
-                  DEEN Assistant is checking catalog &amp; orders…
-                </span>
-              </div>
-            )}
-
-            {errorMsg && (
-              <div
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
+              <span
                 style={{
-                  background: "rgba(239, 68, 68, 0.1)",
-                  color: "#ef4444",
-                  fontSize: 12,
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  marginBottom: 8,
-                  border: "1px solid rgba(239, 68, 68, 0.2)",
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  color: "var(--ink)",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
                 }}
               >
-                {errorMsg}
-              </div>
+                DEEN Concierge
+              </span>
+              <span style={{ fontSize: 10, color: "#10b981", fontWeight: 700 }}>
+                Active now
+              </span>
+            </div>
+            {unreadCount > 0 && (
+              <span
+                style={{
+                  background: "var(--crimson)",
+                  color: "#ffffff",
+                  fontSize: 11,
+                  fontWeight: 800,
+                  borderRadius: 10,
+                  padding: "1px 6px",
+                  minWidth: 18,
+                  textAlign: "center",
+                }}
+              >
+                {unreadCount}
+              </span>
             )}
-
-            <div ref={messagesEndRef} />
           </div>
 
-          {/* Footer Input Bar */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              sendMessage(input);
-            }}
-            style={{
-              padding: "10px 14px",
-              background: "var(--surface-2)",
-              borderTop: "1px solid var(--border)",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              flexShrink: 0,
-            }}
+          <div
+            style={{ display: "flex", alignItems: "center", gap: 2 }}
+            onClick={(e) => e.stopPropagation()}
           >
-            <input
-              ref={desktopInputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask for jeans, order status, or type to buy…"
-              disabled={loading}
-              style={{
-                flex: 1,
-                padding: "10px 14px",
-                borderRadius: 22,
-                border: "1px solid var(--border)",
-                background: "var(--surface)",
-                color: "var(--ink)",
-                fontSize: 13,
-                outline: "none",
-              }}
-            />
             <button
-              type="submit"
-              disabled={loading || !input.trim()}
-              aria-label="Send message"
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                background: input.trim() && !loading ? "var(--indigo)" : "var(--border)",
-                color: "#FFFFFF",
-                border: "none",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: input.trim() && !loading ? "pointer" : "default",
-                transition: "background 0.15s ease",
+              type="button"
+              onClick={() => {
+                setIsMinimized(false);
+                setUnreadCount(0);
               }}
+              title="Expand chat"
+              aria-label="Expand chat"
+              className="fb-header-icon-btn"
+              style={{ fontSize: 13 }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13" />
-                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-              </svg>
+              ▲
             </button>
-          </form>
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                setIsMinimized(false);
+                setUnreadCount(0);
+              }}
+              title="Close chat"
+              aria-label="Close chat"
+              className="fb-header-icon-btn"
+              style={{ fontSize: 15 }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
 
-      {/* ── MOBILE Full-Screen Slide-Up Drawer (< 769px) ── */}
-      {isOpen && (
-        <div
-          className="chatbot-sheet--mobile"
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 10000,
-            background: "var(--surface)",
-            display: "flex",
-            flexDirection: "column",
-            animation: "chatSheetUp 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
-          }}
-        >
-          {/* Mobile Top Header (≥ 44dp touch targets) */}
+      {/* ── Facebook-Style Floating Chatbox Window (when open & expanded) ── */}
+      {isOpen && !isMinimized && (
+        <>
+          {/* Mobile Backdrop (tapping outside dismisses on mobile) */}
           <div
-            style={{
-              height: 56,
-              padding: "0 16px",
-              background: "var(--surface-2)",
-              borderBottom: "1px solid var(--border)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexShrink: 0,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: "50%",
-                  background: "linear-gradient(135deg, var(--indigo) 0%, #ea580c 100%)",
-                  color: "#FFFFFF",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 18,
-                  fontWeight: 900,
-                }}
-              >
-                👖
-              </div>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <h4 style={{ margin: 0, fontSize: 15, fontWeight: 900, color: "var(--ink)" }}>
-                    DEEN Concierge
-                  </h4>
-                  <span
-                    style={{
-                      fontSize: 9,
-                      fontWeight: 800,
-                      background: "rgba(16, 185, 129, 0.15)",
-                      color: "#10b981",
-                      padding: "1px 5px",
-                      borderRadius: 10,
-                    }}
-                  >
-                    LIVE
-                  </span>
-                </div>
-                <p style={{ margin: 0, fontSize: 10.5, color: "var(--sub)" }}>
-                  AI Stylist · Direct Order · Live Tracking
-                </p>
-              </div>
-            </div>
+            className="fb-chatbox-backdrop"
+            onClick={() => setIsOpen(false)}
+            aria-hidden="true"
+          />
 
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              {/* Reset button */}
-              <button
-                type="button"
-                onClick={handleResetSession}
-                title="Reset conversation"
-                aria-label="Restart conversation"
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: "50%",
-                  background: "transparent",
-                  border: "none",
-                  fontSize: 18,
-                  color: "var(--sub)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                }}
-              >
-                ↺
-              </button>
-
-              {/* Close Button - 44x44 minimum touch target */}
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                aria-label="Close assistant"
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: "50%",
-                  background: "var(--surface)",
-                  border: "1px solid var(--border)",
-                  fontSize: 16,
-                  fontWeight: 900,
-                  color: "var(--ink)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  cursor: "pointer",
-                }}
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-
-          {/* Quick Prompts Carousel Bar */}
           <div
-            style={{
-              padding: "8px 12px",
-              background: "var(--surface)",
-              borderBottom: "1px solid var(--border)",
-              display: "flex",
-              gap: 6,
-              overflowX: "auto",
-              whiteSpace: "nowrap",
-              scrollbarWidth: "none",
-              flexShrink: 0,
-            }}
+            className="fb-chatbox-window"
+            role="dialog"
+            aria-label="DEEN Denim Concierge Chat"
           >
-            {QUICK_PROMPTS.map((prompt) => (
-              <button
-                key={prompt}
-                type="button"
-                onClick={() => sendMessage(prompt)}
-                style={{
-                  background: "var(--surface-2)",
-                  color: "var(--ink)",
-                  border: "1px solid var(--border)",
-                  borderRadius: 14,
-                  padding: "5px 12px",
-                  fontSize: 11.5,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  flexShrink: 0,
-                }}
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
-
-          {/* Mobile Messages Body */}
-          <div
-            style={{
-              flex: 1,
-              padding: 16,
-              overflowY: "auto",
-              background: "var(--surface)",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            {messages.map((msg, index) => (
-              <ChatMessage
-                key={msg.id}
-                message={msg}
-                onOrderProduct={handleOrderProduct}
-                onAddToCart={handleAddToCart}
-                onAction={handleAction}
-                onSelectQuickReply={(reply) => sendMessage(reply)}
-                isLatest={index === messages.length - 1}
-              />
-            ))}
-
-            {loading && (
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px" }}>
-                <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
-                <span style={{ fontSize: 12, color: "var(--sub)", fontStyle: "italic" }}>
-                  DEEN Assistant is checking catalog &amp; orders…
-                </span>
-              </div>
-            )}
-
-            {errorMsg && (
-              <div
-                style={{
-                  background: "rgba(239, 68, 68, 0.1)",
-                  color: "#ef4444",
-                  fontSize: 12,
-                  padding: "8px 12px",
-                  borderRadius: 8,
-                  marginBottom: 8,
-                  border: "1px solid rgba(239, 68, 68, 0.2)",
-                }}
-              >
-                {errorMsg}
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Mobile Bottom Input Bar (Sticky, respects safe-area insets) */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              sendMessage(input);
-            }}
-            style={{
-              padding: "10px 14px calc(10px + env(safe-area-inset-bottom, 0px))",
-              background: "var(--surface-2)",
-              borderTop: "1px solid var(--border)",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              flexShrink: 0,
-            }}
-          >
-            <input
-              ref={mobileInputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask for jeans, order status, or type to buy…"
-              disabled={loading}
+            {/* Facebook-Style Header */}
+            <div
               style={{
-                flex: 1,
-                padding: "12px 16px",
-                borderRadius: 24,
-                border: "1px solid var(--border)",
-                background: "var(--surface)",
-                color: "var(--ink)",
-                fontSize: 14,
-                outline: "none",
-              }}
-            />
-            <button
-              type="submit"
-              disabled={loading || !input.trim()}
-              aria-label="Send message"
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                background: input.trim() && !loading ? "var(--indigo)" : "var(--border)",
-                color: "#FFFFFF",
-                border: "none",
+                height: 54,
+                padding: "0 12px 0 14px",
+                background: "var(--surface-2)",
+                borderBottom: "1px solid var(--border)",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                cursor: input.trim() && !loading ? "pointer" : "default",
+                justifyContent: "space-between",
+                flexShrink: 0,
+                userSelect: "none",
               }}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13" />
-                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-              </svg>
-            </button>
-          </form>
-        </div>
+              {/* Left: Avatar + Title + Active Status (clicking title minimizes) */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  cursor: "pointer",
+                  flex: 1,
+                  minWidth: 0,
+                }}
+                onClick={() => setIsMinimized(true)}
+                title="Click to minimize"
+              >
+                <div style={{ position: "relative", width: 34, height: 34, flexShrink: 0 }}>
+                  <div
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: "50%",
+                      background: "linear-gradient(135deg, var(--indigo) 0%, #ea580c 100%)",
+                      color: "#FFFFFF",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 16,
+                      fontWeight: 900,
+                      boxShadow: "0 2px 8px rgba(224, 83, 5, 0.35)",
+                    }}
+                  >
+                    👖
+                  </div>
+                  <span
+                    style={{
+                      position: "absolute",
+                      bottom: 0,
+                      right: 0,
+                      width: 9,
+                      height: 9,
+                      borderRadius: "50%",
+                      background: "#10b981",
+                      border: "2px solid var(--surface)",
+                    }}
+                    title="Active now"
+                  />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", minWidth: 0, flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <h4
+                      style={{
+                        margin: 0,
+                        fontSize: 13.5,
+                        fontWeight: 800,
+                        color: "var(--ink)",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      DEEN Denim Concierge
+                    </h4>
+                  </div>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 10.5,
+                      color: "var(--sub)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <span style={{ color: "#10b981", fontWeight: 700 }}>● Active now</span>
+                    <span>·</span>
+                    <span>AI Stylist</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Right: Actions (Language, Reset, Minimize, Close) */}
+              <div
+                style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span
+                  style={{
+                    fontSize: 9.5,
+                    fontWeight: 800,
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 10,
+                    padding: "2px 6px",
+                    color: "var(--sub)",
+                    marginRight: 4,
+                  }}
+                >
+                  {detectedLang}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={handleResetSession}
+                  title="Restart conversation (new session)"
+                  aria-label="Restart conversation"
+                  className="fb-header-icon-btn"
+                >
+                  ↺
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsMinimized(true)}
+                  title="Minimize chat"
+                  aria-label="Minimize chat"
+                  className="fb-header-icon-btn"
+                  style={{ fontSize: 18, fontWeight: 700 }}
+                >
+                  ─
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false);
+                    setIsMinimized(false);
+                  }}
+                  title="Close chat"
+                  aria-label="Close chat"
+                  className="fb-header-icon-btn"
+                  style={{ fontSize: 16, fontWeight: 700 }}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Prompts Carousel Bar */}
+            <div className="fb-chatbox-prompts">
+              {QUICK_PROMPTS.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => sendMessage(prompt)}
+                  className="fb-prompt-pill"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+
+            {/* Messages Body */}
+            <div
+              style={{
+                flex: 1,
+                padding: "14px 16px",
+                overflowY: "auto",
+                background: "var(--surface)",
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              {messages.map((msg, index) => (
+                <ChatMessage
+                  key={msg.id}
+                  message={msg}
+                  onOrderProduct={handleOrderProduct}
+                  onAddToCart={handleAddToCart}
+                  onAction={handleAction}
+                  onSelectQuickReply={(reply) => sendMessage(reply)}
+                  isLatest={index === messages.length - 1}
+                />
+              ))}
+
+              {loading && (
+                <div style={{ display: "flex", alignItems: "flex-end", gap: 8, margin: "6px 0 10px" }}>
+                  <div
+                    style={{
+                      width: 26,
+                      height: 26,
+                      borderRadius: "50%",
+                      background: "linear-gradient(135deg, var(--indigo) 0%, #c2410c 100%)",
+                      color: "#ffffff",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 12,
+                      flexShrink: 0,
+                    }}
+                  >
+                    👖
+                  </div>
+                  <div className="fb-typing-bubble" aria-label="DEEN Assistant is typing...">
+                    <span className="fb-typing-dot" />
+                    <span className="fb-typing-dot" />
+                    <span className="fb-typing-dot" />
+                  </div>
+                </div>
+              )}
+
+              {errorMsg && (
+                <div
+                  style={{
+                    background: "rgba(239, 68, 68, 0.1)",
+                    color: "#ef4444",
+                    fontSize: 12,
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    marginBottom: 8,
+                    border: "1px solid rgba(239, 68, 68, 0.2)",
+                  }}
+                >
+                  {errorMsg}
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Facebook-Style Footer Composer */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                sendMessage(input);
+              }}
+              style={{
+                padding: "10px 12px",
+                background: "var(--surface)",
+                borderTop: "1px solid var(--border)",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                flexShrink: 0,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => window.open("https://wa.me/8801952700500", "_blank")}
+                title="WhatsApp Concierge Hotline (+8801952700500)"
+                aria-label="WhatsApp Concierge Hotline"
+                className="fb-composer-icon-btn"
+              >
+                <span style={{ fontSize: 16 }}>💬</span>
+              </button>
+
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Message DEEN Assistant…"
+                disabled={loading}
+                className="fb-composer-input"
+              />
+
+              <button
+                type="submit"
+                disabled={loading || !input.trim()}
+                aria-label="Send message"
+                className={`fb-composer-send-btn ${input.trim() && !loading ? "active" : ""}`}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+              </button>
+            </form>
+          </div>
+        </>
       )}
 
       {/* ── Quick Add Modal for in-chat Cart Adding ── */}

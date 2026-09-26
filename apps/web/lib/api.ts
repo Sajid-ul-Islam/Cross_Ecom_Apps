@@ -824,12 +824,24 @@ const DEFAULT_BANNER_SLIDES: HeroSlide[] = [
     actionLabel: "Shop Summer Shirts →",
   },
   {
-    id: "slide_tailoring",
+    id: "slide_web_motion_video",
+    videoUrl: "https://deencommerce.com/wp-content/uploads/2026/06/web-motion-banner.mp4",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/06/Mobile-Banner-Web.mp4",
+    badge: "DEEN MOTION · 2026",
+    title: "Modern Lifestyle & Motion.",
+    headline: "CONTEMPORARY RESORT & CASUAL LIVING",
+    subtitle: "Lightweight tailoring engineered for modern lifestyle and effortless mobility.",
+    actionUrl: "/shop",
+    actionLabel: "Explore New Arrivals →",
+  },
+  {
+    id: "slide_official_cover_image",
     desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
     mobile: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
-    badge: "BESPOKE EVERYDAY LIVING",
+    badge: "OFFICIAL STORE BANNER",
     title: "Tailored Comfort & Modern Classics.",
-    headline: "CARGO TROUSERS & HERITAGE PANJABIS",
+    headline: "THE ORIGINAL SELVEDGE DENIM",
     subtitle: "Enduring silhouettes, reinforced bar-tacking, and supreme cotton craftsmanship.",
     actionUrl: "/shop",
     actionLabel: "Discover All Pieces →",
@@ -855,6 +867,18 @@ export async function fetchHeroBanner(): Promise<HeroBannerState> {
     if (res.ok) {
       const data = await res.json();
       if (data?.desktop) {
+        if (Array.isArray(data.slides)) {
+          // Strictly reject any product photos or non-cover media
+          data.slides = data.slides.filter((s: HeroSlide) => {
+            if (s.videoUrl && s.videoUrl.endsWith(".mp4")) return true;
+            if (!s.desktop) return false;
+            const url = s.desktop.toLowerCase();
+            if (url.includes("600x750") || url.includes("product") || url.includes("front") || url.includes("back") || url.includes("model")) {
+              return false;
+            }
+            return true;
+          });
+        }
         if (!data.slides || data.slides.length === 0) {
           data.slides = DEFAULT_BANNER_SLIDES;
         }

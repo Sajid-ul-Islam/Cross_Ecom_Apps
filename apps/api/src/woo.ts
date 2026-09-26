@@ -677,6 +677,11 @@ export const CANONICAL_CATEGORY_COVERS: Record<string, string> = {
   SWEATSHIRTS: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Sweat-Shirt-108-0101-007-Front.webp",
   DEEN_SELECT: "https://deencommerce.com/wp-content/uploads/2026/09/Springfield-Polo-Shirt-103-0100-119.webp",
   DEEN_COLLECTION: "https://deencommerce.com/wp-content/uploads/2026/05/DEEN-90s-Blue-Jeans-Slim-Fit-101-0100-138-front.webp",
+  SALE: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
+  TRENDING: "https://deencommerce.com/wp-content/uploads/2026/08/DEEN-Tropical-Cuban-Collar-Shirt-102-0302-005-Front.webp",
+  NEW_ARRIVALS: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Burgundy-Floral-Casual-Half-Shirt-102-0301-001-Model-1.webp",
+  VALUE_PACKS: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Orlando-Relaxed-Graphic-Tank-Top-105-0401-004-Front.webp",
+  OTHERS: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Sweat-Shirt-108-0101-007-Model-Front.webp",
 };
 
 export async function fetchWooCategoryImages(): Promise<Record<string, string>> {
@@ -706,6 +711,10 @@ export async function fetchWooCategoryImages(): Promise<Record<string, string>> 
         else if (s === "sweatshirts" || s === "winter") out.SWEATSHIRTS = normalizeImageUrl(src);
         else if (s === "deen-select" || s === "deen_select") out.DEEN_SELECT = normalizeImageUrl(src);
         else if (s === "men" || s === "all-products") out.DEEN_COLLECTION = normalizeImageUrl(src);
+        else if (s === "sale" || s === "offers" || s === "discount") out.SALE = normalizeImageUrl(src);
+        else if (s === "trending" || s === "trending-now") out.TRENDING = normalizeImageUrl(src);
+        else if (s === "new-arrivals" || s === "new-arrival" || s === "new") out.NEW_ARRIVALS = normalizeImageUrl(src);
+        else if (s === "tank-top" || s === "boxer" || s === "value-packs") out.VALUE_PACKS = normalizeImageUrl(src);
       }
     }
   } catch (e) {
@@ -766,15 +775,27 @@ const DEFAULT_SLIDES: DeenHeroSlide[] = [
     actionLabel: "Explore Season Sale →",
   },
   {
-    id: "slide_curated_drops",
-    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/Springfield-Polo-Shirt-103-0100-119-600x750.webp",
-    mobile: "https://deencommerce.com/wp-content/uploads/2026/09/Springfield-Polo-Shirt-103-0100-119-600x750.webp",
-    badge: "DEEN SELECT · CURATED DROPS",
-    title: "Curated International Labels.",
-    headline: "SPRINGFIELD, LEFTIES & PULL & BEAR",
-    subtitle: "European casual cuts, breathable pique polos, and utility twill pants.",
-    actionUrl: "/shop?segment=select",
-    actionLabel: "Discover DEEN Select →",
+    id: "slide_web_motion",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/06/Mobile-Banner-Web.mp4",
+    videoUrl: "https://deencommerce.com/wp-content/uploads/2026/06/web-motion-banner.mp4",
+    badge: "DEEN MOTION · 2026",
+    title: "Modern Lifestyle & Motion.",
+    headline: "CONTEMPORARY RESORT & CASUAL LIVING",
+    subtitle: "Lightweight tailoring engineered for modern lifestyle and effortless mobility.",
+    actionUrl: "/shop",
+    actionLabel: "Explore New Arrivals →",
+  },
+  {
+    id: "slide_official_cover_banner",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
+    badge: "OFFICIAL STORE BANNER",
+    title: "Tailored Comfort & Modern Classics.",
+    headline: "THE ORIGINAL SELVEDGE DENIM",
+    subtitle: "Enduring silhouettes, reinforced bar-tacking, and supreme cotton craftsmanship.",
+    actionUrl: "/shop",
+    actionLabel: "Discover All Pieces →",
   },
 ];
 

@@ -80,7 +80,7 @@ export default function Header() {
           fontSize: "11.5px",
           fontWeight: 700,
           letterSpacing: "0.03em",
-          padding: "7px 16px",
+          padding: "7px clamp(16px, 2.5vw, 48px)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
