@@ -1,12 +1,12 @@
 import { revalidateTag, revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
-const REVALIDATE_SECRET = process.env.REVALIDATE_SECRET || process.env.GATEWAY_API_KEY || "fa002b126085801f23d9375d94409752503639919e39690c42877fc58c624973";
+const REVALIDATE_SECRET = process.env.REVALIDATE_SECRET;
 
 export async function POST(req: Request) {
   try {
     const authHeader = req.headers.get("x-revalidate-secret") || req.headers.get("x-api-key");
-    if (authHeader !== REVALIDATE_SECRET) {
+    if (!REVALIDATE_SECRET || authHeader !== REVALIDATE_SECRET) {
       return NextResponse.json({ error: "UNAUTHORIZED", message: "Invalid revalidation secret." }, { status: 401 });
     }
 

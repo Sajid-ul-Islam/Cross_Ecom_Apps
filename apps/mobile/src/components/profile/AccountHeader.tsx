@@ -8,6 +8,7 @@ import { useTheme } from "../../context/ThemeContext";
 import { useProfile } from "../../context/ProfileContext";
 import { useOrders } from "../../context/OrderContext";
 import { useWishlist } from "../../context/WishlistContext";
+import { CustomerAnalyticsKPIs } from "./CustomerAnalyticsKPIs";
 
 interface AccountHeaderProps {
   onLoginPress: () => void;
@@ -130,6 +131,12 @@ export const AccountHeader: React.FC<AccountHeaderProps> = ({
             </Text>
           </View>
         </View>
+
+        {/* Executive Customer Analytics KPI Dashboard (Requirement R3) */}
+        <CustomerAnalyticsKPIs
+          orders={orders}
+          onOrdersPress={onOrdersPress}
+        />
 
         {/* Quick Stats Bar */}
         <View style={[styles.statsRow, { backgroundColor: colors.paper, borderColor: colors.borderLight }]}>

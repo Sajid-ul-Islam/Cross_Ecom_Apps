@@ -8,15 +8,17 @@ export interface CartItem {
   product: Product;
   size: string;
   qty: number;
+  variationId?: number;
 }
 
 interface CartCtx {
   items: CartItem[];
   totalItems: number;
   subtotal: number;
-  addItem: (product: Product, size: string) => void;
+  addItem: (product: Product, size: string, qty?: number, variationId?: number) => void;
   removeItem: (productId: string, size: string) => void;
   updateQty: (productId: string, size: string, qty: number) => void;
+  updateSize: (productId: string, oldSize: string, newSize: string) => void;
   clearCart: () => void;
 }
 
@@ -60,25 +62,31 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items, loaded]);
 
-  const addItem = useCallback((product: Product, size: string) => {
+  const addItem = useCallback((product: Product, size: string, qty: number = 1, variationId?: number) => {
+    const addQty = Math.max(1, qty || 1);
+    const resolvedVariationId =
+      variationId ||
+      product.variations?.find(
+        (v: any) => String(v.size || "").toLowerCase() === String(size || "").toLowerCase()
+      )?.id;
     setItems((prev) => {
       const existing = prev.find(
-        (i) => i.product.id === product.id && i.size === size
+        (i) => String(i.product.id) === String(product.id) && i.size === size
       );
       if (existing) {
         return prev.map((i) =>
-          i.product.id === product.id && i.size === size
-            ? { ...i, qty: i.qty + 1 }
+          String(i.product.id) === String(product.id) && i.size === size
+            ? { ...i, qty: i.qty + addQty, variationId: resolvedVariationId || i.variationId }
             : i
         );
       }
-      return [...prev, { product, size, qty: 1 }];
+      return [...prev, { product, size, qty: addQty, variationId: resolvedVariationId }];
     });
   }, []);
 
   const removeItem = useCallback((productId: string, size: string) => {
     setItems((prev) =>
-      prev.filter((i) => !(i.product.id === productId && i.size === size))
+      prev.filter((i) => !(String(i.product.id) === String(productId) && i.size === size))
     );
   }, []);
 
@@ -90,11 +98,45 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
       setItems((prev) =>
         prev.map((i) =>
-          i.product.id === productId && i.size === size ? { ...i, qty } : i
+          String(i.product.id) === String(productId) && i.size === size ? { ...i, qty } : i
         )
       );
     },
     [removeItem]
+  );
+
+  const updateSize = useCallback(
+    (productId: string, oldSize: string, newSize: string) => {
+      const cleanNew = String(newSize || "").trim();
+      if (!cleanNew || oldSize === cleanNew) return;
+      setItems((prev) => {
+        const itemToChange = prev.find(
+          (i) => String(i.product.id) === String(productId) && i.size === oldSize
+        );
+        if (!itemToChange) return prev;
+        const newVariationId = itemToChange.product.variations?.find(
+          (v: any) => String(v.size || "").toLowerCase() === cleanNew.toLowerCase()
+        )?.id;
+        const existing = prev.find(
+          (i) => String(i.product.id) === String(productId) && i.size === cleanNew
+        );
+        if (existing) {
+          return prev
+            .filter((i) => !(String(i.product.id) === String(productId) && i.size === oldSize))
+            .map((i) =>
+              String(i.product.id) === String(productId) && i.size === cleanNew
+                ? { ...i, qty: i.qty + itemToChange.qty, variationId: newVariationId || i.variationId }
+                : i
+            );
+        }
+        return prev.map((i) =>
+          String(i.product.id) === String(productId) && i.size === oldSize
+            ? { ...i, size: cleanNew, variationId: newVariationId || i.variationId }
+            : i
+        );
+      });
+    },
+    []
   );
 
   const clearCart = useCallback(() => setItems([]), []);
@@ -114,6 +156,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         addItem,
         removeItem,
         updateQty,
+        updateSize,
         clearCart,
       }}
     >

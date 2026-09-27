@@ -17,7 +17,7 @@ export default function BrandStorySection() {
       >
         <div className="container">
           <div style={{ maxWidth: 840, margin: "0 auto", textAlign: "center", marginBottom: 32 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(99, 102, 241, 0.12)", color: "var(--indigo)", padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", marginBottom: 12 }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "var(--indigo-light)", color: "var(--indigo)", padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", marginBottom: 12 }}>
               <span>🧵</span> EST. DHAKA 2020 · HERITAGE &amp; CRAFT
             </div>
             <h2 style={{ fontSize: "clamp(22px, 3.5vw, 32px)", fontWeight: 900, color: "var(--ink)", letterSpacing: "-0.02em", marginBottom: 12 }}>
@@ -54,10 +54,10 @@ export default function BrandStorySection() {
             </div>
 
             <div style={{ background: "var(--surface-2)", padding: 20, borderRadius: 14, border: "1px solid var(--border)" }}>
-              <div style={{ fontSize: 24, marginBottom: 8 }}>🏬</div>
-              <h3 style={{ fontSize: 14, fontWeight: 800, color: "var(--ink)", marginBottom: 4 }}>4 Retail Showrooms</h3>
+              <div style={{ fontSize: 24, marginBottom: 8 }}>🚚</div>
+              <h3 style={{ fontSize: 14, fontWeight: 800, color: "var(--ink)", marginBottom: 4 }}>Nationwide Delivery</h3>
               <p style={{ fontSize: 12, color: "var(--sub)", lineHeight: 1.5 }}>
-                Visit us in Mirpur 12, Wari (Dhaka), and Cumilla for personalized fittings.
+                Fast home delivery across all 64 districts in Bangladesh with Cash on Delivery (COD).
               </p>
             </div>
 
@@ -86,7 +86,7 @@ export default function BrandStorySection() {
                 borderRadius: 10,
                 textDecoration: "none",
                 letterSpacing: "0.04em",
-                boxShadow: "0 4px 14px rgba(99, 102, 241, 0.28)",
+                boxShadow: "0 4px 14px rgba(224, 83, 5, 0.28)",
               }}
             >
               DISCOVER OUR COLLECTIONS →
@@ -101,7 +101,7 @@ export default function BrandStorySection() {
           {/* Heritage & Craft narrative card */}
           <article className="story-card">
             <div className="story-card__header">
-              <span className="story-card__badge" style={{ color: "var(--indigo)", background: "rgba(99, 102, 241, 0.12)" }}>
+              <span className="story-card__badge" style={{ color: "var(--indigo)", background: "var(--indigo-light)" }}>
                 <AwardIcon size={13} /> HERITAGE &amp; CRAFT
               </span>
               <span className="story-card__right-tag">EST. DHAKA 2020</span>
@@ -123,9 +123,9 @@ export default function BrandStorySection() {
               type="button"
               className="story-card__cta"
               onClick={() => setAboutOpen(true)}
-              aria-label="Read full DEEN heritage story and store locations"
+              aria-label="Read full DEEN heritage story"
             >
-              DISCOVER OUR STORY &amp; SHOWROOMS <ArrowRightIcon size={14} />
+              DISCOVER OUR STORY <ArrowRightIcon size={14} />
             </button>
           </article>
 
@@ -149,7 +149,6 @@ export default function BrandStorySection() {
                   </div>
                 ))}
               </div>
-              <div className="story-card__spacer" />
               <span className="story-card__tag">{item.tag}</span>
             </article>
           ))}

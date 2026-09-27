@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Linking,
+  Image,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 
@@ -20,6 +21,10 @@ import {
   Check,
   Lock,
   MapPin,
+  Trash2,
+  Plus,
+  Minus,
+  ChevronDown,
 } from "../src/components/Icons";
 import { useTheme } from "../src/context/ThemeContext";
 import { sharedStyles } from "../src/theme/sharedStyles";
@@ -27,14 +32,14 @@ import { ScreenShell } from "../src/components/ScreenShell";
 import { useCart } from "../src/context/CartContext";
 import { useOrders } from "../src/context/OrderContext";
 import { useProfile } from "../src/context/ProfileContext";
-import { useRewards } from "../src/context/RewardsContext";
 import { bdt, DELIVERY_OPTIONS, createGuestSession, getGuestSession, fetchPaymentMethods, fetchCoupon, getCashbackAmount, fetchDistricts, type BdDistrict } from "../src/services/gateway";
 
-import { BD_DISTRICTS } from "../src/data/districts";
+import { BD_DISTRICTS, getDistrictPostcode } from "../src/data/districts";
 import { Analytics } from "../src/services/analytics";
 import {
   DeliveryOptionKey,
   DeliverySlot,
+  CartItem,
 } from "../src/types";
 
 const DELIVERY_SLOTS: { key: DeliverySlot; label: string; time: string }[] = [
@@ -49,13 +54,13 @@ export default function CheckoutScreen() {
   const params = useLocalSearchParams<{ area?: string }>();
   const { colors, isDark } = useTheme();
   const s = sharedStyles(colors);
-  const { cart, subtotal, clearCart, cashbackAmount = 0, bogoDiscount = 0 } = useCart();
+  const { cart, subtotal, clearCart, cashbackAmount = 0, bogoDiscount = 0, removeFromCart, updateQty, updateSize } = useCart();
   const { placeOrder } = useOrders();
   const { profile } = useProfile();
-  const { coins, tierLabel, redeemCoins, earnCoins } = useRewards();
   const insets = useSafeAreaInsets();
   const styles = createStyles(colors, s);
 
+  const [sizeModalItem, setSizeModalItem] = useState<CartItem | null>(null);
   const scrollViewRef = React.useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -85,7 +90,6 @@ export default function CheckoutScreen() {
   const [paymentMethods, setPaymentMethods] = useState<{ id: string; title: string; description: string; type: "cod" | "redirect" }[]>([]);
   const [isGuestMode, setIsGuestMode] = useState<boolean>(profile.isGuest);
   const [guestSession, setGuestSession] = useState<null | Awaited<ReturnType<typeof getGuestSession>>>(null);
-  const [redeemPoints, setRedeemPoints] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   // Customer coupon (validated against Woo, exactly like the website).
@@ -126,14 +130,17 @@ export default function CheckoutScreen() {
   // Source of truth: real, ENABLED payment gateways from Woo (cod / bKash / sslcommerz).
   useEffect(() => {
     fetchPaymentMethods()
-      .then((m) => { if (m.length) setPaymentMethods(m); })
+      .then((m) => { setPaymentMethods(m); setPayment(m.find((method) => method.id === "cod")?.id || m[0]?.id || ""); })
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const destination = isGift ? giftDistrict : district;
+    setSelectedArea((current) => current === "store_pickup" ? current : destination.code === "BD-13" ? (current === "dhaka_express" ? current : "dhaka_standard") : "outside_standard");
+  }, [isGift, giftDistrict.code, district.code]);
+
   const deliveryOpt = DELIVERY_OPTIONS[selectedArea] || DELIVERY_OPTIONS.dhaka_standard;
   const deliveryFee = deliveryOpt.fee;
-  const maxCoinDiscount = Math.min(Math.floor(coins / 2), Math.floor(subtotal * 0.2));
-  const coinDiscountBDT = redeemPoints ? maxCoinDiscount : 0;
   const cashbackBDT = cashbackAmount ?? getCashbackAmount(subtotal);
   const couponDiscountBDT = couponInfo
     ? (couponInfo.type === "percent"
@@ -142,7 +149,7 @@ export default function CheckoutScreen() {
     : 0;
   const total = Math.max(
     0,
-    subtotal + deliveryFee - coinDiscountBDT - cashbackBDT - (bogoDiscount || 0) - couponDiscountBDT
+    subtotal + deliveryFee - cashbackBDT - (bogoDiscount || 0) - couponDiscountBDT
   );
 
   const handleApplyCoupon = async () => {
@@ -166,6 +173,7 @@ export default function CheckoutScreen() {
   };
 
   const handlePlaceOrder = async () => {
+    if (loading || !paymentMethods.some((method) => method.id === payment)) return;
     if (!name.trim()) {
       setErrorMsg("Please provide your full name");
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
@@ -185,6 +193,27 @@ export default function CheckoutScreen() {
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
       return;
     }
+    if (isGift) {
+      if (!giftName.trim()) {
+        setErrorMsg("Please provide the gift recipient's full name");
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        return;
+      }
+      let gDigits = giftPhone.replace(/[^0-9]/g, "");
+      if (gDigits.startsWith("880") && gDigits.length === 13) {
+        gDigits = gDigits.slice(2);
+      }
+      if (gDigits.length !== 11 || !gDigits.startsWith("0") || !/^01[3-9]\d{8}$/.test(gDigits)) {
+        setErrorMsg("Recipient phone must be an 11-digit Bangladeshi mobile number (01XXXXXXXXX)");
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        return;
+      }
+      if (!giftAddress.trim() || giftAddress.trim().length < 8) {
+        setErrorMsg("Please enter full gift delivery address (house/flat, road, area)");
+        scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+        return;
+      }
+    }
 
     setErrorMsg("");
     setLoading(true);
@@ -201,40 +230,33 @@ export default function CheckoutScreen() {
         unit: i.product.salePrice ?? i.product.price,
       }));
 
-      const isManualMfs = payment.includes("bkash");
-
-      if (isManualMfs) {
-        if (!bkashNumber.trim() || !trxId.trim()) {
-          setErrorMsg("Please enter your bKash mobile number and Transaction ID (TrxID).");
-          scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-          setLoading(false);
-          return;
-        }
-      }
-
-      const finalDeliveryNotes = isManualMfs
-        ? `[bKash Payment]\nSender Phone: ${bkashNumber.trim()}\nRef/TrxID: ${trxId.trim()}\n${deliveryNotes.trim()}`
-        : deliveryNotes.trim();
-
       const created = await placeOrder({
-        name: isGift ? (giftName.trim() || name.trim()) : name.trim(),
-        phone: isGift ? (giftPhone.replace(/[^0-9]/g, "").slice(-11) || digits) : digits,
+        name: name.trim(),
+        phone: digits,
         email: email.trim() || undefined,
-        address: selectedArea === "store_pickup" ? "DEEN Flagship Outlet, Ramzannesa Super Market, Mirpur 12, Dhaka (Store Pickup)" : isGift ? giftAddress.trim() : address.trim(),
-        city: selectedArea === "store_pickup" ? "Dhaka" : isGift ? (giftCity.trim() || giftDistrict.name) : (city.trim() || district.name),
-        district: isGift ? giftDistrict.code : district.code,
-        state: isGift ? giftDistrict.code : district.code,
-        postcode: "1200",
+        address: selectedArea === "store_pickup" ? "DEEN Dhaka Hub (Store Pickup)" : address.trim(),
+        city: selectedArea === "store_pickup" ? "Dhaka" : (city.trim() || district.name),
+        district: district.code,
+        state: district.code,
+        postcode: getDistrictPostcode(district.code),
         area: selectedArea,
         deliveryOption: selectedArea,
         deliverySlot,
-        deliveryNotes: finalDeliveryNotes || undefined,
+        deliveryNotes: deliveryNotes.trim() || undefined,
         payment,
-        trxId: trxId.trim() || undefined,
         coupon: couponInfo ? couponInfo.code : undefined,
         isGiftOrder: isGift,
         giftRecipientName: isGift ? giftName.trim() : undefined,
         giftRecipientPhone: isGift ? giftPhone.replace(/[^0-9]/g, "").slice(-11) : undefined,
+        shipping: isGift ? {
+          first_name: giftName.trim(),
+          phone: giftPhone.replace(/[^0-9]/g, "").slice(-11),
+          address_1: giftAddress.trim(),
+          city: giftCity.trim() || giftDistrict.name,
+          state: giftDistrict.code,
+          postcode: getDistrictPostcode(giftDistrict.code),
+          country: "BD",
+        } : undefined,
         lines,
         subtotal,
         delivery: deliveryFee,
@@ -244,26 +266,28 @@ export default function CheckoutScreen() {
       } as any);
 
 
-      // Deduct coins if redeemed & earn coins for order
-      if (redeemPoints && coinDiscountBDT > 0) {
-        await redeemCoins(coinDiscountBDT * 2);
-      }
-      await earnCoins(total, `Order #${created.number}`);
+      const actualOrderNumber = created.wooNumber || created.number;
 
       // Dispatch Google Analytics 4 Purchase Event
       Analytics.logPurchase({
-        id: String(created.wooNumber || created.number || created.id),
+        id: String(actualOrderNumber || created.id),
         total: Number(created.total || total),
         deliveryFee: deliveryFee,
         paymentMethod: payment,
       });
 
       clearCart();
+
+      // If online payment gateway (bKash or SSLCommerz), open payment redirect URL
+      if (payment !== "cod" && created.paymentUrl) {
+        Linking.openURL(created.paymentUrl).catch(() => {});
+      }
+
       router.replace({
         pathname: "/order-success",
         params: {
           orderId: created.id,
-          orderNumber: created.wooNumber || created.number,
+          orderNumber: actualOrderNumber,
           gatewayRef: created.number,
           total: String(created.total),
           paymentUrl: created.paymentUrl || "",
@@ -674,9 +698,9 @@ export default function CheckoutScreen() {
             </View>
           ) : (
             <View style={[styles.pickupNotice, { backgroundColor: colors.emeraldLight, borderColor: colors.emerald }]}>
-              <Text style={[styles.pickupNoticeTitle, { color: colors.emerald }]}>📍 Outlet Collection Point:</Text>
+              <Text style={[styles.pickupNoticeTitle, { color: colors.emerald }]}>📍 Hub Collection Point:</Text>
               <Text style={[styles.pickupNoticeText, { color: colors.ink }]}>
-                DEEN Mirpur 12 Outlet, 2nd Floor, Ramzannesa Super Market, Mirpur 12, Dhaka-1216. Open 10 AM - 9:30 PM daily.
+                DEEN Dhaka Dispatch Hub (Store Pickup), Dhaka. Open 10:00 AM – 8:00 PM daily.
               </Text>
             </View>
           )}
@@ -725,18 +749,7 @@ export default function CheckoutScreen() {
           <Text style={[styles.stepTitle, { color: colors.indigoDark }]}>3. PAYMENT METHOD</Text>
 
           {paymentMethods.length === 0 ? (
-            // Fallback while loading / if fetch fails: safe default = COD only.
-            <TouchableOpacity
-              style={[styles.payOption, { backgroundColor: colors.paper, borderColor: colors.border }, payment === "cod" && [styles.payOptionActive, { borderColor: colors.indigo, backgroundColor: colors.indigoLight }]]}
-              onPress={() => setPayment("cod")}
-            >
-              <View style={[styles.radioOuter, { borderColor: colors.indigo }]}>{payment === "cod" && <View style={[styles.radioInner, { backgroundColor: colors.indigo }]} />}</View>
-              <View style={styles.payInfo}>
-                <Text style={[styles.payTitle, { color: colors.ink }]}>Cash on Delivery (COD)</Text>
-                <Text style={[styles.paySub, { color: colors.sub }]}>Pay cash upon receiving and inspecting your parcel</Text>
-              </View>
-              <View style={[styles.payTag, { backgroundColor: colors.indigo }]}><Text style={styles.payTagText}>MOST POPULAR</Text></View>
-            </TouchableOpacity>
+            <Text accessibilityLiveRegion="polite" style={{ color: colors.sub }}>Payment methods are unavailable. Please reload before placing an order.</Text>
           ) : (
             paymentMethods.map((m) => {
               const active = payment === m.id;
@@ -751,94 +764,132 @@ export default function CheckoutScreen() {
                     <View style={styles.payInfo}>
                       <Text style={[styles.payTitle, { color: colors.ink }]}>{m.title}</Text>
                       {m.description ? <Text style={[styles.paySub, { color: colors.sub }]}>{m.description}</Text> : null}
-                      {!isCod && !m.id.includes("bkash") && (
-                        <Text style={[styles.paySub, { color: colors.sub }]}>You'll be taken to the secure {m.title} page to complete payment.</Text>
+                      {!isCod && (
+                        <Text style={[styles.paySub, { color: colors.sub, marginTop: 4 }]}>
+                          You will be redirected to the secure {m.title} page to complete payment.
+                        </Text>
                       )}
                     </View>
                     {isCod && <View style={[styles.payTag, { backgroundColor: colors.indigo }]}><Text style={styles.payTagText}>MOST POPULAR</Text></View>}
                   </TouchableOpacity>
-
-                  {/* Manual bKash Inputs */}
-                  {active && m.id.includes("bkash") && (
-                    <View style={{ padding: 12, backgroundColor: colors.indigoLight, borderBottomLeftRadius: 10, borderBottomRightRadius: 10, borderWidth: 1.5, borderColor: colors.indigo, borderTopWidth: 0, marginTop: -2 }}>
-                      <Text style={{ fontSize: 13, color: colors.ink, marginBottom: 10, fontWeight: "600", lineHeight: 18 }}>
-                        1. Open your bKash App & select Send Money.{"\n"}
-                        2. Send <Text style={{fontWeight: "800", color: colors.indigoDark}}>৳{total.toLocaleString("en-BD")}</Text> to <Text style={{fontWeight: "800", color: colors.indigoDark}}>01952 700 500</Text> (Personal).{"\n"}
-                        3. Enter your sender number and Transaction ID below.
-                      </Text>
-                      
-                      <View style={{ gap: 8 }}>
-                        <TextInput
-                          style={[styles.input, { backgroundColor: colors.paper, borderColor: colors.border, color: colors.ink }]}
-                          value={bkashNumber}
-                          onChangeText={setBkashNumber}
-                          placeholder="Your bKash Number (01XXXXXXXXX)"
-                          placeholderTextColor={colors.faint}
-                          keyboardType="phone-pad"
-                        />
-                        <TextInput
-                          style={[styles.input, { backgroundColor: colors.paper, borderColor: colors.border, color: colors.ink }]}
-                          value={trxId}
-                          onChangeText={setTrxId}
-                          placeholder="Transaction ID (TrxID)"
-                          placeholderTextColor={colors.faint}
-                        />
-                      </View>
-                    </View>
-                  )}
                 </View>
               );
             })
           )}
+
+          {/* Genuine DEEN Commerce Payment Partner Trust Badge */}
+          <View style={{ alignItems: "center", marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.borderLight }}>
+            <Text style={{ fontSize: 10, fontWeight: "700", color: colors.sub, letterSpacing: 0.5, marginBottom: 6 }}>
+              100% SECURE PAYMENT PARTNERS
+            </Text>
+            <Image
+              source={require("../assets/paywith.png")}
+              style={{ width: "100%", height: 32 }}
+              resizeMode="contain"
+            />
+          </View>
         </View>
 
         {/* 4. Order Summary */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.stepTitle, { color: colors.indigoDark }]}>4. ORDER REVIEW</Text>
+          <View style={styles.reviewHeaderRow}>
+            <Text style={[styles.stepTitle, { color: colors.indigoDark, marginBottom: 0 }]}>4. ORDER REVIEW</Text>
+            <Text style={{ fontSize: 11, fontWeight: "700", color: colors.sub }}>
+              {cart.reduce((sum, it) => sum + it.qty, 0)} {cart.reduce((sum, it) => sum + it.qty, 0) === 1 ? "item" : "items"}
+            </Text>
+          </View>
 
-          {cart.map((item) => (
-            <View key={`${item.productId}-${item.size}`} style={styles.reviewItem}>
-              <Text style={[styles.reviewItemName, { color: colors.ink }]} numberOfLines={1}>
-                {item.qty}x {item.product.name} ({item.size})
-              </Text>
-              <Text style={[styles.reviewItemPrice, { color: colors.ink }]}>
-                {bdt((item.product.salePrice ?? item.product.price) * item.qty)}
-              </Text>
-            </View>
-          ))}
+          {cart.map((item) => {
+            const unitPrice = item.product.salePrice ?? item.product.price;
+            const itemImageUri =
+              item.product.thumb ||
+              item.product.images?.[0] ||
+              item.product.gallery?.[0] ||
+              "https://images.unsplash.com/photo-1542272604-780c96856592?w=800";
 
-          {/* 3.5 DEEN VIP Club Loyalty Point Redemption */}
-          {coins > 0 && maxCoinDiscount > 0 && (
-            <TouchableOpacity
-              style={[
-                styles.coinsCard,
-                { backgroundColor: colors.indigoLight, borderColor: colors.indigo },
-                redeemPoints && [styles.coinsCardActive, { borderColor: colors.emerald, backgroundColor: colors.emeraldLight }],
-              ]}
-              activeOpacity={0.88}
-              onPress={() => setRedeemPoints(!redeemPoints)}
-            >
-              <View style={styles.coinsHeader}>
-                <View style={styles.coinsHeaderLeft}>
-                  <Text style={styles.coinIcon}>🪙</Text>
-                  <View>
-                    <Text style={[styles.coinsTitle, { color: colors.ink }]}>REDEEM DEEN VIP COINS</Text>
-                    <Text style={[styles.coinsSub, { color: colors.sub }]}>
-                      Balance: {coins} Coins ({tierLabel})
+            return (
+              <View
+                key={`${item.productId}-${item.size}`}
+                style={[styles.checkoutItemCard, { backgroundColor: colors.paper, borderColor: colors.borderLight }]}
+              >
+                <Image
+                  source={{ uri: itemImageUri }}
+                  style={styles.checkoutItemImg}
+                  resizeMode="cover"
+                />
+
+                <View style={styles.checkoutItemDetails}>
+                  <View style={styles.checkoutItemTop}>
+                    <Text style={[styles.checkoutItemName, { color: colors.ink }]} numberOfLines={1}>
+                      {item.product.name}
                     </Text>
+                    <TouchableOpacity
+                      onPress={() => removeFromCart(item.productId, item.size)}
+                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove ${item.product.name} (Size ${item.size}) from order`}
+                      style={styles.checkoutRemoveBtn}
+                    >
+                      <Trash2 size={16} color={colors.crimson} />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.checkoutItemControls}>
+                    {/* Size Changer Chip */}
+                    <TouchableOpacity
+                      style={[styles.checkoutSizeBadge, { backgroundColor: colors.card, borderColor: colors.border }]}
+                      onPress={() => setSizeModalItem(item)}
+                      activeOpacity={0.75}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Change size for ${item.product.name}, currently size ${item.size}`}
+                    >
+                      <Text style={[styles.checkoutSizeTag, { color: colors.sub }]}>SIZE</Text>
+                      <Text style={[styles.checkoutSizeVal, { color: colors.indigoDark }]}>{item.size}</Text>
+                      <ChevronDown size={11} color={colors.indigoDark} />
+                    </TouchableOpacity>
+
+                    {/* Quantity Stepper */}
+                    <View style={[styles.checkoutStepper, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                      <TouchableOpacity
+                        style={styles.checkoutStepBtn}
+                        onPress={() => updateQty(item.productId, item.size, -1)}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Decrease quantity of ${item.product.name}`}
+                      >
+                        <Minus size={13} color={colors.ink} />
+                      </TouchableOpacity>
+                      <Text style={[styles.checkoutStepQty, { color: colors.ink }]}>{item.qty}</Text>
+                      <TouchableOpacity
+                        style={styles.checkoutStepBtn}
+                        onPress={() => updateQty(item.productId, item.size, 1)}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Increase quantity of ${item.product.name}`}
+                      >
+                        <Plus size={13} color={colors.ink} />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Line Total */}
+                    <View style={styles.checkoutPriceCol}>
+                      <Text style={[styles.checkoutLineTotal, { color: colors.indigoDark }]}>
+                        {bdt(unitPrice * item.qty)}
+                      </Text>
+                      {item.qty > 1 && (
+                        <Text style={[styles.checkoutUnitSmall, { color: colors.sub }]}>
+                          {bdt(unitPrice)} ea
+                        </Text>
+                      )}
+                    </View>
                   </View>
                 </View>
-                <View style={[styles.coinsCheckbox, { borderColor: colors.indigo, backgroundColor: colors.paper }]}>
-                  {redeemPoints && <Check size={12} color={colors.emerald} />}
-                </View>
               </View>
-              <Text style={[styles.coinsDiscountNotice, { color: colors.indigoDark }]}>
-                {redeemPoints
-                  ? `✓ Applied ৳${coinDiscountBDT} instant checkout discount (-${coinDiscountBDT * 2} Coins)`
-                  : `Redeem up to ${maxCoinDiscount * 2} Coins for ৳${maxCoinDiscount} off this order`}
-              </Text>
-            </TouchableOpacity>
-          )}
+            );
+          })}
+
+          {/* 3.5 DEEN VIP Club Loyalty Point Redemption */}
+
 
           {/* Coupon code — customer may have a code written down, like the website */}
           <View style={[styles.couponCard, { backgroundColor: colors.paper, borderColor: colors.borderLight }]}>
@@ -900,16 +951,7 @@ export default function CheckoutScreen() {
             </View>
           )}
 
-          {redeemPoints && coinDiscountBDT > 0 && (
-            <View style={styles.summaryRow}>
-              <Text style={[styles.summaryLabel, { color: colors.emerald }]}>
-                🪙 DEEN Coins Discount
-              </Text>
-              <Text style={[styles.summaryValue, { color: colors.emerald }]}>
-                -{bdt(coinDiscountBDT)}
-              </Text>
-            </View>
-          )}
+
 
           {couponInfo && couponDiscountBDT > 0 && (
             <View style={styles.summaryRow}>
@@ -944,7 +986,7 @@ export default function CheckoutScreen() {
           style={[styles.placeOrderBtn, { backgroundColor: colors.indigo }]}
           activeOpacity={0.88}
           onPress={handlePlaceOrder}
-          disabled={loading}
+          disabled={loading || !paymentMethods.some((method) => method.id === payment)}
           accessibilityRole="button"
           accessibilityLabel={
             payment === "cod"
@@ -1071,6 +1113,105 @@ export default function CheckoutScreen() {
                 );
               })}
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Size Selection Bottom Sheet Modal */}
+      <Modal
+        visible={Boolean(sizeModalItem)}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSizeModalItem(null)}
+      >
+        <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" }}>
+          <View
+            style={{
+              backgroundColor: colors.paper,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              padding: 20,
+              paddingBottom: Math.max(insets.bottom, 20),
+            }}
+          >
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <View style={{ flex: 1, paddingRight: 10 }}>
+                <Text style={{ fontSize: 16, fontWeight: "900", color: colors.ink }}>
+                  SELECT SIZE
+                </Text>
+                <Text style={{ fontSize: 12, color: colors.sub }} numberOfLines={1}>
+                  {sizeModalItem?.product.name}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={{ padding: 6 }}
+                onPress={() => setSizeModalItem(null)}
+                accessibilityRole="button"
+                accessibilityLabel="Close size modal"
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={{ fontSize: 18, fontWeight: "800", color: colors.ink }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 11, fontWeight: "800", color: colors.sub, letterSpacing: 0.5, marginBottom: 12 }}>
+              AVAILABLE SIZES:
+            </Text>
+
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
+              {(() => {
+                if (!sizeModalItem) return null;
+                const cat = (sizeModalItem.product.category || "").toUpperCase();
+                const fallbackSizes =
+                  cat === "JEANS" || cat === "TROUSERS"
+                    ? ["28", "30", "32", "34", "36", "38"]
+                    : ["S", "M", "L", "XL", "XXL"];
+                const rawSizes =
+                  sizeModalItem.product.sizes && sizeModalItem.product.sizes.length > 0
+                    ? sizeModalItem.product.sizes
+                    : fallbackSizes;
+                const availableSizes = Array.from(
+                  new Set([sizeModalItem.size, ...rawSizes].filter(Boolean))
+                );
+
+                return availableSizes.map((s) => {
+                  const isCurrent = s === sizeModalItem.size;
+                  return (
+                    <TouchableOpacity
+                      key={s}
+                      style={{
+                        minWidth: 54,
+                        height: 44,
+                        paddingHorizontal: 14,
+                        borderRadius: 8,
+                        borderWidth: 1.5,
+                        borderColor: isCurrent ? colors.indigo : colors.border,
+                        backgroundColor: isCurrent ? colors.indigoLight : colors.card,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                      activeOpacity={0.75}
+                      onPress={() => {
+                        updateSize(sizeModalItem.productId, sizeModalItem.size, s);
+                        setSizeModalItem(null);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Select size ${s}`}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          fontWeight: isCurrent ? "800" : "600",
+                          color: isCurrent ? colors.indigoDark : colors.ink,
+                        }}
+                      >
+                        {s}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                });
+              })()}
+            </View>
           </View>
         </View>
       </Modal>
@@ -1354,6 +1495,99 @@ function createStyles(colors: any, s: ReturnType<typeof sharedStyles>) {
     reviewItemPrice: {
       fontSize: 12,
       fontWeight: "700",
+    },
+    reviewHeaderRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: 12,
+    },
+    checkoutItemCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      padding: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      marginBottom: 10,
+      gap: 10,
+    },
+    checkoutItemImg: {
+      width: 52,
+      height: 64,
+      borderRadius: 6,
+    },
+    checkoutItemDetails: {
+      flex: 1,
+      justifyContent: "space-between",
+    },
+    checkoutItemTop: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: 6,
+      marginBottom: 6,
+    },
+    checkoutItemName: {
+      fontSize: 12.5,
+      fontWeight: "700",
+      flex: 1,
+    },
+    checkoutRemoveBtn: {
+      padding: 4,
+    },
+    checkoutItemControls: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+    },
+    checkoutSizeBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 8,
+      paddingVertical: 5,
+      borderRadius: 6,
+      borderWidth: 1,
+      gap: 4,
+    },
+    checkoutSizeTag: {
+      fontSize: 9,
+      fontWeight: "800",
+    },
+    checkoutSizeVal: {
+      fontSize: 11.5,
+      fontWeight: "800",
+    },
+    checkoutStepper: {
+      flexDirection: "row",
+      alignItems: "center",
+      borderRadius: 6,
+      borderWidth: 1,
+      overflow: "hidden",
+    },
+    checkoutStepBtn: {
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      minWidth: 26,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    checkoutStepQty: {
+      fontSize: 12,
+      fontWeight: "700",
+      paddingHorizontal: 4,
+      minWidth: 20,
+      textAlign: "center",
+    },
+    checkoutPriceCol: {
+      alignItems: "flex-end",
+    },
+    checkoutLineTotal: {
+      fontSize: 13,
+      fontWeight: "800",
+    },
+    checkoutUnitSmall: {
+      fontSize: 9.5,
     },
     coinsCard: {
       borderRadius: 8,

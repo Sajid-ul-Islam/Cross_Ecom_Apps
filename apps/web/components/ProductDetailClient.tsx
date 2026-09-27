@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { bdt, resolveProductImage, type Product, type DeliveryFees } from "@/lib/api";
+import { bdt, resolveProductImage, type Product, type DeliveryFees, decodeHtmlEntities } from "@/lib/api";
 import { useCart } from "@/lib/cart";
 import { useWishlist } from "@/lib/wishlist";
 import SizeGuideModal from "@/components/SizeGuideModal";
@@ -14,6 +14,7 @@ import BankOffersModal from "@/components/BankOffersModal";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ProductCard from "@/components/ProductCard";
 import CompleteTheLook from "@/components/CompleteTheLook";
+import ProductComments from "@/components/ProductComments";
 
 const WASH_OPTIONS = [
   { name: "Raw Indigo", color: "#1c2841" },
@@ -85,7 +86,7 @@ export default function ProductDetailClient({
         <span>/</span>
         <Link href={`/shop?category=${product.category}`}>{product.category}</Link>
         <span>/</span>
-        <span style={{ color: "var(--ink)", fontWeight: 600 }}>{product.name}</span>
+        <span style={{ color: "var(--ink)", fontWeight: 600 }}>{decodeHtmlEntities(product.name)}</span>
       </nav>
 
       <div
@@ -175,7 +176,44 @@ export default function ProductDetailClient({
         {/* Info & Buying Controls */}
         <div>
           {/* Category & Badges */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+            {product.segment === "select" ? (
+              <span
+                style={{
+                  background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)",
+                  color: "#fbbf24",
+                  border: "1px solid rgba(251, 191, 36, 0.4)",
+                  padding: "3px 8px",
+                  borderRadius: 4,
+                  fontSize: 11,
+                  fontWeight: 900,
+                  letterSpacing: "0.5px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <span>⚡</span> DEEN SELECT {product.brand && product.brand !== "DEEN" ? `· ${product.brand.toUpperCase()}` : "· CURATED DROP"}
+              </span>
+            ) : (
+              <span
+                style={{
+                  background: "rgba(224, 83, 5, 0.1)",
+                  color: "var(--indigo)",
+                  border: "1px solid rgba(224, 83, 5, 0.3)",
+                  padding: "3px 8px",
+                  borderRadius: 4,
+                  fontSize: 11,
+                  fontWeight: 900,
+                  letterSpacing: "0.5px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                <span>💎</span> DEEN COLLECTION
+              </span>
+            )}
             <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: "var(--sub)", textTransform: "uppercase" }}>
               {product.category}
             </span>
@@ -191,9 +229,15 @@ export default function ProductDetailClient({
             )}
           </div>
 
-          <h1 style={{ fontSize: 28, fontWeight: 900, color: "var(--ink)", lineHeight: 1.25, marginBottom: 12 }}>
-            {product.name}
+          <h1 style={{ fontSize: 28, fontWeight: 900, color: "var(--ink)", lineHeight: 1.25, marginBottom: 6 }}>
+            {decodeHtmlEntities(product.name)}
           </h1>
+
+          {product.sku && (
+            <p style={{ fontSize: 11, fontFamily: "monospace", color: "var(--sub)", letterSpacing: 0.4, marginBottom: 12, opacity: 0.8 }}>
+              SKU: <strong style={{ color: "var(--ink)" }}>{product.sku}</strong>
+            </p>
+          )}
 
           {/* Rating */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
@@ -229,7 +273,7 @@ export default function ProductDetailClient({
           {/* Blurb */}
           {product.blurb && (
             <p style={{ fontSize: 14, color: "var(--sub)", lineHeight: 1.7, marginBottom: 16 }}>
-              {product.blurb}
+              {decodeHtmlEntities(product.blurb)}
             </p>
           )}
 
@@ -279,7 +323,9 @@ export default function ProductDetailClient({
               <span style={{ fontSize: 12, fontWeight: 800, color: "var(--ink)", textTransform: "uppercase", letterSpacing: 0.5 }}>
                 Wash &amp; Tone: <strong>{selectedWash}</strong>
               </span>
-              <span style={{ fontSize: 11, color: "var(--sub)" }}>Pre-shrunk 13.5 oz</span>
+              <span style={{ fontSize: 11, color: "var(--sub)" }}>
+                {product.fabric ? product.fabric.slice(0, 24) : "Washed Finish"}
+              </span>
             </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {WASH_OPTIONS.map((w) => {
@@ -514,6 +560,17 @@ export default function ProductDetailClient({
                 return "📖 Garment Care Guide";
               })()}
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById("customer-reviews");
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="btn btn--outline"
+              style={{ flex: 1, fontSize: 12, padding: "8px 12px", fontWeight: 700 }}
+            >
+              ⭐ Fit Reviews
+            </button>
             <WhatsAppButton
               productName={product.name}
               size={selectedSize}
@@ -540,7 +597,7 @@ export default function ProductDetailClient({
                     if (product.fabric && product.fabric.trim().length > 10) return product.fabric;
                     const cat = (product.category || "").toUpperCase();
                     if (cat.includes("JEAN") || cat.includes("DENIM")) {
-                      return "Crafted from 13.5 oz artisanal raw selvedge denim woven on vintage shuttle looms. Features genuine redline selvedge ID, antique brass donut buttons, and copper rivets.";
+                      return "Crafted from premium washed cotton denim with authentic fading, sturdy rivets, and reinforced stitching for daily endurance.";
                     }
                     if (cat.includes("PANJABI") || cat.includes("PUNJABI")) {
                       return "Crafted from 100% Egyptian Giza combed cotton & dobby jacquard weaves. Features high-density artisanal embroidery, tailored band collar, and natural coconut buttons.";
@@ -584,6 +641,9 @@ export default function ProductDetailClient({
           </div>
         </div>
       </div>
+
+      {/* Verified Customer Reviews & WordPress Comments */}
+      <ProductComments productId={product.id} productName={product.name} />
 
       {/* 1-Tap Curated Outfit Bundling */}
       {related.length > 0 && (
@@ -687,7 +747,7 @@ export default function ProductDetailClient({
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {product.name}
+              {decodeHtmlEntities(product.name)}
             </div>
             <div style={{ fontSize: 13, fontWeight: 900, color: "var(--indigo)" }}>
               {bdt(price)}

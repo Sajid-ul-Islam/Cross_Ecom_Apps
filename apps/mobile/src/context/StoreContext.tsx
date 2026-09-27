@@ -2,15 +2,15 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { fetchStoreInfo, StoreInfo, fetchPage } from "../services/gateway";
 
 const DEFAULTS: StoreInfo = {
-  address: "Level 3, Ramzannesa Super Market, Mirpur 12, Dhaka 1216",
+  address: "Dhaka, Bangladesh",
   city: "Dhaka",
   postcode: "1216",
   country: "BD",
   currency: "BDT",
-  hotline: "09617-700500",
+  hotline: "01952-700500",
   whatsapp: "01952-700500",
   bkash: "01952700500",
-  email: "support@deencommerce.com",
+  email: "hello@deencommerce.com",
 };
 
 interface StoreContextType {

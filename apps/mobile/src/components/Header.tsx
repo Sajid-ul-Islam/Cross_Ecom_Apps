@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
 import { useRouter } from "expo-router";
-import { ArrowLeft, Search, Bell, Heart, Sparkles } from "./Icons";
+import { ArrowLeft, Search, Bell, Heart, Sparkles, Menu } from "./Icons";
 import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useWishlist } from "../context/WishlistContext";
@@ -9,6 +9,9 @@ import { useNotifications } from "../context/NotificationContext";
 import { NotificationModal } from "./NotificationModal";
 import { WishlistModal } from "./WishlistModal";
 import { AiConciergeModal } from "./AiConciergeModal";
+import { SideNavDrawer } from "./SideNavDrawer";
+import { StoriesFeedModal } from "./StoriesFeedModal";
+import { DEFAULT_SOCIAL_FEED } from "../services/gateway";
 
 interface HeaderProps {
   title?: string;
@@ -37,6 +40,8 @@ export const Header: React.FC<HeaderProps> = ({
   const [notifVisible, setNotifVisible] = useState(false);
   const [wishlistVisible, setWishlistVisible] = useState(false);
   const [aiVisible, setAiVisible] = useState(false);
+  const [sideNavVisible, setSideNavVisible] = useState(false);
+  const [storiesVisible, setStoriesVisible] = useState(false);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.paper, borderBottomColor: colors.border }]}>
@@ -52,18 +57,35 @@ export const Header: React.FC<HeaderProps> = ({
         ) : (
           <View style={styles.brandContainer}>
             <View style={styles.brandRow}>
-              <Image
-                source={require("../../assets/icon.png")}
-                style={styles.brandLogo}
-                resizeMode="cover"
-              />
-              <Text style={[styles.brandTitle, { color: isDark ? colors.indigo : colors.indigoDark }]}>
-                DEEN
-              </Text>
+              <TouchableOpacity
+                style={[styles.iconButton, { backgroundColor: colors.cardSecondary, marginRight: 6 }]}
+                onPress={() => setSideNavVisible(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Open navigation menu"
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Menu size={20} color={colors.ink} />
+              </TouchableOpacity>
+              <View style={{ flexDirection: "column" }}>
+                <Image
+                  source={isDark ? require("../../assets/logo_white.png") : require("../../assets/logo.png")}
+                  style={styles.brandLogo}
+                  resizeMode="contain"
+                />
+                <Text
+                  style={{
+                    fontSize: 8.5,
+                    fontWeight: "800",
+                    letterSpacing: 1,
+                    textTransform: "uppercase",
+                    color: colors.denimStitch,
+                    marginTop: 1,
+                  }}
+                >
+                  {subtitle || "EST. 2020 · DHAKA"}
+                </Text>
+              </View>
             </View>
-            {subtitle ? (
-              <Text style={[styles.brandSubtitle, { color: colors.sub }]}>{subtitle}</Text>
-            ) : null}
           </View>
         )}
 
@@ -152,6 +174,20 @@ export const Header: React.FC<HeaderProps> = ({
         visible={aiVisible}
         onClose={() => setAiVisible(false)}
       />
+
+      {/* Side Card Navigation Drawer */}
+      <SideNavDrawer
+        visible={sideNavVisible}
+        onClose={() => setSideNavVisible(false)}
+        onOpenStories={() => setStoriesVisible(true)}
+      />
+
+      {/* Shoppable Stories Modal */}
+      <StoriesFeedModal
+        visible={storiesVisible}
+        onClose={() => setStoriesVisible(false)}
+        feedData={DEFAULT_SOCIAL_FEED}
+      />
     </View>
   );
 };
@@ -184,9 +220,8 @@ function createStyles(colors: ThemeColors) {
       letterSpacing: 2,
     },
     brandLogo: {
-      width: 26,
-      height: 26,
-      borderRadius: 6,
+      width: 96,
+      height: 28,
     },
     brandSubtitle: {
       fontSize: 11,

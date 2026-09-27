@@ -15,7 +15,7 @@ This document tracks all identified feature discrepancies and details their full
 | **Brand Identity** | Official Socials (FB, IG, LI, WA) | Implemented | Implemented | Both apps include Facebook, Instagram, LinkedIn, and WhatsApp in Header, Footer, Profile, and About drawers. |
 | **Social Commerce** | Curated Reels & Stories Carousel | Implemented | Implemented | Both apps consume `GET /v1/deen/social/feed` with 1-tap "Quick Bag" and "Shop Piece →" PDP navigation. |
 | **Hero Experience** | Dynamic Motion Hero Slider | Implemented | Implemented | Both apps feature high-definition hero sliders with craftsmanship badges and instant campaign CTAs. |
-| **Craftsmanship Story**| Heritage & Shuttle Loom Section | Implemented | Implemented | Both apps display selvedge heritage details (13.5oz red-line, 4 retail stores, 7-day exchange). |
+| **Brand Story** | Brand Heritage & Nationwide Delivery | Implemented | Implemented | Both apps display brand story, nationwide 64-district delivery, and 7-day doorstep exchange. |
 | **Navigation** | 5 Standard Navigation Tabs | Implemented | Implemented | Synchronized 5-tab bar on native mobile and responsive web mobile viewports. |
 | **Logistics** | 64 Bangladesh Districts Selector | Implemented | Implemented | Both apps use official WooCommerce `BD-XX` state codes (`BD-13` Dhaka, `BD-10` Chattogram, etc.). |
 | **Logistics** | Real-Time Pathao Courier Tracking | Implemented | Implemented | Orders display live courier tracking status stepper when `ptc_consignment_id` is present. |

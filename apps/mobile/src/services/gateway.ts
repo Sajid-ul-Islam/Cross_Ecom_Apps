@@ -29,7 +29,9 @@ import {
   FREE_TEE_THRESHOLD,
   CASHBACK_TIERS,
   getCashbackAmount,
+  decodeHtmlEntities,
 } from "./api";
+import { getDistrictPostcode } from "../data/districts";
 export {
   DELIVERY_FEES,
   DELIVERY_OPTIONS,
@@ -42,6 +44,7 @@ export {
   FREE_TEE_THRESHOLD,
   CASHBACK_TIERS,
   getCashbackAmount,
+  decodeHtmlEntities,
 };
 import { getBundledProducts } from "./catalog";
 import { fetchOrCache, checkCacheVersion, loadCacheVersion, TTL } from "./cache";
@@ -63,6 +66,7 @@ const extra = (Constants.expoConfig?.extra ?? {}) as {
 
 /** Default to Render live gateway */
 const DEFAULT_GATEWAY_URL = "https://cross-ecom-apps-4b4n.onrender.com";
+const BACKUP_GATEWAY_URL = "https://cross-ecom-apps.onrender.com";
 
 /** Ordered list of gateway base URLs.
  *  Source of truth (per-build) = app.json `extra.gatewayUrl` (primary) and
@@ -76,6 +80,7 @@ export const GATEWAY_URLS: string[] = Array.from(
       extra.gatewayUrl,
       ...(Array.isArray(extra.gatewayUrls) ? extra.gatewayUrls : []),
       DEFAULT_GATEWAY_URL,
+      BACKUP_GATEWAY_URL,
     ]
       .filter(Boolean)
       .map((u) => String(u).replace(/\/$/, "")),
@@ -257,11 +262,58 @@ export function startGatewayKeepAlive(intervalMs = 4 * 60 * 1000): () => void {
 
 /* ----------------------------- catalog ----------------------------- */
 
-function applyFilters(list: Product[], category?: DeenCategory, query?: string): Product[] {
-  let out = (list || []).filter((p) => (p.stockStatus || "instock") !== "outofstock");
-  if (category && category !== "ALL") {
-    out = out.filter((p) => p.category === category);
+/**
+ * Resolves strictly in-stock sizes for a product.
+ * Omits any size whose variation stock status is 'outofstock'.
+ * Returns an empty array if the product itself is out of stock.
+ */
+export function getInStockSizes(product: Product | null | undefined): string[] {
+  if (!product || (product.stockStatus || "instock") === "outofstock") {
+    return [];
   }
+
+  if (Array.isArray(product.variations) && product.variations.length > 0) {
+    const inStock = product.variations
+      .filter((v) => {
+        const s = String(v.stock || "instock").toLowerCase();
+        return s !== "outofstock" && s !== "out-of-stock";
+      })
+      .map((v) => String(v.size || "").trim())
+      .filter(Boolean);
+    if (inStock.length > 0) {
+      return Array.from(new Set(inStock));
+    }
+  }
+
+  return (product.sizes || []).map((s) => String(s || "").trim()).filter(Boolean);
+}
+
+function applyFilters(
+  list: Product[],
+  category?: DeenCategory,
+  query?: string,
+  segment?: "all" | "collection" | "select"
+): Product[] {
+  let out = (list || []).filter((p) => (p.stockStatus || "instock") !== "outofstock");
+
+  // Segment filtering (collection vs select)
+  if (segment === "select") {
+    out = out.filter((p) => p.segment === "select");
+  } else if (segment === "collection") {
+    out = out.filter((p) => p.segment === "collection" || !p.segment);
+  }
+
+  if (category && category !== "ALL") {
+    const norm = (category as string).toUpperCase().replace(/[- ]/g, "_");
+    if (norm === "DEEN_SELECT" || norm === "SELECT") {
+      out = out.filter((p) => p.segment === "select");
+    } else if (norm === "DEEN_COLLECTION" || norm === "COLLECTION") {
+      out = out.filter((p) => p.segment === "collection" || !p.segment);
+    } else {
+      out = out.filter((p) => p.category === category);
+    }
+  }
+
   if (query && query.trim()) {
     const q = query.toLowerCase();
     out = out.filter(
@@ -269,7 +321,10 @@ function applyFilters(list: Product[], category?: DeenCategory, query?: string):
         p.name.toLowerCase().includes(q) ||
         p.category.toLowerCase().includes(q) ||
         p.sku.toLowerCase().includes(q) ||
-        (p.fabric || "").toLowerCase().includes(q)
+        (p.fabric || "").toLowerCase().includes(q) ||
+        (p.brand && p.brand.toLowerCase().includes(q)) ||
+        (q.includes("select") && p.segment === "select") ||
+        (q.includes("collection") && (p.segment === "collection" || !p.segment))
     );
   }
   return out;
@@ -291,20 +346,162 @@ function sortProductsLocal(list: Product[], sort: string): Product[] {
   }
 }
 
+const WORDPRESS_SITE_URL = "https://deencommerce.com";
+
+function normalizeImageUrl(src: string): string {
+  if (!src || typeof src !== "string") return "";
+  let clean = src.trim();
+  if (clean.startsWith("//")) clean = `https:${clean}`;
+  else if (clean.startsWith("/")) clean = `${WORDPRESS_SITE_URL}${clean}`;
+  else if (clean.startsWith("http://")) clean = clean.replace("http://", "https://");
+  return clean;
+}
+
+function parseDiscountPct(cats: string[]): number {
+  let pct = 0;
+  for (const c of cats) {
+    const m = /(\d+)\s*%\s*OFF/i.exec(c);
+    if (m) pct = Math.max(pct, Number(m[1]));
+  }
+  return pct;
+}
+
+function mapStoreCategory(catNames: string[]): Exclude<DeenCategory, "ALL"> {
+  const upper = catNames.map((c) => c.trim().toUpperCase());
+  for (const c of ["JEANS", "PANJABI", "SHIRT", "T-SHIRT", "TROUSERS", "POLO", "ACCESSORIES"] as const) {
+    if (upper.includes(c)) return c;
+  }
+  if (upper.some((c) => c.includes("SHIRT") && !c.includes("T-SHIRT") && !c.includes("POLO"))) return "SHIRT";
+  if (upper.some((c) => c.includes("T-SHIRT") || c.includes("TEE"))) return "T-SHIRT";
+  if (upper.some((c) => c.includes("PANJABI") || c.includes("PUNJABI"))) return "PANJABI";
+  if (upper.some((c) => c.includes("JEAN") || c.includes("DENIM"))) return "JEANS";
+  if (upper.some((c) => c.includes("TROUSER") || c.includes("CHINO") || c.includes("PANT"))) return "TROUSERS";
+  if (upper.some((c) => c.includes("POLO"))) return "POLO";
+  if (upper.some((c) => c.includes("ACCESS") || c.includes("BAG") || c.includes("BELT") || c.includes("WALLET"))) return "ACCESSORIES";
+  return "OTHER";
+}
+
+export function sanitizeProduct<T extends Partial<Product>>(p: T): T {
+  if (!p) return p;
+  return {
+    ...p,
+    ...(p.name ? { name: decodeHtmlEntities(p.name) } : {}),
+    ...(p.blurb ? { blurb: decodeHtmlEntities(p.blurb) } : {}),
+  };
+}
+
+export function mapStoreProductToMobile(p: any): Product {
+  const regularPrice = p.prices?.regular_price ? Number(p.prices.regular_price) : undefined;
+  const salePrice = p.prices?.sale_price ? Number(p.prices.sale_price) : undefined;
+  const currentPrice = Number(p.prices?.price) || salePrice || regularPrice || 0;
+  const onSale = Boolean(p.on_sale && regularPrice && salePrice && regularPrice > salePrice);
+  const catNames = (p.categories || []).map((c: any) => c.name);
+  const category = mapStoreCategory(catNames);
+  const pct = onSale && regularPrice && salePrice
+    ? Math.round(((regularPrice - salePrice) / regularPrice) * 100)
+    : parseDiscountPct(catNames);
+
+  const sizeAttr = (p.attributes || []).find((a: any) => /size|মাপ/i.test(a.name));
+  const sizes = sizeAttr?.terms ? sizeAttr.terms.map((t: any) => t.name) : ["30", "32", "34", "36", "38"];
+
+  const fitAttr = (p.attributes || []).find((a: any) => /fit/i.test(a.name));
+  const fitVal = fitAttr?.terms?.[0]?.name;
+
+  const rawImgs = (p.images || []).map((img: any) => ({
+    full: normalizeImageUrl(img.src || ""),
+    thumb: normalizeImageUrl(img.thumbnail || img.src || ""),
+  })).filter((x: any) => Boolean(x.full));
+
+  const primaryImg = rawImgs[0]?.full || "https://deencommerce.com/wp-content/uploads/2026/05/jeans-1.jpg";
+  const secondaryImg = rawImgs[1]?.full || primaryImg;
+  const thumbImg = rawImgs[0]?.thumb || primaryImg;
+
+  const isSelect = (p.categories || []).some(
+    (c: any) =>
+      c.id === 1281 ||
+      c.parent === 1281 ||
+      /deen\s*select/i.test(c.name || "") ||
+      /deen-select/i.test(c.slug || "")
+  );
+  const segment: "collection" | "select" = isSelect ? "select" : "collection";
+  const cleanName = decodeHtmlEntities(p.name || "");
+  const brand = /springfield/i.test(cleanName)
+    ? "Springfield"
+    : /lefties/i.test(cleanName)
+    ? "Lefties"
+    : /pull\s*&?\s*bear/i.test(cleanName)
+    ? "Pull & Bear"
+    : /zara/i.test(cleanName)
+    ? "Zara"
+    : isSelect
+    ? "DEEN Select"
+    : "DEEN";
+
+  return {
+    id: String(p.id),
+    sku: p.sku || `DS-${p.id}`,
+    name: cleanName,
+    category,
+    segment,
+    brand,
+    price: regularPrice || currentPrice,
+    salePrice: onSale ? salePrice : undefined,
+    regularPrice: onSale ? regularPrice : undefined,
+    salePct: pct || undefined,
+    sizes: sizes.length > 0 ? sizes : ["M", "L", "XL"],
+    images: [primaryImg, secondaryImg],
+    gallery: rawImgs.map((x: any) => x.full).length > 0 ? rawImgs.map((x: any) => x.full) : [primaryImg],
+    thumb: thumbImg,
+    single: primaryImg,
+    full: primaryImg,
+    fabric: "Premium Fabric",
+    fit: fitVal || "Regular Fit",
+    stockStatus: p.is_in_stock ? "instock" : "outofstock",
+    rating: Number(p.average_rating) || 4.9,
+    ratingCount: Number(p.review_count) || 12,
+    blurb: decodeHtmlEntities((p.short_description || p.description || "").replace(/<[^>]+>/g, "").slice(0, 220)) || "Authentic DEEN design crafted in Bangladesh.",
+    isNew: catNames.some((c: string) => /new/i.test(c)),
+  };
+}
+
+/**
+ * Direct public WooCommerce Store API fallback (no API key required).
+ * Bypasses Render when gateway is unreachable or sleeping.
+ */
+export async function fetchDirectStoreProducts(perPage = 100): Promise<Product[]> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const res = await fetch(`${WORDPRESS_SITE_URL}/wp-json/wc/store/v1/products?per_page=${perPage}`, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    if (!res.ok) return [];
+    const raw = await res.json();
+    if (Array.isArray(raw)) {
+      return raw.map(mapStoreProductToMobile);
+    }
+  } catch {}
+  return [];
+}
+
 /**
  * Loads products from live gateway when online, with fallback to local cache and bundled data.
  */
 export async function fetchProducts(
   category?: DeenCategory,
   query?: string,
-  sort?: "price-asc" | "price-desc" | "name-asc" | "new"
+  sort?: "price-asc" | "price-desc" | "name-asc" | "new",
+  segment?: "all" | "collection" | "select"
 ): Promise<Product[]> {
   const params = new URLSearchParams();
   if (category && category !== "ALL") params.set("category", category);
+  if (segment && segment !== "all") params.set("segment", segment);
   if (query && query.trim()) params.set("q", query.trim());
   if (sort) params.set("sort", sort);
   const qs = params.toString();
-  const cacheKey = `products_${category || "ALL"}_${query || ""}_${sort || "default"}`;
+  const cacheKey = `products_${category || "ALL"}_${segment || "all"}_${query || ""}_${sort || "default"}`;
 
   try {
     // Use fetch-or-cache: returns cached data if fresh, otherwise fetches from API
@@ -313,23 +510,43 @@ export async function fetchProducts(
       cacheKey,
       TTL.CATALOG,
       async () => {
-        const fresh = await request<Product[]>(`/v1/deen/products${qs ? `?${qs}` : ""}`, undefined, 6000);
-        if (Array.isArray(fresh) && fresh.length > 0) return fresh;
-        // If API returned empty, fall back to bundled
-        return applyFilters(getBundledProducts(), category, query);
+        try {
+          const fresh = await request<Product[]>(`/v1/deen/products${qs ? `?${qs}` : ""}`, undefined, 6000);
+          if (Array.isArray(fresh) && fresh.length > 0) return fresh;
+        } catch (gateErr) {
+          // Tier 2: Render Gateway failed/cold-starting -> Direct WooCommerce Store API fallback
+          const directWp = await fetchDirectStoreProducts(100);
+          if (Array.isArray(directWp) && directWp.length > 0) {
+            return applyFilters(directWp, category, query, segment);
+          }
+        }
+        // If API returned empty/failed, fall back to bundled
+        return applyFilters(getBundledProducts(), category, query, segment);
       }
     );
     if (Array.isArray(list) && list.length > 0) {
-      const filtered = applyFilters(list, category, query);
-      return sort ? sortProductsLocal(filtered, sort) : filtered;
+      const filtered = applyFilters(list, category, query, segment);
+      const res = sort ? sortProductsLocal(filtered, sort) : filtered;
+      return res.map((p) => sanitizeProduct(p) as Product);
     }
   } catch {
-    // Network failure — fallback
+    // Network failure — fallback to direct WP or bundled
   }
 
-  // Fallback to bundled snapshot
-  const bundled = applyFilters(getBundledProducts(), category, query);
-  return sort ? sortProductsLocal(bundled, sort) : bundled;
+  // Tier 2 outer fallback if cache threw
+  try {
+    const directWp = await fetchDirectStoreProducts(100);
+    if (Array.isArray(directWp) && directWp.length > 0) {
+      const filtered = applyFilters(directWp, category, query, segment);
+      const res = sort ? sortProductsLocal(filtered, sort) : filtered;
+      return res.map((p) => sanitizeProduct(p) as Product);
+    }
+  } catch {}
+
+  // Tier 3: Fallback to bundled snapshot
+  const bundled = applyFilters(getBundledProducts(), category, query, segment);
+  const res = sort ? sortProductsLocal(bundled, sort) : bundled;
+  return res.map((p) => sanitizeProduct(p) as Product);
 }
 
 export async function fetchStats(): Promise<Stats | null> {
@@ -345,7 +562,27 @@ export async function fetchCategories(): Promise<{ category: string; count: numb
   try {
     const cats = await request<{ category: string; count: number }[]>("/v1/deen/categories", undefined, 5000);
     if (Array.isArray(cats) && cats.length > 0) return cats;
-  } catch {}
+  } catch {
+    // Direct WP Store API fallback for categories
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(`${WORDPRESS_SITE_URL}/wp-json/wc/store/v1/products/categories?per_page=100`, {
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const raw = await res.json();
+        if (Array.isArray(raw) && raw.length > 0) {
+          const mapped = raw
+            .filter((c: any) => c.name && c.count > 0)
+            .map((c: any) => ({ category: String(c.name).toUpperCase(), count: Number(c.count) || 0 }));
+          if (mapped.length > 0) return mapped;
+        }
+      }
+    } catch {}
+  }
 
   // Fallback: derive categories from bundled products
   const bundled = getBundledProducts();
@@ -373,8 +610,25 @@ export async function fetchCategoryCovers(): Promise<Record<string, string>> {
 export async function fetchProductById(id: string): Promise<Product | undefined> {
   try {
     const p = await request<Product>(`/v1/deen/products/${id}`, undefined, 6000);
-    if (p && p.id) return p;
+    if (p && p.id) return sanitizeProduct(p) as Product;
   } catch {}
+
+  // Direct WP Store API fallback if numeric id
+  if (/^\d+$/.test(id)) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(`${WORDPRESS_SITE_URL}/wp-json/wc/store/v1/products/${id}`, {
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const raw = await res.json();
+        if (raw && raw.id) return sanitizeProduct(mapStoreProductToMobile(raw)) as Product;
+      }
+    } catch {}
+  }
 
   // 1. Search cached products
   try {
@@ -382,17 +636,18 @@ export async function fetchProductById(id: string): Promise<Product | undefined>
     if (cached) {
       const list = JSON.parse(cached) as Product[];
       const match = list.find((p) => String(p.id) === String(id));
-      if (match) return match;
+      if (match) return sanitizeProduct(match) as Product;
     }
   } catch {}
 
   // 2. Search bundled products
   const bundled = getBundledProducts();
   const matchBundled = bundled.find((p) => String(p.id) === String(id));
-  if (matchBundled) return matchBundled;
+  if (matchBundled) return sanitizeProduct(matchBundled) as Product;
 
   // 3. Search seed catalog
-  return PRODUCTS_CATALOG.find((p) => String(p.id) === String(id));
+  const matchCatalog = PRODUCTS_CATALOG.find((p) => String(p.id) === String(id));
+  return matchCatalog ? (sanitizeProduct(matchCatalog) as Product) : undefined;
 }
 
 /* ------------------------------ orders ----------------------------- */
@@ -403,9 +658,8 @@ export async function getOrders(phone?: string): Promise<Order[]> {
     // the request and scope orders to this session phone.
     const session = await getGuestSession();
     const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (session?.token) {
-      headers["Authorization"] = `Bearer ${session.token}`;
-    }
+    const token = await getAuthToken() || session?.token;
+    if (token) headers["Authorization"] = `Bearer ${token}`;
     const qs = phone ? `?phone=${encodeURIComponent(phone)}` : "";
     const list = await request<Order[]>(
       `/v1/deen/orders${qs}`,
@@ -422,7 +676,7 @@ export async function getOrders(phone?: string): Promise<Order[]> {
   const cached = await AsyncStorage.getItem("deen_gateway_orders_v1").catch(() => null);
   if (cached) {
     try {
-      const parsed = JSON.parse(cached) as Order[];
+      const parsed = (JSON.parse(cached) as Order[]).filter((o) => Boolean(o.wooId));
       if (phone) {
         const digits = phone.replace(/[^0-9]/g, "");
         return parsed.filter((o) => o.phone === digits);
@@ -508,7 +762,7 @@ export async function createOrder(
       variationId: (l as any).variationId || undefined,
     }));
 
-  const idempotencyKey =
+  let idempotencyKey =
     orderData.idempotencyKey ||
     `m_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
@@ -529,125 +783,68 @@ export async function createOrder(
     city: (orderData as any).city || "Dhaka",
     district: (orderData as any).district || (orderData as any).state || "BD-13",
     state: (orderData as any).state || (orderData as any).district || "BD-13",
-    postcode: (orderData as any).postcode || "1200",
+    postcode: (orderData as any).postcode && (orderData as any).postcode !== "1200"
+      ? (orderData as any).postcode
+      : getDistrictPostcode((orderData as any).state || (orderData as any).district || "BD-13"),
     area: areaMap[String(orderData.area)] || orderData.area || "dhaka",
     payment: orderData.payment,
+    email: orderData.email || undefined,
+    deliveryNotes: (orderData as any).deliveryNotes || undefined,
+    customerNote: (orderData as any).customerNote || (orderData as any).deliveryNotes || undefined,
     trxId: (orderData as any).trxId || undefined,
     coupon: (orderData as any).coupon || undefined,
     items: cleanItems,
     idempotencyKey,
+    isGiftOrder: (orderData as any).isGiftOrder,
+    giftRecipientName: (orderData as any).giftRecipientName,
+    giftRecipientPhone: (orderData as any).giftRecipientPhone,
+    shipping: (orderData as any).shipping,
+    billing: (orderData as any).billing,
     ...(orderData.guestToken ? { guestToken: orderData.guestToken } : {}),
   };
 
-  const orderOrigins = [
-    ...GATEWAY_URLS.slice(preferredGatewayIdx),
-    ...GATEWAY_URLS.slice(0, preferredGatewayIdx),
-  ];
-
-  for (let i = 0; i < orderOrigins.length; i++) {
-    const base = orderOrigins[i];
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-    try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        "Idempotency-Key": idempotencyKey,
-        "x-idempotency-key": idempotencyKey,
-      };
-      if (API_KEY) headers["x-api-key"] = API_KEY;
-      if (orderData.guestToken) headers["Authorization"] = `Bearer ${orderData.guestToken}`;
-
-      const res = await fetch(`${base}/v1/deen/orders`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(orderPayload),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (res.ok) {
-        markOnline();
-        const created = (await res.json()) as Order;
-        // Update local cache
-        const prev = await AsyncStorage.getItem("deen_gateway_orders_v1").catch(() => null);
-        const arr = prev ? (JSON.parse(prev) as Order[]) : [];
-        await AsyncStorage.setItem(
-          "deen_gateway_orders_v1",
-          JSON.stringify([created, ...arr.filter((o) => o.id !== created.id)])
-        ).catch(() => {});
-        return created;
-      }
-
-      // 4xx is definitive validation/client error: DO NOT fail over or retry
-      if (res.status >= 400 && res.status < 500) {
-        const body = await res.text().catch(() => "");
-        let cleanMsg = `HTTP ${res.status}`;
-        try {
-          const parsed = JSON.parse(body);
-          if (parsed.message) cleanMsg = parsed.message;
-          else if (parsed.error) cleanMsg = parsed.error;
-        } catch {
-          if (body) cleanMsg = body.slice(0, 150);
-        }
-        throw new Error(cleanMsg);
-      }
-    } catch (err: any) {
-      clearTimeout(timeoutId);
-      // If it's a definitive 4xx error thrown above, rethrow immediately
-      const isDefinitiveClientError =
-        err?.message &&
-        !err?.name?.includes("Abort") &&
-        !err?.message?.includes("failed") &&
-        !err?.message?.includes("timed out") &&
-        !err?.message?.includes("Network request") &&
-        !err?.message?.includes("Failed to fetch");
-
-      if (isDefinitiveClientError && !err?.message?.startsWith("HTTP 5")) {
-        throw err;
-      }
-    }
-
-    // ── TWO-PHASE RECONCILIATION ──
-    // The request timed out, aborted, or returned 5xx. DO NOT blindly retry POST.
-    // First, check if the gateway or WooCommerce actually finished the order!
-    try {
-      const reconciliation = await reconcileOrder(idempotencyKey, cleanPhone);
-      if (reconciliation.reconciled && reconciliation.order) {
-        markOnline();
-        const existingOrder = reconciliation.order;
-        const prev = await AsyncStorage.getItem("deen_gateway_orders_v1").catch(() => null);
-        const arr = prev ? (JSON.parse(prev) as Order[]) : [];
-        await AsyncStorage.setItem(
-          "deen_gateway_orders_v1",
-          JSON.stringify([existingOrder, ...arr.filter((o) => o.id !== existingOrder.id)])
-        ).catch(() => {});
-        return existingOrder;
-      }
-    } catch {}
-
-    // Shift preferred index to next origin and continue loop with exact same idempotencyKey
-    const idx = GATEWAY_URLS.indexOf(base);
-    if (idx === preferredGatewayIdx) {
-      preferredGatewayIdx = (preferredGatewayIdx + 1) % GATEWAY_URLS.length;
-    }
+  const pendingKey = "deen_pending_checkout";
+  try {
+    const fingerprint = JSON.stringify({ ...orderPayload, idempotencyKey: undefined });
+    const saved = JSON.parse(await AsyncStorage.getItem(pendingKey) || "null");
+    if (saved?.fingerprint === fingerprint && saved?.key) idempotencyKey = saved.key;
+    await AsyncStorage.setItem(pendingKey, JSON.stringify({ fingerprint, key: idempotencyKey }));
+  } catch { /* storage failure must not cause another order POST */ }
+  orderPayload.idempotencyKey = idempotencyKey;
+  const token = await getAuthToken() || orderData.guestToken || (await getGuestSession())?.token;
+  const headers: Record<string, string> = { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey };
+  if (API_KEY) headers["x-api-key"] = API_KEY;
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 35_000);
+  let res: Response | undefined;
+  try {
+    res = await fetch(`${GATEWAY_URLS[preferredGatewayIdx]}/v1/deen/orders`, {
+      method: "POST", headers, body: JSON.stringify(orderPayload), signal: controller.signal,
+    });
+  } catch { /* reconcile ambiguous outcomes with reads only */ }
+  finally { clearTimeout(timeout); }
+  if (res && res.status >= 400 && res.status < 500) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || data.error || "Order validation failed.");
   }
-
-  // If all online gateways failed and reconciliation found nothing:
-  // Create local offline order record with idempotencyKey preserved for clean sync.
-  const created: Order = {
-    ...orderData,
-    phone: cleanPhone,
-    id: `offline-${Date.now()}`,
-    number: `DC-OFFLINE-${Math.floor(100000 + Math.random() * 900000)}`,
-    status: "received",
-    idempotencyKey,
-    createdAt: new Date().toISOString(),
-  };
-  const prev = await AsyncStorage.getItem("deen_gateway_orders_v1").catch(() => null);
-  const arr = prev ? (JSON.parse(prev) as Order[]) : [];
-  await AsyncStorage.setItem("deen_gateway_orders_v1", JSON.stringify([created, ...arr])).catch(() => {});
-  return created;
+  let confirmed: Order | undefined;
+  if (res?.ok) confirmed = await res.json().catch(() => undefined);
+  if (!confirmed?.wooId) {
+    const result = await reconcileOrder(idempotencyKey, cleanPhone);
+    confirmed = result.reconciled ? result.order : undefined;
+  }
+  if (!confirmed?.wooId || !confirmed.number) {
+    throw new Error("We could not confirm your order. Your bag is saved. Check order status before trying again.");
+  }
+  markOnline();
+  try {
+    const stored = JSON.parse(await AsyncStorage.getItem("deen_gateway_orders_v1") || "[]");
+    const previous: Order[] = Array.isArray(stored) ? stored : [];
+    await AsyncStorage.setItem("deen_gateway_orders_v1", JSON.stringify([confirmed, ...previous.filter((o) => o.id !== confirmed!.id)].slice(0, 50)));
+    await AsyncStorage.removeItem(pendingKey);
+  } catch { /* a cache failure cannot undo a confirmed WooCommerce order */ }
+  return confirmed;
 }
 
 /* --------------------------- cashback (from gateway = Woo source of truth) -----------
@@ -722,7 +919,42 @@ export async function fetchPricing(items: { productId: string; qty: number }[], 
     }, 6000, true);
     return res;
   } catch {
-    return { subtotal: 0, cashback: 0, nextTierAt: null, bogoDiscount: 0, bogoFreeIndexes: [], deliveryFees: { insideDhaka: 50, outsideDhaka: 90, express: 120, storePickup: 0 }, total: 0, currency: "BDT" };
+    const deliveryFees = { insideDhaka: 50, outsideDhaka: 90, express: 120, storePickup: 0 };
+    const deliveryFee =
+      area === "outside" || area === "outside_standard"
+        ? deliveryFees.outsideDhaka
+        : area === "dhaka_express"
+        ? deliveryFees.express
+        : area === "store_pickup" || area === "pickup"
+        ? deliveryFees.storePickup
+        : deliveryFees.insideDhaka;
+
+    const catalog = getBundledProducts();
+    let subtotal = 0;
+    for (const it of items) {
+      const prod = catalog.find((p: any) => String(p.id) === String(it.productId));
+      const price = prod ? (prod.salePrice ?? prod.price ?? 0) : 0;
+      subtotal += price * (it.qty || 1);
+    }
+    const cashback = getCashbackAmount(subtotal);
+    const nextTierAt =
+      subtotal < CASHBACK_TIERS.tier1.minSpend
+        ? CASHBACK_TIERS.tier1.minSpend
+        : subtotal < CASHBACK_TIERS.tier2.minSpend
+        ? CASHBACK_TIERS.tier2.minSpend
+        : null;
+    const total = Math.max(0, subtotal - cashback + deliveryFee);
+
+    return {
+      subtotal,
+      cashback,
+      nextTierAt,
+      bogoDiscount: 0,
+      bogoFreeIndexes: [],
+      deliveryFees,
+      total,
+      currency: "BDT",
+    };
   }
 }
 
@@ -771,6 +1003,25 @@ export async function fetchPage(slug: string): Promise<{ title: string; content:
   try {
     return await request<{ title: string; content: string }>(`/v1/deen/page?slug=${encodeURIComponent(slug)}`, undefined, 5000, true);
   } catch {
+    // Direct WordPress core REST API fallback (/wp-json/wp/v2/pages?slug=...)
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(`${WORDPRESS_SITE_URL}/wp-json/wp/v2/pages?slug=${encodeURIComponent(slug)}`, {
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const pages = await res.json();
+        if (Array.isArray(pages) && pages[0]) {
+          return {
+            title: pages[0].title?.rendered || slug,
+            content: pages[0].content?.rendered || "",
+          };
+        }
+      }
+    } catch {}
     return null;
   }
 }
@@ -1009,25 +1260,17 @@ export async function registerCustomer(
   phone: string,
   email?: string,
   password?: string
-): Promise<{ success: boolean; message: string; returning: boolean } | null> {
+): Promise<AuthResult & { returning?: boolean }> {
   try {
-    const res = await request<{
-      success: boolean;
-      message: string;
-      returning: boolean;
-    }>("/v1/auth/register", {
-      method: "POST",
-      body: JSON.stringify({
-        name,
-        phone,
-        email: email || undefined,
-        password: password || undefined,
-      }),
-    }, 6000);
+    const res = await request<AuthResult & { returning?: boolean }>("/v1/auth/register", {
+      method: "POST", body: JSON.stringify({ name, phone, email: email || undefined, password }),
+    }, 12_000);
+    if (res.success && res.token && res.user) {
+      await AsyncStorage.setItem(AUTH_TOKEN_KEY, res.token);
+      await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(res.user));
+    }
     return res;
-  } catch {
-    return null;
-  }
+  } catch (error: any) { return { success: false, message: error?.message || "Registration failed." }; }
 }
 
 /**
@@ -1273,13 +1516,70 @@ export async function deleteUserAccount(): Promise<{ success: boolean; message: 
   }
 }
 
+export interface DayOperationalSummary {
+  dateStr: string;
+  grossRevenue: number;
+  netSales: number;
+  totalOrders: number;
+  shippedAndCompletedOrders: number;
+  completedCount: number;
+  deliveredCount: number;
+  deliveredValue: number;
+  inTransitCount: number;
+  inTransitValue: number;
+  pendingCount: number;
+  returnedCount: number;
+  shippedRate: number;
+  deliverySuccessRate: number;
+}
+
+export interface MarketBasketRule {
+  antecedent: string;
+  consequent: string;
+  pairTitle: string;
+  supportPct: number;
+  confidencePct: number;
+  lift: number;
+  coOccurrenceCount: number;
+  bundleRevenue: number;
+  recommendationStrength: "STRONG" | "MODERATE" | "NEUTRAL";
+}
+
+export interface MarketBasketAnalytics {
+  upt: number;
+  multiItemOrderRate: number;
+  basketDistribution: {
+    singleItemPct: number;
+    twoItemsPct: number;
+    threeOrMorePct: number;
+    singleItemCount: number;
+    twoItemsCount: number;
+    threeOrMoreCount: number;
+  };
+  rules: MarketBasketRule[];
+  topBundles: Array<{
+    pairTitle: string;
+    itemA: string;
+    itemB: string;
+    count: number;
+    totalRevenue: number;
+    lift?: number;
+    confidencePct?: number;
+    supportPct?: number;
+  }>;
+}
+
 export interface AdminAnalyticsResult {
   success: boolean;
   timeframe: string;
+  todaySummary?: DayOperationalSummary;
+  lastDaySummary?: DayOperationalSummary;
   sales?: {
     grossRevenue: number;
     netSales: number;
     totalOrders: number;
+    todaySummary?: DayOperationalSummary;
+    lastDaySummary?: DayOperationalSummary;
     paidOrders: number;
     codOrders: number;
     prepaidOrders: number;
@@ -1290,10 +1590,11 @@ export interface AdminAnalyticsResult {
     projected30dRevenue: number;
     growthRatePct: number;
     salesTrend: Array<{ date: string; revenue: number; netSales: number; orders: number }>;
-    topProductPairs?: Array<{ pairTitle: string; itemA: string; itemB: string; count: number; totalRevenue: number }>;
+    topProductPairs?: Array<{ pairTitle: string; itemA: string; itemB: string; count: number; totalRevenue: number; lift?: number; confidencePct?: number; supportPct?: number }>;
     productPerformance?: Array<{ id: string; name: string; sku: string; category: string; units: number; revenue: number; returnedUnits: number; returnRatePct: number; netSales: number }>;
     categoryMatrix: Array<{ category: string; revenue: number; units: number; sharePct: number }>;
   };
+  marketBasket?: MarketBasketAnalytics;
   logistics?: {
     totalDispatched: number;
     deliveredCount: number;
@@ -1701,4 +2002,386 @@ export async function fetchAppSettings(): Promise<AppSettings | null> {
   } catch {
     return null;
   }
+}
+
+/* ------------------------- official brand social media & shoppable reels ---- */
+
+export interface SocialAccountInfo {
+  facebook: string;
+  instagram: string;
+  linkedin: string;
+  whatsapp: string;
+  handle: string;
+  communityCount: string;
+}
+
+export interface SocialStory {
+  id: string;
+  title: string;
+  image: string;
+  hasUnseen?: boolean;
+  actionUrl: string;
+}
+
+export interface TaggedProduct {
+  id: string;
+  name: string;
+  price: number;
+  regularPrice?: number;
+  category?: string;
+  image: string;
+}
+
+export interface SocialReel {
+  id: string;
+  title: string;
+  author: string;
+  platform: 'instagram' | 'facebook' | 'tiktok';
+  poster: string;
+  videoUrl?: string;
+  caption: string;
+  likes: number;
+  views: string;
+  comments: number;
+  permalink: string;
+  taggedProduct?: TaggedProduct;
+}
+
+export interface SocialFeedData {
+  officialAccounts: SocialAccountInfo;
+  stories: SocialStory[];
+  reels: SocialReel[];
+}
+
+export const DEFAULT_SOCIAL_FEED: SocialFeedData = {
+  officialAccounts: {
+    facebook: 'https://www.facebook.com/deencommerce',
+    instagram: 'https://www.instagram.com/deencommerce/?hl=en',
+    linkedin: 'https://www.linkedin.com/company/deencommerce',
+    whatsapp: 'https://wa.me/8801952700500',
+    handle: '@deencommerce',
+    communityCount: '125,000+ Patrons Across Bangladesh',
+  },
+  stories: [
+    {
+      id: 'story_1',
+      title: 'Raw Selvedge',
+      image: 'https://deencommerce.com/wp-content/uploads/2026/05/DEEN-90s-Blue-Jeans-Slim-Fit-101-0100-138-front.webp',
+      hasUnseen: true,
+      actionUrl: '/(tabs)/shop?category=JEANS',
+    },
+    {
+      id: 'story_2',
+      title: 'Heritage Panjabi',
+      image: 'https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Stone-Embroidered-Panjabi-106-0101-136-Front.webp',
+      hasUnseen: true,
+      actionUrl: '/(tabs)/shop?category=PANJABI',
+    },
+    {
+      id: 'story_3',
+      title: 'Oxford Shirts',
+      image: 'https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Flanel-Shirt-102-0302-041-Front.webp',
+      hasUnseen: false,
+      actionUrl: '/(tabs)/shop?category=SHIRT',
+    },
+    {
+      id: 'story_4',
+      title: 'Dhaka Studio',
+      image: 'https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp',
+      hasUnseen: false,
+      actionUrl: '/(tabs)/shop',
+    },
+  ],
+  reels: [
+    {
+      id: 'reel_selvedge_autumn',
+      title: 'Raw Selvedge Denim Craftsmanship',
+      author: '@deencommerce',
+      platform: 'instagram',
+      poster: 'https://deencommerce.com/wp-content/uploads/2026/05/DEEN-90s-Blue-Jeans-Slim-Fit-101-0100-138-front.webp',
+      videoUrl: 'https://deencommerce.com/wp-content/uploads/2026/09/Denim-Web-Banner_1920x840pxl.mp4',
+      caption: 'Every fold speaks dedication. 100% shuttle-loom woven raw selvedge with signature red-line ID. Engineered to fade with your daily journey. 👖✨ #DeenDenim #RawSelvedge #MadeInBangladesh',
+      likes: 1842,
+      views: '24.5K',
+      comments: 96,
+      permalink: 'https://www.instagram.com/deencommerce/?hl=en',
+      taggedProduct: {
+        id: '14164',
+        name: 'Springfield Polo Shirt',
+        price: 1090,
+        regularPrice: 1090,
+        category: 'POLO',
+        image: 'https://deencommerce.com/wp-content/uploads/2026/09/Springfield-Polo-Shirt-103-0100-119-600x750.webp',
+      },
+    },
+    {
+      id: 'reel_season_clearance',
+      title: 'End of Season Showcase',
+      author: '@deencommerce',
+      platform: 'facebook',
+      poster: 'https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Stone-Embroidered-Panjabi-106-0101-136-Front.webp',
+      videoUrl: 'https://deencommerce.com/wp-content/uploads/2026/09/END-OF-THE-SESSION-2_1920x8401.mp4',
+      caption: 'Artisanal tailoring, lightweight resort shirts & raw denim engineered for Bangladesh. Catch the season clearance drop! ⚡ #DeenCommerce #BangladeshDenim',
+      likes: 2430,
+      views: '38.2K',
+      comments: 142,
+      permalink: 'https://www.facebook.com/deencommerce',
+      taggedProduct: {
+        id: '14157',
+        name: 'Springfield Classic Shirt',
+        price: 1090,
+        regularPrice: 1090,
+        category: 'SHIRT',
+        image: 'https://deencommerce.com/wp-content/uploads/2026/09/Springfield-Polo-Shirt-103-0100-119-600x750.webp',
+      },
+    },
+    {
+      id: 'reel_oxford_shirt',
+      title: 'Classic Oxford Weave - Work to Weekend',
+      author: '@deencommerce',
+      platform: 'instagram',
+      poster: 'https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Flanel-Shirt-102-0302-041-Front.webp',
+      caption: 'Heavyweight pin-point Oxford weave. Mother-of-pearl buttons and tailored relaxed fit for Dhaka\'s climate. 👔 #DeenTailoring #OxfordShirt',
+      likes: 1290,
+      views: '19.4K',
+      comments: 68,
+      permalink: 'https://www.instagram.com/deencommerce/?hl=en',
+      taggedProduct: {
+        id: '103',
+        name: 'Premium Tailored Oxford Shirt',
+        price: 1750,
+        regularPrice: 1950,
+        category: 'SHIRT',
+        image: 'https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Checkmate-Executive-Formal-Shirt-102-0501-005-Front.webp',
+      },
+    },
+    {
+      id: 'reel_summer_half_sleeve',
+      title: 'Breathable Heavyweight 240 GSM Tees',
+      author: '@deencommerce',
+      platform: 'instagram',
+      poster: 'https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Essential-Black-T-shirt-105-0101-380-Front.webp',
+      caption: 'Structured drop-shoulder silhouette in 100% combed compact cotton. Minimalist essential for daily wear. ⚡ #DeenStudio #DailyApparel',
+      likes: 1520,
+      views: '22.1K',
+      comments: 74,
+      permalink: 'https://www.instagram.com/deencommerce/?hl=en',
+      taggedProduct: {
+        id: '104',
+        name: '240 GSM Heavyweight Drop-Shoulder Tee',
+        price: 850,
+        regularPrice: 990,
+        category: 'T-SHIRT',
+        image: 'https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Warm-Spice-T-shirt-105-0101-377-Front.webp',
+      },
+    },
+  ],
+};
+
+export async function fetchSocialFeed(): Promise<SocialFeedData> {
+  try {
+    const res = await request<SocialFeedData>('/v1/deen/social/feed', undefined, 8000, true);
+    if (res && res.reels && res.reels.length > 0) {
+      return res;
+    }
+  } catch {}
+  return DEFAULT_SOCIAL_FEED;
+}
+
+export interface SectionBannerItem {
+  id: string;
+  title: string;
+  image: string;
+  category: string;
+  actionUrl: string;
+}
+
+export const FALLBACK_SECTION_BANNERS: SectionBannerItem[] = [
+  {
+    id: "sec_denim",
+    title: "Raw Washed & Selvedge Denim Campaign",
+    image: "https://deencommerce.com/wp-content/uploads/2026/05/DEEN-90s-Blue-Jeans-Slim-Fit-101-0100-138-front.webp",
+    category: "JEANS",
+    actionUrl: "/category/JEANS",
+  },
+  {
+    id: "sec_shirt",
+    title: "Summer Essential Resort & Cuban Shirts",
+    image: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Flanel-Shirt-102-0302-041-Front.webp",
+    category: "SHIRT",
+    actionUrl: "/category/SHIRT",
+  },
+  {
+    id: "sec_panjabi",
+    title: "Artisanal Heritage Panjabi Collection",
+    image: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Stone-Embroidered-Panjabi-106-0101-136-Front.webp",
+    category: "PANJABI",
+    actionUrl: "/category/PANJABI",
+  },
+  {
+    id: "sec_halfsleeve",
+    title: "Breathable Tees & Casual Polos",
+    image: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Essential-Black-T-shirt-105-0101-380-Front.webp",
+    category: "T-SHIRT",
+    actionUrl: "/category/T-SHIRT",
+  },
+  {
+    id: "sec_trousers",
+    title: "Tailored Cargo Trousers & Everyday Comfort",
+    image: "https://deencommerce.com/wp-content/uploads/2026/09/Lefties-Baggy-Cargo-Trousers-DS-104-0402-005-Model-front.webp",
+    category: "TROUSERS",
+    actionUrl: "/category/TROUSERS",
+  },
+];
+
+export async function fetchSectionBanners(): Promise<SectionBannerItem[]> {
+  try {
+    const banners = await request<SectionBannerItem[]>("/v1/deen/section-banners", undefined, 6000);
+    if (Array.isArray(banners) && banners.length > 0) return banners;
+  } catch {}
+  return FALLBACK_SECTION_BANNERS;
+}
+
+/* ------------------------- customer comments & reviews ------------ */
+
+export interface ProductComment {
+  id: number;
+  productId: number;
+  authorName: string;
+  authorEmail?: string;
+  content: string;
+  rating: number;
+  date: string;
+  status: "approved" | "pending";
+}
+
+export interface ProductCommentsResponse {
+  productId: number | string;
+  comments: ProductComment[];
+  count: number;
+  averageRating: number;
+}
+
+export interface SubmitCommentPayload {
+  authorName: string;
+  authorEmail?: string;
+  content: string;
+  rating?: number;
+}
+
+export interface SubmitCommentResponse {
+  success: boolean;
+  comment: ProductComment;
+  message: string;
+}
+
+export async function fetchProductComments(productId: string | number): Promise<ProductCommentsResponse> {
+  try {
+    const res = await request<ProductCommentsResponse>(`/v1/deen/products/${productId}/comments`, undefined, 8000, true);
+    if (res && Array.isArray(res.comments)) return res;
+  } catch (err) {
+    console.warn("[gateway] fetchProductComments error:", err);
+  }
+  return {
+    productId,
+    comments: [],
+    count: 0,
+    averageRating: 5.0,
+  };
+}
+
+export async function submitProductComment(
+  productId: string | number,
+  payload: SubmitCommentPayload
+): Promise<SubmitCommentResponse> {
+  const res = await request<SubmitCommentResponse>(`/v1/deen/products/${productId}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }, 12000, false);
+
+  if (!res || !res.success) {
+    throw new Error((res as any)?.message || "Failed to submit comment to WordPress.");
+  }
+  return res;
+}
+
+/* ---- Live WooCommerce Category Hierarchy ---- */
+
+export interface WooCategoryNode {
+  id: number;
+  name: string;
+  slug: string;
+  count: number;
+  image?: string | null;
+  children: WooCategoryNode[];
+}
+
+let _categoryTreeCache: { at: number; data: WooCategoryNode[] } | null = null;
+const TREE_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Fetches the live WooCommerce category hierarchy (parent→children tree).
+ * Children names are used as filter chip labels on category landing pages.
+ * Only real WooCommerce category names — no made-up labels.
+ */
+export async function fetchCategoryTree(): Promise<WooCategoryNode[]> {
+  if (_categoryTreeCache && Date.now() - _categoryTreeCache.at < TREE_TTL) {
+    return _categoryTreeCache.data;
+  }
+  try {
+    const tree = await request<WooCategoryNode[]>("/v1/deen/categories/tree", undefined, 8000, true);
+    if (Array.isArray(tree) && tree.length > 0) {
+      _categoryTreeCache = { at: Date.now(), data: tree };
+      return tree;
+    }
+  } catch {
+    // Fall through to return cached or empty
+  }
+  return _categoryTreeCache?.data ?? [];
+}
+
+/**
+ * Returns the sub-categories for a given top-level category slug or name.
+ * e.g. "JEANS" → ["Regular Fit", "Slim Fit"]
+ * e.g. "T-SHIRT" → ["Solid T-Shirts", "Full Sleeved T-Shirts", ...]
+ */
+export async function fetchSubCategories(categoryName: string): Promise<WooCategoryNode[]> {
+  const tree = await fetchCategoryTree();
+  const upper = categoryName.toUpperCase().replace(/_/g, " ");
+
+  // Map mobile category names to WooCommerce category names
+  const aliasMap: Record<string, string[]> = {
+    "JEANS": ["JEANS"],
+    "T-SHIRT": ["T-SHIRTS", "T-SHIRT"],
+    "SHIRT": ["SHIRTS", "SHIRT"],
+    "POLO": ["POLO SHIRTS", "POLO"],
+    "PANJABI": ["PANJABI"],
+    "TROUSERS": ["TROUSERS"],
+    "ACCESSORIES": ["ACCESSORIES", "ACCESSORIES"],
+    "SWEATSHIRTS": ["SWEATSHIRTS"],
+    "DEEN SELECT": ["DEEN SELECT"],
+    "MEN": ["MEN"],
+  };
+
+  const aliases = aliasMap[upper] ?? [upper];
+
+  for (const root of tree) {
+    const rootUpper = root.name.toUpperCase();
+    if (aliases.some((a) => rootUpper === a || rootUpper.includes(a))) {
+      return root.children;
+    }
+  }
+
+  // Fallback: search across all roots
+  for (const root of tree) {
+    for (const child of root.children) {
+      const childUpper = child.name.toUpperCase();
+      if (aliases.some((a) => childUpper === a)) {
+        return child.children;
+      }
+    }
+  }
+
+  return [];
 }

@@ -10,8 +10,9 @@ import Footer from "@/components/Footer";
 import DynamicCampaignBanner from "@/components/DynamicCampaignBanner";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import ScrollToTop from "@/components/ScrollToTop";
-import AiConciergeDrawer from "@/components/AiConciergeDrawer";
 import FestivalGreetingModal from "@/components/FestivalGreetingModal";
+import GatewayKeepAlive from "@/components/GatewayKeepAlive";
+import ChatAssistant from "@/components/ChatAssistant";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://deencommerce.com"),
@@ -21,11 +22,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "https://deencommerce.com/wp-content/uploads/2025/04/cropped-cropped-Deen-Logo-scaled-1-32x32.png", sizes: "32x32", type: "image/png" },
-      { url: "https://deencommerce.com/wp-content/uploads/2025/04/cropped-cropped-Deen-Logo-scaled-1-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon.png", sizes: "192x192", type: "image/png" },
+      { url: "/favicon.ico" },
     ],
-    shortcut: "https://deencommerce.com/wp-content/uploads/2025/04/cropped-cropped-Deen-Logo-scaled-1-32x32.png",
-    apple: "https://deencommerce.com/wp-content/uploads/2025/04/cropped-cropped-Deen-Logo-scaled-1-180x180.png",
+    shortcut: "/favicon.ico",
+    apple: "/icon.png",
   },
   description:
     "Shop premium jeans, shirts, panjabis, and accessories. Authentic quality, delivered across Bangladesh.",
@@ -35,7 +37,7 @@ export const metadata: Metadata = {
     siteName: "DEEN Commerce",
     title: "DEEN - দেশের প্রথম ডেনিম ব্র্যান্ড",
     description: "Premium jeans, shirts, panjabis & accessories. Delivered across Bangladesh.",
-    images: ["https://deencommerce.com/wp-content/uploads/2025/04/cropped-cropped-Deen-Logo-scaled-1-192x192.png"],
+    images: ["/icon.png"],
   },
 };
 
@@ -49,9 +51,9 @@ export default function RootLayout({
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="https://deencommerce.com/wp-content/uploads/2025/04/cropped-cropped-Deen-Logo-scaled-1-32x32.png" sizes="32x32" />
-        <link rel="icon" href="https://deencommerce.com/wp-content/uploads/2025/04/cropped-cropped-Deen-Logo-scaled-1-192x192.png" sizes="192x192" />
-        <link rel="apple-touch-icon" href="https://deencommerce.com/wp-content/uploads/2025/04/cropped-cropped-Deen-Logo-scaled-1-180x180.png" />
+        <link rel="icon" href="/favicon-32x32.png" sizes="32x32" />
+        <link rel="icon" href="/icon.png" sizes="192x192" />
+        <link rel="apple-touch-icon" href="/icon.png" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -95,8 +97,9 @@ export default function RootLayout({
             <Footer />
             <MobileBottomNav />
             <ScrollToTop />
-            <AiConciergeDrawer />
             <FestivalGreetingModal />
+            <GatewayKeepAlive />
+            <ChatAssistant />
           </WishlistProvider>
         </CartProvider>
       </body>

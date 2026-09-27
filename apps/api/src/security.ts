@@ -51,6 +51,10 @@ const RL_WINDOW_MS = 60_000;
 
 export function checkRateLimit(key: string, limit: number): boolean {
   const now = Date.now();
+  if (rlStore.size >= 10_000) {
+    for (const [id, record] of rlStore) if (record.resetAt <= now) rlStore.delete(id);
+    if (rlStore.size >= 10_000 && !rlStore.has(key)) return false;
+  }
   const entry = rlStore.get(key);
   if (!entry || entry.resetAt <= now) {
     rlStore.set(key, { count: 1, resetAt: now + RL_WINDOW_MS });
@@ -60,9 +64,6 @@ export function checkRateLimit(key: string, limit: number): boolean {
   return entry.count <= limit;
 }
 
-export function rateLimitKeyFor(req: { headers: Record<string, any>; socket?: any }): string {
-  const apiKey = (req.headers["x-api-key"] as string) || "";
-  if (apiKey) return `key:${apiKey.slice(0, 12)}`;
-  const ip = (req.headers["x-forwarded-for"] as string | undefined)?.split(",")[0]?.trim() || req.socket?.remoteAddress || "unknown";
-  return `ip:${ip}`;
+export function rateLimitKeyFor(req: { headers: Record<string, any>; ip?: string; socket?: any }): string {
+  return `ip:${req.ip || req.socket?.remoteAddress || "unknown"}`;
 }

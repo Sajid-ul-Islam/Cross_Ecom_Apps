@@ -34,7 +34,7 @@ import {
 import { ThemeColors } from "../../src/theme/colors";
 import { sharedStyles } from "../../src/theme/sharedStyles";
 import { useTheme } from "../../src/context/ThemeContext";
-import { fetchProductById, fetchProducts, fetchDeliveryFees, bdt, type DeliveryFees } from "../../src/services/gateway";
+import { fetchProductById, fetchProducts, fetchDeliveryFees, fetchProductComments, bdt, decodeHtmlEntities, type DeliveryFees } from "../../src/services/gateway";
 import { Product, Variation } from "../../src/types";
 import { useCart } from "../../src/context/CartContext";
 import { useProfile } from "../../src/context/ProfileContext";
@@ -88,6 +88,8 @@ export default function ProductDetailScreen() {
   const [stockModalVisible, setStockModalVisible] = useState(false);
   const [reviewsModalVisible, setReviewsModalVisible] = useState(false);
   const [careGuideVisible, setCareGuideVisible] = useState(false);
+  const [commentsCount, setCommentsCount] = useState(0);
+  const [averageRating, setAverageRating] = useState(4.9);
 
   const galleryScrollRef = useRef<ScrollView>(null);
 
@@ -143,6 +145,17 @@ export default function ProductDetailScreen() {
     fetchDeliveryFees().then((fees) => {
       setDeliveryFees(fees);
     });
+
+    // Fetch live customer comments count & average rating
+    fetchProductComments(id)
+      .then((cRes) => {
+        if (!isMounted) return;
+        if (cRes && typeof cRes.count === "number") {
+          setCommentsCount(cRes.count);
+          if (cRes.averageRating) setAverageRating(cRes.averageRating);
+        }
+      })
+      .catch(() => {});
 
     return () => {
       isMounted = false;
@@ -252,7 +265,7 @@ export default function ProductDetailScreen() {
       {addedNotice && (
         <View style={styles.toastBanner}>
           <Text style={styles.toastText}>
-            ✓ Added {product.name} ({selectedSize}) to cart!
+            ✓ Added {decodeHtmlEntities(product.name)} ({selectedSize}) to cart!
           </Text>
         </View>
       )}
@@ -353,6 +366,18 @@ export default function ProductDetailScreen() {
         {/* Product Meta & Details */}
         <View style={styles.metaContainer}>
           <View style={styles.categoryRow}>
+            {product.segment === "select" && (
+              <View style={[styles.newPill, { backgroundColor: "#1C1917", borderColor: "#92400E" }]}>
+                <Text style={[styles.newPillText, { color: "#D97706" }]}>
+                  ⚡ DEEN SELECT{product.brand && product.brand !== "DEEN" ? ` · ${product.brand.toUpperCase()}` : ""}
+                </Text>
+              </View>
+            )}
+            {product.segment === "collection" && (
+              <View style={[styles.newPill, { backgroundColor: "#2A1408", borderColor: "#7C2D12" }]}>
+                <Text style={[styles.newPillText, { color: "#FB923C" }]}>💎 DEEN COLLECTION</Text>
+              </View>
+            )}
             <Text style={styles.categoryText}>{product.category}</Text>
             {product.isNew && (
               <View style={styles.newPill}>
@@ -366,7 +391,10 @@ export default function ProductDetailScreen() {
             )}
           </View>
 
-          <Text style={styles.productName}>{product.name}</Text>
+          <Text style={styles.productName}>{decodeHtmlEntities(product.name)}</Text>
+          {product.sku ? (
+            <Text style={styles.skuRef}>SKU: {product.sku}</Text>
+          ) : null}
 
           {/* Price Row */}
           <View style={styles.priceRow}>
@@ -384,7 +412,7 @@ export default function ProductDetailScreen() {
           </View>
 
           {/* Blurb */}
-          <Text style={styles.blurb}>{product.blurb}</Text>
+          <Text style={styles.blurb}>{decodeHtmlEntities(product.blurb)}</Text>
 
           {/* Fabric Badge */}
           <View style={styles.fabricHighlight}>
@@ -418,7 +446,9 @@ export default function ProductDetailScreen() {
               <Text style={[styles.washSectionTitle, { color: colors.ink }]}>
                 WASH & TONE: <Text style={{ color: colors.indigoDark }}>{selectedWash}</Text>
               </Text>
-              <Text style={{ fontSize: 11, color: colors.sub }}>13.5 oz Selvedge</Text>
+              <Text style={{ fontSize: 11, color: colors.sub }}>
+                {product.fabric ? product.fabric.slice(0, 24) : "Washed Finish"}
+              </Text>
             </View>
             <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
               {WASH_OPTIONS.map((w) => {
@@ -563,7 +593,7 @@ export default function ProductDetailScreen() {
 
           {/* WhatsApp Stylist Concierge */}
           <WhatsAppConciergeButton
-            productName={product.name}
+            productName={decodeHtmlEntities(product.name)}
             category={product.category}
           />
 
@@ -576,8 +606,8 @@ export default function ProductDetailScreen() {
             >
               <Store size={15} color={colors.indigoDark} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.featurePillTitle}>OUTLET INVENTORY</Text>
-                <Text style={styles.featurePillSub}>Check stock at 4 Outlets</Text>
+                <Text style={styles.featurePillTitle}>STORE AVAILABILITY</Text>
+                <Text style={styles.featurePillSub}>Online Store · 64 Districts</Text>
               </View>
             </TouchableOpacity>
 
@@ -588,8 +618,12 @@ export default function ProductDetailScreen() {
             >
               <Star size={15} color={colors.amber} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.featurePillTitle}>FIT REVIEWS (4.9 ⭐)</Text>
-                <Text style={styles.featurePillSub}>Customer fit photos & feedback</Text>
+                <Text style={styles.featurePillTitle}>
+                  FIT REVIEWS ({averageRating.toFixed(1)} ⭐)
+                </Text>
+                <Text style={styles.featurePillSub}>
+                  {commentsCount > 0 ? `${commentsCount} customer reviews` : "Customer fit photos & feedback"}
+                </Text>
               </View>
             </TouchableOpacity>
 
@@ -651,7 +685,7 @@ export default function ProductDetailScreen() {
                     }
                     const cat = (product.category || "").toUpperCase();
                     if (cat.includes("JEAN") || cat.includes("DENIM")) {
-                      return `• Composition: 13.5 oz Raw Selvedge Denim\n• Dye Process: Traditional deep rope-dyed pure indigo\n• Hardware: Solid embossed copper rivets & YKK brass zipper\n• Stitching: High-tensile poly-core tobacco stitch thread\n• Origin: Proudly woven & crafted in Bangladesh`;
+                      return `• Composition: ${product.fabric || "Premium Cotton Denim"}\n• Dye Process: Traditional deep rope-dyed indigo\n• Hardware: Solid embossed copper rivets & YKK brass zipper\n• Stitching: High-tensile poly-core thread\n• Origin: Proudly woven & crafted in Bangladesh`;
                     }
                     if (cat.includes("PANJABI") || cat.includes("PUNJABI")) {
                       return `• Composition: 100% Egyptian Giza Combed Cotton & Dobby Jacquard\n• Motif: Dense artisanal thread embroidery\n• Trims: Natural coconut & mother-of-pearl buttons\n• Collar: Structured tailored band collar\n• Origin: Master crafted in Bangladesh`;
@@ -733,7 +767,7 @@ export default function ProductDetailScreen() {
                   • Home Delivery: {bdt(deliveryFees.insideDhaka)} (2-3 Days){"\n"}
                   • Express Home Delivery: {bdt(deliveryFees.express)} (Within 24 Hours){"\n"}
                   • Outside Dhaka (Home Delivery): {bdt(deliveryFees.outsideDhaka)} (Nationwide Courier · 3-5 Days){"\n"}
-                  • Store Pickup: FREE (Mirpur 12 Flagship Outlet){"\n"}
+                  • Store Pickup: FREE (Dhaka Dispatch Hub){"\n"}
                   • 7-Day Hassle-Free Size Exchange Guaranteed
                 </Text>
               </View>
@@ -751,7 +785,7 @@ export default function ProductDetailScreen() {
             onPress={() => {
               Alert.alert(
                 "Restock Alert Registered",
-                `We will notify you via in-app notification when ${product.name} (Size: ${selectedSize}) is restocked at deencommerce.com!`
+                `We will notify you via in-app notification when ${decodeHtmlEntities(product.name)} (Size: ${selectedSize}) is restocked at deencommerce.com!`
               );
             }}
             accessibilityRole="button"
@@ -767,7 +801,7 @@ export default function ProductDetailScreen() {
               activeOpacity={0.85}
               onPress={handleAddToCart}
               accessibilityRole="button"
-              accessibilityLabel={`Add ${product.name} to shopping bag`}
+              accessibilityLabel={`Add ${decodeHtmlEntities(product.name)} to shopping bag`}
             >
               <ShoppingBag size={18} color={colors.indigoDark} />
               <Text style={styles.addToCartBtnText}>ADD TO BAG</Text>
@@ -803,7 +837,7 @@ export default function ProductDetailScreen() {
         onClose={() => setLightboxVisible(false)}
         images={zoomImages}
         initialIndex={activeImageIdx}
-        productName={product.name}
+        productName={decodeHtmlEntities(product.name)}
       />
       {/* Store Stock Modal */}
       {product && (
@@ -829,7 +863,7 @@ export default function ProductDetailScreen() {
         visible={careGuideVisible}
         onClose={() => setCareGuideVisible(false)}
         category={product.category}
-        productName={product.name}
+        productName={decodeHtmlEntities(product.name)}
       />
     </ScreenShell>
   );
@@ -1013,7 +1047,15 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
       fontWeight: "800",
       color: colors.ink,
       lineHeight: 26,
-      marginBottom: 8,
+      marginBottom: 4,
+    },
+    skuRef: {
+      fontSize: 10,
+      fontFamily: "monospace" as const,
+      color: colors.faint,
+      letterSpacing: 0.3,
+      marginBottom: 10,
+      opacity: 0.8,
     },
     priceRow: {
       flexDirection: "row",

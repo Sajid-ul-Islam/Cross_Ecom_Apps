@@ -14,6 +14,8 @@ export interface Product {
   sku: string;
   name: string;
   category: "JEANS" | "PANJABI" | "SHIRT" | "T-SHIRT" | "TROUSERS" | "POLO" | "ACCESSORIES" | "OTHER";
+  segment?: "collection" | "select";
+  brand?: string;
   price: number;
   salePrice?: number;
   regularPrice?: number;
@@ -33,6 +35,8 @@ export interface Product {
   isNew?: boolean;
   fit?: string; // jeans fit from Woo (Regular | Slim | Straight)
   variations?: Variation[];
+  /** Live WooCommerce sub-category names the product belongs to (e.g. "Regular Fit", "Slim Fit"). */
+  wooSubCategories?: string[];
 }
 
 export interface Variation {
@@ -160,6 +164,8 @@ export interface Order {
   /** Gateway-issued anonymous guest session token (when placed as a guest). */
   guestToken?: string;
   idempotencyKey?: string;
+  shipping?: any;
+  billing?: any;
   createdAt: string;
 }
 

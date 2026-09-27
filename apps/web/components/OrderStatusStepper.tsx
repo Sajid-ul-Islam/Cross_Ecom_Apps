@@ -90,7 +90,7 @@ export default function OrderStatusStepper({ order, onTrackPathao }: OrderStatus
                 ? "rgba(245, 158, 11, 0.12)"
                 : currentStep === 4
                 ? "rgba(16, 185, 129, 0.15)"
-                : "rgba(99, 102, 241, 0.15)",
+                : "rgba(224, 83, 5, 0.15)",
               color: isCancelled || isFailed
                 ? "var(--crimson)"
                 : isReturned
@@ -211,7 +211,7 @@ export default function OrderStatusStepper({ order, onTrackPathao }: OrderStatus
       </div>
 
       {/* Pathao Logistics Live Tracking Bar */}
-      {hasPathao && (
+      {hasPathao ? (
         <div
           style={{
             marginTop: 14,
@@ -260,7 +260,28 @@ export default function OrderStatusStepper({ order, onTrackPathao }: OrderStatus
             )}
           </div>
         </div>
-      )}
+      ) : !isCancelled && !isFailed ? (
+        <div
+          style={{
+            marginTop: 14,
+            paddingTop: 12,
+            borderTop: "1px dashed var(--border)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <span style={{ fontSize: 16 }}>📦</span>
+          <div>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "var(--ink)", textTransform: "uppercase" }}>
+              Courier: <strong style={{ color: "var(--sub)" }}>Preparing Dispatch</strong>
+            </span>
+            <span style={{ display: "block", fontSize: 11, color: "var(--sub)" }}>
+              Consignment ID and tracking link will update once dispatched
+            </span>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -63,7 +63,7 @@ export function SalesTrendAreaChart({ data, height = 240 }: SalesTrendAreaChartP
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 12, height: 4, borderRadius: 2, background: "#4F46E5" }} />
+            <span style={{ width: 12, height: 4, borderRadius: 2, background: "#E05305" }} />
             <span style={{ fontSize: 11, fontWeight: 800, color: "var(--ink)" }}>Gross Sales (৳)</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -74,7 +74,7 @@ export function SalesTrendAreaChart({ data, height = 240 }: SalesTrendAreaChartP
         {activePoint ? (
           <div style={{ display: "flex", gap: 12, background: "var(--surface-2)", padding: "4px 12px", borderRadius: 6, border: "1px solid var(--border)" }}>
             <span style={{ fontSize: 11, fontWeight: 800, color: "var(--sub)" }}>Date: <strong style={{ color: "var(--ink)" }}>{activePoint.date}</strong></span>
-            <span style={{ fontSize: 11, fontWeight: 800, color: "#4F46E5" }}>Gross: <strong>{bdt(activePoint.revenue)}</strong></span>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "#E05305" }}>Gross: <strong>{bdt(activePoint.revenue)}</strong></span>
             <span style={{ fontSize: 11, fontWeight: 800, color: "#10B981" }}>Net: <strong>{bdt(activePoint.netSales ?? Math.round(activePoint.revenue * 0.92))}</strong></span>
             <span style={{ fontSize: 11, fontWeight: 800, color: "var(--amber)" }}>Orders: <strong>{activePoint.orders}</strong></span>
           </div>
@@ -90,8 +90,8 @@ export function SalesTrendAreaChart({ data, height = 240 }: SalesTrendAreaChartP
       >
         <defs>
           <linearGradient id="salesGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#4F46E5" stopOpacity="0.45" />
-            <stop offset="100%" stopColor="#4F46E5" stopOpacity="0.0" />
+            <stop offset="0%" stopColor="#E05305" stopOpacity="0.45" />
+            <stop offset="100%" stopColor="#E05305" stopOpacity="0.0" />
           </linearGradient>
           <linearGradient id="netGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#10B981" stopOpacity="0.2" />
@@ -148,7 +148,7 @@ export function SalesTrendAreaChart({ data, height = 240 }: SalesTrendAreaChartP
         <path
           d={linePath}
           fill="none"
-          stroke="#4F46E5"
+          stroke="#E05305"
           strokeWidth="2.75"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -179,7 +179,7 @@ export function SalesTrendAreaChart({ data, height = 240 }: SalesTrendAreaChartP
                   y1={padding.top}
                   x2={p.x}
                   y2={padding.top + chartH}
-                  stroke="#4F46E5"
+                  stroke="#E05305"
                   strokeWidth="1.5"
                   strokeDasharray="2,2"
                 />
@@ -190,8 +190,8 @@ export function SalesTrendAreaChart({ data, height = 240 }: SalesTrendAreaChartP
                 cx={p.x}
                 cy={p.y}
                 r={isHovered ? 6 : 3.5}
-                fill={isHovered ? "#fff" : "#4F46E5"}
-                stroke="#4F46E5"
+                fill={isHovered ? "#fff" : "#E05305"}
+                stroke="#E05305"
                 strokeWidth={isHovered ? 3 : 1.5}
                 style={{ transition: "cx 0.5s cubic-bezier(0.4, 0, 0.2, 1), cy 0.5s cubic-bezier(0.4, 0, 0.2, 1), r 0.15s ease" }}
               />
@@ -375,7 +375,7 @@ export function CategoryRevenueBarChart({ categories }: { categories: CategoryMa
                 style={{
                   width: `${pctOfMax}%`,
                   height: "100%",
-                  background: "linear-gradient(90deg, #4F46E5 0%, #3B82F6 100%)",
+                  background: "linear-gradient(90deg, #E05305 0%, #EA580C 100%)",
                   borderRadius: 4,
                   transition: "width 0.6s cubic-bezier(0.4, 0, 0.2, 1)",
                 }}
@@ -468,7 +468,7 @@ interface ReturnsClassificationProps {
 export function ReturnsClassificationDonutChart({ paid, exchanges, partials, nonPaid }: ReturnsClassificationProps) {
   const categories = [
     { key: "paid", label: "Paid Return", count: paid, color: "#10B981" },
-    { key: "exchanges", label: "Product/Size Exchange", count: exchanges, color: "#6366F1" },
+    { key: "exchanges", label: "Product/Size Exchange", count: exchanges, color: "#E05305" },
     { key: "partials", label: "Partial Delivery", count: partials, color: "#F59E0B" },
     { key: "nonPaid", label: "Non-Paid Return (RTO)", count: nonPaid, color: "#EF4444" },
   ];
@@ -576,7 +576,7 @@ interface ReturnReasonsProps {
 
 export function ReturnReasonsBarChart({ reasons }: ReturnReasonsProps) {
   const items = [
-    { label: "📏 Size & Fit Mismatch", count: reasons.sizeMismatch || 0, color: "#6366F1", tag: "Fit / Measurement" },
+    { label: "📏 Size & Fit Mismatch", count: reasons.sizeMismatch || 0, color: "#E05305", tag: "Fit / Measurement" },
     { label: "🚫 Customer Denied (CNR)", count: reasons.cnr || 0, color: "#EF4444", tag: "Refused at Door" },
     { label: "📍 Customer Unavailable", count: reasons.unavailable || 0, color: "#F59E0B", tag: "Rescheduled / Absent" },
     { label: "🛵 Courier / Delivery Delay", count: reasons.courierDelay || 0, color: "#3B82F6", tag: "Rider Late / No Call" },

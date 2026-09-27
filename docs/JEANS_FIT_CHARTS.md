@@ -13,7 +13,7 @@ Jeans in the DEEN catalog (`deencommerce.com`) are structured across three disti
 
 ### Fit Extraction Pipeline
 - In WooCommerce, **fit is defined by product category name**, rather than a custom `pa_fit` attribute.
-- The Fastify Gateway ([woo.ts](file:///home/bearded/Documents/GitHub/Cross_Ecom_Apps/apps/api/src/woo.ts)) extracts fit dynamically via regex pattern matching on category titles:
+- The Fastify Gateway (`apps/api/src/woo.ts`) extracts fit dynamically via regex pattern matching on category titles:
   ```ts
   // Extracts "Slim" / "Regular" / "Straight"
   const fitMatch = categoryNames.find(c => /\b(slim|regular|straight)\s*fit\b/i.test(c));
@@ -24,7 +24,7 @@ Jeans in the DEEN catalog (`deencommerce.com`) are structured across three disti
 
 ## 2. Size Guide Modal Integration
 
-In the mobile app, [SizeGuideModal.tsx](file:///home/bearded/Documents/GitHub/Cross_Ecom_Apps/apps/mobile/src/components/SizeGuideModal.tsx) accepts the product's `fit` prop and displays the appropriate chart and header subtitle (e.g., *"Slim Fit · Raw Selvedge Denim Sizing"*).
+In the mobile app, `apps/mobile/src/components/SizeGuideModal.tsx` accepts the product's `fit` prop and displays the appropriate chart and header subtitle (e.g., *"Slim Fit · Raw Selvedge Denim Sizing"*).
 
 ### Measurement Spec Table Format
 To replace the generic fallback denim chart with specific per-fit measurements, populate `FIT_CHARTS` with official brand measurements:

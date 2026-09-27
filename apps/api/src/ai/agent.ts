@@ -36,6 +36,7 @@ export interface AiAssistantResponse {
     | "general";
   suggestedProducts?: AiAssistantProductSummary[];
   suggestedActions?: Array<{ label: string; action: string; payload?: any }>;
+  quickReplies?: string[];
 }
 
 export interface AiCommerceOptions {
@@ -303,7 +304,7 @@ export async function processAiCommerceQuery(
               (trackingStatus ? `• **কুরিয়ার লাইভ ট্র্যাকিং:** ${trackingStatus}\n` : "") +
               `• **লাইভ ট্র্যাকিং লিংক:** ${trackingUrl}\n\n` +
               `আপনার পার্সেলটি পাঠাও কুরিয়ারের মাধ্যমে ডেলিভারির প্রক্রিয়ায় রয়েছে। নিচের বাটনে ট্যাপ করে যেকোনো সময় সরাসরি লাইভ কুরিয়ার লোকেশন দেখতে পারেন!`
-            : `\n✨ আপনার পার্সেলটি আমাদের মিরপুর সেন্ট্রাল স্টুডিও থেকে পাঠাও কুরিয়ারে হস্তান্তরের প্রস্তুতি চলছে। কুরিয়ারে হ্যান্ডওভার হওয়ার সাথে সাথে এসএমএস ও কনসাইনমেন্ট ট্র্যাকিং লিংক পেয়ে যাবেন।`);
+            : `\n✨ আপনার পার্সেলটি আমাদের ঢাকা ফুলফিলমেন্ট সেন্টার থেকে পাঠাও কুরিয়ারে হস্তান্তরের প্রস্তুতি চলছে। কুরিয়ারে হ্যান্ডওভার হওয়ার সাথে সাথে এসএমএস ও কনসাইনমেন্ট ট্র্যাকিং লিংক পেয়ে যাবেন।`);
       } else {
         reply =
           `📦 **Real-Time Status for Order #${orderNum}:**\n\n` +
@@ -315,7 +316,7 @@ export async function processAiCommerceQuery(
               (trackingStatus ? `• **Courier Movement:** ${trackingStatus}\n` : "") +
               `• **Live Tracking:** ${trackingUrl}\n\n` +
               `Your order is in transit with Pathao Courier. Tap the tracking button below to view real-time rider coordinates!`
-            : `\n✨ Your parcel is currently being prepared for dispatch at our Mirpur Central Studio. You will receive live Pathao consignment tracking as soon as it is picked up.`);
+            : `\n✨ Your parcel is currently being prepared for dispatch at our Dhaka fulfillment center. You will receive live Pathao consignment tracking as soon as it is picked up.`);
       }
 
       const actions: Array<{ label: string; action: string; payload?: any }> = [];
@@ -343,6 +344,9 @@ export async function processAiCommerceQuery(
         reply,
         intent: "order_track",
         suggestedActions: actions,
+        quickReplies: isBn
+          ? ["ডেলিভারি চার্জ কত?", "৭ দিনের সাইজ এক্সচেঞ্জ", "হোয়াটসঅ্যাপ সাপোর্ট"]
+          : ["Delivery charges?", "7-day size exchange", "WhatsApp Support"],
       };
     }
 
@@ -357,6 +361,9 @@ export async function processAiCommerceQuery(
           { label: isBn ? "📦 আমার অর্ডার দেখুন" : "📦 My Orders", action: "navigate_orders" },
           { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" }, { label: isBn ? "💬 মেসেঞ্জার" : "💬 Messenger", action: "open_messenger" },
         ],
+        quickReplies: isBn
+          ? ["আমার ফোন নম্বর দিয়ে খুঁজুন", "হোয়াটসঅ্যাপ সাপোর্ট", "নতুন কালেকশন দেখুন"]
+          : ["Search by my phone", "WhatsApp Support", "Browse New Drops"],
       };
     }
 
@@ -371,6 +378,9 @@ export async function processAiCommerceQuery(
           { label: isBn ? "📦 অর্ডার পেজে যান" : "📦 Go to Orders", action: "navigate_orders" },
           { label: isBn ? "📞 কাস্টমার কেয়ার" : "📞 Call Concierge", action: "contact_support" },
         ],
+        quickReplies: isBn
+          ? ["#১০৪১ অর্ডার খুঁজুন", "হোয়াটসঅ্যাপ সাপোর্ট", "নতুন কালেকশন"]
+          : ["Search #1041", "WhatsApp Support", "New Collection"],
       };
     }
 
@@ -384,6 +394,9 @@ export async function processAiCommerceQuery(
         { label: isBn ? "📦 আমার অর্ডার দেখুন" : "📦 View My Orders", action: "navigate_orders" },
         { label: isBn ? "📞 কাস্টমার কেয়ার" : "📞 Call Concierge", action: "contact_support" },
       ],
+      quickReplies: isBn
+        ? ["#১০৪১ অর্ডার ট্র্যাক", "হোয়াটসঅ্যাপ সাপোর্ট", "জিন্স কালেকশন"]
+        : ["Track Order #1041", "WhatsApp Support", "Jeans Collection"],
     };
   }
 
@@ -411,6 +424,9 @@ export async function processAiCommerceQuery(
         { label: isBn ? "🔥 বর্তমান অফার দেখুন" : "🔥 View Active Offers", action: "search_delivery" },
         { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" },
       ],
+      quickReplies: isBn
+        ? ["জিন্স কালেকশন 👖", "সাইজ ৩২ আছে?", "ডেলিভারি চার্জ কত?", "ক্যাশ অন ডেলিভারি"]
+        : ["Jeans Collection 👖", "Size 32 available?", "Delivery charge?", "Cash on Delivery"],
     };
   }
 
@@ -424,15 +440,15 @@ export async function processAiCommerceQuery(
 
     const reply = isBn
       ? `DEEN-এ বর্তমানে চলমান স্পেশাল অফার ও ডিসকাউন্টসমূহ:\n\n` +
-        `🔥 **ফ্ল্যাট আপ টু ৫০% ছাড়**: সিলেক্টেড সেলভেজ জিন্স ও প্রিমিয়াম শার্টে ৪০%-৫০% পর্যন্ত মূল্যছাড় চলছে।\n` +
+        `🔥 **ফ্ল্যাট আপ টু ৫০% ছাড়**: সিলেক্টেড ডেনিম ও প্রিমিয়াম শার্টে ৪০%-৫০% পর্যন্ত মূল্যছাড় চলছে।\n` +
         `💸 **ইনস্ট্যান্ট ক্যাশব্যাক**: ৳২৫০০+ অর্ডারে ৳৫০০ এবং ৳৩০০০+ অর্ডারে ৳৭০০ ইনস্ট্যান্ট ক্যাশব্যাক চেকআউটে স্বয়ংক্রিয়ভাবে প্রযোজ্য।\n` +
-        `🚚 **ডেলিভারি অফার**: ঢাকা মেট্রোয় মাত্র ৳৫০ এবং ঢাকার বাইরে ৳৯০। যেকোনো শোরুম থেকে সেলফ-পিকআপ সম্পূর্ণ ফ্রি (৳০)।\n` +
+        `🚚 **ডেলিভারি চার্জ**: ঢাকা সিটিতে মাত্র ৳৫০ এবং ঢাকার বাইরে ৳৯০। ঢাকা হাব থেকে সেলফ-পিকআপ সম্পূর্ণ ফ্রি (৳০)।\n` +
         `💳 **০% ইএমআই ও ব্যাংক ছাড়**: সিলেক্টেড ক্রেডিট কার্ডে ৩, ৬ ও ১২ মাসের ০% ইএমআই সুবিধা।\n\n` +
         (saleItems.length > 0 ? `নিচে বর্তমান অফারের সেরা কয়েকটি প্রোডাক্ট দেওয়া হলো:` : `চেকআউটে ডিসকাউন্ট স্বয়ংক্রিয়ভাবে যুক্ত হয়ে যাবে!`)
       : `Here are the active campaigns, offers, and discounts currently live at DEEN Commerce:\n\n` +
-        `🔥 **Flat Up to 50% Off**: Season Clearance discount on selected selvedge denim & artisanal shirts.\n` +
+        `🔥 **Flat Up to 50% Off**: Season Clearance discount on selected denim & artisanal shirts.\n` +
         `💸 **Instant Tiered Cashback**: Get ৳500 instant cashback on orders ৳2500+, and ৳700 cashback on orders ৳3000+ (applied automatically at checkout).\n` +
-        `🚚 **Affordable Delivery**: ৳50 inside Dhaka Metro, ৳90 across all 64 districts nationwide. Showroom pickup is 100% FREE.\n` +
+        `🚚 **Affordable Delivery**: ৳50 inside Dhaka Metro, ৳90 across all 64 districts nationwide. Dhaka hub pickup is 100% FREE.\n` +
         `💳 **0% EMI & Bank Discounts**: 3, 6, and 12-month 0% EMI available on major credit cards via SSLCommerz.\n\n` +
         (saleItems.length > 0 ? `Check out these featured deal items from our live catalog below:` : `All discounts apply automatically at checkout!`);
 
@@ -445,6 +461,9 @@ export async function processAiCommerceQuery(
         { label: isBn ? "💳 ব্যাংক অফার দেখুন" : "💳 Bank Card Offers", action: "open_bank_offers" },
         { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" },
       ],
+      quickReplies: isBn
+        ? ["জিন্স কালেকশন", "পাঞ্জাবি কালেকশন", "শার্ট কালেকশন", "ক্যাশ অন ডেলিভারি"]
+        : ["Jeans Collection", "Panjabi Collection", "Shirt Collection", "Cash on Delivery"],
     };
   }
 
@@ -460,6 +479,9 @@ export async function processAiCommerceQuery(
         { label: isBn ? "🔄 এক্সচেঞ্জ রিকোয়েস্ট" : "🔄 Initiate Exchange", action: "navigate_returns" },
         { label: isBn ? "🛍️ নতুন কালেকশন দেখুন" : "🛍️ Shop Catalog", action: "navigate_shop" },
       ],
+      quickReplies: isBn
+        ? ["সাইজ গাইড 📏", "ডেলিভারি চার্জ কত?", "হোয়াটসঅ্যাপ সাপোর্ট"]
+        : ["Size Guide 📏", "Delivery charges?", "WhatsApp Support"],
     };
   }
 
@@ -472,9 +494,13 @@ export async function processAiCommerceQuery(
       reply: isBn ? outletKb.contentBn : outletKb.contentEn,
       intent: "store_locator",
       suggestedActions: [
-        { label: isBn ? "📍 শোরুম লোকেশন দেখুন" : "📍 View Showroom Locations", action: "open_outlets" },
-        { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" }, { label: isBn ? "💬 মেসেঞ্জার" : "💬 Messenger", action: "open_messenger" },
+        { label: isBn ? "🛍️ অনলাইন কালেকশন দেখুন" : "🛍️ Shop Online", action: "navigate_shop" },
+        { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" },
+        { label: isBn ? "💬 মেসেঞ্জার" : "💬 Messenger", action: "open_messenger" },
       ],
+      quickReplies: isBn
+        ? ["ডেলিভারি চার্জ কত?", "সাইজ এক্সচেঞ্জ সুবিধা", "হোয়াটসঅ্যাপ সাপোর্ট"]
+        : ["Delivery charges?", "Size exchange policy", "WhatsApp Support"],
     };
   }
 
@@ -489,8 +515,8 @@ export async function processAiCommerceQuery(
     let specificReply = isBn ? deliveryKb.contentBn : deliveryKb.contentEn;
     if (isInsideDhaka) {
       specificReply = isBn
-        ? "ঢাকা সিটির মধ্যে ডেলিভারি চার্জ মাত্র ৳৫০ (২৪-৪৮ ঘণ্টার মধ্যে পাঠাও এক্সপ্রেস হোম ডেলিভারি)। এছাড়া আমাদের ৪টি ফ্ল্যাগশিপ শোরুম থেকে পিকআপ সম্পূর্ণ ফ্রি (৳০)। ক্যাশ অন ডেলিভারি সুবিধা রয়েছে।"
-        : "Delivery inside Dhaka is only ৳50 via 24–48h Pathao Express home delivery. Showroom pickup from any of our 4 retail studios is 100% FREE (৳0). Cash on Delivery is available.";
+        ? "ঢাকা সিটির মধ্যে ডেলিভারি চার্জ মাত্র ৳৫০ (২৪-৪৮ ঘণ্টার মধ্যে পাঠাও এক্সপ্রেস হোম ডেলিভারি)। ঢাকা হাব থেকে সেলফ-পিকআপ সম্পূর্ণ ফ্রি (৳০)। ক্যাশ অন ডেলিভারি সুবিধা রয়েছে।"
+        : "Delivery inside Dhaka is only ৳50 via 24–48h Pathao Express home delivery. Store pickup from Dhaka dispatch hub is 100% FREE (৳0). Cash on Delivery is available.";
     } else if (isOutsideDhaka) {
       specificReply = isBn
         ? "ঢাকার বাইরে বাংলাদেশের যেকোনো জেলায় ডেলিভারি চার্জ মাত্র ৳৯০ (২-৪ কার্যদিবসের মধ্যে সরাসরি হোম ডেলিভারি)। রেগুলার অর্ডারে কোনো অগ্রিম পেমেন্ট ছাড়াই ক্যাশ অন ডেলিভারিতে (COD) পণ্য হাতে পেয়ে মূল্য পরিশোধ করতে পারবেন।"
@@ -503,6 +529,9 @@ export async function processAiCommerceQuery(
       suggestedActions: [
         { label: isBn ? "🛒 চেকআউটে যান" : "🛒 Go to Checkout", action: "navigate_checkout" },
       ],
+      quickReplies: isBn
+        ? ["ক্যাশ অন ডেলিভারি আছে?", "৭ দিনের সাইজ এক্সচেঞ্জ", "জিন্স কালেকশন"]
+        : ["Cash on Delivery?", "7-day size exchange", "Jeans Collection"],
     };
   }
 
@@ -518,6 +547,9 @@ export async function processAiCommerceQuery(
         { label: isBn ? "👖 সেলভেজ কালেকশন দেখুন" : "👖 Shop Selvedge Jeans", action: "search_jeans" },
         { label: isBn ? "🧼 ওয়াশ ও কেয়ার গাইড" : "🧼 Denim Care Guide", action: "open_care_guide" },
       ],
+      quickReplies: isBn
+        ? ["সাইজ গাইড 📏", "ডেলিভারি চার্জ কত?", "হোয়াটসঅ্যাপ সাপোর্ট"]
+        : ["Size Guide 📏", "Delivery charge?", "WhatsApp Support"],
     };
   }
 
@@ -533,6 +565,9 @@ export async function processAiCommerceQuery(
         { label: isBn ? "💳 ব্যাংক অফার দেখুন" : "💳 Bank Card Offers", action: "open_bank_offers" },
         { label: isBn ? "🛍️ কেনাকাটা করুন" : "🛍️ Shop Catalog", action: "navigate_shop" },
       ],
+      quickReplies: isBn
+        ? ["ডেলিভারি চার্জ কত?", "ক্যাশ অন ডেলিভারি", "বর্তমান অফার"]
+        : ["Delivery charges?", "Cash on Delivery", "Current Offers"],
     };
   }
 
@@ -547,6 +582,9 @@ export async function processAiCommerceQuery(
       suggestedActions: [
         { label: isBn ? "🧼 ডেনিম কেয়ার দেখুন" : "🧼 Full Care Guide", action: "open_care_guide" },
       ],
+      quickReplies: isBn
+        ? ["সেলভেজ জিন্স কালেকশন", "সাইজ গাইড", "হোয়াটসঅ্যাপ সাপোর্ট"]
+        : ["Selvedge Jeans Collection", "Size Guide", "WhatsApp Support"],
     };
   }
 
@@ -576,6 +614,9 @@ export async function processAiCommerceQuery(
         { label: isBn ? "📐 সাইজ চার্ট দেখুন" : "📐 View Size Chart", action: "open_size_guide" },
         { label: isBn ? "🛍️ কালেকশন দেখুন" : "🛍️ Shop Collection", action: "navigate_shop" },
       ],
+      quickReplies: isBn
+        ? ["সাইজ ৩২ জিন্স দেখান", "৭ দিনের সাইজ এক্সচেঞ্জ", "হোয়াটসঅ্যাপ সাপোর্ট"]
+        : ["Show size 32 jeans", "7-day doorstep exchange", "WhatsApp Support"],
     };
   }
 
@@ -711,6 +752,9 @@ export async function processAiCommerceQuery(
           { label: isBn ? "🛒 শপ ক্যাটালগ দেখুন" : "🛒 Browse Full Shop", action: "navigate_shop" },
           { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" }, { label: isBn ? "💬 মেসেঞ্জার" : "💬 Messenger", action: "open_messenger" },
         ],
+        quickReplies: isBn
+          ? ["সাইজ ৩২ আছে?", "সাইজ ৩৪ আছে?", "ডেলিভারি চার্জ কত?", "ক্যাশ অন ডেলিভারি"]
+          : ["Size 32 available?", "Size 34 available?", "Delivery charge?", "Cash on Delivery"],
       };
     }
   }
@@ -729,6 +773,9 @@ export async function processAiCommerceQuery(
         { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" },
         { label: isBn ? "💬 মেসেঞ্জার" : "💬 Messenger", action: "open_messenger" },
       ],
+      quickReplies: isBn
+        ? ["জিন্স কালেকশন", "সাইজ গাইড 📏", "ডেলিভারি চার্জ কত?", "হোয়াটসঅ্যাপ"]
+        : ["Jeans Collection", "Size Guide 📏", "Delivery charge?", "WhatsApp Support"],
     };
   }
 
@@ -751,6 +798,9 @@ export async function processAiCommerceQuery(
             { label: isBn ? "💬 হোয়াটসঅ্যাপ" : "💬 WhatsApp", action: "open_whatsapp" },
             { label: isBn ? "💬 মেসেঞ্জার" : "💬 Messenger", action: "open_messenger" },
           ],
+          quickReplies: isBn
+            ? ["জিন্স কালেকশন 👖", "বর্তমান অফার 🔥", "ডেলিভারি চার্জ 🚚", "হোয়াটসঅ্যাপ 💬"]
+            : ["Jeans Collection 👖", "Active Offers 🔥", "Delivery Charge 🚚", "WhatsApp 💬"],
         };
       }
     } catch (err) {
@@ -770,7 +820,10 @@ export async function processAiCommerceQuery(
       { label: isBn ? "📦 অর্ডার ট্র্যাক করুন" : "📦 Track My Order", action: "navigate_orders" },
       { label: isBn ? "👖 সেলভেজ জিন্স" : "👖 Best Seller Jeans", action: "search_jeans" },
       { label: isBn ? "🚚 ডেলিভারি পলিসি" : "🚚 Shipping Policies", action: "search_delivery" },
-      { label: isBn ? "📍 শোরুম লোকেশন" : "📍 Store Locations", action: "open_outlets" },
+      { label: isBn ? "🔄 সাইজ এক্সচেঞ্জ" : "🔄 Size Exchange", action: "open_exchange" },
     ],
+    quickReplies: isBn
+      ? ["জিন্স কালেকশন 👖", "পাঞ্জাবি কালেকশন 🕌", "সাইজ গাইড 📏", "অর্ডার স্ট্যাটাস 📦"]
+      : ["Jeans Collection 👖", "Panjabi Collection 🕌", "Size Guide 📏", "Track My Order 📦"],
   };
 }

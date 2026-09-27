@@ -91,7 +91,7 @@
 
 ## 4. P2 — Post-Launch Enhancements
 
-- **Jeans Per-Fit Sizing Tables**: Category-based fit routing is active in `SizeGuideModal.tsx`. Replace generic placeholder tables with official brand measurement specs once provided (see [docs/JEANS_FIT_CHARTS.md](file:///home/bearded/Documents/GitHub/Cross_Ecom_Apps/docs/JEANS_FIT_CHARTS.md)).
+- **Jeans Per-Fit Sizing Tables**: Category-based fit routing is active in `SizeGuideModal.tsx`. Replace generic placeholder tables with official brand measurement specs once provided (see [`docs/JEANS_FIT_CHARTS.md`](./JEANS_FIT_CHARTS.md)).
 - **Automated Payment Gateway Integration**: Integrate direct bKash / Nagad / SSLCommerz payment APIs.
 - **Push Notification Broadcasts**: Dispatch marketing pushes from WordPress webhooks using stored Expo push tokens.
 - **Multi-Tenant SaaS Deployment**: Provision secondary store clients via the gateway `STORES` registry.

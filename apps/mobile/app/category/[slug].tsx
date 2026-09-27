@@ -28,13 +28,20 @@ import { ProductCard } from "../../src/components/ProductCard";
 import { NavBar } from "../../src/components/NavBar";
 import { ScreenShell } from "../../src/components/ScreenShell";
 import { SizeGuideModal } from "../../src/components/SizeGuideModal";
-import { fetchProducts, isGatewayConfigured, useCatalogRefreshOnFocus, fetchCategoryCovers } from "../../src/services/gateway";
+import {
+  fetchProducts,
+  isGatewayConfigured,
+  useCatalogRefreshOnFocus,
+  fetchCategoryCovers,
+  fetchSubCategories,
+  WooCategoryNode,
+} from "../../src/services/gateway";
 import { Product, DeenCategory } from "../../src/types";
 import { useProfile } from "../../src/context/ProfileContext";
 import { getCategoryInfo } from "../../src/data/categories";
 
 const { width } = Dimensions.get("window");
-const COVER_HEIGHT = 220;
+const COVER_HEIGHT = 250;
 
 type SortOption = "featured" | "price_asc" | "price_desc" | "newest" | "discount";
 
@@ -56,11 +63,22 @@ export default function CategoryLandingScreen() {
   const [sizeGuideVisible, setSizeGuideVisible] = useState(false);
   const [categoryCovers, setCategoryCovers] = useState<Record<string, string>>({});
 
+  // Live WooCommerce sub-categories for filter chips
+  const [subCategories, setSubCategories] = useState<WooCategoryNode[]>([]);
+
   useEffect(() => {
     fetchCategoryCovers()
       .then((c) => setCategoryCovers(c || {}))
       .catch(() => {});
   }, []);
+
+  // Fetch live WooCommerce sub-categories whenever the category slug changes
+  useEffect(() => {
+    setSelectedTag("All"); // reset filter when switching categories
+    fetchSubCategories(slug || "JEANS")
+      .then((subs) => setSubCategories(subs))
+      .catch(() => setSubCategories([]));
+  }, [slug]);
 
   const loadCategoryProducts = useCallback(async () => {
     try {
@@ -89,18 +107,26 @@ export default function CategoryLandingScreen() {
 
   const { refreshControl } = usePullToRefresh(loadCategoryProducts);
 
+  // All filter chip labels: "All" + live WooCommerce sub-category names
+  const filterTags = useMemo<string[]>(() => {
+    if (subCategories.length === 0) return ["All"];
+    return ["All", ...subCategories.map((sc) => sc.name)];
+  }, [subCategories]);
+
   // Filter and Sort items
   const displayedProducts = useMemo(() => {
     let list = [...products];
 
-    // Tag filter
+    // Sub-category filter using live WooCommerce sub-category names
+    // A product is shown if its wooSubCategories array contains the selected tag,
+    // OR (fallback) if the product name/fabric contains the tag text
     if (selectedTag && selectedTag !== "All") {
       const q = selectedTag.toLowerCase();
       list = list.filter(
         (p) =>
+          (p.wooSubCategories && p.wooSubCategories.some((sc) => sc.toLowerCase() === q)) ||
           p.name.toLowerCase().includes(q) ||
-          p.fabric.toLowerCase().includes(q) ||
-          p.blurb?.toLowerCase().includes(q)
+          p.fabric.toLowerCase().includes(q)
       );
     }
 
@@ -168,6 +194,11 @@ export default function CategoryLandingScreen() {
 
                 <Text style={styles.heroTitle}>{categoryInfo.title}</Text>
                 <Text style={styles.heroSubtitle}>{categoryInfo.subtitle}</Text>
+                {categoryInfo.description ? (
+                  <Text style={styles.heroDescription} numberOfLines={3}>
+                    {categoryInfo.description}
+                  </Text>
+                ) : null}
 
                 <View style={styles.craftPill}>
                   <Layers size={13} color="#FFFFFF" />
@@ -192,20 +223,23 @@ export default function CategoryLandingScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Subcategory / Fit Filter Tags */}
-            {categoryInfo.filterTags.length > 0 && (
+            {/* Live WooCommerce Sub-category Filter Chips */}
+            {filterTags.length > 1 && (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.tagsScroll}
               >
-                {categoryInfo.filterTags.map((tag) => {
+                {filterTags.map((tag) => {
                   const active = selectedTag === tag;
                   return (
                     <TouchableOpacity
                       key={tag}
                       style={[styles.tagChip, active && styles.tagChipActive]}
                       onPress={() => setSelectedTag(tag)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Filter by ${tag}`}
+                      hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
                     >
                       <Text style={[styles.tagChipText, active && styles.tagChipTextActive]}>
                         {tag}
@@ -364,6 +398,12 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
       marginTop: 4,
       lineHeight: 16,
     },
+    heroDescription: {
+      color: "rgba(255, 255, 255, 0.9)",
+      fontSize: 11,
+      lineHeight: 15,
+      marginTop: 4,
+    },
     craftPill: {
       flexDirection: "row",
       alignItems: "center",
@@ -415,6 +455,8 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
       borderRadius: 20,
       borderWidth: 1,
       borderColor: colors.border,
+      minHeight: 34,
+      justifyContent: "center",
     },
     tagChipActive: {
       backgroundColor: colors.indigo,
@@ -464,12 +506,13 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
       fontWeight: "800",
     },
     columnWrapper: {
-      paddingHorizontal: 16,
-      gap: 12,
+      paddingHorizontal: 8,
+      gap: 8,
     },
     gridItem: {
       flex: 1,
-      maxWidth: (width - 44) / 2,
+      maxWidth: (width - 24) / 2,
+      marginBottom: 8,
     },
     bold: s.bold,
     emptyWrap: {

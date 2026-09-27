@@ -1,6 +1,6 @@
 # DEEN Commerce — Gateway API (`apps/api`)
 
-[![Fastify](https://img.shields.io/badge/Fastify-4.28-000000?style=for-the-badge&logo=fastify&logoColor=white)](https://www.fastify.io/)
+[![Fastify](https://img.shields.io/badge/Fastify-5.x-000000?style=for-the-badge&logo=fastify&logoColor=white)](https://www.fastify.io/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-20.x-43853D?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![Docker](https://img.shields.io/badge/Docker-Container-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
@@ -81,6 +81,19 @@ PATHAO_CLIENT_ID=
 PATHAO_CLIENT_SECRET=
 PATHAO_USERNAME=
 PATHAO_PASSWORD=
+
+# Social sign-in verification (Google / Facebook). Must match the OAuth clients
+# the apps sign in with: a token minted for another client/app is rejected 401.
+GOOGLE_CLIENT_ID=
+FACEBOOK_APP_ID=
+FACEBOOK_APP_SECRET=
+
+# Local-dev only: accept a social sign-in whose provider token is missing or
+# unverifiable. Ignored when NODE_ENV=production.
+SOCIAL_AUTH_ALLOW_UNVERIFIED=false
+
+# Dedicated HMAC key for session tokens (falls back to WOO_WEBHOOK_SECRET).
+SESSION_SIGNING_SECRET=
 ```
 
 ---

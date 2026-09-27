@@ -1,0 +1,31 @@
+{
+  "products": {
+    "shirt": ["shart", "shirt", "শার্ট", "jama", "kameez", "formal shirt", "casual shirt", "kamiz"],
+    "panjabi": ["panjabee", "panjabi", "পাঞ্জাবি", "punjabi", "kurta", "পাঞ্জাবী"],
+    "tshirt": ["t-shirt", "tee", "ti shirt", "টি-শার্ট", "t shirt", "polo", "টি শার্ট", "tshirt"],
+    "jeans": ["jeans", "pant", "প্যান্ট", "jins", "denim", "জিন্স", "জিন্স প্যান্ট", "selvedge", "selvage"],
+    "trousers": ["trouser", "trousers", "ট্রাউজার", "chino", "chinos", "formal pant", "gabardine"],
+    "polo": ["polo", "polo shirt", "পোলো", "পোলো শার্ট", "collar t-shirt"],
+    "jacket": ["jacket", "জ্যাকেট", "denim jacket", "winter wear", "bomber"],
+    "hoodie": ["hoodie", "হুডি", "sweatshirt", "sweater"],
+    "saree": ["sari", "saree", "শাড়ি", "sharee", "jamdani", "silk"],
+    "salwar": ["salwar", "kameez", "সালোয়ার", "three piece", "থ্রি পিস"],
+    "kurti": ["kurti", "kurtis", "কুর্তি", "tunic"],
+    "shoe": ["shoes", "juta", "জুতা", "sandal", "chappal", "sneakers", "লোফার", "loafer"],
+    "bag": ["bags", "ব্যাগ", "beg", "backpack", "wallet", "মানিব্যাগ", "purse"],
+    "watch": ["watches", "ঘড়ি", "ghori", "hand watch", "smart watch"],
+    "belt": ["belt", "বেল্ট", "leather belt"],
+    "perfume": ["attar", "atthor", "perfume", "পারফিউম", "আতর", "fragrance", "scent"],
+    "accessories": ["accessories", "এক্সেসরিজ", "sunglasses", "sun glass", "চশমা"]
+  },
+  "colors": {
+    "black": ["black", "kalo", "কালো", "jet black"],
+    "blue": ["blue", "nil", "নীল", "navy", "navy blue", "indigo"],
+    "white": ["white", "shada", "সাদা", "off white"],
+    "grey": ["grey", "gray", "dhushor", "ধূসর", "washed grey"],
+    "red": ["red", "lal", "লাল", "crimson", "maroon"],
+    "green": ["green", "shobuj", "সবুজ", "olive"],
+    "yellow": ["yellow", "holud", "হলুদ"],
+    "brown": ["brown", "badami", "বাদামী"]
+  }
+}

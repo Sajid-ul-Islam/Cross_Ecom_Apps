@@ -4,29 +4,30 @@
    ================================================================ */
 
 :root {
-  /* Brand */
+  /* Brand (deencommerce.com orange aesthetic) */
   --brand: var(--indigo);
   --muted: var(--sub);
   --emerald-light: #ecfdf5;
-  --indigo: #2a3680;
-  --indigo-hover: #1e265c;
-  --indigo-light: #eef0f8;
-  --denim-stitch: #d49439;
+  --indigo: #e05305;
+  --indigo-hover: #c2410c;
+  --indigo-dark: #7c2d12;
+  --indigo-light: #fff7ed;
+  --denim-stitch: #c27803;
 
-  /* Backgrounds */
-  --bg: #f7f6f0;
+  /* Backgrounds & Clean Surfaces */
+  --bg: #ffffff;
   --surface: #ffffff;
   --surface-1: #ffffff;
-  --surface-2: #f0efe8;
-  --border: #e5e2d8;
-  --border-light: #f0ede4;
+  --surface-2: #fdf9f5;
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
 
   /* Typography */
-  --ink: #151a2c;
-  --text-main: #151a2c;
-  --sub: #636b7f;
-  --text-sub: #636b7f;
-  --faint: #9da3b4;
+  --ink: #0f172a;
+  --text-main: #0f172a;
+  --sub: #475569;
+  --text-sub: #475569;
+  --faint: #94a3b8;
 
   /* Status */
   --crimson: #c93b36;
@@ -43,23 +44,24 @@
   --brand: var(--indigo);
   --muted: var(--sub);
   --emerald-light: #064e3b;
-  --indigo: #5b6ee1;
-  --indigo-hover: #7384ea;
-  --indigo-light: #1f2848;
-  --denim-stitch: #eaa74b;
+  --indigo: #fb923c;
+  --indigo-hover: #fdba74;
+  --indigo-dark: #ea580c;
+  --indigo-light: #261308;
+  --denim-stitch: #fdba74;
 
-  --bg: #0d111a;
-  --surface: #161c2a;
-  --surface-1: #161c2a;
-  --surface-2: #1f273b;
-  --border: #2a344d;
-  --border-light: #1e2638;
+  --bg: #000000;
+  --surface: #101010;
+  --surface-1: #101010;
+  --surface-2: #181818;
+  --border: #262626;
+  --border-light: #181818;
 
-  --ink: #f4f6fc;
-  --text-main: #f4f6fc;
-  --sub: #a2abc3;
-  --text-sub: #a2abc3;
-  --faint: #6c7691;
+  --ink: #ffffff;
+  --text-main: #ffffff;
+  --sub: #a3a3a3;
+  --text-sub: #a3a3a3;
+  --faint: #737373;
 
   --crimson: #f25f5c;
   --emerald: #34d399;
@@ -86,11 +88,12 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* ── Layout ─────────────────────────────────────── */
+/* ── Layout (Edge-to-Edge Responsive Layout) ────── */
 .container {
-  max-width: 1200px;
+  width: 100%;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 clamp(16px, 2.5vw, 48px);
 }
 
 .site-header-wrapper {
@@ -211,10 +214,50 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 /* ── Product Grid ────────────────────────────────── */
+/* Flexbox so a partial (odd-count) last row centers via justify-content,
+   while full rows still tile edge-to-edge (percent bases sum to 100% + gaps). */
+/* ── Product Grid (Edge-to-Edge Responsive Layout) ── */
 .product-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
   gap: 20px;
+  width: 100%;
+}
+.product-grid > * {
+  flex: 0 0 calc(25% - 15px);
+  max-width: calc(25% - 15px);
+}
+
+@media (min-width: 1440px) {
+  .product-grid > * {
+    flex: 0 0 calc(20% - 16px);
+    max-width: calc(20% - 16px);
+  }
+}
+
+@media (min-width: 1800px) {
+  .product-grid > * {
+    flex: 0 0 calc(16.6666% - 16.67px);
+    max-width: calc(16.6666% - 16.67px);
+  }
+}
+
+@media (max-width: 1079px) {
+  .product-grid > * {
+    flex: 0 0 calc(33.3333% - 13.334px);
+    max-width: calc(33.3333% - 13.334px);
+  }
+}
+
+@media (max-width: 800px) {
+  .product-grid {
+    gap: 12px;
+  }
+  .product-grid > * {
+    flex: 0 0 calc(50% - 6px);
+    max-width: calc(50% - 6px);
+  }
 }
 
 /* ── Product Card ────────────────────────────────── */
@@ -320,23 +363,78 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .nav__link:hover, .nav__link--active {
   background: var(--indigo-light); color: var(--indigo);
 }
-.nav__actions { display: flex; align-items: center; gap: 8px; }
-.nav__icon-btn {
-  width: 44px; height: 44px;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 50%; background: var(--surface-2);
-  border: 1px solid var(--border); cursor: pointer;
-  transition: all 0.15s ease; position: relative;
+.nav__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-.nav__icon-btn:hover { background: var(--indigo-light); }
+.nav__icon-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.nav__icon-btn:hover {
+  background: var(--indigo-light);
+  border-color: rgba(224, 83, 5, 0.3);
+  color: var(--indigo);
+  transform: translateY(-1px);
+}
+.nav__icon-btn:active {
+  transform: translateY(0) scale(0.96);
+}
+.nav__icon-btn--active {
+  background: var(--indigo-light);
+  border-color: var(--indigo);
+  color: var(--indigo);
+}
 .nav__profile-desktop { display: flex; }
 .nav__orders-desktop-only { display: flex; }
-.nav__cart-badge {
-  position: absolute; top: -4px; right: -4px;
-  width: 18px; height: 18px; border-radius: 50%;
-  background: var(--indigo); color: #fff;
-  font-size: 9px; font-weight: 800;
-  display: flex; align-items: center; justify-content: center;
+.nav__chat-desktop-only { display: flex; }
+.nav__cart-desktop-only { display: flex; }
+.nav__cart-desktop-only--has-items {
+  /* Restrained editorial styling — navbar cart button does not get extra orange */
+}
+
+.nav__badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 9px;
+  font-size: 9.5px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  line-height: 1;
+  border: 2px solid var(--surface);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+.nav__badge--crimson {
+  background: var(--crimson);
+  color: #ffffff;
+}
+.nav__badge--indigo {
+  background: var(--indigo);
+  color: #ffffff;
+}
+.nav__badge--cart {
+  background: var(--ink);
+  color: var(--bg);
+  border: 1.5px solid var(--surface);
 }
 
 /* ── Hero ───────────────────────────────────────── */
@@ -348,14 +446,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 .hero__bg {
   position: absolute; inset: 0;
-  background: linear-gradient(135deg, #0d111a 0%, #1a2350 100%);
+  background: linear-gradient(135deg, #000000 0%, #121212 100%);
 }
 .hero__bg img {
   width: 100%; height: 100%; object-fit: cover; opacity: 0.5;
 }
 .hero__overlay {
   position: absolute; inset: 0;
-  background: linear-gradient(to top, rgba(10,15,30,0.85) 30%, transparent 70%);
+  background: linear-gradient(to top, rgba(0,0,0,0.88) 30%, transparent 70%);
 }
 .hero__content {
   position: relative; z-index: 2;
@@ -657,24 +755,30 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 
 @media (max-width: 768px) {
-  body { padding-bottom: 70px; }
+  body { padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
   .mobile-bottom-nav { display: flex; }
   .nav__profile-desktop { display: none !important; }
   .nav__orders-desktop-only { display: none !important; }
-  .page-content { padding-bottom: 80px; }
+  .nav__chat-desktop-only { display: none !important; }
+  .nav__cart-desktop-only { display: none !important; }
+  .page-content { padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
 }
 
 @media (min-width: 769px) {
   .mobile-bottom-nav { display: none !important; }
+  .nav__profile-desktop { display: flex !important; }
+  .nav__orders-desktop-only { display: flex !important; }
+  .nav__chat-desktop-only { display: flex !important; }
+  .nav__cart-desktop-only { display: flex !important; }
 }
 
 @media (max-width: 600px) {
-  .container { padding: 0 16px; }
+  .container { padding: 0 8px; }
   .hero { height: 70vh; min-height: 400px; margin: 0 0 32px; }
   .hero__content { padding: 24px 20px; }
   .hero__title { font-size: 1.8rem; }
   .hero__sub { font-size: 13px; margin-bottom: 20px; }
-  .product-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .product-grid { gap: 8px; }
   .footer__grid { grid-template-columns: 1fr; }
   .trust-bar { grid-template-columns: 1fr; }
   .payment-options { grid-template-columns: 1fr; }
@@ -771,14 +875,17 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   bottom: 0;
   left: 0;
   right: 0;
-  height: 60px;
+  height: calc(60px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--surface);
   border-top: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-around;
   z-index: 1000;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 .mobile-tab-btn {
   display: flex;
@@ -798,23 +905,22 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .mobile-tab-btn--active {
   color: var(--indigo);
 }
-/* Jakob's Law: Emphasize center/primary tab for core action (Cart in e-commerce) */
+/* Consistent mobile bottom navigation - cart remains balanced without extra orange */
 .mobile-tab-btn--primary {
-  background: linear-gradient(135deg, var(--indigo) 0%, #3b82f6 100%);
-  border-radius: 12px;
-  padding: 6px 0 8px;
-  margin-top: -4px;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
-  transform: translateY(-2px);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background: transparent;
+  border-radius: 0;
+  padding: 4px 0;
+  margin-top: 0;
+  box-shadow: none;
+  transform: none;
 }
 .mobile-tab-btn--primary:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.45);
+  transform: none;
+  box-shadow: none;
 }
 .mobile-tab-btn--primary .mobile-tab-label {
-  font-weight: 900;
-  letter-spacing: 0.4px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
 }
 .mobile-tab-icon-wrap {
   position: relative;
@@ -1085,7 +1191,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   width: 40px;
   height: 40px;
   border-radius: 10px;
-  background: rgba(99, 102, 241, 0.1);
+  background: var(--indigo-light);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1748,8 +1854,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .checkout-items-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  max-height: 280px;
+  gap: 14px;
+  max-height: 380px;
   overflow-y: auto;
   padding-right: 4px;
   margin-bottom: 16px;
@@ -1757,44 +1863,160 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 .checkout-item-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
+  padding: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.15s ease;
+}
+.checkout-item-row:hover {
+  border-color: var(--border-focus);
 }
 .checkout-item-img {
-  width: 48px;
-  height: 60px;
+  width: 52px;
+  height: 66px;
   object-fit: cover;
   border-radius: 6px;
-  background: var(--surface-2);
+  background: var(--surface);
+  flex-shrink: 0;
 }
 .checkout-item-img-placeholder {
-  width: 48px;
-  height: 60px;
-  background: var(--surface-2);
+  width: 52px;
+  height: 66px;
+  background: var(--surface);
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
+  flex-shrink: 0;
 }
 .checkout-item-details {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.checkout-item-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
 }
 .checkout-item-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.35;
+  margin: 0;
+}
+.checkout-item-remove-btn {
+  background: none;
+  border: none;
+  padding: 6px;
+  margin: -4px -4px 0 0;
+  color: var(--crimson);
+  cursor: pointer;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+  opacity: 0.8;
+}
+.checkout-item-remove-btn:hover {
+  opacity: 1;
+  background: rgba(225, 29, 72, 0.1);
+}
+.checkout-item-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+.checkout-size-pill {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 6px 2px 8px;
+  gap: 4px;
+}
+.checkout-size-tag {
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--sub);
+  letter-spacing: 0.5px;
+}
+.checkout-size-select {
+  background: transparent;
+  border: none;
+  color: var(--ink);
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 4px;
+  outline: none;
+  font-family: inherit;
+}
+.checkout-size-select option {
+  background: var(--surface);
+  color: var(--ink);
+}
+.checkout-stepper {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.checkout-stepper-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.checkout-stepper-btn:hover {
+  background: var(--surface-2);
+}
+.checkout-stepper-qty {
+  min-width: 24px;
+  text-align: center;
   font-size: 12px;
   font-weight: 700;
   color: var(--ink);
-  line-height: 1.3;
 }
-.checkout-item-meta {
-  font-size: 11px;
-  color: var(--sub);
-  margin-top: 2px;
+.checkout-item-price-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-left: auto;
 }
 .checkout-item-total {
   font-size: 13px;
   font-weight: 800;
   color: var(--indigo);
+}
+.checkout-item-unit-price {
+  font-size: 10px;
+  color: var(--sub);
 }
 
 /* VIP Loyalty Coins */
@@ -2401,6 +2623,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 }
 .story-mobile-rail {
   display: flex;
+  align-items: flex-start;
   gap: 12px;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
@@ -2512,9 +2735,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   border-radius: 3px;
   flex: none;
 }
-.story-card__spacer {
-  flex: 1;
-}
 .story-card__tag {
   font-size: 9px;
   font-weight: 900;
@@ -2549,6 +2769,317 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   .story-mobile-rail-section {
     display: block;
   }
+  .nav__chat-desktop-only {
+    display: none !important;
+  }
 }
+
+@media (min-width: 769px) {
+  .nav__chat-desktop-only {
+    display: flex !important;
+  }
+  .scroll-to-top-btn {
+    bottom: 88px !important;
+    right: 34px !important;
+  }
+}
+
+/* ── DEEN Unified Facebook-Style Chat Assistant & Concierge ──────────────── */
+#chatbot-widget-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 28px;
+  width: 56px;
+  height: 56px;
+  border-radius: 28px;
+  background: linear-gradient(135deg, var(--indigo) 0%, #c2410c 100%);
+  color: #ffffff;
+  border: 2px solid var(--denim-stitch);
+  box-shadow: 0 6px 24px rgba(224, 83, 5, 0.45);
+  cursor: pointer;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+#chatbot-widget-btn:hover {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 10px 30px rgba(224, 83, 5, 0.55);
+}
+#chatbot-widget-btn:active {
+  transform: scale(0.96);
+}
+
+/* Strictly hide floating launcher on mobile (< 768px) to eliminate UI collisions
+   with bottom navigation tabs, ScrollToTop, and sticky PDP Add-to-Bag bars.
+   Mobile users access the assistant via Bottom Nav Tab 4 [ 💬 Chat ]. */
+@media (max-width: 768px) {
+  #chatbot-widget-btn {
+    display: none !important;
+  }
+}
+
+/* Facebook-Style Floating Chatbox Window (Desktop ≥ 769px) */
+.fb-chatbox-window {
+  position: fixed;
+  bottom: 20px;
+  right: 24px;
+  width: 380px;
+  height: 550px;
+  max-height: calc(100vh - 40px);
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 1000;
+  animation: fbChatPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: box-shadow 0.2s ease;
+}
+
+/* Mobile Non-Fullscreen Card & Backdrop (< 769px) */
+.fb-chatbox-backdrop {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .fb-chatbox-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(2px);
+    z-index: 9998;
+    animation: fbFadeIn 0.2s ease;
+  }
+  .fb-chatbox-window {
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: 440px;
+    margin: 0 auto;
+    height: 82vh;
+    max-height: 560px;
+    border-radius: 20px;
+    z-index: 9999;
+    animation: fbSheetUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+/* Facebook-Style Minimized Docked Tab / Pill */
+.fb-chatbox-minimized {
+  position: fixed;
+  bottom: 20px;
+  right: 24px;
+  height: 48px;
+  min-width: 250px;
+  max-width: 290px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px 0 10px;
+  z-index: 1000;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  animation: fbChatPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+.fb-chatbox-minimized:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+}
+@media (max-width: 768px) {
+  .fb-chatbox-minimized {
+    bottom: 84px;
+    right: 16px;
+    max-width: 260px;
+    z-index: 9999;
+  }
+}
+
+/* Header Action Buttons */
+.fb-header-icon-btn {
+  background: transparent;
+  border: none;
+  font-size: 15px;
+  color: var(--sub);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.fb-header-icon-btn:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+/* Typing Indicator (FB Messenger 3 Bouncing Dots) */
+.fb-typing-bubble {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 8px 12px;
+  width: fit-content;
+}
+.fb-typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sub);
+  animation: fbTypingBounce 1.2s infinite ease-in-out;
+}
+.fb-typing-dot:nth-child(1) { animation-delay: 0s; }
+.fb-typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.fb-typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes fbTypingBounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  30% {
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
+
+/* Quick Prompts Carousel */
+.fb-chatbox-prompts {
+  padding: 8px 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  white-space: nowrap;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+.fb-chatbox-prompts::-webkit-scrollbar {
+  display: none;
+}
+.fb-prompt-pill {
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+.fb-prompt-pill:hover {
+  border-color: var(--indigo);
+  color: var(--indigo);
+  background: var(--surface);
+}
+
+/* Composer Controls */
+.fb-composer-icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 17px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+  flex-shrink: 0;
+}
+.fb-composer-icon-btn:hover {
+  transform: scale(1.06);
+  background: var(--surface);
+}
+
+.fb-composer-input {
+  flex: 1;
+  padding: 9px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.fb-composer-input:focus {
+  border-color: var(--indigo);
+  background: var(--surface);
+}
+
+.fb-composer-send-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  background: var(--border);
+  color: var(--sub);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  transition: background 0.15s ease, transform 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+.fb-composer-send-btn.active {
+  background: var(--indigo);
+  color: #ffffff;
+  cursor: pointer;
+}
+.fb-composer-send-btn.active:hover {
+  transform: scale(1.08);
+}
+.fb-composer-send-btn.active:active {
+  transform: scale(0.95);
+}
+
+@keyframes fbChatPop {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fbSheetUp {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fbFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+
 
 

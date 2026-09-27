@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 
-A multi-agent autonomous audit was conducted across the **React Native + Expo mobile application** (`apps/mobile`) and the **Next.js 14 web application** (`apps/web`). The objective was to elevate the software from a generic storefront into a premium, tactile, high-converting omni-channel retail experience for Bangladesh's discerning fashion patrons.
+A multi-agent autonomous audit was conducted across the **React Native + Expo mobile application** (`apps/mobile`) and the **Next.js 15 web application** (`apps/web`). The objective was to elevate the software from a generic storefront into a premium, tactile, high-converting omni-channel retail experience for Bangladesh's discerning fashion patrons.
 
 ---
 

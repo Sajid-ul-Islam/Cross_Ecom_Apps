@@ -87,7 +87,7 @@ export const NotificationOptInModal: React.FC<NotificationOptInModalProps> = ({
                 </View>
 
                 <View style={styles.valueRow}>
-                  <View style={[styles.miniIcon, { backgroundColor: "rgba(99, 102, 241, 0.12)" }]}>
+                  <View style={[styles.miniIcon, { backgroundColor: colors.indigoLight }]}>
                     <Sparkles size={16} color={colors.indigo} />
                   </View>
                   <View style={styles.valueTextWrap}>

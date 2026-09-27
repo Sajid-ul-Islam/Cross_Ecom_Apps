@@ -18,6 +18,8 @@ import { SocialReel } from "../services/socialContent";
 import { bdt } from "../services/gateway";
 import { Product } from "../types";
 
+import { QuickAddBottomSheet } from "./QuickAddBottomSheet";
+
 const { width, height } = Dimensions.get("window");
 
 interface SocialReelModalProps {
@@ -35,7 +37,8 @@ export const SocialReelModal: React.FC<SocialReelModalProps> = ({
   const { colors, isDark } = useTheme();
   const { addToCart } = useCart();
   const [liked, setLiked] = useState(false);
-  const [addedToast, setAddedToast] = useState(false);
+  const [quickAddProduct, setQuickAddProduct] = useState<Product | null>(null);
+  const [quickAddVisible, setQuickAddVisible] = useState(false);
 
   if (!reel) return null;
 
@@ -58,7 +61,7 @@ export const SocialReelModal: React.FC<SocialReelModalProps> = ({
   const handleQuickAdd = () => {
     if (!reel.taggedProduct) return;
     const p = reel.taggedProduct;
-    // Map minimal TaggedProduct to Product interface for cart
+    // Map minimal TaggedProduct to Product interface for bottom sheet
     const dummyProduct: Product = {
       id: p.id,
       sku: `DEEN-${p.id}`,
@@ -67,7 +70,7 @@ export const SocialReelModal: React.FC<SocialReelModalProps> = ({
       price: p.price,
       regularPrice: p.regularPrice,
       salePrice: p.price,
-      sizes: ["30", "32", "34"],
+      sizes: ["30", "32", "34", "36"],
       images: [p.image, p.image],
       gallery: [p.image],
       thumb: p.image,
@@ -79,15 +82,15 @@ export const SocialReelModal: React.FC<SocialReelModalProps> = ({
       ratingCount: 28,
       blurb: p.name,
     };
-    addToCart(dummyProduct, "32", 1);
-    setAddedToast(true);
-    setTimeout(() => setAddedToast(false), 2500);
+    setQuickAddProduct(dummyProduct);
+    setQuickAddVisible(true);
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
+    <>
+      <Modal
+        visible={visible}
+        transparent
       animationType="slide"
       onRequestClose={onClose}
     >
@@ -206,14 +209,6 @@ export const SocialReelModal: React.FC<SocialReelModalProps> = ({
                   </View>
                 </View>
 
-                {addedToast && (
-                  <View style={[styles.toastBanner, { backgroundColor: colors.emeraldLight }]}>
-                    <Text style={[styles.toastBannerText, { color: colors.emerald }]}>
-                      ✓ Added to bag! Size 32 selected.
-                    </Text>
-                  </View>
-                )}
-
                 <View style={styles.actionRow}>
                   <TouchableOpacity
                     style={[styles.quickAddBtn, { backgroundColor: colors.cardSecondary, borderColor: colors.border }]}
@@ -238,6 +233,13 @@ export const SocialReelModal: React.FC<SocialReelModalProps> = ({
         </View>
       </View>
     </Modal>
+
+    <QuickAddBottomSheet
+      product={quickAddProduct}
+      visible={quickAddVisible}
+      onClose={() => setQuickAddVisible(false)}
+    />
+    </>
   );
 };
 

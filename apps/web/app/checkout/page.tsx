@@ -10,6 +10,8 @@ import {
   bdt,
   API_URL,
   fetchCampaigns,
+  fetchPaymentMethods,
+  type DeenPaymentMethod,
   fetchDeliveryFees,
   fetchDistricts,
   fetchProduct,
@@ -60,8 +62,8 @@ const DELIVERY_OPTION_META: Record<string, Omit<DeliveryOption, "fee">> = {
   },
   store_pickup: {
     id: "store_pickup",
-    name: "Store Pickup (Mirpur 12)",
-    sub: "Ready in 2h · Ramzannesa Super Market, Mirpur 12",
+    name: "Store Pickup (Dhaka Hub)",
+    sub: "Ready in 2h · DEEN Dhaka Dispatch Hub",
     badge: "FREE",
     icon: "🏪",
   },
@@ -74,34 +76,12 @@ const DELIVERY_SLOTS = [
   { key: "evening", label: "Evening", time: "6:00 PM – 9:00 PM" },
 ];
 
-const PAYMENT_METHODS = [
-  {
-    id: "cod",
-    title: "Cash on Delivery (COD)",
-    description: "Pay cash upon receiving and inspecting your parcel at your doorstep.",
-    tag: "MOST POPULAR",
-    icon: "💵",
-  },
-  {
-    id: "bkash",
-    title: "bKash Direct / Send Money",
-    description: "Pay securely via bKash personal send-money with instant TrxID entry.",
-    icon: "📱",
-  },
-  {
-    id: "card",
-    title: "Debit / Credit Card (SSLCommerz)",
-    description: "256-bit encrypted Visa, Mastercard, Amex, or bank portal.",
-    icon: "💳",
-  },
-];
-
 const PROFILE_STORAGE_KEY = "deen_web_user_profile";
 
 function CheckoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { items, subtotal, clearCart, addItem } = useCart();
+  const { items, subtotal, clearCart, addItem, removeItem, updateQty, updateSize } = useCart();
 
   // User Profile & Guest mode
   const [isGuestMode, setIsGuestMode] = useState<boolean>(true);
@@ -112,7 +92,7 @@ function CheckoutContent() {
   useEffect(() => {
     const paramPid = searchParams.get("productId");
     const paramSize = searchParams.get("size");
-    const paramQty = Number(searchParams.get("qty") || "1");
+    const paramQty = Math.max(1, Math.min(50, Math.floor(Number(searchParams.get("qty") || "1")) || 1));
     if (paramPid && items.length === 0) {
       fetchProduct(paramPid).then((p) => {
         if (p) {
@@ -150,7 +130,14 @@ function CheckoutContent() {
   }, []);
   const [deliverySlot, setDeliverySlot] = useState<string>("any");
   const [deliveryNotes, setDeliveryNotes] = useState("");
-  const [payment, setPayment] = useState<string>("cod");
+  const [payment, setPayment] = useState<string>("");
+  const [paymentMethods, setPaymentMethods] = useState<DeenPaymentMethod[]>([]);
+  useEffect(() => {
+    fetchPaymentMethods().then((methods) => {
+      setPaymentMethods(methods);
+      setPayment(methods.find((method) => method.id === "cod")?.id || methods[0]?.id || "");
+    }).catch(() => {});
+  }, []);
   const [bkashNumber, setBkashNumber] = useState("");
   const [trxId, setTrxId] = useState("");
 
@@ -164,6 +151,11 @@ function CheckoutContent() {
     BD_DISTRICTS.find((d) => d.code === "BD-13") || BD_DISTRICTS[0]
   );
 
+  useEffect(() => {
+    const destination = isGift ? giftDistrict : district;
+    setSelectedArea((current) => current === "store_pickup" ? current : destination.code === "BD-13" ? (current === "dhaka_express" ? current : "dhaka_standard") : "outside");
+  }, [isGift, giftDistrict, district]);
+
   // Modals & UI States
   const [districtModalOpen, setDistrictModalOpen] = useState(false);
   const [districtSearch, setDistrictSearch] = useState("");
@@ -171,9 +163,7 @@ function CheckoutContent() {
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
 
-  // VIP Coins & Loyalty
-  const [coins] = useState<number>(450);
-  const [redeemPoints, setRedeemPoints] = useState<boolean>(false);
+
 
   // Campaign state from REST API
   const [campaign, setCampaign] = useState<ActiveCampaignState | null>(null);
@@ -277,23 +267,31 @@ function CheckoutContent() {
   const deliveryOpt = deliveryOptions[selectedArea] || deliveryOptions.dhaka_standard;
   const deliveryFee = deliveryOpt.fee;
 
-  // BOGO: buy 2+ same category → cheapest is free (matches API calculateBogo)
+  // BOGO: buy 2+ same category → cheapest pairs are free (matches API calculateBogo)
   const bogoByCat = new Map<string, { unit: number; qty: number }[]>();
   items.forEach((it) => {
     const cat = (it.product.category || "OTHER").toUpperCase();
     const unit = it.product.salePrice ?? it.product.price;
     const existing = bogoByCat.get(cat) || [];
-    existing.push({ unit, qty: it.qty });
+    existing.push({ unit, qty: Math.max(1, it.qty) });
     bogoByCat.set(cat, existing);
   });
   let bogoDiscount = 0;
   Array.from(bogoByCat.values()).forEach((catItems) => {
-    if (catItems.length < 2) return;
-    let cheapestIdx = 0;
-    for (let i = 1; i < catItems.length; i++) {
-      if (catItems[i].unit < catItems[cheapestIdx].unit) cheapestIdx = i;
+    const totalUnits = catItems.reduce((sum, it) => sum + it.qty, 0);
+    const maxFree = Math.floor(totalUnits / 2);
+    if (maxFree <= 0) return;
+
+    const unitList: number[] = [];
+    for (const it of catItems) {
+      for (let q = 0; q < it.qty; q++) {
+        unitList.push(it.unit);
+      }
     }
-    bogoDiscount += catItems[cheapestIdx].unit * catItems[cheapestIdx].qty;
+    unitList.sort((a, b) => a - b);
+    for (let i = 0; i < maxFree; i++) {
+      bogoDiscount += unitList[i];
+    }
   });
 
   // Instant Cashback Tiers — ONLY if enabled in the REST API
@@ -311,9 +309,7 @@ function CheckoutContent() {
       : 0
     : 0;
 
-  // Coins Discount (up to 20% of subtotal or half of coin balance)
-  const maxCoinDiscount = Math.min(Math.floor(coins / 2), Math.floor(subtotal * 0.2));
-  const coinDiscountBDT = redeemPoints ? maxCoinDiscount : 0;
+
 
   // Coupon Discount
   const couponDiscountBDT = couponInfo
@@ -325,7 +321,7 @@ function CheckoutContent() {
   // Total Calculation
   const total = Math.max(
     0,
-    subtotal + deliveryFee - cashbackBDT - bogoDiscount - coinDiscountBDT - couponDiscountBDT
+    subtotal + deliveryFee - cashbackBDT - bogoDiscount - couponDiscountBDT
   );
 
   // Validate Bangladeshi phone number inline
@@ -390,12 +386,26 @@ function CheckoutContent() {
     if (selectedArea !== "store_pickup" && (!address.trim() || address.trim().length < 8)) {
       errs.address = "Full delivery address required (house #, road #, sector/area)";
     }
+    if (isGift) {
+      if (!giftName.trim()) {
+        errs.giftName = "Recipient full name is required";
+      }
+      let gDigits = giftPhone.replace(/[^0-9]/g, "");
+      if (gDigits.startsWith("880") && gDigits.length === 13) gDigits = gDigits.slice(2);
+      if (gDigits.length !== 11 || !gDigits.startsWith("01") || !/^01[3-9]\d{8}$/.test(gDigits)) {
+        errs.giftPhone = "Recipient phone must be an 11-digit Bangladeshi mobile number (01XXXXXXXXX)";
+      }
+      if (!giftAddress.trim() || giftAddress.trim().length < 8) {
+        errs.giftAddress = "Full gift delivery address required (house #, road #, sector/area)";
+      }
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading || !paymentMethods.some((method) => method.id === payment)) return;
     if (!handleValidateForm()) return;
     if (items.length === 0) {
       router.push("/shop");
@@ -406,53 +416,86 @@ function CheckoutContent() {
     setApiError("");
 
     try {
-      const isManualMfs = payment.includes("bkash");
-
-      if (isManualMfs) {
-        if (!bkashNumber.trim() || !trxId.trim()) {
-          setApiError("Please enter your bKash mobile number and Transaction ID (TrxID).");
-          setLoading(false);
-          return;
-        }
-      }
-
-      const finalDeliveryNotes = isManualMfs
-        ? `[bKash Payment]\nSender Phone: ${bkashNumber.trim()}\nTrxID: ${trxId.trim()}\n${deliveryNotes.trim()}`
-        : deliveryNotes.trim();
-
       const orderResult = await placeOrder({
-        name: isGift ? (giftName.trim() || name.trim()) : name.trim(),
-        phone: isGift ? (giftPhone.replace(/[^0-9]/g, "").slice(-11) || cleanPhoneDigits) : cleanPhoneDigits,
+        name: name.trim(),
+        phone: cleanPhoneDigits,
         email: email.trim() || undefined,
         address:
           selectedArea === "store_pickup"
-            ? "DEEN Flagship Outlet, Ramzannesa Super Market, Mirpur 12, Dhaka (Store Pickup)"
-            : isGift ? giftAddress.trim() : address.trim(),
-        city: selectedArea === "store_pickup" ? "Dhaka" : isGift ? (giftCity.trim() || giftDistrict.name) : (city.trim() || district.name),
-        district: isGift ? giftDistrict.code : district.code,
-        state: isGift ? giftDistrict.code : district.code,
-        postcode: getDistrictPostcode(isGift ? giftDistrict.code : district.code),
+            ? "DEEN Dhaka Hub (Store Pickup)"
+            : address.trim(),
+        city: selectedArea === "store_pickup" ? "Dhaka" : (city.trim() || district.name),
+        district: district.code,
+        state: district.code,
+        postcode: getDistrictPostcode(district.code),
         area: selectedArea,
         payment,
-        trxId: trxId.trim() || undefined,
         deliverySlot,
-        deliveryNotes: finalDeliveryNotes || undefined,
-        customerNote: finalDeliveryNotes || undefined,
+        deliveryNotes: deliveryNotes.trim() || undefined,
+        customerNote: deliveryNotes.trim() || undefined,
         coupon: couponInfo ? couponInfo.code : undefined,
         isGuestOrder: isGuestMode,
         isGiftOrder: isGift,
         giftRecipientName: isGift ? giftName.trim() : undefined,
         giftRecipientPhone: isGift ? giftPhone.replace(/[^0-9]/g, "").slice(-11) : undefined,
+        shipping: isGift ? {
+          first_name: giftName.trim(),
+          phone: giftPhone.replace(/[^0-9]/g, "").slice(-11),
+          address_1: giftAddress.trim(),
+          city: giftCity.trim() || giftDistrict.name,
+          state: giftDistrict.code,
+          postcode: getDistrictPostcode(giftDistrict.code),
+          country: "BD",
+        } : undefined,
         items: items.map((i) => ({
-          productId: i.product.id,
+          productId: String(i.product.id),
+          variationId: i.variationId || i.product.variations?.find((v: any) => String(v.size || "").toLowerCase() === String(i.size || "").toLowerCase())?.id,
           size: i.size,
           qty: i.qty,
         })),
       });
 
+      const actualOrderNumber = orderResult.wooNumber || orderResult.number;
+
+      // Save order record to local storage for order history & tracking
+      try {
+        const rawSaved = localStorage.getItem("deen_web_orders");
+        const existingList = rawSaved ? JSON.parse(rawSaved) : [];
+        const savedOrder = {
+          ...orderResult,
+          id: orderResult.id,
+          number: actualOrderNumber,
+          wooNumber: actualOrderNumber,
+          wooId: orderResult.wooId,
+          total: orderResult.total,
+          delivery: orderResult.delivery,
+          payment: orderResult.paymentTitle || orderResult.payment,
+          paymentUrl: orderResult.paymentUrl,
+          createdAt: new Date().toISOString(),
+          phone: cleanPhoneDigits,
+          name: name.trim(),
+          lines: items.map((it) => ({
+            name: it.product.name,
+            size: it.size,
+            qty: it.qty,
+            unit: it.product.salePrice ?? it.product.price,
+          })),
+        };
+        existingList.unshift(savedOrder);
+        localStorage.setItem("deen_web_orders", JSON.stringify(existingList.slice(0, 50)));
+      } catch {}
+
       clearCart();
+
+      // If online payment gateway (bKash or SSLCommerz), redirect to the authentic payment gateway
+      if (payment !== "cod" && orderResult.paymentUrl) {
+        window.location.href = orderResult.paymentUrl;
+        return;
+      }
+
+      // If COD (or gateway fallback), navigate to order success screen
       router.push(
-        `/order-success?id=${orderResult.id}&number=${orderResult.number}&total=${orderResult.total}&wooId=${orderResult.wooId || ""}&delivery=${orderResult.delivery}&payment=${encodeURIComponent(orderResult.paymentTitle || orderResult.payment)}&consignment=${orderResult.pathaoConsignmentId || ""}&tracking=${encodeURIComponent(orderResult.pathaoTrackingUrl || "")}&guestName=${encodeURIComponent(isGuestMode ? name.trim() : "")}&guestPhone=${encodeURIComponent(isGuestMode ? cleanPhoneDigits : "")}`
+        `/order-success?id=${orderResult.id}&number=${actualOrderNumber}&total=${orderResult.total}&wooId=${orderResult.wooId || ""}&delivery=${orderResult.delivery}&payment=${encodeURIComponent(orderResult.paymentTitle || orderResult.payment)}&consignment=${orderResult.pathaoConsignmentId || ""}&tracking=${encodeURIComponent(orderResult.pathaoTrackingUrl || "")}&paymentUrl=${encodeURIComponent(orderResult.paymentUrl || "")}&guestName=${encodeURIComponent(isGuestMode ? name.trim() : "")}&guestPhone=${encodeURIComponent(isGuestMode ? cleanPhoneDigits : "")}`
       );
     } catch (err: any) {
       const msg = err instanceof Error ? err.message : "Order failed. Please try again.";
@@ -467,7 +510,7 @@ function CheckoutContent() {
         <div className="empty-state" style={{ padding: "120px 24px" }}>
           <div className="empty-state__icon">🛒</div>
           <h2 className="empty-state__title">Your bag is empty</h2>
-          <p className="empty-state__sub">Add selvedge jeans, shirts, or accessories before proceeding.</p>
+          <p className="empty-state__sub">Add denim jeans, shirts, or accessories before proceeding.</p>
           <Link href="/shop" className="btn btn-primary btn-lg">Browse Products</Link>
         </div>
       </div>
@@ -730,30 +773,42 @@ function CheckoutContent() {
                       <label className="form-label">Recipient Full Name *</label>
                       <input
                         type="text"
-                        className="form-input"
+                        className={`form-input ${errors.giftName ? "form-input--error" : ""}`}
                         placeholder="e.g. Rahim Ahmed"
                         value={giftName}
-                        onChange={(e) => setGiftName(e.target.value)}
+                        onChange={(e) => {
+                          setGiftName(e.target.value);
+                          if (errors.giftName) setErrors((prev) => ({ ...prev, giftName: "" }));
+                        }}
                       />
+                      {errors.giftName && <p className="form-error">{errors.giftName}</p>}
                     </div>
                     <div className="form-group">
                       <label className="form-label">Recipient Phone *</label>
                       <input
                         type="tel"
-                        className="form-input"
+                        className={`form-input ${errors.giftPhone ? "form-input--error" : ""}`}
                         placeholder="01XXXXXXXXX"
                         value={giftPhone}
-                        onChange={(e) => setGiftPhone(e.target.value)}
+                        onChange={(e) => {
+                          setGiftPhone(e.target.value);
+                          if (errors.giftPhone) setErrors((prev) => ({ ...prev, giftPhone: "" }));
+                        }}
                       />
+                      {errors.giftPhone && <p className="form-error">{errors.giftPhone}</p>}
                     </div>
                     <div className="form-group" style={{ gridColumn: "1 / -1" }}>
                       <label className="form-label">Gift Shipping Address *</label>
                       <textarea
-                        className="form-textarea"
+                        className={`form-textarea ${errors.giftAddress ? "form-input--error" : ""}`}
                         placeholder="House / Flat #, Road #, Sector / Area details for the recipient…"
                         value={giftAddress}
-                        onChange={(e) => setGiftAddress(e.target.value)}
+                        onChange={(e) => {
+                          setGiftAddress(e.target.value);
+                          if (errors.giftAddress) setErrors((prev) => ({ ...prev, giftAddress: "" }));
+                        }}
                       />
+                      {errors.giftAddress && <p className="form-error">{errors.giftAddress}</p>}
                     </div>
                     <div className="form-group">
                       <label className="form-label">City / Thana *</label>
@@ -885,12 +940,12 @@ function CheckoutContent() {
               ) : (
                 <div className="store-pickup-banner" style={{ marginTop: 20 }}>
                   <div className="pickup-banner-header">
-                    <span>📍 Outlet Collection Point:</span>
+                    <span>📍 Hub Collection Point:</span>
                   </div>
                   <p className="pickup-banner-text">
-                    <strong>DEEN Mirpur 12 Outlet:</strong> 2nd Floor, Ramzannesa Super Market, Mirpur 12, Dhaka-1216.
+                    <strong>DEEN Dhaka Dispatch Hub:</strong> Dhaka (Store Pickup).
                     <br />
-                    Open 10:00 AM – 9:30 PM daily. Parcel will be ready for pickup in 2 hours.
+                    Open 10:00 AM – 8:00 PM daily. Parcel will be ready for pickup in 2 hours.
                   </p>
                 </div>
               )}
@@ -940,12 +995,17 @@ function CheckoutContent() {
             <div className="checkout-step-card">
               <h2 className="step-card-title">3. PAYMENT METHOD</h2>
 
-              <div className="payment-options-grid">
-                {PAYMENT_METHODS.map((m) => {
+              <div className="payment-options-grid" role="radiogroup" aria-label="Payment method">
+                {paymentMethods.length === 0 && <p role="status">Payment methods are unavailable. Please reload before placing an order.</p>}
+                {paymentMethods.map((m) => {
                   const active = payment === m.id;
                   return (
                     <div
                       key={m.id}
+                      role="radio"
+                      aria-checked={active}
+                      tabIndex={0}
+                      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setPayment(m.id); } }}
                       className={`payment-method-card ${active ? "payment-method-card--active" : ""}`}
                       onClick={() => setPayment(m.id)}
                     >
@@ -953,15 +1013,34 @@ function CheckoutContent() {
                         <div className="pay-card-left">
                           <div className={`radio-circle ${active ? "radio-circle--selected" : ""}`} />
                           <span className="pay-card-title">
-                            {m.icon} {m.title}
+                            {m.type === "cod" ? "💵" : "💳"} {m.title}
                           </span>
                         </div>
-                        {m.tag && <span className="pay-popular-tag">{m.tag}</span>}
+                        {m.type === "cod" && <span className="pay-popular-tag">PAY ON DELIVERY</span>}
                       </div>
                       <p className="pay-card-desc">{m.description}</p>
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Genuine DEEN Commerce Payment Partner Trust Badge */}
+              <div style={{ marginTop: 14, textAlign: "center", padding: "10px 14px", background: "var(--surface-2)", borderRadius: 8, border: "1px solid var(--border)" }}>
+                <p style={{ fontSize: 11, fontWeight: 700, color: "var(--sub)", margin: "0 0 8px", letterSpacing: "0.5px" }}>
+                  100% SECURE &amp; VERIFIED PAYMENT PARTNERS
+                </p>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/paywith_web_versionW.png"
+                  alt="bKash, Nagad, Rocket, Visa, Mastercard, AMEX, Cash on Delivery"
+                  style={{
+                    maxWidth: "100%",
+                    height: "auto",
+                    maxHeight: 40,
+                    objectFit: "contain",
+                    display: "inline-block",
+                  }}
+                />
               </div>
 
               {payment === "cod" ? (
@@ -973,34 +1052,16 @@ function CheckoutContent() {
                 </div>
               ) : payment.includes("bkash") ? (
                 <div className="payment-info-box" style={{ marginTop: 16, background: "var(--indigo-light)", borderColor: "var(--indigo)" }}>
-                  <p className="payment-info-title" style={{ color: "var(--ink)" }}>📱 Manual bKash Send Money</p>
-                  <p className="payment-info-sub" style={{ marginBottom: 12, lineHeight: 1.6 }}>
-                    1. Go to your bKash Menu/App & select <strong>Send Money</strong>.<br/>
-                    2. Send <strong>{bdt(total)}</strong> to <strong>01952 700 500</strong> (Personal).<br/>
-                    3. Enter your bKash number and Transaction ID (TrxID) below:
+                  <p className="payment-info-title" style={{ color: "var(--ink)" }}>📱 Official bKash Gateway</p>
+                  <p className="payment-info-sub" style={{ lineHeight: 1.6 }}>
+                    Upon confirming your order, you will be redirected automatically to the official <strong>bKash Payment Gateway</strong> (<code>payment.bkash.com</code>) to complete payment of <strong>{bdt(total)}</strong>.
                   </p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                    <input
-                      className="form-input"
-                      type="text"
-                      placeholder="Your bKash Number (e.g. 017XXXXXXXX)"
-                      value={bkashNumber}
-                      onChange={(e) => setBkashNumber(e.target.value)}
-                    />
-                    <input
-                      className="form-input"
-                      type="text"
-                      placeholder="bKash Transaction ID (TrxID)"
-                      value={trxId}
-                      onChange={(e) => setTrxId(e.target.value)}
-                    />
-                  </div>
                 </div>
               ) : (
                 <div className="payment-info-box" style={{ marginTop: 16 }}>
-                  <p className="payment-info-title">🔒 Digital Merchant Processing</p>
-                  <p className="payment-info-sub">
-                    After confirming your order, you will be redirected to the secure gateway to complete payment.
+                  <p className="payment-info-title">💳 SSLCommerz Secure Digital Payment</p>
+                  <p className="payment-info-sub" style={{ lineHeight: 1.6 }}>
+                    Upon confirming your order, you will be redirected automatically to the secure <strong>SSLCommerz Gateway</strong> to complete payment of <strong>{bdt(total)}</strong> with Visa, Mastercard, AMEX, or Net Banking.
                   </p>
                 </div>
               )}
@@ -1016,6 +1077,19 @@ function CheckoutContent() {
               <div className="checkout-items-list">
                 {items.map((item) => {
                   const unitPrice = item.product.salePrice ?? item.product.price;
+                  const cat = (item.product.category || "").toUpperCase();
+                  const fallbackSizes =
+                    cat === "JEANS" || cat === "TROUSERS"
+                      ? ["28", "30", "32", "34", "36", "38"]
+                      : ["S", "M", "L", "XL", "XXL"];
+                  const rawSizes =
+                    item.product.sizes && item.product.sizes.length > 0
+                      ? item.product.sizes
+                      : fallbackSizes;
+                  const availableSizes = Array.from(
+                    new Set([item.size, ...rawSizes].filter(Boolean))
+                  );
+
                   return (
                     <div key={`${item.product.id}-${item.size}`} className="checkout-item-row">
                       {item.product.images[0] ? (
@@ -1029,42 +1103,77 @@ function CheckoutContent() {
                         <div className="checkout-item-img-placeholder">👖</div>
                       )}
                       <div className="checkout-item-details">
-                        <p className="checkout-item-name">{item.product.name}</p>
-                        <p className="checkout-item-meta">
-                          Size: <strong>{item.size}</strong> · Qty: {item.qty}
-                        </p>
+                        <div className="checkout-item-header">
+                          <p className="checkout-item-name">{item.product.name}</p>
+                          <button
+                            type="button"
+                            className="checkout-item-remove-btn"
+                            onClick={() => removeItem(item.product.id, item.size)}
+                            aria-label={`Remove ${item.product.name} (Size ${item.size}) from order`}
+                            title="Remove item"
+                          >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M3 6h18m-2 0v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                              <line x1="10" y1="11" x2="10" y2="17" />
+                              <line x1="14" y1="11" x2="14" y2="17" />
+                            </svg>
+                          </button>
+                        </div>
+
+                        <div className="checkout-item-controls">
+                          {/* Size Selector */}
+                          <div className="checkout-size-pill">
+                            <span className="checkout-size-tag">SIZE</span>
+                            <select
+                              value={item.size}
+                              onChange={(e) => updateSize(item.product.id, item.size, e.target.value)}
+                              className="checkout-size-select"
+                              aria-label={`Change size for ${item.product.name}`}
+                            >
+                              {availableSizes.map((s) => (
+                                <option key={s} value={s}>
+                                  {s}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Quantity Stepper */}
+                          <div className="checkout-stepper">
+                            <button
+                              type="button"
+                              className="checkout-stepper-btn"
+                              onClick={() => updateQty(item.product.id, item.size, item.qty - 1)}
+                              aria-label={`Decrease quantity of ${item.product.name}`}
+                            >
+                              −
+                            </button>
+                            <span className="checkout-stepper-qty">{item.qty}</span>
+                            <button
+                              type="button"
+                              className="checkout-stepper-btn"
+                              onClick={() => updateQty(item.product.id, item.size, item.qty + 1)}
+                              aria-label={`Increase quantity of ${item.product.name}`}
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          {/* Price Total */}
+                          <div className="checkout-item-price-col">
+                            <span className="checkout-item-total">{bdt(unitPrice * item.qty)}</span>
+                            {item.qty > 1 && (
+                              <span className="checkout-item-unit-price">{bdt(unitPrice)} ea</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <span className="checkout-item-total">{bdt(unitPrice * item.qty)}</span>
                     </div>
                   );
                 })}
               </div>
 
-              {/* DEEN VIP Loyalty Coins Redemption Card */}
-              {coins > 0 && maxCoinDiscount > 0 && (
-                <div
-                  className={`vip-coins-card ${redeemPoints ? "vip-coins-card--active" : ""}`}
-                  onClick={() => setRedeemPoints(!redeemPoints)}
-                >
-                  <div className="vip-coins-top">
-                    <div className="vip-coins-left">
-                      <span className="coin-emoji">🪙</span>
-                      <div>
-                        <p className="vip-coins-title">REDEEM DEEN VIP COINS</p>
-                        <p className="vip-coins-balance">Balance: {coins} Coins (Gold Member)</p>
-                      </div>
-                    </div>
-                    <div className={`coins-checkbox ${redeemPoints ? "coins-checkbox--checked" : ""}`}>
-                      {redeemPoints ? "✓" : ""}
-                    </div>
-                  </div>
-                  <p className="vip-coins-notice">
-                    {redeemPoints
-                      ? `✓ Applied ৳${coinDiscountBDT} instant checkout discount (-${coinDiscountBDT * 2} Coins)`
-                      : `Redeem up to ${maxCoinDiscount * 2} Coins for ৳${maxCoinDiscount} off this order`}
-                  </p>
-                </div>
-              )}
+
 
               {/* Coupon Entry Section */}
               <div className="checkout-coupon-card">
@@ -1188,12 +1297,7 @@ function CheckoutContent() {
                   </div>
                 )}
 
-                {redeemPoints && coinDiscountBDT > 0 && (
-                  <div className="price-breakdown-row price-breakdown-row--discount">
-                    <span>🪙 DEEN VIP Coins Discount</span>
-                    <span>-{bdt(coinDiscountBDT)}</span>
-                  </div>
-                )}
+
 
                 {couponInfo && couponDiscountBDT > 0 && (
                   <div className="price-breakdown-row price-breakdown-row--discount">
@@ -1224,7 +1328,7 @@ function CheckoutContent() {
                 <button
                   type="submit"
                   className="btn btn-primary btn-full btn-lg checkout-submit-btn"
-                  disabled={loading}
+                  disabled={loading || !paymentMethods.some((method) => method.id === payment)}
                 >
                   {loading ? (
                     <span className="submit-spinner-text">Placing Order…</span>
@@ -1250,7 +1354,7 @@ function CheckoutContent() {
           <button
             type="submit"
             className="mobile-bar-submit-btn"
-            disabled={loading}
+            disabled={loading || !paymentMethods.some((method) => method.id === payment)}
           >
             {loading ? (
               "Placing…"

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -18,9 +18,9 @@ import { ProductCard } from "../../src/components/ProductCard";
 import { useTheme } from "../../src/context/ThemeContext";
 import { sharedStyles } from "../../src/theme/sharedStyles";
 import { usePullToRefresh } from "../../src/hooks/usePullToRefresh";
-import { fetchProducts, CATEGORIES, useCatalogRefreshOnFocus } from "../../src/services/gateway";
+import { fetchProducts, CATEGORIES, useCatalogRefreshOnFocus, fetchSubCategories, type WooCategoryNode } from "../../src/services/gateway";
 import { Product, DeenCategory } from "../../src/types";
-import { getCategoryInfo } from "../../src/data/categories";
+import { getCategoryInfo, CategoryInfo } from "../../src/data/categories";
 
 type SortKey = "default" | "price-asc" | "price-desc" | "name-asc" | "new";
 
@@ -35,8 +35,25 @@ export default function ShopScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [deferredQuery, setDeferredQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("default");
+  const [segment, setSegment] = useState<"all" | "collection" | "select">("all");
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Live WooCommerce sub-categories for filter chips
+  const [subCategories, setSubCategories] = useState<WooCategoryNode[]>([]);
+  const [selectedSubCat, setSelectedSubCat] = useState("All");
+
+  // Fetch sub-categories whenever selectedCategory changes
+  useEffect(() => {
+    setSelectedSubCat("All");
+    if (selectedCategory !== "ALL") {
+      fetchSubCategories(selectedCategory)
+        .then((subs) => setSubCategories(subs))
+        .catch(() => setSubCategories([]));
+    } else {
+      setSubCategories([]);
+    }
+  }, [selectedCategory]);
 
   const styles = createStyles(colors, s);
 
@@ -55,10 +72,21 @@ export default function ShopScreen() {
   const loadProducts = useCallback(async () => {
     const sortParam = sort === "default" ? undefined : (sort as "price-asc" | "price-desc" | "name-asc" | "new");
     try {
-      const data = await fetchProducts(selectedCategory, deferredQuery, sortParam);
+      const data = await fetchProducts(selectedCategory, deferredQuery, sortParam, segment);
       setProducts(data);
     } catch {}
-  }, [selectedCategory, deferredQuery, sort]);
+  }, [selectedCategory, deferredQuery, sort, segment]);
+
+  // Client-side sub-category filtering on top of category products
+  const displayedProducts = useMemo(() => {
+    if (selectedSubCat === "All") return products;
+    const subClean = selectedSubCat.toLowerCase();
+    return products.filter((p) => {
+      const matchInSubCats = p.wooSubCategories?.some((sc) => sc.toLowerCase() === subClean);
+      const matchInName = p.name.toLowerCase().includes(subClean);
+      return matchInSubCats || matchInName;
+    });
+  }, [products, selectedSubCat]);
 
   // Refresh catalog whenever the shop screen regains focus or the app resumes
   // from background — surfaces live WooCommerce stock/product changes without
@@ -68,9 +96,43 @@ export default function ShopScreen() {
   useEffect(() => {
     setLoading(true);
     loadProducts().finally(() => setLoading(false));
-  }, [selectedCategory, deferredQuery, sort]);
+  }, [selectedCategory, deferredQuery, sort, segment]);
 
-  const { refreshing, onRefresh: handleRefresh } = usePullToRefresh(loadProducts);
+  const { refreshing, onRefresh: handleRefresh, refreshControl } = usePullToRefresh(loadProducts);
+
+  const categorizedSections = useMemo(() => {
+    if (selectedCategory !== "ALL" || deferredQuery.trim().length > 0) {
+      return [];
+    }
+    const catList = CATEGORIES.filter((c) => c !== "ALL");
+    const sections: { category: DeenCategory; info: CategoryInfo; items: Product[] }[] = [];
+
+    catList.forEach((cat) => {
+      const items = products.filter(
+        (p) => p.category.toUpperCase() === cat.toUpperCase()
+      );
+      if (items.length > 0) {
+        sections.push({
+          category: cat,
+          info: getCategoryInfo(cat),
+          items,
+        });
+      }
+    });
+
+    const knownCats = new Set(catList.map((c) => c.toUpperCase()));
+    const remaining = products.filter((p) => !knownCats.has(p.category.toUpperCase()));
+    if (remaining.length > 0) {
+      const firstCat = (remaining[0].category as DeenCategory) || "JEANS";
+      sections.push({
+        category: firstCat,
+        info: getCategoryInfo(remaining[0].category),
+        items: remaining,
+      });
+    }
+
+    return sections;
+  }, [products, selectedCategory, deferredQuery]);
 
   return (
     <ScreenShell title="CATEGORIES" showSearch={false}>
@@ -81,7 +143,7 @@ export default function ShopScreen() {
           <Search size={18} color={colors.sub} />
           <TextInput
             style={[styles.input, { color: colors.ink }]}
-            placeholder="Search jeans, panjabi, shirts, polo, combo..."
+            placeholder="Search by name, SKU, category…"
             placeholderTextColor={colors.faint}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -93,6 +155,52 @@ export default function ShopScreen() {
             </TouchableOpacity>
           )}
         </View>
+      </View>
+
+      {/* Brand Segmented Control — ALL · 💎 COLLECTION · ⚡ SELECT */}
+      <View style={[styles.segmentBar, { backgroundColor: colors.paper }]}>
+        {(
+          [
+            { key: "all", label: "ALL" },
+            { key: "collection", label: "💎 COLLECTION" },
+            { key: "select", label: "⚡ SELECT" },
+          ] as const
+        ).map(({ key, label }) => {
+          const active = segment === key;
+          const isSelect = key === "select";
+          const isCollection = key === "collection";
+          const activeBg = isSelect
+            ? "#92400E"
+            : isCollection
+            ? colors.indigoDark
+            : colors.indigoDark;
+          const activeText = "#FFFFFF";
+          return (
+            <TouchableOpacity
+              key={key}
+              style={[
+                styles.segPill,
+                { backgroundColor: colors.card, borderColor: colors.border },
+                active && { backgroundColor: activeBg, borderColor: activeBg },
+              ]}
+              activeOpacity={0.8}
+              onPress={() => setSegment(key)}
+              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+              accessibilityRole="button"
+              accessibilityLabel={`Filter by ${label}`}
+            >
+              <Text
+                style={[
+                  styles.segPillText,
+                  { color: colors.sub },
+                  active && { color: activeText },
+                ]}
+              >
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {/* Visual Category Showcase Tiles */}
@@ -141,6 +249,46 @@ export default function ShopScreen() {
           })}
         </ScrollView>
       </View>
+
+      {/* Live WooCommerce Sub-Category Filter Chips */}
+      {selectedCategory !== "ALL" && subCategories.length > 0 && (
+        <View style={[styles.subCatBar, { backgroundColor: colors.paper, borderBottomColor: colors.borderLight }]}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.subCatScroll}
+          >
+            {["All", ...subCategories.map((s) => s.name)].map((subName) => {
+              const active = selectedSubCat === subName;
+              return (
+                <TouchableOpacity
+                  key={subName}
+                  style={[
+                    styles.subCatPill,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                    active && [styles.subCatPillActive, { backgroundColor: colors.indigoDark, borderColor: colors.indigoDark }],
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={() => setSelectedSubCat(subName)}
+                  hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Filter by subcategory ${subName}`}
+                >
+                  <Text
+                    style={[
+                      styles.subCatText,
+                      { color: colors.sub },
+                      active && [styles.subCatTextActive, { color: "#FFFFFF" }],
+                    ]}
+                  >
+                    {subName}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Sort Bar */}
       <View style={styles.sortBar}>
@@ -219,13 +367,15 @@ export default function ShopScreen() {
       {/* Header with Result Count */}
       <View style={styles.metaRow}>
         <Text style={[styles.resultCount, { color: colors.sub }]}>
-          SHOWING {products.length} {products.length === 1 ? "PRODUCT" : "PRODUCTS"}
+          SHOWING {displayedProducts.length} {displayedProducts.length === 1 ? "PRODUCT" : "PRODUCTS"}
+          {selectedSubCat !== "All" ? ` · ${selectedSubCat}` : ""}
         </Text>
-        {(selectedCategory !== "ALL" || searchQuery.length > 0) && (
+        {(selectedCategory !== "ALL" || searchQuery.length > 0 || selectedSubCat !== "All") && (
           <TouchableOpacity
             style={styles.clearBtn}
             onPress={() => {
               setSelectedCategory("ALL");
+              setSelectedSubCat("All");
               setSearchQuery("");
             }}
           >
@@ -240,7 +390,7 @@ export default function ShopScreen() {
           <ActivityIndicator size="large" color={colors.indigo} />
           <Text style={[styles.loadingText, { color: colors.sub }]}>Fetching DEEN catalog...</Text>
         </View>
-      ) : products.length === 0 ? (
+      ) : displayedProducts.length === 0 ? (
         <View style={[styles.emptyContainer, { flex: 1 }]}>
           <Text style={[styles.emptyTitle, { color: colors.ink }]}>No products found</Text>
           <Text style={[styles.emptySub, { color: colors.sub }]}>
@@ -250,15 +400,83 @@ export default function ShopScreen() {
             style={[styles.resetBtn, { backgroundColor: colors.indigo }]}
             onPress={() => {
               setSelectedCategory("ALL");
+              setSelectedSubCat("All");
               setSearchQuery("");
             }}
           >
             <Text style={styles.resetBtnText}>SHOW ALL PRODUCTS</Text>
           </TouchableOpacity>
         </View>
+      ) : selectedCategory === "ALL" && deferredQuery.trim().length === 0 && categorizedSections.length > 0 ? (
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={refreshControl}
+        >
+          {categorizedSections.map((section) => (
+            <View key={section.category} style={styles.categorySection}>
+              {/* Category Cover Banner with Title & Poetic Description */}
+              <TouchableOpacity
+                style={[styles.categoryHeroBanner, { backgroundColor: colors.indigoDark }]}
+                activeOpacity={0.88}
+                onPress={() => setSelectedCategory(section.category)}
+              >
+                <Image
+                  source={{ uri: section.info.coverImage }}
+                  style={styles.categoryHeroImage}
+                  resizeMode="cover"
+                />
+                <View style={styles.categoryHeroOverlay} />
+                <View style={styles.categoryHeroContent}>
+                  <View style={styles.categoryHeroTop}>
+                    <Text style={styles.categoryHeroTitle}>
+                      {section.info.title}
+                    </Text>
+                    <View style={[styles.landingPageLink, { backgroundColor: colors.indigo }]}>
+                      <Text style={styles.landingPageLinkText}>View All ({section.items.length})</Text>
+                      <ArrowRight size={12} color="#FFFFFF" />
+                    </View>
+                  </View>
+                  <Text style={styles.categoryHeroSub} numberOfLines={1}>
+                    {section.info.subtitle}
+                  </Text>
+                  {section.info.description ? (
+                    <Text style={styles.categoryHeroDescription} numberOfLines={2}>
+                      {section.info.description}
+                    </Text>
+                  ) : null}
+                </View>
+              </TouchableOpacity>
+
+              {/* Preview Grid of Products (up to 4 items in 2 columns) */}
+              <View style={styles.previewGrid}>
+                {section.items.slice(0, 4).map((item) => (
+                  <View key={item.id} style={styles.previewGridItem}>
+                    <ProductCard product={item} />
+                  </View>
+                ))}
+              </View>
+
+              {/* Explore All Category CTA */}
+              <TouchableOpacity
+                style={[styles.exploreCategoryBtn, { borderColor: colors.border, backgroundColor: colors.card }]}
+                activeOpacity={0.8}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Explore all ${section.info.title} products`}
+                onPress={() => setSelectedCategory(section.category)}
+              >
+                <Text style={[styles.exploreCategoryBtnText, { color: colors.indigo }]}>
+                  EXPLORE ALL {section.info.title.toUpperCase()} ({section.items.length} ITEMS)
+                </Text>
+                <ArrowRight size={13} color={colors.indigo} />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
       ) : (
         <FlatList
-          data={products}
+          data={displayedProducts}
           keyExtractor={(p) => p.id}
           numColumns={2}
           columnWrapperStyle={styles.row}
@@ -298,9 +516,14 @@ export default function ShopScreen() {
                       <ArrowRight size={12} color="#FFFFFF" />
                     </View>
                   </View>
-                  <Text style={styles.categoryHeroSub} numberOfLines={2}>
+                  <Text style={styles.categoryHeroSub} numberOfLines={1}>
                     {getCategoryInfo(selectedCategory).subtitle}
                   </Text>
+                  {getCategoryInfo(selectedCategory).description ? (
+                    <Text style={styles.categoryHeroDescription} numberOfLines={2}>
+                      {getCategoryInfo(selectedCategory).description}
+                    </Text>
+                  ) : null}
                 </View>
               </TouchableOpacity>
             ) : null
@@ -319,8 +542,8 @@ export default function ShopScreen() {
 function createStyles(colors: any, s: ReturnType<typeof sharedStyles>) {
   return StyleSheet.create({
     searchSection: {
-      paddingHorizontal: 16,
-      paddingVertical: 10,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
     },
     searchBar: {
       flexDirection: "row",
@@ -336,12 +559,31 @@ function createStyles(colors: any, s: ReturnType<typeof sharedStyles>) {
       fontSize: 13,
       height: "100%",
     },
+    segmentBar: {
+      flexDirection: "row",
+      gap: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+    },
+    segPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      borderRadius: 20,
+      borderWidth: 1,
+    },
+    segPillText: {
+      fontSize: 11,
+      fontWeight: "800",
+      letterSpacing: 0.5,
+    },
     categoriesContainer: {
-      paddingBottom: 10,
+      paddingBottom: 8,
     },
     categoryScroll: {
-      paddingHorizontal: 16,
-      gap: 10,
+      paddingHorizontal: 10,
+      gap: 8,
     },
     catTile: {
       flexDirection: "row",
@@ -398,10 +640,34 @@ function createStyles(colors: any, s: ReturnType<typeof sharedStyles>) {
     categoryChipTextActive: {
       color: "#FFFFFF",
     },
+    subCatBar: {
+      paddingVertical: 8,
+      borderBottomWidth: 1,
+    },
+    subCatScroll: {
+      paddingHorizontal: 10,
+      gap: 8,
+    },
+    subCatPill: {
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 18,
+      borderWidth: 1,
+      flexDirection: "row",
+      alignItems: "center",
+    },
+    subCatPillActive: {},
+    subCatText: {
+      fontSize: 12,
+      fontWeight: "700",
+    },
+    subCatTextActive: {
+      fontWeight: "800",
+    },
     sortBar: {
       flexDirection: "row",
       gap: 6,
-      paddingHorizontal: 16,
+      paddingHorizontal: 10,
       paddingBottom: 8,
     },
     sortChip: {
@@ -425,8 +691,8 @@ function createStyles(colors: any, s: ReturnType<typeof sharedStyles>) {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      paddingHorizontal: 16,
-      paddingVertical: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
     },
     resultCount: {
       fontSize: 10,
@@ -440,13 +706,18 @@ function createStyles(colors: any, s: ReturnType<typeof sharedStyles>) {
       fontSize: 11,
       fontWeight: "600",
     },
-    scrollContent: { ...s.scrollContent, paddingBottom: 24, paddingHorizontal: 16 },
+    scrollContent: {
+      paddingHorizontal: 8,
+      paddingTop: 4,
+      paddingBottom: 24,
+    },
     row: {
-      justifyContent: "space-between",
+      gap: 8,
     },
     gridItem: {
-      width: "48%",
-      marginBottom: 12,
+      flex: 1,
+      maxWidth: "50%",
+      marginBottom: 8,
     },
     centerContainer: {
       alignItems: "center",
@@ -484,25 +755,24 @@ function createStyles(colors: any, s: ReturnType<typeof sharedStyles>) {
       letterSpacing: 0.8,
     },
     categoryHeroBanner: {
-      height: 120,
+      minHeight: 135,
       borderRadius: 10,
       overflow: "hidden",
       position: "relative",
       marginBottom: 14,
+      justifyContent: "flex-end",
     },
     categoryHeroImage: {
+      ...StyleSheet.absoluteFill,
       width: "100%",
       height: "100%",
     },
     categoryHeroOverlay: {
       ...StyleSheet.absoluteFill,
-      backgroundColor: "rgba(10, 20, 15, 0.6)",
+      backgroundColor: "rgba(10, 20, 15, 0.65)",
     },
     categoryHeroContent: {
-      position: "absolute",
-      bottom: 12,
-      left: 12,
-      right: 12,
+      padding: 12,
     },
     categoryHeroTop: {
       flexDirection: "row",
@@ -535,6 +805,40 @@ function createStyles(colors: any, s: ReturnType<typeof sharedStyles>) {
       color: "rgba(255, 255, 255, 0.85)",
       fontSize: 10,
       lineHeight: 14,
+    },
+    categoryHeroDescription: {
+      color: "rgba(255, 255, 255, 0.92)",
+      fontSize: 11,
+      lineHeight: 15,
+      marginTop: 4,
+    },
+    categorySection: {
+      marginBottom: 24,
+    },
+    previewGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "space-between",
+      marginBottom: 8,
+    },
+    previewGridItem: {
+      width: "48.5%",
+      marginBottom: 8,
+    },
+    exploreCategoryBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingVertical: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      marginBottom: 8,
+    },
+    exploreCategoryBtnText: {
+      fontSize: 11,
+      fontWeight: "800",
+      letterSpacing: 0.6,
     },
   });
 }

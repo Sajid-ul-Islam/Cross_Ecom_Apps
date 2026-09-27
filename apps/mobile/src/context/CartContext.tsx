@@ -9,6 +9,7 @@ interface CartContextType {
   addToCart: (product: Product, size: string, qty?: number, variationId?: number) => void;
   removeFromCart: (productId: string, size: string) => void;
   updateQty: (productId: string, size: string, delta: number) => void;
+  updateSize: (productId: string, oldSize: string, newSize: string) => void;
   clearCart: () => void;
   subtotal: number;
   totalItems: number;
@@ -88,6 +89,39 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
+  const updateSize = (productId: string, oldSize: string, newSize: string) => {
+    const cleanNew = String(newSize || "").trim();
+    if (!cleanNew || oldSize === cleanNew) return;
+    setCart((prev) => {
+      const itemToChange = prev.find(
+        (item) => item.productId === productId && item.size === oldSize
+      );
+      if (!itemToChange) return prev;
+      const variationId = itemToChange.product.variations?.find((v) => v.size === cleanNew)?.id;
+      const existing = prev.find(
+        (item) => item.productId === productId && item.size === cleanNew
+      );
+      if (existing) {
+        return prev
+          .filter((item) => !(item.productId === productId && item.size === oldSize))
+          .map((item) =>
+            item.productId === productId && item.size === cleanNew
+              ? {
+                  ...item,
+                  qty: item.qty + itemToChange.qty,
+                  variationId: variationId ?? item.variationId,
+                }
+              : item
+          );
+      }
+      return prev.map((item) =>
+        item.productId === productId && item.size === oldSize
+          ? { ...item, size: cleanNew, variationId: variationId ?? item.variationId }
+          : item
+      );
+    });
+  };
+
   const clearCart = () => setCart([]);
 
   const subtotal = cart.reduce((acc, item) => {
@@ -144,6 +178,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addToCart,
         removeFromCart,
         updateQty,
+        updateSize,
         clearCart,
         subtotal,
         totalItems,

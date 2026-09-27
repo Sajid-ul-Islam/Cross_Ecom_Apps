@@ -11,11 +11,13 @@ const PROFILE_STORAGE_KEY = "deen_web_user_profile";
 function OrderSuccessContent() {
   const params = useSearchParams();
   const orderId = params.get("id") || "";
-  const number = params.get("number") || "DC-???";
+  const number = params.get("number") || (params.get("wooId") ? `#${params.get("wooId")}` : "Order");
   const total = Number(params.get("total") || 0);
   const delivery = Number(params.get("delivery") || 50);
   const wooId = params.get("wooId");
   const payment = params.get("payment") || "Cash on Delivery (COD)";
+  const paymentUrl = params.get("paymentUrl") || "";
+  const needsPayment = Boolean(paymentUrl && paymentUrl.trim().length > 0) && !payment.toLowerCase().includes("cash") && payment !== "cod";
   const consignment = params.get("consignment");
   const hasConsignment = Boolean(consignment && consignment.trim().length > 0);
   const [whatsapp, setWhatsapp] = useState("01952700500");
@@ -44,26 +46,7 @@ function OrderSuccessContent() {
     } catch {}
   }, [guestPhone]);
 
-  const handleSaveGuestProfile = () => {
-    setSaveLoading(true);
-    try {
-      const updated = {
-        name: guestName,
-        phone: guestPhone,
-        email: "",
-        address: "",
-        city: "Dhaka",
-        district: "BD-13",
-        jeansSize: "32",
-        topSize: "L",
-        isGuest: false,
-        role: "customer",
-      };
-      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
-      setGuestSaved(true);
-    } catch {}
-    setSaveLoading(false);
-  };
+  const handleSaveGuestProfile = () => { window.location.href = "/profile"; };
 
   return (
     <div className="container" style={{ paddingBottom: 100 }}>
@@ -75,7 +58,7 @@ function OrderSuccessContent() {
 
         <h1 className="order-success-title">ORDER PLACED SUCCESSFULLY!</h1>
         <p className="order-success-sub">
-          Thank you for shopping with DEEN. Your parcel is now queued for fulfillment and dispatch at our Mirpur central studio.
+          Thank you for shopping with DEEN. Your parcel is now queued for fulfillment and dispatch at our Dhaka fulfillment center.
         </p>
 
         {/* Order Details Card */}
@@ -202,7 +185,7 @@ function OrderSuccessContent() {
         {/* Guest Profile Save Prompt */}
         {isGuestOrder && !guestSaved && (
           <div className="guest-save-prompt-card">
-            <h4 className="guest-save-title">Save this order to your DEEN profile?</h4>
+            <h4 className="guest-save-title">Create your DEEN account</h4>
             <p className="guest-save-sub">
               Save your details so next time DEEN greets you by name ({guestName}) and automatically remembers your addresses.
             </p>
@@ -214,7 +197,7 @@ function OrderSuccessContent() {
                 onClick={handleSaveGuestProfile}
                 disabled={saveLoading}
               >
-                {saveLoading ? "Saving…" : "Save My Profile"}
+                {saveLoading ? "Saving…" : "Sign In / Create Account"}
               </button>
               <button
                 type="button"
@@ -230,6 +213,15 @@ function OrderSuccessContent() {
 
         {/* Navigation Action Buttons */}
         <div className="success-action-buttons">
+          {needsPayment && (
+            <a
+              href={paymentUrl}
+              className="btn btn-primary btn-full btn-lg"
+              style={{ background: "var(--emerald)", borderColor: "var(--emerald)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+            >
+              <span>💳</span> Complete Online Payment (bKash / Card) →
+            </a>
+          )}
           <Link href="/orders" className="btn btn-primary btn-full btn-lg">
             📋 Track My Orders & History
           </Link>

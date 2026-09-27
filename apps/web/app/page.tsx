@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { fetchProducts, fetchCampaigns, fetchCategoryCovers, fetchCategories, fetchHeroBanner, fetchSectionBanners, bdt } from "@/lib/api";
+import { fetchProducts, fetchCampaigns, fetchCategoryCovers, fetchCategories, fetchHeroBanner, fetchSectionBanners, fetchSocialFeed, bdt } from "@/lib/api";
 import { getCategoryInfo } from "@/lib/categories";
 import ProductCard from "@/components/ProductCard";
 import HeroSlider from "@/components/HeroSlider";
+import CategoryBentoShowcase from "@/components/CategoryBentoShowcase";
 import SectionOfferBanner from "@/components/SectionOfferBanner";
 import BrandStorySection from "@/components/BrandStorySection";
 
@@ -23,6 +24,7 @@ export default async function HomePage() {
     categoriesList,
     heroBanner,
     sectionBanners,
+    socialFeed,
   ] = await Promise.all([
     fetchProducts({ per_page: 8 }),
     fetchProducts({ per_page: 4, sort: "new" }),
@@ -34,12 +36,26 @@ export default async function HomePage() {
     fetchCategories(),
     fetchHeroBanner(),
     fetchSectionBanners(),
+    fetchSocialFeed(),
   ]);
 
   const activePromo = campaign?.activeCampaign;
 
-  // Curate display categories from REST API + standard catalog
-  const primaryCategories = ["JEANS", "SHIRT", "PANJABI", "T-SHIRT", "POLO", "TROUSERS"];
+  // Curate display categories from deencommerce.com official taxonomy
+  const primaryCategories = [
+    "TRENDING",
+    "NEW_ARRIVALS",
+    "JEANS",
+    "SHIRT",
+    "T-SHIRT",
+    "TROUSERS",
+    "PANJABI",
+    "DEEN_SELECT",
+    "VALUE_PACKS",
+    "SALE",
+    "ACCESSORIES",
+    "OTHERS",
+  ];
   const displayCategories = primaryCategories.map((catKey) => {
     const info = getCategoryInfo(catKey, remoteCovers);
     const countObj = categoriesList.find((c) => c.category.toUpperCase() === catKey);
@@ -50,6 +66,8 @@ export default async function HomePage() {
       img: info.coverImage,
       badge: info.metaBadge,
       count: countObj?.count,
+      initialOrientation: info.orientation,
+      initialAspectRatio: info.aspectRatio,
     };
   });
 
@@ -130,184 +148,8 @@ export default async function HomePage() {
           </div>
         ) : null}
 
-        {/* ── Category Showcase (Dynamic REST API Category Covers) ───────────────────────────────── */}
-        {/* ── Category Showcase (Single Line Moving Carousel / Marquee) ───────────────────────────────── */}
-        <section className="section" style={{ overflow: "hidden" }}>
-          <div className="section__header">
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <h2 className="section__title">Shop by Category</h2>
-                <span style={{ fontSize: 10, fontWeight: 900, background: "var(--indigo-light)", color: "var(--indigo)", padding: "2px 8px", borderRadius: 10, letterSpacing: 0.5 }}>
-                  LIVE
-                </span>
-              </div>
-              <p className="section__sub">Explore our artisanal menswear collection crafted in Bangladesh</p>
-            </div>
-            <Link href="/shop" className="section__link">See all →</Link>
-          </div>
-
-          <style>{`
-            @keyframes catMarquee {
-              0% {
-                transform: translateX(0);
-              }
-              100% {
-                transform: translateX(-50%);
-              }
-            }
-            @keyframes liveKenBurns {
-              0% {
-                transform: scale(1);
-              }
-              50% {
-                transform: scale(1.07);
-              }
-              100% {
-                transform: scale(1);
-              }
-            }
-            @keyframes liveSheen {
-              0% {
-                transform: translateX(-150%) skewX(-20deg);
-              }
-              22%, 100% {
-                transform: translateX(250%) skewX(-20deg);
-              }
-            }
-            @keyframes livePulseDot {
-              0%, 100% {
-                transform: scale(1);
-                opacity: 1;
-              }
-              50% {
-                transform: scale(1.35);
-                opacity: 0.55;
-              }
-            }
-            .cat-moving-container {
-              width: 100%;
-              overflow-x: auto;
-              overflow-y: hidden;
-              scrollbar-width: none;
-              -ms-overflow-style: none;
-              position: relative;
-              padding: 6px 0 14px;
-              mask-image: linear-gradient(to right, transparent, black 2%, black 98%, transparent);
-              -webkit-mask-image: linear-gradient(to right, transparent, black 2%, black 98%, transparent);
-            }
-            .cat-moving-container::-webkit-scrollbar {
-              display: none;
-            }
-            .cat-moving-track {
-              display: flex;
-              flex-wrap: nowrap;
-              gap: 16px;
-              width: max-content;
-              animation: catMarquee 32s linear infinite;
-            }
-            .cat-moving-track:hover {
-              animation-play-state: paused;
-            }
-            .cat-moving-card {
-              position: relative;
-              flex: 0 0 220px;
-              width: 220px;
-              height: 250px;
-              border-radius: var(--radius);
-              overflow: hidden;
-              display: block;
-              cursor: pointer;
-              border: 1px solid var(--border);
-              transition: transform 0.25s ease, box-shadow 0.25s ease;
-            }
-            .cat-moving-card:hover {
-              transform: translateY(-4px);
-              box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
-            }
-            .cat-moving-card::after {
-              content: '';
-              position: absolute;
-              inset: 0;
-              background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.15) 50%, transparent 100%);
-              animation: liveSheen 6s ease-in-out infinite;
-              pointer-events: none;
-            }
-            .cat-img {
-              width: 100%;
-              height: 100%;
-              object-fit: cover;
-              display: block;
-              animation: liveKenBurns 9s ease-in-out infinite;
-              transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), filter 0.4s ease;
-            }
-            .cat-moving-card:hover .cat-img {
-              transform: scale(1.12) !important;
-              filter: brightness(1.08) contrast(1.02);
-            }
-            .cat-live-dot {
-              display: inline-block;
-              width: 5px;
-              height: 5px;
-              border-radius: 50%;
-              background-color: #10b981;
-              margin-right: 5px;
-              animation: livePulseDot 1.8s ease-in-out infinite;
-            }
-            @media (max-width: 768px) {
-              .cat-moving-card {
-                flex: 0 0 170px;
-                width: 170px;
-                height: 205px;
-              }
-              .cat-moving-track {
-                animation-duration: 24s;
-                gap: 12px;
-              }
-            }
-          `}</style>
-
-          <div className="cat-moving-container">
-            <div className="cat-moving-track">
-              {/* Duplicated list for seamless infinite moving loop on one single line */}
-              {[...displayCategories, ...displayCategories].map((cat, idx) => (
-                <Link
-                  key={`${cat.key}-${idx}`}
-                  href={`/shop?category=${cat.key}`}
-                  className="cat-moving-card"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={cat.img}
-                    alt={cat.label}
-                    className="cat-img"
-                  />
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      background: "linear-gradient(to top, rgba(10,15,30,0.88) 0%, rgba(10,15,30,0.3) 55%, transparent 100%)",
-                      display: "flex",
-                      alignItems: "flex-end",
-                      padding: 14,
-                      zIndex: 2,
-                    }}
-                  >
-                    <div>
-                      <span style={{ color: "var(--denim-stitch)", fontSize: 9, fontWeight: 800, letterSpacing: 0.8, background: "rgba(0,0,0,0.6)", padding: "2px 6px", borderRadius: 4, display: "inline-flex", alignItems: "center", marginBottom: 4 }}>
-                        <span className="cat-live-dot" />
-                        {cat.badge}
-                      </span>
-                      <p style={{ color: "#fff", fontSize: 15, fontWeight: 900, letterSpacing: 0.3, lineHeight: 1.2, margin: 0 }}>{cat.label}</p>
-                      <p style={{ color: "rgba(255,255,255,0.75)", fontSize: 11, marginTop: 4, marginBottom: 0 }}>
-                        Shop Collection {cat.count ? `(${cat.count})` : ""} →
-                      </p>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
+        {/* ── Category Bento Showcase (Dynamic Landscape/Portrait Orientation + Zero Blank Spaces) ── */}
+        <CategoryBentoShowcase categories={displayCategories} />
 
         {/* ── Featured Products / Best Sellers (Auto-Scroll Right-to-Left Slider Mode) ──────────── */}
         <section className="section" style={{ overflow: "hidden" }}>
@@ -352,10 +194,12 @@ export default async function HomePage() {
               flex-wrap: nowrap;
               gap: 18px;
               width: max-content;
-              animation: bestSellerMarquee 220s linear infinite;
+              animation: bestSellerMarquee 480s linear infinite;
               will-change: transform;
             }
-            .bestseller-slider-track:hover {
+            .bestseller-slider-track:hover,
+            .bestseller-slider-track:active,
+            .bestseller-slider-track:focus-within {
               animation-play-state: paused;
             }
             .bestseller-card-wrap {
@@ -369,7 +213,7 @@ export default async function HomePage() {
                 width: 185px;
               }
               .bestseller-slider-track {
-                animation-duration: 200s;
+                animation-duration: 420s;
                 gap: 12px;
               }
             }

@@ -12,12 +12,7 @@ interface StoreSectionProps {
   onReportPress: () => void;
 }
 
-const FALLBACK_OUTLETS: Outlet[] = [
-  { id: "mirpur-12", name: "DEEN Mirpur 12 (Flagship Outlet)", tag: "CENTRAL STUDIO & STORE PICKUP", address: "Level 3, Ramzannesa Super Market, Mirpur 12 Bus Stand, Dhaka-1216", hours: "Open Daily: 10:00 AM – 09:30 PM", phone: "01972-627981" },
-  { id: "wari-outlet", name: "DEEN Wari Outlet", tag: "DHAKA SOUTH SHOWROOM", address: "Ground Floor, 41 A.K Famous Tower, Rankin Street, Wari, Dhaka-1203", hours: "Open Daily: 10:30 AM – 09:30 PM", phone: "01972-627983" },
-  { id: "cumilla-outlet", name: "DEEN Cumilla Outlet", tag: "CUMILLA REGIONAL SHOWROOM", address: "4th Floor, QR Tower, Badurtola (Dharmasagor Side), Kandirpar, Cumilla-3500", hours: "Open Daily: 10:30 AM – 09:00 PM", phone: "01972-627984" },
-  { id: "sylhet-outlet", name: "DEEN Sylhet Outlet", tag: "SYLHET REGIONAL SHOWROOM", address: "54/A, Level 2, Block-A, Kumarpara, Zindabazar, Sylhet", hours: "Open Daily: 10:30 AM – 09:30 PM", phone: "01972-627985" },
-];
+const FALLBACK_OUTLETS: Outlet[] = [];
 
 export const StoreSection: React.FC<StoreSectionProps> = ({
   onAboutPress,
@@ -43,15 +38,24 @@ export const StoreSection: React.FC<StoreSectionProps> = ({
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.cardHeader}>
           <Store size={17} color={colors.indigo} />
-          <Text style={[styles.cardTitle, { color: colors.ink }]}>DEEN RETAIL OUTLETS</Text>
+          <Text style={[styles.cardTitle, { color: colors.ink }]}>ONLINE CONCIERGE & OPERATIONS</Text>
         </View>
 
-        {outlets.map((outlet) => (
-          <View key={outlet.id} style={styles.storeLocation}>
-            <Text style={[styles.storeName, { color: colors.ink }]}>📍 {outlet.name}</Text>
-            <Text style={[styles.storeAddr, { color: colors.sub }]}>{outlet.address}</Text>
+        {outlets.length === 0 ? (
+          <View style={{ paddingVertical: 8 }}>
+            <Text style={[styles.storeName, { color: colors.ink }]}>📍 Corporate HQ: Dhaka, Bangladesh</Text>
+            <Text style={[styles.storeAddr, { color: colors.sub }]}>
+              Online-first fashion store delivering across all 64 districts with Cash on Delivery & 7-Day Doorstep Size Exchange.
+            </Text>
           </View>
-        ))}
+        ) : (
+          outlets.map((outlet) => (
+            <View key={outlet.id} style={styles.storeLocation}>
+              <Text style={[styles.storeName, { color: colors.ink }]}>📍 {outlet.name}</Text>
+              <Text style={[styles.storeAddr, { color: colors.sub }]}>{outlet.address}</Text>
+            </View>
+          ))
+        )}
 
         <TouchableOpacity
           style={[styles.supportBox, { backgroundColor: colors.indigoLight }]}

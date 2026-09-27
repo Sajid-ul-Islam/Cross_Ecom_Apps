@@ -2,7 +2,7 @@
 
 **Project:** Cross_Ecom_Apps (DEEN Commerce)  
 **Date:** September 3, 2026  
-**Context:** Connecting Mobile App (React Native/Expo) & Web App (Next.js 14) to WordPress / WooCommerce (`https://deencommerce.com`) for real customer and store administrator authentication.
+**Context:** Connecting Mobile App (React Native/Expo) & Web App (Next.js 15) to WordPress / WooCommerce (`https://deencommerce.com`) for real customer and store administrator authentication.
 
 ---
 

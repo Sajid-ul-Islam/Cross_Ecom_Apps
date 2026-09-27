@@ -193,28 +193,22 @@ export const AboutModal: React.FC<AboutModalProps> = ({ visible, onClose }) => {
               </TouchableOpacity>
             </View>
 
-            {/* Retail Showrooms & Outlets */}
+            {/* Online Store & Nationwide Operations */}
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>
                 <MapPin size={16} color={colors.indigo} />
-                <Text style={styles.sectionTitle}>RETAIL SHOWROOMS &amp; OUTLETS</Text>
+                <Text style={styles.sectionTitle}>ONLINE STORE &amp; OPERATIONS</Text>
               </View>
               
-              <Text style={[styles.sectionBody, { fontWeight: "bold", color: colors.ink, marginTop: 4 }]}>Mirpur 12 Outlet</Text>
-              <Text style={styles.sectionBody}>Level 3, Ramzannesa Super Market, Mirpur 12, Dhaka 1216.</Text>
-              <Text style={styles.sectionBody}>01972-627981</Text>
+              <Text style={[styles.sectionBody, { fontWeight: "bold", color: colors.ink, marginTop: 4 }]}>Corporate Headquarters</Text>
+              <Text style={styles.sectionBody}>Dhaka, Bangladesh</Text>
+              <Text style={styles.sectionBody}>Trade License: 224468 (DNCC) · TIN: 121840223362</Text>
 
-              <Text style={[styles.sectionBody, { fontWeight: "bold", color: colors.ink, marginTop: 12 }]}>Wari Outlet</Text>
-              <Text style={styles.sectionBody}>Ground floor, 41 A.K. Famous Tower, Rankin Street, Wari, Dhaka 1203.</Text>
-              <Text style={styles.sectionBody}>01972-627983</Text>
+              <Text style={[styles.sectionBody, { fontWeight: "bold", color: colors.ink, marginTop: 12 }]}>Nationwide Delivery Model</Text>
+              <Text style={styles.sectionBody}>Operating exclusively as an online fashion brand. Fast doorstep delivery to all 64 districts with Cash on Delivery (COD) and 7-day doorstep size exchange.</Text>
 
-              <Text style={[styles.sectionBody, { fontWeight: "bold", color: colors.ink, marginTop: 12 }]}>Cumilla Outlet</Text>
-              <Text style={styles.sectionBody}>4th floor, QR Tower, Road Dharmasagor Side, Cumilla 3500.</Text>
-              <Text style={styles.sectionBody}>01972-627984</Text>
-
-              <Text style={[styles.sectionBody, { fontWeight: "bold", color: colors.ink, marginTop: 12 }]}>Sylhet Outlet</Text>
-              <Text style={styles.sectionBody}>54/A, Level 2, Block A, Kumarpara, Sylhet.</Text>
-              <Text style={styles.sectionBody}>01972-627985</Text>
+              <Text style={[styles.sectionBody, { fontWeight: "bold", color: colors.ink, marginTop: 12 }]}>Customer Concierge &amp; WhatsApp</Text>
+              <Text style={styles.sectionBody}>+880 1952-700500 · hello@deencommerce.com</Text>
             </View>
 
             {/* Privacy & Support (store readiness) */}

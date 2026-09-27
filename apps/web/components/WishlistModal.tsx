@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useWishlist } from "@/lib/wishlist";
 import { useCart } from "@/lib/cart";
-import { bdt, resolveProductImage } from "@/lib/api";
+import { bdt, resolveProductImage, getInStockSizes, type Product } from "@/lib/api";
+import QuickAddModal from "./QuickAddModal";
 
 interface WishlistModalProps {
   isOpen: boolean;
@@ -17,17 +18,24 @@ export default function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
   const { wishlist, removeFromWishlist, clearWishlist } = useWishlist();
   const { addItem } = useCart();
   const [movingId, setMovingId] = React.useState<string | null>(null);
+  const [quickAddProduct, setQuickAddProduct] = React.useState<Product | null>(null);
+  const [quickAddOpen, setQuickAddOpen] = React.useState(false);
 
   if (!isOpen) return null;
 
   const handleMoveToCart = (product: any) => {
-    setMovingId(product.id);
-    const size = product.sizes?.[0] || "M";
-    addItem(product, size);
-    setTimeout(() => {
-      removeFromWishlist(product.id);
-      setMovingId(null);
-    }, 400);
+    const inStock = getInStockSizes(product);
+    if (inStock.length === 1) {
+      setMovingId(product.id);
+      addItem(product, inStock[0]);
+      setTimeout(() => {
+        removeFromWishlist(product.id);
+        setMovingId(null);
+      }, 400);
+      return;
+    }
+    setQuickAddProduct(product);
+    setQuickAddOpen(true);
   };
 
   const handleViewProduct = (productId: string) => {
@@ -231,6 +239,12 @@ export default function WishlistModal({ isOpen, onClose }: WishlistModalProps) {
           </div>
         )}
       </div>
+
+      <QuickAddModal
+        product={quickAddProduct}
+        isOpen={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
+      />
     </div>
   );
 }

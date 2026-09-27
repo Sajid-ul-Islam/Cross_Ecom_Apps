@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
-  Text,
   Image,
   TouchableOpacity,
   StyleSheet,
@@ -9,15 +8,16 @@ import {
   Animated,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { ArrowRight, Sparkles, ShieldCheck } from "./Icons";
+import { useVideoPlayer, VideoView } from "expo-video";
 import { useTheme } from "../context/ThemeContext";
 
-const { width } = Dimensions.get("window");
-const HERO_HEIGHT = Math.round((width - 32) * (10 / 16)); // 16:10 cinematic banner ratio
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const HERO_HEIGHT = SCREEN_WIDTH; // 1:1 square native mobile ratio to match 1080x1080 video assets
 
 interface HeroSlide {
   id: string;
   image: string;
+  videoUrl?: string;
   badge: string;
   title: string;
   tagline: string;
@@ -27,60 +27,113 @@ interface HeroSlide {
 const SLIDES: HeroSlide[] = [
   {
     id: "denim_hero",
-    image: "https://deencommerce.com/wp-content/uploads/2026/08/Mobile-Hero-Banner.jpg",
-    badge: "🔥 RAW SELVEDGE '26",
+    image: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
+    videoUrl: "https://deencommerce.com/wp-content/uploads/2026/09/Home_1x11.mp4",
+    badge: "দেশের প্রথম ডেনিম ব্র্যান্ড · DEEN",
     title: "দেশের প্রথম ডেনিম ব্র্যান্ড",
-    tagline: "13.5oz Red-Line ID Selvedge woven on vintage shuttle looms",
+    tagline: "13.5oz Selvedge Denim woven on vintage shuttle looms",
     categorySlug: "JEANS",
   },
   {
-    id: "shirt_hero",
-    image: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-1.jpg",
-    badge: "👔 TAILORED SHIRTS",
-    title: "Pin-Point Oxford Weave",
-    tagline: "Pure cotton comfort engineered for Bangladesh weather",
-    categorySlug: "SHIRT",
+    id: "sale_hero",
+    image: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
+    videoUrl: "https://deencommerce.com/wp-content/uploads/2026/09/END-OF-THE-SESSION-2_-1x11-1.mp4",
+    badge: "END OF SEASON SALE · UP TO 50% OFF",
+    title: "End of Season Clearance",
+    tagline: "Flat discounts on selected artisanal denim, shirts & apparel",
+    categorySlug: "JEANS",
   },
   {
-    id: "panjabi_hero",
-    image: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner.jpg",
-    badge: "🌙 HERITAGE COLLECTION",
-    title: "Indigo Dobby Panjabi",
-    tagline: "Artisanal hand-finished collars & timeless elegance",
-    categorySlug: "PANJABI",
+    id: "curated_hero",
+    image: "https://deencommerce.com/wp-content/uploads/2026/09/Springfield-Polo-Shirt-103-0100-119-600x750.webp",
+    badge: "DEEN SELECT · CURATED DROPS",
+    title: "Curated International Labels",
+    tagline: "Springfield, Lefties & Pull & Bear handpicked for everyday style",
+    categorySlug: "DEEN_SELECT",
   },
 ];
 
-export const MotionHero: React.FC = () => {
+const HeroVideoSlide: React.FC<{
+  videoUrl: string;
+  isActive: boolean;
+  onEnded: () => void;
+}> = ({ videoUrl, isActive, onEnded }) => {
+  const player = useVideoPlayer(videoUrl, (p) => {
+    p.loop = false; // Do not loop: play full video once before next slide
+    p.muted = true;
+    if (isActive) {
+      p.play();
+    }
+  });
+
+  useEffect(() => {
+    if (isActive) {
+      player.play();
+    } else {
+      player.pause();
+    }
+  }, [isActive, player]);
+
+  useEffect(() => {
+    const sub = player.addListener("playToEnd", () => {
+      if (isActive) {
+        onEnded();
+      }
+    });
+    return () => {
+      sub.remove();
+    };
+  }, [player, isActive, onEnded]);
+
+  return (
+    <VideoView
+      style={StyleSheet.absoluteFill}
+      player={player}
+      nativeControls={false}
+      contentFit="cover"
+    />
+  );
+};
+
+interface MotionHeroProps {
+  onWatchStory?: () => void;
+}
+
+export const MotionHero: React.FC<MotionHeroProps> = () => {
   const router = useRouter();
   const { colors } = useTheme();
   const [activeIndex, setActiveIndex] = useState(0);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
-  const slideAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      // Smooth fade out
-      Animated.timing(fadeAnim, {
-        toValue: 0.2,
-        duration: 350,
-        useNativeDriver: true,
-      }).start(() => {
-        setActiveIndex((prev) => (prev + 1) % SLIDES.length);
-        // Fade back in
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 450,
-          useNativeDriver: true,
-        }).start();
-      });
-    }, 5500);
-
-    return () => clearInterval(timer);
-  }, [fadeAnim]);
 
   const currentSlide = SLIDES[activeIndex];
+
+  const advanceToNextSlide = useCallback(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 0.2,
+      duration: 350,
+      useNativeDriver: true,
+    }).start(() => {
+      setActiveIndex((prev) => (prev + 1) % SLIDES.length);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 450,
+        useNativeDriver: true,
+      }).start();
+    });
+  }, [fadeAnim]);
+
+  useEffect(() => {
+    // For static images, advance after 5.5 seconds.
+    // For video slides, advance upon playback completion (via onEnded) with a 30s safety watchdog.
+    if (currentSlide.videoUrl) {
+      const watchdog = setTimeout(advanceToNextSlide, 30000);
+      return () => clearTimeout(watchdog);
+    }
+
+    const timer = setTimeout(advanceToNextSlide, 5500);
+    return () => clearTimeout(timer);
+  }, [activeIndex, currentSlide.videoUrl, advanceToNextSlide]);
 
   const handlePrimaryPress = () => {
     if (currentSlide.categorySlug) {
@@ -96,7 +149,7 @@ export const MotionHero: React.FC = () => {
   return (
     <View style={styles.container}>
       <TouchableOpacity
-        activeOpacity={0.94}
+        activeOpacity={0.96}
         onPress={handlePrimaryPress}
         style={styles.heroCard}
       >
@@ -106,44 +159,17 @@ export const MotionHero: React.FC = () => {
             style={styles.heroImage}
             resizeMode="cover"
           />
+          {currentSlide.videoUrl ? (
+            <HeroVideoSlide
+              key={currentSlide.id}
+              videoUrl={currentSlide.videoUrl}
+              isActive={true}
+              onEnded={advanceToNextSlide}
+            />
+          ) : null}
         </Animated.View>
 
-        {/* Multi-gradient backdrop for rich text contrast */}
-        <View style={styles.darkGradient} />
-
-        {/* Content Overlay */}
-        <View style={styles.contentOverlay}>
-          {/* Top Brand Pill */}
-          <View style={styles.badgeRow}>
-            <View style={styles.badgePill}>
-              <Sparkles size={11} color="#FFFFFF" />
-              <Text style={styles.badgeText}>{currentSlide.badge}</Text>
-            </View>
-
-            <View style={styles.guaranteePill}>
-              <ShieldCheck size={11} color="#10B981" />
-              <Text style={styles.guaranteeText}>7-Day Size Swap</Text>
-            </View>
-          </View>
-
-          {/* Title and Tagline */}
-          <Text style={styles.titleText}>{currentSlide.title}</Text>
-          <Text style={styles.taglineText}>{currentSlide.tagline}</Text>
-
-          {/* CTA Row */}
-          <View style={styles.ctaRow}>
-            <View style={styles.primaryCta}>
-              <Text style={styles.primaryCtaText}>EXPLORE NOW</Text>
-              <ArrowRight size={13} color="#FFFFFF" />
-            </View>
-
-            <Text style={styles.shopCategoryHint}>
-              Tap to view {currentSlide.categorySlug || "collection"} →
-            </Text>
-          </View>
-        </View>
-
-        {/* Sleek Slide Indicators */}
+        {/* Sleek Minimal Slide Indicators */}
         <View style={styles.indicatorRow}>
           {SLIDES.map((_, i) => (
             <TouchableOpacity
@@ -153,8 +179,9 @@ export const MotionHero: React.FC = () => {
               style={[
                 styles.indicatorBar,
                 {
-                  width: i === activeIndex ? 24 : 6,
-                  backgroundColor: i === activeIndex ? "#FFFFFF" : "rgba(255,255,255,0.4)",
+                  width: i === activeIndex ? 20 : 6,
+                  backgroundColor:
+                    i === activeIndex ? "#FFFFFF" : "rgba(255,255,255,0.45)",
                 },
               ]}
             />
@@ -167,21 +194,18 @@ export const MotionHero: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    marginHorizontal: 16,
-    marginTop: 8,
+    marginHorizontal: -16, // Flush edge-to-edge canceling screen 16px horizontal padding
+    marginTop: -16, // Flush to screen top
     marginBottom: 16,
+    width: SCREEN_WIDTH,
   },
   heroCard: {
+    width: SCREEN_WIDTH,
     height: HERO_HEIGHT,
-    borderRadius: 16,
+    borderRadius: 0, // Edge-to-edge clean
     overflow: "hidden",
     position: "relative",
-    backgroundColor: "#0D111A",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.22,
-    shadowRadius: 10,
-    elevation: 4,
+    backgroundColor: "#000000",
   },
   imageWrap: {
     width: "100%",
@@ -191,113 +215,17 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  darkGradient: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(13, 17, 26, 0.42)",
-  },
-  contentOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: 16,
-    justifyContent: "flex-end",
-  },
-  badgeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 6,
-  },
-  badgePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: "rgba(99, 102, 241, 0.88)",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  badgeText: {
-    color: "#FFFFFF",
-    fontSize: 9.5,
-    fontWeight: "900",
-    letterSpacing: 0.6,
-  },
-  guaranteePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "rgba(16, 185, 129, 0.4)",
-  },
-  guaranteeText: {
-    color: "#FFFFFF",
-    fontSize: 9.5,
-    fontWeight: "700",
-  },
-  titleText: {
-    color: "#FFFFFF",
-    fontSize: 19,
-    fontWeight: "900",
-    letterSpacing: 0.3,
-    marginBottom: 4,
-    textShadowColor: "rgba(0,0,0,0.8)",
-    textShadowOffset: { width: 0, height: 1.5 },
-    textShadowRadius: 4,
-  },
-  taglineText: {
-    color: "rgba(255,255,255,0.88)",
-    fontSize: 11.5,
-    lineHeight: 16,
-    fontWeight: "600",
-    marginBottom: 10,
-    maxWidth: width * 0.75,
-    textShadowColor: "rgba(0,0,0,0.7)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
-  ctaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  primaryCta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "#6366F1",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  primaryCtaText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 0.5,
-  },
-  shopCategoryHint: {
-    color: "rgba(255,255,255,0.8)",
-    fontSize: 10.5,
-    fontWeight: "700",
-  },
   indicatorRow: {
     position: "absolute",
-    top: 12,
-    right: 14,
+    bottom: 12,
+    right: 16,
     flexDirection: "row",
     gap: 5,
     alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   indicatorBar: {
     height: 4,

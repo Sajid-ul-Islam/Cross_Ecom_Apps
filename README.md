@@ -2,12 +2,12 @@
 
 **DEEN** — Bangladesh's artisanal selvedge denim & contemporary apparel brand — engineered as an ultra-reliable, high-concurrency omni-channel e-commerce system:
 - 📱 **Mobile Application**: React Native (Expo SDK 57 / React 19) for iOS & Android with **OTA (Over-The-Air) auto-updates**.
-- ⚡ **API Gateway**: Fastify REST proxy with WooCommerce auto-sync, 2-phase idempotency, in-memory caching, and multi-origin failover.
-- 🖥️ **Web Storefront & Mobile Web**: Next.js 14 App Router e-commerce experience with **100% mobile feature parity**.
+- ⚡ **API Gateway**: Fastify 5 REST proxy with WooCommerce auto-sync, 2-phase idempotency, in-memory caching, and multi-origin failover.
+- 🖥️ **Web Storefront & Mobile Web**: Next.js 15 App Router e-commerce experience with **100% mobile feature parity**.
 
-[![Fastify](https://img.shields.io/badge/Fastify-4.28-000000?style=for-the-badge&logo=fastify&logoColor=white)](https://www.fastify.io/)
+[![Fastify](https://img.shields.io/badge/Fastify-5.x-000000?style=for-the-badge&logo=fastify&logoColor=white)](https://www.fastify.io/)
 [![React Native](https://img.shields.io/badge/React_Native-Expo_SDK_57-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactnative.dev/)
-[![Next.js](https://img.shields.io/badge/Next.js-14-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![EAS Update](https://img.shields.io/badge/EAS_OTA-Update-4630EB?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/eas)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
@@ -23,7 +23,7 @@
 ### 1. High-Traffic Gateway & WooCommerce Protection (`apps/api`)
 - **Stateless HMAC-SHA256 Multi-Instance Auth**: Tokens (`gst.<payload>.<sig>`, `usr.<payload>.<sig>`) are signed with shared secret, enabling instant $\mathcal{O}(1)$ verification across cluster gateway replicas without database bottlenecks.
 - **In-Flight Single-Flight Order Idempotency**: `_inFlightOrders` promise joining and 5-minute memory-bounded idempotency eliminate race-condition duplicate orders under heavy network jitter or client double-clicks.
-- **Two-Phase Write Failover**: Safe failover for idempotent reads (`GET /catalog`) vs. strict upstream reconciliation (`findWooOrderByKey`) before retrying mutating writes (`POST /orders`).
+- **Two-Phase Write Reconciliation**: Safe failover for idempotent reads (`GET /catalog`) vs. strict upstream reconciliation (`findWooOrderByKey`) matching phone digits before retrying mutating writes (`POST /orders`). Upstream errors return HTTP 502 with no fake confirmation receipt.
 - **Webhook Delivery Resilience**: Topic-aware cache invalidation with HMAC-SHA256 signature verification and 10-minute delivery ID deduplication.
 - **Microsecond Catalog Caching**: 5-minute in-memory catalog cache with single-flight warming protects WordPress from flash-sale load spikes.
 - **Multi-Tier Rate Limiting**: Dedicated rate limits for Auth (10 req/min/IP), Order Placement (6 req/min/IP), and Catalog browsing (120 req/min/IP).
@@ -32,9 +32,10 @@
 - **Official OAuth 2.0 Pop-Up Windows**: Clicking "Continue with Google" or "Continue with Facebook" opens a **real, centered browser pop-up** directly to `accounts.google.com` (with account chooser / `prompt=select_account`) or `facebook.com/v19.0/dialog/oauth`.
 - **PostMessage Token Exchange**: The `/auth/callback` page receives the OAuth token from the pop-up and passes it back to the parent window via `postMessage`. No page redirects.
 - **Fastify Token Verification**: Gateway verifies Google OIDC `id_token` via `https://oauth2.googleapis.com/tokeninfo` and Facebook `access_token` via Graph API — real cryptographic verification, not mocks.
+- **Client Ownership Asserted**: Google tokens are rejected unless `aud` matches our `GOOGLE_CLIENT_ID`, issuer/expiry are valid and the email is verified; Facebook tokens are checked with `debug_token` (issuing `app_id` must be ours) before the profile call carries an `appsecret_proof`. A token minted for any other client/app cannot vouch for a DEEN account, and a failed verification always answers 401 — the gateway never falls back to a client-supplied email.
 - **WooCommerce Customer Auto-Provisioning**: Verified email automatically links to or creates a real WooCommerce customer record (`/wp-json/wc/v3/customers`), attaching `customer_id` to every order for lifetime purchase history.
 - **Mobile Account Chooser Sheet**: Native React Native modal mimics the Google / Facebook account selection sheet with avatar badges, saved account list, "Use another account" form, and animated slide-up.
-- **Environment Variables**: `NEXT_PUBLIC_GOOGLE_CLIENT_ID` + `NEXT_PUBLIC_FACEBOOK_APP_ID` in `.env.local` / Vercel for live credentials.
+- **Environment Variables**: `NEXT_PUBLIC_GOOGLE_CLIENT_ID` + `NEXT_PUBLIC_FACEBOOK_APP_ID` in `.env.local` / Vercel for the browser side; `GOOGLE_CLIENT_ID` + `FACEBOOK_APP_ID` + `FACEBOOK_APP_SECRET` on the gateway (Render) for verification. `SOCIAL_AUTH_ALLOW_UNVERIFIED=true` restores the old unverified behaviour for local demos only — it is ignored when `NODE_ENV=production`.
 
 ### 3. OTA (Over-The-Air) Auto-Updates — No APK Rebuilds
 - **expo-updates integration**: The mobile app silently checks for a new JS bundle from EAS Update 3 seconds after launch.
@@ -50,7 +51,7 @@
 - **7-Day Doorstep Guarantee**: In-app Return & Size Exchange submission flow (`POST /v1/deen/returns`).
 
 ### 5. 100% Web & Mobile Feature Parity (`apps/web` ⇄ `apps/mobile`)
-- **5-Tab Navigation**: Unified `[ 🏠 Home ] [ 🗂️ Categories ] [ 🛒 Cart (live badge) ] [ 📦 Orders ] [ 👤 Profile ]`.
+- **5-Tab Navigation**: Unified `[ 🏠 Home ] [ 🗂️ Categories ] [ 🛒 Cart (live badge) ] [ 💬 Chat ] [ 👤 Profile ]`.
 - **Customer Wishlist & Saved Items Suite**: Save-for-later favorites with heart toggles on cards (bottom-right corner, non-overlapping), PDP, header count badge, and slide-out `WishlistModal` with 1-click "Move to Bag".
 - **In-App Notification Center & Bell Icon**: Categorized announcements (Promos, Bank Offers, Order Updates) with 1-click coupon code copying.
 - **Bank & MFS Card Discounts Suite**: Dedicated deals modal for City Bank Amex, BRAC Bank, EBL, SCB, MTB, and bKash (`GET /v1/deen/offers`).
@@ -61,6 +62,13 @@
 - **Direct WhatsApp Concierge**: Instant 1-tap chat (`https://wa.me/8801952700500`) with prefilled product inquiry.
 - **Promotional Campaigns & BOGO**: Dynamic top banner with auto-rotation, Instant Cashback tiers (৳500 / ৳700), and BOGO 50% discount on lowest-priced denim.
 
+### 6. Multilingual Rule-Based E-Commerce Chatbot (`apps/web`)
+- **Strictly Zero LLM / Zero External AI**: 100% deterministic rule-based conversational agent with zero hallucinations, zero external API costs, and sub-10ms response times.
+- **Trilingual Comprehension**: Native support for **Bangla (`bn`)**, **English (`en`)**, and **Banglish (`banglish`)** with Bengali numeral normalization (`০-৯` ➔ `0-9`) and phonetic keyword mapping.
+- **Multi-Turn State Machine**: Autonomous conversational ordering (`ORDER_PRODUCT ➔ ORDER_SIZE ➔ ORDER_QTY ➔ ORDER_PHONE ➔ ORDER_ADDRESS ➔ ORDER_CONFIRM`) and order status tracking by phone and order ID.
+- **Fuzzy Search & Synonyms**: Fuse.js fuzzy matcher integrated with Bangladeshi apparel dictionaries (`synonyms.json`) and direct WooCommerce REST API v3 fallback.
+- **Comprehensive Architecture Guide**: [`docs/CHATBOT_ARCHITECTURE.md`](./docs/CHATBOT_ARCHITECTURE.md).
+
 ---
 
 ## 🗂️ Monorepo Workspace Structure
@@ -68,10 +76,11 @@
 ```
 Cross_Ecom_Apps/
 ├── apps/
-│   ├── api/                    # Fastify 4.28 Gateway (Node.js / TypeScript)
+│   ├── api/                    # Fastify 5 Gateway (Node.js / TypeScript)
 │   │   ├── src/                # Server, routes, woo proxy, auth, pricing, webhooks
 │   │   ├── src/pricing.test.ts # Unit tests for BOGO, Cashback, phone validation
-│   │   ├── src/idempotency.test.ts # Integration tests for idempotency & session tokens
+│   │   ├── src/checkout.integration.test.ts # Integration tests for verified order placement
+│   │   ├── src/security.integration.test.ts # Integration tests for access control & rate limits
 │   │   ├── Dockerfile          # Production container configuration
 │   │   └── README.md           # API Gateway documentation
 │   │
@@ -84,7 +93,7 @@ Cross_Ecom_Apps/
 │   │   ├── eas.json            # EAS Build + Update channel configuration
 │   │   └── README.md           # Mobile app documentation
 │   │
-│   └── web/                    # Next.js 14 Web Storefront (App Router)
+│   └── web/                    # Next.js 15 Web Storefront (App Router)
 │       ├── app/                # Next.js pages (shop, product, cart, checkout, orders, profile)
 │       │   └── auth/callback/  # OAuth 2.0 pop-up callback handler (Google & Facebook)
 │       ├── components/         # SocialAuthModal, AdminAnalyticsModal, ProductCard…
@@ -141,6 +150,16 @@ cd ../..
 # Required for real Google & Facebook OAuth pop-up login
 NEXT_PUBLIC_GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
 NEXT_PUBLIC_FACEBOOK_APP_ID="your-facebook-app-id"
+```
+
+#### `apps/api/.env` (gateway — verification side; see `.env.example`)
+```env
+# Must match the web/mobile OAuth clients, or tokens are rejected with 401
+GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
+FACEBOOK_APP_ID="your-facebook-app-id"
+FACEBOOK_APP_SECRET="your-facebook-app-secret"
+# Dedicated HMAC key for session tokens (falls back to WEBHOOK_SECRET)
+SESSION_SIGNING_SECRET="random-high-entropy-value"
 ```
 
 #### GitHub Actions Secret (for OTA auto-publish)

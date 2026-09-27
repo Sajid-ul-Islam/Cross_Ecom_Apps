@@ -19,7 +19,8 @@ import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useCart } from "../context/CartContext";
 import { useProfile } from "../context/ProfileContext";
-import { bdt, GATEWAY_URL } from "../services/gateway";
+import { bdt, GATEWAY_URL, getInStockSizes } from "../services/gateway";
+import { QuickAddBottomSheet } from "./QuickAddBottomSheet";
 
 const { width, height } = Dimensions.get("window");
 
@@ -37,15 +38,17 @@ interface AiMessage {
     sizes: string[];
   }>;
   actions?: Array<{ label: string; action: string; payload?: any }>;
+  quickReplies?: string[];
 }
 
 const QUICK_PROMPTS = [
   "🔥 What is the current offer & discount?",
-  "✨ What are the new products?",
-  "👖 Suggest selvedge jeans under ৳2500",
-  "🚚 Chittagong delivery charge & time?",
+  "👖 Suggest jeans under ৳2500",
+  "📏 How to choose my waist size for DEEN jeans?",
   "🔄 How does the 7-day size exchange work?",
-  "📍 Where are your retail showrooms in Dhaka?",
+  "🚚 Chittagong delivery charge & time?",
+  "📍 Do you have retail outlets or showrooms?",
+  "💬 WhatsApp Concierge Hotline",
 ];
 
 export interface AiConciergeModalProps {
@@ -56,6 +59,122 @@ export interface AiConciergeModalProps {
 export interface AiChatViewProps {
   onClose?: () => void;
   isEmbedded?: boolean;
+}
+
+/**
+ * Lightweight, zero-dependency formatted text parser for React Native.
+ * Parses bold tokens (**text**), strikethrough (~~text~~), inline code (`code`),
+ * bullets (•, -, *), and line breaks into styled <Text> tree.
+ */
+export function renderFormattedTextNative(
+  text: string,
+  isUser: boolean,
+  colors: ThemeColors
+): React.ReactNode {
+  if (!text) return null;
+
+  const lines = text.split("\n");
+
+  const parseInline = (lineText: string, keyPrefix: string): React.ReactNode[] => {
+    const parts = lineText.split(/(\*\*[\s\S]+?\*\*|~~[\s\S]+?~~|`[\s\S]+?`)/g);
+    return parts.map((part, idx) => {
+      const key = `${keyPrefix}_${idx}`;
+      if (part.startsWith("**") && part.endsWith("**") && part.length >= 4) {
+        const content = part.slice(2, -2);
+        return (
+          <Text
+            key={key}
+            style={{
+              fontWeight: "700",
+              color: isUser ? "#FFFFFF" : colors.ink,
+            }}
+          >
+            {content}
+          </Text>
+        );
+      }
+      if (part.startsWith("~~") && part.endsWith("~~") && part.length >= 4) {
+        const content = part.slice(2, -2);
+        return (
+          <Text
+            key={key}
+            style={{
+              textDecorationLine: "line-through",
+              opacity: 0.7,
+              color: isUser ? "#FFFFFF" : colors.sub,
+            }}
+          >
+            {content}
+          </Text>
+        );
+      }
+      if (part.startsWith("`") && part.endsWith("`") && part.length >= 2) {
+        const content = part.slice(1, -1);
+        return (
+          <Text
+            key={key}
+            style={{
+              fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+              fontWeight: "600",
+              color: isUser ? "#FFFFFF" : colors.indigo,
+            }}
+          >
+            {content}
+          </Text>
+        );
+      }
+      return (
+        <Text key={key} style={{ color: isUser ? "#FFFFFF" : colors.ink }}>
+          {part}
+        </Text>
+      );
+    });
+  };
+
+  const renderedElements: React.ReactNode[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (line.trim() === "") {
+      renderedElements.push(
+        <Text key={`space_${i}`}>
+          {"\n"}
+        </Text>
+      );
+      continue;
+    }
+
+    const bulletMatch = line.match(/^(\s*)([•\-\*])\s+(.+)$/);
+    if (bulletMatch) {
+      const indent = bulletMatch[1].length > 0 ? "    " : "  ";
+      const bulletContent = bulletMatch[3];
+      renderedElements.push(
+        <Text key={`b_${i}`}>
+          <Text
+            style={{
+              color: isUser ? "#FFFFFF" : colors.indigo,
+              fontWeight: "700",
+            }}
+          >
+            {indent}•{" "}
+          </Text>
+          {parseInline(bulletContent, `b_in_${i}`)}
+          {i < lines.length - 1 ? "\n" : ""}
+        </Text>
+      );
+      continue;
+    }
+
+    renderedElements.push(
+      <Text key={`l_${i}`}>
+        {parseInline(line, `l_in_${i}`)}
+        {i < lines.length - 1 ? "\n" : ""}
+      </Text>
+    );
+  }
+
+  return renderedElements;
 }
 
 export const AiChatView: React.FC<AiChatViewProps> = ({
@@ -76,7 +195,14 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
     {
       id: "welcome",
       sender: "ai",
-      text: "👋 Welcome to **DEEN Assistant**! I can recommend menswear outfits from our live catalog, calculate Bangladesh delivery charges, explain our 7-day doorstep size exchange, or locate our 4 retail showrooms.\n\nHow can I help you today?",
+      text: "👋 Welcome to **DEEN Denim Concierge**! I can recommend menswear outfits from our live catalog, calculate Bangladesh delivery charges, guide you on waist & chest sizing, explain our 7-day doorstep size exchange, or check your live order tracking.\n\nHow can I help you today?",
+      quickReplies: [
+        "জিন্স কালেকশন 👖",
+        "পাঞ্জাবি কালেকশন 🕌",
+        "শার্ট কালেকশন 👔",
+        "সাইজ গাইড 📏",
+        "অর্ডার স্ট্যাটাস চেক 📦",
+      ],
     },
   ]);
 
@@ -127,6 +253,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
         text: data.reply,
         products: data.suggestedProducts,
         actions: data.suggestedActions,
+        quickReplies: data.quickReplies,
       };
 
       setMessages((prev) => [...prev, aiMsg]);
@@ -144,13 +271,21 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
     }
   };
 
+  const [quickAddProduct, setQuickAddProduct] = useState<any>(null);
+  const [quickAddVisible, setQuickAddVisible] = useState(false);
+
   const handleQuickAdd = (p: any) => {
-    const size = p.sizes?.[0] || "32";
-    addToCart(p, size, 1);
-    setAddedIds((prev) => ({ ...prev, [p.id]: true }));
-    setTimeout(() => {
-      setAddedIds((prev) => ({ ...prev, [p.id]: false }));
-    }, 2000);
+    const inStock = getInStockSizes(p);
+    if (inStock.length === 1) {
+      addToCart(p, inStock[0], 1);
+      setAddedIds((prev) => ({ ...prev, [p.id]: true }));
+      setTimeout(() => {
+        setAddedIds((prev) => ({ ...prev, [p.id]: false }));
+      }, 2000);
+      return;
+    }
+    setQuickAddProduct(p);
+    setQuickAddVisible(true);
   };
 
   const openWhatsApp = async () => {
@@ -188,8 +323,10 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
             <Sparkles size={18} color="#FFFFFF" />
           </View>
           <View>
-            <Text style={styles.title}>DEEN ASSISTANT</Text>
-            <Text style={styles.sub}>● Online</Text>
+            <Text style={styles.title}>DEEN DENIM CONCIERGE</Text>
+            <Text style={[styles.sub, { color: colors.denimStitch }]}>
+              দেশের প্রথম ডেনিম ব্র্যান্ড · <Text style={{ color: colors.emerald }}>Online</Text>
+            </Text>
           </View>
         </View>
 
@@ -214,17 +351,23 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
             <MessageCircle size={15} color="#0084FF" />
           </TouchableOpacity>
 
-          {!isEmbedded && onClose && (
-            <TouchableOpacity
-              style={styles.closeBtn}
-              onPress={onClose}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityRole="button"
-              accessibilityLabel="Close AI Concierge"
-            >
-              <X size={20} color={colors.ink} />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={styles.closeBtn}
+            onPress={() => {
+              if (onClose) {
+                onClose();
+              } else if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace("/(tabs)");
+              }
+            }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel="Leave chat"
+          >
+            <X size={20} color={colors.ink} />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -255,7 +398,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
                       m.sender === "user" ? styles.userBubbleText : styles.aiBubbleText,
                     ]}
                   >
-                    {m.text}
+                    {renderFormattedTextNative(m.text, m.sender === "user", colors)}
                   </Text>
                 </View>
 
@@ -329,6 +472,24 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
                     ))}
                   </View>
                 )}
+
+                {/* Interactive Quick Reply Pills */}
+                {m.sender === "ai" && m.quickReplies && m.quickReplies.length > 0 && (
+                  <View style={styles.quickRepliesRow}>
+                    {m.quickReplies.map((qr, qIdx) => (
+                      <TouchableOpacity
+                        key={`qr_${m.id}_${qIdx}`}
+                        style={styles.quickReplyPill}
+                        activeOpacity={0.8}
+                        onPress={() => handleSend(qr)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Quick reply: ${qr}`}
+                      >
+                        <Text style={styles.quickReplyText}>{qr}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
             ))}
 
@@ -388,6 +549,11 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         {content}
+        <QuickAddBottomSheet
+          product={quickAddProduct}
+          visible={quickAddVisible}
+          onClose={() => setQuickAddVisible(false)}
+        />
       </KeyboardAvoidingView>
     );
   }
@@ -397,7 +563,19 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
       style={styles.overlay}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
+      <TouchableOpacity
+        style={StyleSheet.absoluteFill}
+        activeOpacity={1}
+        onPress={onClose}
+        accessibilityRole="button"
+        accessibilityLabel="Dismiss chat modal"
+      />
       {content}
+      <QuickAddBottomSheet
+        product={quickAddProduct}
+        visible={quickAddVisible}
+        onClose={() => setQuickAddVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 };
@@ -415,20 +593,27 @@ function createStyles(colors: ThemeColors) {
   return StyleSheet.create({
     overlay: {
       flex: 1,
-      backgroundColor: "rgba(0,0,0,0.6)",
+      backgroundColor: "rgba(0,0,0,0.55)",
       justifyContent: "flex-end",
     },
     sheet: {
       backgroundColor: colors.paper,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-      height: Math.round(height * 0.85),
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      height: Math.round(height * 0.82),
+      maxWidth: 600,
+      width: "100%",
+      alignSelf: "center",
       display: "flex",
       flexDirection: "column",
+      overflow: "hidden",
     },
     sheetEmbedded: {
       backgroundColor: colors.paper,
       flex: 1,
+      maxWidth: 600,
+      width: "100%",
+      alignSelf: "center",
       display: "flex",
       flexDirection: "column",
     },
@@ -468,9 +653,9 @@ function createStyles(colors: ThemeColors) {
       marginTop: 2,
     },
     headerIconCircle: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: "rgba(37, 211, 102, 0.12)",
@@ -478,7 +663,14 @@ function createStyles(colors: ThemeColors) {
       borderColor: "rgba(37, 211, 102, 0.35)",
     },
     closeBtn: {
-      padding: 6,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.cardSecondary,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
     },
     messagesContainer: {
       flex: 1,
@@ -593,6 +785,25 @@ function createStyles(colors: ThemeColors) {
       borderColor: colors.border,
     },
     actionChipText: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.indigo,
+    },
+    quickRepliesRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 6,
+      marginTop: 8,
+    },
+    quickReplyPill: {
+      paddingHorizontal: 11,
+      paddingVertical: 6,
+      borderRadius: 16,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.indigo,
+    },
+    quickReplyText: {
       fontSize: 11,
       fontWeight: "700",
       color: colors.indigo,

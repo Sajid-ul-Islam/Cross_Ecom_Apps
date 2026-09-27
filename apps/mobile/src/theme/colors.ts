@@ -1,21 +1,21 @@
 export const LightColors = {
-  // Brand Denim Palette
-  indigo: "#2A3680",
-  indigoDark: "#1A2350",
-  indigoLight: "#EEF0F8",
-  denimStitch: "#D49439",
+  // Brand Artisanal Orange Palette (deencommerce.com brand vibe)
+  indigo: "#E05305",
+  indigoDark: "#7C2D12",
+  indigoLight: "#FFF7ED",
+  denimStitch: "#C27803",
 
-  // Background & Surfaces
-  paper: "#F7F6F0",
+  // Background & Surfaces (Crisp modern editorial look)
+  paper: "#FFFFFF",
   card: "#FFFFFF",
-  cardSecondary: "#F0EFE8",
-  border: "#E5E2D8",
-  borderLight: "#F0EDE4",
+  cardSecondary: "#FDF9F5",
+  border: "#E2E8F0",
+  borderLight: "#F1F5F9",
 
-  // Typography
-  ink: "#151A2C",
-  sub: "#525A6C",
-  faint: "#7E869B",
+  // Typography (High-contrast slate/navy ink)
+  ink: "#0F172A",
+  sub: "#475569",
+  faint: "#94A3B8",
 
   // Status & Accents
   crimson: "#C93B36",
@@ -28,40 +28,40 @@ export const LightColors = {
   // Bangladeshi Payment Accents
   bkash: "#E2136E",
   nagad: "#F7941D",
-  cod: "#2A3680",
+  cod: "#7C2D12",
 };
 
 export const DarkColors: typeof LightColors = {
-  // Brand Denim Palette
-  indigo: "#5B6EE1",
-  indigoDark: "#4354BF",
-  indigoLight: "#1F2848",
-  denimStitch: "#EAA74B",
+  // Brand Artisanal Orange Palette
+  indigo: "#FB923C",
+  indigoDark: "#EA580C",
+  indigoLight: "#261308",
+  denimStitch: "#FDBA74",
 
-  // Background & Surfaces
-  paper: "#0D111A",
-  card: "#161C2A",
-  cardSecondary: "#1F273B",
-  border: "#2A344D",
-  borderLight: "#1E2638",
+  // Background & Surfaces (True AMOLED Deep Black)
+  paper: "#000000",
+  card: "#101010",
+  cardSecondary: "#181818",
+  border: "#262626",
+  borderLight: "#181818",
 
-  // Typography
-  ink: "#F4F6FC",
-  sub: "#B2BBD4",
-  faint: "#8C96B2",
+  // Typography (Neutral Crisp Monochromes)
+  ink: "#FFFFFF",
+  sub: "#A3A3A3",
+  faint: "#737373",
 
   // Status & Accents
   crimson: "#F25F5C",
-  crimsonLight: "#3A191D",
+  crimsonLight: "#220E10",
   emerald: "#34D399",
-  emeraldLight: "#143828",
+  emeraldLight: "#082218",
   amber: "#FBBF24",
-  amberLight: "#382B0E",
+  amberLight: "#261C08",
 
   // Bangladeshi Payment Accents
   bkash: "#FF3388",
   nagad: "#FFA63D",
-  cod: "#5B6EE1",
+  cod: "#FB923C",
 };
 
 export type ThemeColors = typeof LightColors;

@@ -8,23 +8,151 @@ interface HeroSliderProps {
   bannerData: HeroBannerState;
 }
 
+interface HeroVideoItemProps {
+  videoUrl: string;
+  poster: string;
+  isActive: boolean;
+  isFirst: boolean;
+  onEnded?: () => void;
+}
+
+function HeroVideoItem({ videoUrl, poster, isActive, isFirst, onEnded }: HeroVideoItemProps) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Synchronously ensure muted DOM property is true
+  const setVideoRef = useCallback((el: HTMLVideoElement | null) => {
+    videoRef.current = el;
+    if (el) {
+      el.muted = true;
+      el.defaultMuted = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.muted = true;
+    video.defaultMuted = true;
+
+    if (isActive) {
+      video.currentTime = 0;
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // Browser autoplay policy blocked; resume on user gesture
+          const resumeOnGesture = () => {
+            if (videoRef.current && isActive) {
+              videoRef.current.play().catch(() => {});
+            }
+            window.removeEventListener("pointerdown", resumeOnGesture);
+            window.removeEventListener("touchstart", resumeOnGesture);
+          };
+          window.addEventListener("pointerdown", resumeOnGesture, { once: true, passive: true });
+          window.addEventListener("touchstart", resumeOnGesture, { once: true, passive: true });
+        });
+      }
+    } else {
+      video.pause();
+    }
+  }, [isActive]);
+
+  return (
+    <div style={{ position: "relative", width: "100%", height: "100%" }}>
+      <video
+        ref={setVideoRef}
+        src={videoUrl}
+        autoPlay
+        muted
+        playsInline
+        preload={isFirst ? "auto" : "metadata"}
+        poster={poster}
+        onEnded={() => {
+          if (isActive && onEnded) {
+            onEnded();
+          }
+        }}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          display: "block",
+        }}
+      >
+        <source src={videoUrl} type="video/mp4" />
+      </video>
+    </div>
+  );
+}
+
+const CANONICAL_COVER_SLIDES: HeroSlide[] = [
+  {
+    id: "slide_denim",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
+    videoUrl: "https://deencommerce.com/wp-content/uploads/2026/09/Denim-Web-Banner_1920x840pxl.mp4",
+    badge: "দেশের প্রথম ডেনিম ব্র্যান্ড · DEEN",
+    title: "Raw Washed. Selvedge Heritage.",
+    headline: "ARTISANAL INDIGO & CROSS HATCH DENIM",
+    subtitle: "Woven on Vintage Shuttle Looms with Deep Rope-Dyed Indigo & Artisanal Precision.",
+    actionUrl: "/shop?category=JEANS",
+    actionLabel: "Explore Denim Collection →",
+  },
+  {
+    id: "slide_season_clearance",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
+    videoUrl: "https://deencommerce.com/wp-content/uploads/2026/09/END-OF-THE-SESSION-2_1920x8401.mp4",
+    badge: "END OF SEASON DROP · 2026",
+    title: "Artisanal Tailoring & Comfort.",
+    headline: "SEASON CLEARANCE IS LIVE",
+    subtitle: "Flat discounts on selected artisanal denim, resort shirts & tailored comfort.",
+    actionUrl: "/shop?sort=sale",
+    actionLabel: "Explore Season Sale →",
+  },
+  {
+    id: "slide_web_motion",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/06/Mobile-Banner-Web.mp4",
+    videoUrl: "https://deencommerce.com/wp-content/uploads/2026/06/web-motion-banner.mp4",
+    badge: "DEEN MOTION · 2026",
+    title: "Modern Lifestyle & Motion.",
+    headline: "CONTEMPORARY RESORT & CASUAL LIVING",
+    subtitle: "Lightweight tailoring engineered for modern lifestyle and effortless mobility.",
+    actionUrl: "/shop",
+    actionLabel: "Explore New Arrivals →",
+  },
+  {
+    id: "slide_official_cover_image",
+    desktop: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN.jpg",
+    mobile: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
+    badge: "OFFICIAL STORE BANNER",
+    title: "Bespoke Everyday Living.",
+    headline: "THE ORIGINAL SELVEDGE DENIM",
+    subtitle: "Enduring silhouettes, reinforced bar-tacking, and supreme cotton craftsmanship.",
+    actionUrl: "/shop",
+    actionLabel: "Discover All Pieces →",
+  },
+];
+
 export default function HeroSlider({ bannerData }: HeroSliderProps) {
-  const slides: HeroSlide[] =
-    bannerData?.slides && bannerData.slides.length > 0
-      ? bannerData.slides
-      : [
-          {
-            id: "slide_denim",
-            desktop: "https://deencommerce.com/wp-content/uploads/2026/08/web-banner-2.jpg",
-            mobile: "https://deencommerce.com/wp-content/uploads/2026/08/Mobile-Hero-Banner.jpg",
-            badge: "",
-            title: "",
-            headline: "",
-            subtitle: "",
-            actionUrl: "/shop?category=JEANS",
-            actionLabel: "Shop Denim",
-          },
-        ];
+  // Strictly filter incoming slides to guarantee ONLY authentic widescreen cover images or cover videos are shown.
+  // Rejects any product photos, thumbnails, or non-cover media.
+  const isStrictCoverMedia = (s: HeroSlide): boolean => {
+    if (!s) return false;
+    // Cover video is valid
+    if (s.videoUrl && s.videoUrl.endsWith(".mp4")) return true;
+    // Cover image must exist and not be a product photo
+    if (!s.desktop) return false;
+    const url = s.desktop.toLowerCase();
+    if (url.includes("600x750") || url.includes("product") || url.includes("front") || url.includes("back") || url.includes("model")) {
+      return false;
+    }
+    return url.includes("banner") || url.includes("hero") || url.includes("sale");
+  };
+
+  const candidateSlides = (bannerData?.slides || []).filter(isStrictCoverMedia);
+  const slides: HeroSlide[] = candidateSlides.length > 0 ? candidateSlides : CANONICAL_COVER_SLIDES;
 
   const [current, setCurrent] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -38,12 +166,21 @@ export default function HeroSlider({ bannerData }: HeroSliderProps) {
     setCurrent((prev) => (prev - 1 + slides.length) % slides.length);
   }, [slides.length]);
 
-  // Auto-advance slideshow every 5 seconds
+  const currentSlide = slides[current];
+
+  // Auto-advance: videos advance when full video finishes (onEnded); static images advance after 5.5s
   useEffect(() => {
     if (isPaused || slides.length <= 1) return;
-    const timer = setInterval(nextSlide, 5000);
-    return () => clearInterval(timer);
-  }, [isPaused, slides.length, nextSlide]);
+
+    if (currentSlide?.videoUrl) {
+      // 30s safety watchdog in case network stalls or video fails to buffer
+      const watchdog = setTimeout(nextSlide, 30000);
+      return () => clearTimeout(watchdog);
+    }
+
+    const timer = setTimeout(nextSlide, 5500);
+    return () => clearTimeout(timer);
+  }, [isPaused, slides.length, nextSlide, current, currentSlide?.videoUrl]);
 
   // Touch swipe support for mobile
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -72,24 +209,24 @@ export default function HeroSlider({ bannerData }: HeroSliderProps) {
           background-color: #080c14;
           margin-bottom: 28px;
         }
-        /* Desktop aspect ratio: dynamic responsive widescreen that scales gracefully across screens */
+        /* Desktop aspect ratio: native 16:7 (1920x840) widescreen that scales responsively without vertical clipping */
         @media (min-width: 769px) {
           .hero-slider-clean {
-            aspect-ratio: 21 / 9;
+            aspect-ratio: 16 / 7;
             min-height: 280px;
-            max-height: 480px;
+            max-height: none;
           }
           .hero-slider-clean img {
             object-fit: cover;
             object-position: center 30%;
           }
         }
-        /* Dynamic Mobile screen ratio: 16:9 ratio prevents taking over the whole screen and prevents cut-offs */
+        /* Dynamic Mobile screen ratio: 16:7 (1920x840) ratio preserves lateral edges of widescreen and square slides without cropping */
         @media (max-width: 768px) {
           .hero-slider-clean {
-            aspect-ratio: 16 / 9;
-            min-height: 190px;
-            max-height: 280px;
+            aspect-ratio: 16 / 7;
+            min-height: unset;
+            max-height: none;
             margin-bottom: 18px;
           }
           .hero-slider-clean img {
@@ -130,23 +267,35 @@ export default function HeroSlider({ bannerData }: HeroSliderProps) {
                 cursor: "pointer",
               }}
             >
-              <picture style={{ width: "100%", height: "100%", display: "block" }}>
-                <source media="(max-width: 768px)" srcSet={slide.mobile || slide.desktop} />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={slide.desktop}
-                  alt={slide.headline || slide.title || "DEEN Collection Banner"}
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    display: "block",
-                    transform: isActive ? "scale(1)" : "scale(1.025)",
-                    transition: "transform 5000ms ease-out",
-                  }}
-                  loading={index === 0 ? "eager" : "lazy"}
+              {slide.videoUrl ? (
+                <HeroVideoItem
+                  videoUrl={slide.videoUrl}
+                  poster={slide.desktop}
+                  isActive={isActive}
+                  isFirst={index === 0}
+                  onEnded={nextSlide}
                 />
-              </picture>
+              ) : (
+                <picture style={{ width: "100%", height: "100%", display: "block" }}>
+                  <source media="(max-width: 768px)" srcSet={slide.mobile || slide.desktop} />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={slide.desktop}
+                    alt={slide.headline || slide.title || "DEEN Collection Banner"}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      display: "block",
+                      transform: isActive ? "scale(1)" : "scale(1.025)",
+                      transition: "transform 5000ms ease-out",
+                    }}
+                    loading={index === 0 ? "eager" : "lazy"}
+                    decoding={index === 0 ? "sync" : "async"}
+                    fetchPriority={index === 0 ? "high" : "auto"}
+                  />
+                </picture>
+              )}
             </Link>
           );
         })}

@@ -18,6 +18,7 @@ import {
 import SocialAuthModal from "@/components/SocialAuthModal";
 import AboutDeenDrawer from "@/components/AboutDeenDrawer";
 import ProfileDrawer from "@/components/ProfileDrawer";
+import CustomerAnalyticsKPIs from "@/components/CustomerAnalyticsKPIs";
 
 const PROFILE_STORAGE_KEY = "deen_web_user_profile";
 
@@ -282,6 +283,11 @@ export default function ProfilePage() {
         signupPassword,
         signupEmail.trim() || undefined
       );
+      if (!data.success || !data.token || !data.user) {
+        setAuthSubmitting(false);
+        setAuthNotice({ type: "error", text: data.message || "Account could not be created." });
+        return;
+      }
       const updated: UserProfile = {
         ...profile,
         name: signupName.trim(),
@@ -471,6 +477,12 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* ── Executive Customer Analytics KPI Dashboard (Requirement R3) ── */}
+      <CustomerAnalyticsKPIs
+        orders={orders}
+        onOrdersClick={() => setActiveDrawer("orders")}
+      />
+
       {/* ── Priority for Admin: Executive BI Command Hub ── */}
       {profile.role === "admin" && (
         <div
@@ -627,9 +639,9 @@ export default function ProfilePage() {
         >
           <div className="profile-menu-item__icon">🏢</div>
           <div className="profile-menu-item__content">
-            <div className="profile-menu-item__title">About DEEN, Showrooms &amp; Socials</div>
+            <div className="profile-menu-item__title">About DEEN &amp; Socials</div>
             <p className="profile-menu-item__subtitle">
-              4 retail outlets, official brand socials &amp; heritage
+              Online brand story, operations &amp; official socials
             </p>
           </div>
           <div className="profile-menu-item__chevron">→</div>
@@ -660,7 +672,7 @@ export default function ProfilePage() {
         style={{
           marginTop: 20,
           marginBottom: 20,
-          background: "var(--card, #161C2A)",
+          background: "var(--surface, #101010)",
           borderRadius: 16,
           border: "1px solid var(--border, rgba(255, 255, 255, 0.08))",
           padding: 20,
@@ -1355,41 +1367,10 @@ export default function ProfilePage() {
                 <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
                   <button
                     type="button"
-                    onClick={async () => {
+                    onClick={() => {
                       setLoginIdent("admin");
-                      setLoginPass("admin");
-                      setAuthSubmitting(true);
-                      try {
-                        const data = await loginCustomer("admin", "admin");
-                        if (data.success) {
-                          const updated: UserProfile = {
-                            ...profile,
-                            name: "DEEN Store Admin",
-                            email: "admin@deencommerce.com",
-                            role: "admin",
-                            isGuest: false,
-                          };
-                          setProfile(updated);
-                          localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
-                          if (data.token) localStorage.setItem("deen_web_guest_token", data.token);
-                          if (typeof window !== "undefined") window.dispatchEvent(new Event("deen_profile_updated"));
-                          setAuthNotice({
-                            type: "success",
-                            text: "👑 Welcome back, Store Administrator! Opening BI Control Room...",
-                          });
-                          setTimeout(() => {
-                            setAuthSubmitting(false);
-                            setAuthModalOpen(false);
-                            router.push("/admin");
-                          }, 400);
-                        } else {
-                          setAuthSubmitting(false);
-                          setAuthNotice({ type: "error", text: data.message || "Admin login failed." });
-                        }
-                      } catch {
-                        setAuthSubmitting(false);
-                        setAuthNotice({ type: "error", text: "Admin login network error." });
-                      }
+                      setLoginPass("");
+                      setAuthNotice({ type: "success", text: "Enter your WordPress administrator username and password, then sign in." });
                     }}
                     disabled={authSubmitting}
                     className="btn btn--outline"
@@ -1410,7 +1391,7 @@ export default function ProfilePage() {
                     👑 LOGIN AS STORE ADMIN
                   </button>
                   <p style={{ fontSize: 11, color: "var(--text-sub)", textAlign: "center", marginTop: 6 }}>
-                    Store Admin Privileges &amp; BI Analytics (user: admin · pass: admin)
+                    Use your WordPress administrator credentials.
                   </p>
                 </div>
               </form>

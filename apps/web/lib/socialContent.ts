@@ -62,7 +62,7 @@ export const FALLBACK_REELS: SocialReel[] = [
     title: "Unboxing the 13.5oz Autumn Raw Selvedge",
     author: "@deencommerce",
     platform: "instagram",
-    poster: "https://deencommerce.com/wp-content/uploads/2026/08/Section-image.jpg",
+    poster: "https://deencommerce.com/wp-content/uploads/2026/05/DEEN-90s-Blue-Jeans-Slim-Fit-101-0100-138-front.webp",
     caption:
       "Every fold speaks dedication. 100% shuttle-loom woven raw selvedge with signature red-line ID. Engineered to fade with your daily journey. 👖✨ #DeenDenim #RawSelvedge #MadeInBangladesh",
     likes: 1842,
@@ -75,7 +75,7 @@ export const FALLBACK_REELS: SocialReel[] = [
       price: 2850,
       regularPrice: 3200,
       category: "JEANS",
-      image: "https://deencommerce.com/wp-content/uploads/2025/11/Jeans.webp",
+      image: "https://deencommerce.com/wp-content/uploads/2026/05/DEEN-90s-Blue-Jeans-Slim-Fit-101-0100-138-front.webp",
     },
   },
   {
@@ -83,7 +83,7 @@ export const FALLBACK_REELS: SocialReel[] = [
     title: "Artisanal Dobby Cotton Panjabi",
     author: "@deencommerce",
     platform: "facebook",
-    poster: "https://deencommerce.com/wp-content/uploads/2026/06/Panjabi-Section-Image.webp",
+    poster: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Stone-Embroidered-Panjabi-106-0101-136-Front.webp",
     caption:
       "Refined minimalism for Friday prayer and festive evenings. Hand-finished mandarin collar in pure breathable dobby cotton. 🌙 #DeenHeritage #Panjabi #PureCotton",
     likes: 2430,
@@ -96,7 +96,7 @@ export const FALLBACK_REELS: SocialReel[] = [
       price: 2150,
       regularPrice: 2450,
       category: "PANJABI",
-      image: "https://deencommerce.com/wp-content/uploads/2026/02/Category.jpg",
+      image: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Stone-Embroidered-Panjabi-106-0101-136-Front.webp",
     },
   },
   {
@@ -104,7 +104,7 @@ export const FALLBACK_REELS: SocialReel[] = [
     title: "Classic Oxford Weave - Work to Weekend",
     author: "@deencommerce",
     platform: "instagram",
-    poster: "https://deencommerce.com/wp-content/uploads/2026/06/Shirt-Section-Image.png",
+    poster: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Flanel-Shirt-102-0302-041-Front.webp",
     caption:
       "Heavyweight pin-point Oxford weave. Mother-of-pearl buttons and tailored relaxed fit for Dhaka's climate. 👔 #DeenTailoring #OxfordShirt",
     likes: 1290,
@@ -117,7 +117,7 @@ export const FALLBACK_REELS: SocialReel[] = [
       price: 1750,
       regularPrice: 1950,
       category: "SHIRT",
-      image: "https://deencommerce.com/wp-content/uploads/2026/04/Category.webp",
+      image: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Checkmate-Executive-Formal-Shirt-102-0501-005-Front.webp",
     },
   },
   {
@@ -125,7 +125,7 @@ export const FALLBACK_REELS: SocialReel[] = [
     title: "Breathable Heavyweight 240 GSM Tees",
     author: "@deencommerce",
     platform: "instagram",
-    poster: "https://deencommerce.com/wp-content/uploads/2026/06/Half-sleeve-Section-iomage.webp",
+    poster: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Essential-Black-T-shirt-105-0101-380-Front.webp",
     caption:
       "Structured drop-shoulder silhouette in 100% combed compact cotton. Minimalist essential for daily wear. ⚡ #DeenStudio #DailyApparel",
     likes: 1520,
@@ -138,7 +138,7 @@ export const FALLBACK_REELS: SocialReel[] = [
       price: 850,
       regularPrice: 990,
       category: "T-SHIRT",
-      image: "https://deencommerce.com/wp-content/uploads/2026/06/Half-sleeve-Section-iomage.webp",
+      image: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Warm-Spice-T-shirt-105-0101-377-Front.webp",
     },
   },
 ];
@@ -147,28 +147,28 @@ export const FALLBACK_STORIES: SocialStory[] = [
   {
     id: "story_1",
     title: "Raw Selvedge",
-    image: "https://deencommerce.com/wp-content/uploads/2025/11/Jeans.webp",
+    image: "https://deencommerce.com/wp-content/uploads/2026/05/DEEN-90s-Blue-Jeans-Slim-Fit-101-0100-138-front.webp",
     hasUnseen: true,
     actionUrl: "/shop?category=JEANS",
   },
   {
     id: "story_2",
     title: "Heritage Panjabi",
-    image: "https://deencommerce.com/wp-content/uploads/2026/02/Category.jpg",
+    image: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Stone-Embroidered-Panjabi-106-0101-136-Front.webp",
     hasUnseen: true,
     actionUrl: "/shop?category=PANJABI",
   },
   {
     id: "story_3",
     title: "Oxford Shirts",
-    image: "https://deencommerce.com/wp-content/uploads/2026/04/Category.webp",
+    image: "https://deencommerce.com/wp-content/uploads/2026/07/DEEN-Flanel-Shirt-102-0302-041-Front.webp",
     hasUnseen: false,
     actionUrl: "/shop?category=SHIRT",
   },
   {
     id: "story_4",
     title: "Dhaka Studio",
-    image: "https://deencommerce.com/wp-content/uploads/2026/08/Mobile-Hero-Banner.jpg",
+    image: "https://deencommerce.com/wp-content/uploads/2026/09/End-Of-The-Season-Sale-Hero-Banner-DEEN-PPI.webp",
     hasUnseen: false,
     actionUrl: "/shop",
   },
