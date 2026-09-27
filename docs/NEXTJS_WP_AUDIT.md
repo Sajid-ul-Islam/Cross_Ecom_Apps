@@ -21,17 +21,17 @@ Do NOT assume the existing architecture is correct. Your job is to inspect the a
 ## 1. Understand the Existing Architecture
 
 Identify:
-- Next.js version: **14.2.35 (App Router)**
-- React version: **18.3.1**
+- Next.js version: **15.5.26 (App Router)**
+- React version: **19.0.0**
 - App Router vs Pages Router: **100% App Router (`apps/web/app/`)**
 - TypeScript: **TypeScript 5.4.5, strict mode enabled**
 - Rendering strategy: **Hybrid — Server Components layout & metadata + Client Component interactives**
-- Gateway & WP Integration: **Centralized Fastify 4.28 Gateway (`apps/api`) proxying WooCommerce REST API with in-memory caching & HMAC session tokens**
+- Gateway & WP Integration: **Centralized Fastify 5.x Gateway (`apps/api`) proxying WooCommerce REST API with in-memory caching & HMAC session tokens**
 
 ```text
 Browser / Client (Desktop & Mobile)
    ↓
-Next.js 14 Web Frontend (`apps/web`)
+Next.js 15 Web Frontend (`apps/web`)
    ├── Server Components (Root Layout, Metadata, Static Shells)
    ├── Client Components (ProductCard, SizeGuide, Checkout, Wishlist, Notifications)
    ├── Local Cart & Profile Store (`localStorage` + Context)

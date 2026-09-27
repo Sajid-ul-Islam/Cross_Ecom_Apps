@@ -2,12 +2,12 @@
 
 **DEEN** — Bangladesh's artisanal selvedge denim & contemporary apparel brand — engineered as an ultra-reliable, high-concurrency omni-channel e-commerce system:
 - 📱 **Mobile Application**: React Native (Expo SDK 57 / React 19) for iOS & Android with **OTA (Over-The-Air) auto-updates**.
-- ⚡ **API Gateway**: Fastify REST proxy with WooCommerce auto-sync, 2-phase idempotency, in-memory caching, and multi-origin failover.
-- 🖥️ **Web Storefront & Mobile Web**: Next.js 14 App Router e-commerce experience with **100% mobile feature parity**.
+- ⚡ **API Gateway**: Fastify 5 REST proxy with WooCommerce auto-sync, 2-phase idempotency, in-memory caching, and multi-origin failover.
+- 🖥️ **Web Storefront & Mobile Web**: Next.js 15 App Router e-commerce experience with **100% mobile feature parity**.
 
-[![Fastify](https://img.shields.io/badge/Fastify-4.28-000000?style=for-the-badge&logo=fastify&logoColor=white)](https://www.fastify.io/)
+[![Fastify](https://img.shields.io/badge/Fastify-5.x-000000?style=for-the-badge&logo=fastify&logoColor=white)](https://www.fastify.io/)
 [![React Native](https://img.shields.io/badge/React_Native-Expo_SDK_57-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactnative.dev/)
-[![Next.js](https://img.shields.io/badge/Next.js-14-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![EAS Update](https://img.shields.io/badge/EAS_OTA-Update-4630EB?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/eas)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
@@ -23,7 +23,7 @@
 ### 1. High-Traffic Gateway & WooCommerce Protection (`apps/api`)
 - **Stateless HMAC-SHA256 Multi-Instance Auth**: Tokens (`gst.<payload>.<sig>`, `usr.<payload>.<sig>`) are signed with shared secret, enabling instant $\mathcal{O}(1)$ verification across cluster gateway replicas without database bottlenecks.
 - **In-Flight Single-Flight Order Idempotency**: `_inFlightOrders` promise joining and 5-minute memory-bounded idempotency eliminate race-condition duplicate orders under heavy network jitter or client double-clicks.
-- **Two-Phase Write Failover**: Safe failover for idempotent reads (`GET /catalog`) vs. strict upstream reconciliation (`findWooOrderByKey`) before retrying mutating writes (`POST /orders`).
+- **Two-Phase Write Reconciliation**: Safe failover for idempotent reads (`GET /catalog`) vs. strict upstream reconciliation (`findWooOrderByKey`) matching phone digits before retrying mutating writes (`POST /orders`). Upstream errors return HTTP 502 with no fake confirmation receipt.
 - **Webhook Delivery Resilience**: Topic-aware cache invalidation with HMAC-SHA256 signature verification and 10-minute delivery ID deduplication.
 - **Microsecond Catalog Caching**: 5-minute in-memory catalog cache with single-flight warming protects WordPress from flash-sale load spikes.
 - **Multi-Tier Rate Limiting**: Dedicated rate limits for Auth (10 req/min/IP), Order Placement (6 req/min/IP), and Catalog browsing (120 req/min/IP).
@@ -51,7 +51,7 @@
 - **7-Day Doorstep Guarantee**: In-app Return & Size Exchange submission flow (`POST /v1/deen/returns`).
 
 ### 5. 100% Web & Mobile Feature Parity (`apps/web` ⇄ `apps/mobile`)
-- **5-Tab Navigation**: Unified `[ 🏠 Home ] [ 🗂️ Categories ] [ 🛒 Cart (live badge) ] [ 📦 Orders ] [ 👤 Profile ]`.
+- **5-Tab Navigation**: Unified `[ 🏠 Home ] [ 🗂️ Categories ] [ 🛒 Cart (live badge) ] [ 💬 Chat ] [ 👤 Profile ]`.
 - **Customer Wishlist & Saved Items Suite**: Save-for-later favorites with heart toggles on cards (bottom-right corner, non-overlapping), PDP, header count badge, and slide-out `WishlistModal` with 1-click "Move to Bag".
 - **In-App Notification Center & Bell Icon**: Categorized announcements (Promos, Bank Offers, Order Updates) with 1-click coupon code copying.
 - **Bank & MFS Card Discounts Suite**: Dedicated deals modal for City Bank Amex, BRAC Bank, EBL, SCB, MTB, and bKash (`GET /v1/deen/offers`).
@@ -76,10 +76,11 @@
 ```
 Cross_Ecom_Apps/
 ├── apps/
-│   ├── api/                    # Fastify 4.28 Gateway (Node.js / TypeScript)
+│   ├── api/                    # Fastify 5 Gateway (Node.js / TypeScript)
 │   │   ├── src/                # Server, routes, woo proxy, auth, pricing, webhooks
 │   │   ├── src/pricing.test.ts # Unit tests for BOGO, Cashback, phone validation
-│   │   ├── src/idempotency.test.ts # Integration tests for idempotency & session tokens
+│   │   ├── src/checkout.integration.test.ts # Integration tests for verified order placement
+│   │   ├── src/security.integration.test.ts # Integration tests for access control & rate limits
 │   │   ├── Dockerfile          # Production container configuration
 │   │   └── README.md           # API Gateway documentation
 │   │
@@ -92,7 +93,7 @@ Cross_Ecom_Apps/
 │   │   ├── eas.json            # EAS Build + Update channel configuration
 │   │   └── README.md           # Mobile app documentation
 │   │
-│   └── web/                    # Next.js 14 Web Storefront (App Router)
+│   └── web/                    # Next.js 15 Web Storefront (App Router)
 │       ├── app/                # Next.js pages (shop, product, cart, checkout, orders, profile)
 │       │   └── auth/callback/  # OAuth 2.0 pop-up callback handler (Google & Facebook)
 │       ├── components/         # SocialAuthModal, AdminAnalyticsModal, ProductCard…

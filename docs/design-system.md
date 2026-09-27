@@ -4,7 +4,7 @@
 
 DEEN Commerce is a premier Bangladeshi denim and heritage apparel brand specializing in 13.5oz red-line selvedge denim woven on vintage shuttle looms, heavy-wash twill, premium shirts, and contemporary streetwear.
 
-The design system is engineered to convey an authentic, tactile, luxury yet approachable brand experience. It operates across **React Native + Expo (Android & iOS)** and **Next.js 14 (Web & Responsive Mobile)** with complete visual and behavioral synchronization.
+The design system is engineered to convey an authentic, tactile, luxury yet approachable brand experience. It operates across **React Native + Expo (Android & iOS)** and **Next.js 15 (Web & Responsive Mobile)** with complete visual and behavioral synchronization.
 
 ---
 

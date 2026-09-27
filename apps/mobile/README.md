@@ -17,7 +17,7 @@
   <img src="https://img.shields.io/badge/Expo-SDK_57-000020?style=for-the-badge&logo=expo&logoColor=white" alt="Expo SDK 57" />
   <img src="https://img.shields.io/badge/React_Native-0.86.3-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React Native" />
   <img src="https://img.shields.io/badge/React-19.2-149ECA?style=for-the-badge&logo=react&logoColor=white" alt="React 19" />
-  <img src="https://img.shields.io/badge/Fastify-4.28-000000?style=for-the-badge&logo=fastify&logoColor=white" alt="Fastify" />
+  <img src="https://img.shields.io/badge/Fastify-5.x-000000?style=for-the-badge&logo=fastify&logoColor=white" alt="Fastify" />
   <img src="https://img.shields.io/badge/TypeScript-6.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/WooCommerce-Proxy_Gateway-96588A?style=for-the-badge&logo=woocommerce&logoColor=white" alt="WooCommerce" />
   <img src="https://img.shields.io/badge/Render-Deployed_API-46E3B7?style=for-the-badge&logo=render&logoColor=black" alt="Render" />
@@ -55,7 +55,7 @@
 
 ## Project Overview
 
-**DEEN Commerce** is an omni-channel menswear e-commerce ecosystem built for Bangladesh's premier denim and dobby panjabi brand. It pairs a **high-performance React Native (Expo SDK 55) mobile application** with a **Fastify microservice gateway** hosted on Render (`https://cross-ecom-apps.onrender.com/`), backed by a web storefront desk.
+**DEEN Commerce** is an omni-channel menswear e-commerce ecosystem built for Bangladesh's premier denim and dobby panjabi brand. It pairs a **high-performance React Native (Expo SDK 57) mobile application** with a **Fastify microservice gateway** hosted on Render (`https://cross-ecom-apps.onrender.com/`), backed by a web storefront desk.
 
 The entire architecture is designed with **offline-first capability, real-time WooCommerce synchronization, and zero third-party peer dependency friction**.
 
@@ -66,9 +66,9 @@ The entire architecture is designed with **offline-first capability, real-time W
 ```
 Cross_Ecom_Apps/
 ├── apps/
-│   ├── mobile/                   # React Native (Expo SDK 55, React 19.2) mobile application
+│   ├── mobile/                   # React Native (Expo SDK 57, React 19.2) mobile application
 │   │   ├── app/                  # Expo Router file-based navigation
-│   │   │   ├── (tabs)/           # Tab bar routes: Home (index), Shop, Bag, Orders, Profile
+│   │   │   ├── (tabs)/           # Tab bar routes: Home (index), Shop, Bag, Chat, Profile
 │   │   │   ├── category/[slug]   # Editorial category landing pages with craft banners
 │   │   │   ├── product/[id]      # Detailed product screen with size chart & bundle builder
 │   │   │   ├── checkout.tsx      # Secure checkout (Guest / Registered, coins discount, slots)
@@ -210,7 +210,7 @@ The Fastify gateway is live at `https://cross-ecom-apps.onrender.com/`:
 ## 🚀 To-Do & Roadmap List
 
 ### ✅ Completed Features
-- [x] Full responsive mobile experience on React Native / Expo SDK 55.
+- [x] Full responsive mobile experience on React Native / Expo SDK 57.
 - [x] Replaced peer-incompatible icon libraries with zero-dependency inline SVG icon set (`Icons.tsx`).
 - [x] Live WooCommerce proxy gateway deployed on Render (`https://cross-ecom-apps.onrender.com/`).
 - [x] Offline-first catalog snapshot (826 live items bundled for instant boot).

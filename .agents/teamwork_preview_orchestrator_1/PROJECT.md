@@ -4,7 +4,7 @@
 DEEN Commerce is a multi-platform e-commerce ecosystem consisting of:
 - `apps/api`: Fastify Gateway Server connected to WooCommerce with in-memory caching, rate-limiting, and AI shopping engine.
 - `apps/mobile`: Expo / React Native Application (iOS/Android) sharing theme tokens, district mappings, and WooCommerce API contracts.
-- `apps/web`: Next.js 14 Web Application maintaining 100% feature and visual parity with the mobile app.
+- `apps/web`: Next.js 15 Web Application maintaining 100% feature and visual parity with the mobile app.
 
 ## Feature Inventory
 Every requirement (R1–R6) from `ORIGINAL_REQUEST.md` and the Phase 0 Survey is mapped to a milestone below:

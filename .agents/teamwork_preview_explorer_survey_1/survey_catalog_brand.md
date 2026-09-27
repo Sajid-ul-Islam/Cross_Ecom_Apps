@@ -48,7 +48,7 @@ Fastify Gateway Server (apps/api)
   ├── routes.ts: GET /v1/deen/products?category=...&segment=...&sort=...
   └── routes.ts: GET /v1/deen/category-covers (returns resolved map of category -> WebP cover URL)
         │
-        ├──▶ Next.js 14 Frontend (apps/web)
+        ├──▶ Next.js 15 Frontend (apps/web)
         │     ├── app/shop/page.tsx -> fetches products + category-covers
         │     ├── app/categories/page.tsx -> re-exports app/shop/page.tsx
         │     ├── components/ShopClient.tsx -> interactive filter state, renders flat product grid

@@ -25,6 +25,11 @@
 3. **64 District Selection**:
    - Both Web and Mobile checkout forms must provide the full 64 Bangladesh districts selection mapped to official WooCommerce state codes (`BD-13` Dhaka, `BD-10` Chattogram, etc.).
 
+4. **Checkout Failure Hardening & Two-Phase Idempotency**:
+   - Order creation must never confirm an order or display fake success when the primary gateway or WooCommerce fails.
+   - If an order submission fails, the customer's cart must remain preserved with an actionable error alert. Never silently or automatically re-submit failed orders to an unverified secondary gateway without explicit customer action.
+   - The Fastify order endpoint enforces two-phase idempotency reconciliation: duplicate in-flight submissions attach to the active promise, while finalized keys return the verified recorded order response.
+
 ---
 
 ## 2. Infrastructure, Gateway & High-Traffic Rules (`apps/api`)
@@ -108,4 +113,4 @@
 Before declaring any task complete or merging code into `master`:
 1. `npm run typecheck:all` must report **0 errors** across all 3 workspaces.
 2. `npm test` must pass all automated backend tests.
-3. `npx tsx apps/web/lib/chatbot.test.ts` must pass all 25 chatbot tests.
+3. `npx tsx apps/web/lib/chatbot.test.ts` must pass all 26 chatbot tests.

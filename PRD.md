@@ -2,7 +2,7 @@
 
 **Project Name:** DEEN Commerce — Cross-Platform E-commerce Monorepo  
 **Brand:** DEEN (Bangladesh's Artisanal Raw Selvedge Denim & Contemporary Apparel)  
-**Authoritative Tech Stack:** Next.js 14 App Router (`apps/web`), Expo SDK 57 React Native (`apps/mobile`), Fastify 4.x Gateway (`apps/api`)  
+**Authoritative Tech Stack:** Next.js 15 App Router (`apps/web`), Expo SDK 57 React Native (`apps/mobile`), Fastify 5.x Gateway (`apps/api`)  
 **Backend:** WordPress + WooCommerce REST API v3 (`https://deencommerce.com`)  
 **Status:** Production-Ready  
 
@@ -10,7 +10,7 @@
 
 ## 1. Executive Summary & Product Vision
 
-DEEN Commerce is an omnichannel, high-concurrency retail platform engineered to provide a luxurious, blisteringly fast shopping experience across Bangladesh. The platform unifies a native mobile app (iOS & Android via Expo SDK 57) and an editorial Next.js 14 web storefront with 100% mobile feature parity, connected via a resilient Fastify caching gateway and an upstream WooCommerce cluster.
+DEEN Commerce is an omnichannel, high-concurrency retail platform engineered to provide a luxurious, blisteringly fast shopping experience across Bangladesh. The platform unifies a native mobile app (iOS & Android via Expo SDK 57) and an editorial Next.js 15 web storefront with 100% mobile feature parity, connected via a resilient Fastify caching gateway and an upstream WooCommerce cluster.
 
 ### Core Strategic Goals:
 1. **Frictionless Mobile-First Commerce**: Ultra-fast shopping bag interactions with hybrid stock-aware quick add, 1-click checkout, and full 64 Bangladesh district delivery calculation.

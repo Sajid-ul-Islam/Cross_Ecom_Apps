@@ -6,7 +6,7 @@
 
 ## 1. Overview & Toolchain Specifications
 
-- **Expo SDK**: `~55.0.0` (React Native 0.83+, React 19.2, Expo Router v7)
+- **Expo SDK**: `~57.0.0` (React Native 0.86.3, React 19.2, Expo Router)
 - **Node Environment**: Node 18+ (with `scripts/node18-polyfill.cjs`)
 - **Icons Engine**: Custom in-house SVG stroke icon set (`src/components/Icons.tsx` on `react-native-svg`), eliminating React 19 peer dependency conflicts.
 - **Build Configurations (`eas.json`)**:
@@ -49,11 +49,11 @@ npx eas submit --platform ios --latest
 
 ### A. React 19 Peer Dependency Resolution
 - **Issue**: Standard icon libraries (e.g. `lucide-react-native`) specified `react ^16.5 || ^17 || ^18` peer ranges, failing during EAS `npm install` under React 19.2.
-- **Resolution**: Replaced with an in-house lightweight vector icon library ([Icons.tsx](file:///home/bearded/Documents/GitHub/Cross_Ecom_Apps/apps/mobile/src/components/Icons.tsx)) backed by `react-native-svg`. All 41 application icons are fully typed with identical `<Icon size={24} color="#..." />` APIs and zero third-party peer friction.
+- **Resolution**: Replaced with an in-house lightweight vector icon library (`apps/mobile/src/components/Icons.tsx`) backed by `react-native-svg`. All 41 application icons are fully typed with identical `<Icon size={24} color="#..." />` APIs and zero third-party peer friction.
 
 ### B. Apple Xcode 16 & iOS 18 Compatibility
 - **Issue**: Apple requires Xcode 16 / iOS 18 SDK binaries for all submissions. Older Expo SDKs (e.g. SDK 51) fail on modern EAS builders.
-- **Resolution**: Upgraded mobile workspace to Expo SDK 55 with `ios.image = "latest"`, ensuring full App Store compliance.
+- **Resolution**: Upgraded mobile workspace to Expo SDK 57 with `ios.image = "latest"`, ensuring full App Store compliance.
 
 ### C. Build Quotas & Troubleshooting
 - **Free Tier Quota**: EAS Free plan allows a monthly quota of Android builds. If the monthly limit is reached, EAS returns:

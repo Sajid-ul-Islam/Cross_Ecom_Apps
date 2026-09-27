@@ -4,8 +4,8 @@ Welcome! Thank you for your interest in contributing to the **DEEN Commerce** cr
 
 This monorepo powers the online presence and mobile applications for Bangladesh's premier denim brand:
 - `apps/mobile`: Native iOS & Android application built with **Expo SDK 57 / React Native**.
-- `apps/web`: Full-featured web storefront and mobile-web built with **Next.js 14 App Router**.
-- `apps/api`: High-traffic REST proxy gateway built with **Fastify 4.x** connected to WordPress / WooCommerce.
+- `apps/web`: Full-featured web storefront and mobile-web built with **Next.js 15 App Router**.
+- `apps/api`: High-traffic REST proxy gateway built with **Fastify 5.x** connected to WordPress / WooCommerce.
 
 ---
 

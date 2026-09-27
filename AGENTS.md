@@ -3,7 +3,7 @@
 This codebase contains:
 - `apps/api`: Fastify Gateway Server connected to WooCommerce (`https://deencommerce.com`)
 - `apps/mobile`: Expo / React Native App (Android/iOS)
-- `apps/web`: Next.js 14 App (Full-fledged E-commerce Web Frontend)
+- `apps/web`: Next.js 15 App (Full-fledged E-commerce Web Frontend)
 
 ---
 
@@ -21,6 +21,16 @@ This codebase contains:
 
 3. **64 District Selection**:
    - Both Web and Mobile checkout forms provide full 64 Bangladesh districts dropdown/modal selection with official WooCommerce state codes (`BD-13` Dhaka, `BD-10` Chattogram, etc.).
+
+4. **Checkout Hardening & Two-Phase Idempotency Reconciliation**:
+   - Upstream WooCommerce failures, timeouts, or network disconnects return HTTP 502 with no synthetic confirmation receipt or fake order number.
+   - Failed checkout attempts must NEVER automatically submit to alternate origins or fallback payment gateways.
+   - Before failing or retrying, the client/gateway executes read-only reconciliation (`findWooOrderByKey`) which must strictly match the billing phone number.
+   - On checkout failure, the customer's shopping bag is preserved intact.
+
+5. **Store Admin Privileges & Account Ownership**:
+   - Store Administrator roles require WordPress verification; hardcoded default credentials (`admin`/`admin`) and client-side elevation bypasses are strictly prohibited.
+   - Customer profile updates, password resets, and order history queries require an authenticated session matching the account owner.
 
 ---
 

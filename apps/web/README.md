@@ -1,17 +1,17 @@
 # DEEN Commerce — Web Storefront (`apps/web`)
 
-[![Next.js](https://img.shields.io/badge/Next.js-14.2-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![Next.js](https://img.shields.io/badge/Next.js-15.x-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vercel](https://img.shields.io/badge/Vercel-Deployed-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://vercel.com/)
 
-**Full-fledged Next.js 14 E-commerce Web Storefront** for DEEN Commerce — Bangladesh's premier denim and dobby panjabi brand.
+**Full-fledged Next.js 15 E-commerce Web Storefront** for DEEN Commerce — Bangladesh's premier denim and dobby panjabi brand.
 
 ---
 
 ## 🌟 Key Features
 
-- **SSR & Fast Edge Rendering**: Powered by Next.js 14 App Router for rapid page loads and high SEO rankings.
+- **SSR & Fast Edge Rendering**: Powered by Next.js 15 App Router for rapid page loads and high SEO rankings.
 - **Full 64 Bangladesh Districts Checkout**: Integrated dropdown & modal selection supporting official WooCommerce BD state codes (`BD-13` Dhaka, `BD-10` Chattogram, etc.).
 - **Dynamic Delivery Charge Engine**:
   - Inside Dhaka: **৳50**

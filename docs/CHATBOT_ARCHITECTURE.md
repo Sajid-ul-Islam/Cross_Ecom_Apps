@@ -1,7 +1,7 @@
 # Multilingual Rule-Based E-Commerce Chatbot Architecture
 
 > **Document Status:** Authoritative Architectural Guide  
-> **Workspace:** `apps/web` (Next.js 14 App Router)  
+> **Workspace:** `apps/web` (Next.js 15 App Router)  
 > **Constraint:** Strictly Zero LLM / Zero External AI / 100% Deterministic Rule-Based Engine  
 > **Target Upstream:** WordPress + WooCommerce REST API v3 (`https://deencommerce.com`)
 
@@ -24,7 +24,7 @@ The DEEN E-Commerce Chatbot is a production-ready, ultra-fast conversational age
 
 ```
 +-----------------------------------------------------------------------------------------+
-|                                 Next.js 14 Web Frontend                                 |
+|                                 Next.js 15 Web Frontend                                 |
 |                                                                                         |
 |  [ ChatWidget.tsx ] <──> [ ChatMessage.tsx ] + [ QuickReplies.tsx ]                     |
 |  • Floating circular bubble (bottom: 24px desktop / bottom: 76px mobile above nav)      |

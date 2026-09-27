@@ -1,7 +1,7 @@
 # Next.js + WordPress REST API — Comprehensive Engineering Audit Report
 
 > **Auditor:** Senior Next.js Architect & Principal Security Engineer  
-> **Target Codebase:** `apps/web` (Next.js 14), `apps/api` (Fastify Gateway), `apps/mobile` (Expo React Native)  
+> **Target Codebase:** `apps/web` (Next.js 15), `apps/api` (Fastify Gateway), `apps/mobile` (Expo React Native)  
 > **Backend System:** WordPress 6.x + WooCommerce REST API (`https://deencommerce.com`)  
 > **Date:** September 2, 2026  
 > **Status:** Completed Engineering Audit (Phase 1)
@@ -27,7 +27,7 @@
 Browser / Mobile Clients (Web Viewports & Expo Native)
        │
        ▼
-Next.js 14 App Router (`apps/web`)
+Next.js 15 App Router (`apps/web`)
   ├── Server Components: Root Layout (`app/layout.tsx`), Homepage (`app/page.tsx`)
   ├── Client Components (SPA Mode): PDP (`product/[id]`), Shop (`shop/`), Checkout (`checkout/`)
   ├── Auth & Session: `localStorage` (`deen_web_user_profile`, `deen_web_guest_token`)

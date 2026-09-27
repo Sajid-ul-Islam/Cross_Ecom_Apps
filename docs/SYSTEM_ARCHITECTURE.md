@@ -15,7 +15,7 @@ DEEN Commerce is structured into three distinct layers:
 │                          CLIENT APPLICATIONS                           │
 │                                                                        │
 │   ┌──────────────────────────────┐    ┌────────────────────────────┐   │
-│   │    Expo Mobile App (APK)     │    │    Next.js 14 Web App      │   │
+│   │    Expo Mobile App (APK)     │    │    Next.js 15 Web App      │   │
 │   │         apps/mobile          │    │          apps/web          │   │
 │   │ - Offline-first catalog      │    │ - Full SSR/CSR Storefront  │   │
 │   │ - Multi-gateway failover     │    │ - Responsive Desktop/Mobile│   │
@@ -54,7 +54,7 @@ The client applications are **thin clients**. They never invent products, prices
 
 ## 2. Request Lifecycle & Gateway Communication
 
-Every network call in the mobile app travels through a centralized function: `request<T>()` in [gateway.ts](file:///home/bearded/Documents/GitHub/Cross_Ecom_Apps/apps/mobile/src/services/gateway.ts).
+Every network call in the mobile app travels through a centralized function: `request<T>()` in `apps/mobile/src/services/gateway.ts`.
 
 ### Client Request Pipeline
 1. **Multi-Origin Failover (`GATEWAY_URLS`)**: The client reads gateway URLs from `app.json` (`extra.gatewayUrl` + `extra.gatewayUrls`). If the active origin returns an HTTP 5xx error (e.g., suspended Render instance) or experiences a network timeout, `request()` automatically fails over to the backup origin.
@@ -118,17 +118,15 @@ Customer Taps "Place Order"
 Clean Payload (Strip promo tags, normalize BD-XX state & phone)
          │
          ▼
-POST /v1/deen/orders (10s timeout)
+POST /v1/deen/orders (10s timeout, Idempotency-Key)
          │
          ├─────────────────────────────────┐
-         ▼ (Success)                       ▼ (Network / Gateway Error)
-Push to WooCommerce Real Order     Create Local Offline Order
-Receive Woo #204xxx               Save to deen_gateway_orders_v1
-Display Order Success             Display Confirmation & Queue
-Cache in Local Storage                     │
-                                           ▼ (Connection Back Online)
-                                   OrderContext Auto-Reconciliation
-                                   Re-submits Order to WooCommerce
+         ▼ (Success: 200/201)             ▼ (Failure: 502/Network Error)
+Push to WooCommerce Real Order     Bag Preserved, No Fake Confirmation
+Receive Woo #204xxx               Actionable Error Alert Rendered
+Display Order Success Page         No Auto-Submission to Secondary Origin
+Clear Shopping Bag                 Client Can Safely Retry (Idempotent)
+Cache in Local Order History
 ```
 
 1. **Payload Normalization**: Phone number sanitized, district mapped to official WooCommerce state code (`BD-13` Dhaka, `BD-10` Chattogram, etc.), and delivery charge applied (৳50 Dhaka, ৳90 Outside, ৳0 Pickup).
@@ -136,7 +134,8 @@ Cache in Local Storage                     │
 3. **Dual Order Representation**:
    - Primary: WooCommerce Order Number (`#204639`) shown to customer.
    - Secondary: Gateway Reference (`DC-123`) for debugging trace.
-4. **Offline Order Queueing**: If connection drops during checkout, the app creates a localized offline order record (`offline-<timestamp>`). When connection is restored, `OrderContext` automatically reconciles and submits the queued order to WooCommerce.
+4. **Checkout Failure Hardening & Cart Preservation**: If an upstream call fails or network drops, the application never fakes order confirmation. The customer's cart remains intact, and an actionable error alert is presented.
+5. **Two-Phase Idempotency Reconciliation**: The gateway tracks in-flight and completed requests by `Idempotency-Key` and payload hash, preventing duplicate orders during network blips or repeated user taps.
 
 ---
 

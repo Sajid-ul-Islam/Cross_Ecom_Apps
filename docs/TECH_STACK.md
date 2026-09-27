@@ -8,10 +8,10 @@
 
 | Workspace | Domain / Purpose | Framework / Runtime | Version | Language / Tooling |
 | :--- | :--- | :--- | :--- | :--- |
-| **`apps/mobile`** | iOS & Android Native Retail App | **Expo SDK**<br>**React Native**<br>**React** | **`~57.0.17` (SDK 57)**<br>**`0.86.3`**<br>**`19.2.3`** | TypeScript `~6.0`<br>Expo Router `~57.0`<br>EAS Build (Android SDK 36) |
-| **`apps/api`** | Fastify REST Middle Gateway | **Fastify**<br>**Node.js Runtime** | **`^4.28.1` (Fastify 4.x)**<br>**`>= 20.x` (LTS)** | TypeScript `^5.5`<br>`tsx` `^4.19` (ESM native) |
-| **`apps/web`** | Next.js Storefront & Mobile Web | **Next.js (App Router)**<br>**React** | **`14.2.35` (Next 14)**<br>**`^18.3.1`** | TypeScript `^5.5`<br>Tailwind / CSS Variables |
-| **Root Tooling** | Monorepo Orchestration & CI | **Node.js / npm** | **Node `>= 20.x` / npm `>= 10`** | GitHub Actions CI<br>`tsx --test` Test Runner |
+| **`apps/mobile`** | iOS & Android Native Retail App | **Expo SDK**<br>**React Native**<br>**React** | **`~57.0.17` (SDK 57)**<br>**`0.86.3`**<br>**`19.2.3`** | TypeScript `~6.0`<br>Expo Router `~57.0`<br>EAS Build (Android SDK 36)<br>`uuid@^11.1.1` override |
+| **`apps/api`** | Fastify REST Middle Gateway | **Fastify**<br>**Node.js Runtime** | **`^5.12.5` (Fastify 5.x)**<br>**`>= 20.x` (LTS)** | TypeScript `^5.5`<br>`@fastify/cors@^11.3.0`<br>`tsx` `^4.19` (ESM native) |
+| **`apps/web`** | Next.js Storefront & Mobile Web | **Next.js (App Router)**<br>**React** | **`^15.5.26` (Next 15)**<br>**`^18.3.1`** | TypeScript `^5.5`<br>Async Route Params (`Promise`)<br>`postcss@^8.5.28` override |
+| **Root Tooling** | Monorepo Orchestration & CI | **Node.js / npm** | **Node `>= 20.x` / npm `>= 10`** | GitHub Actions CI<br>`tsx --test` Test Runner<br>`uuid@^11.1.1` |
 
 ---
 
@@ -24,14 +24,18 @@
 * **Graphics & Icons:** `react-native-svg@15.15.4`, `lottie-react-native@~7.3.4`
 * **Android Target:** Compile SDK `36`, Target SDK `36`, Min SDK `24`
 * **iOS Target:** iOS Deployment Target `16.4`
+* **Security & Overrides:** `uuid@^11.1.1` override (GHSA-w5hq-g745-h8pq clean)
 
 ### B. Gateway API (`apps/api`)
-* **HTTP Framework:** Fastify `^4.28.1` (`@fastify/cors@^9.0.1`)
+* **HTTP Framework:** Fastify `^5.12.5` (`@fastify/cors@^11.3.0`)
 * **Execution:** Native TypeScript execution via `tsx` (zero compile step required in dev/prod)
-* **Architecture:** In-memory high-throughput reverse gateway connected to WooCommerce (`https://deencommerce.com`) with rate limiting, response caching, exponential backoff, and Pathao logistics tracking.
+* **Architecture:** In-memory high-throughput reverse gateway connected to WooCommerce (`https://deencommerce.com`) with rate limiting, response caching, exponential backoff, atomic single-flight order deduplication, two-phase idempotency reconciliation, and Pathao logistics tracking.
 
 ### C. Web Storefront (`apps/web`)
-* **Framework:** Next.js `14.2.35` (App Router) + React `18.3.1`
+* **Framework:** Next.js `^15.5.26` (Next 15 App Router) + React `18.3.1`
+* **Server Components:** Async route `params` and `searchParams` (`Promise`)
+* **Build Configuration:** `outputFileTracingRoot` anchored to monorepo root
+* **Security & Overrides:** `postcss@^8.5.28` override (0 vulnerabilities)
 * **Deployment Target:** Vercel Edge / Node.js Runtime (Zero-config live gateway failover)
 * **Parity Standard:** 100% feature and visual parity with the mobile app on mobile viewports (`< 768px`).
 

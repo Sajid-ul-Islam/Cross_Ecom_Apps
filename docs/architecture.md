@@ -6,7 +6,7 @@
 graph TD
     subgraph Clients["Customer Frontends"]
         Mobile["📱 React Native / Expo App<br/>(Android & iOS)"]
-        Web["💻 Next.js 14 App<br/>(SSR, RSC & Mobile View)"]
+        Web["💻 Next.js 15 App<br/>(SSR, RSC & Mobile View)"]
     end
 
     subgraph Edge["Edge Infrastructure & Ingress"]
