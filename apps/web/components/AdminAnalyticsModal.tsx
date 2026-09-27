@@ -705,7 +705,7 @@ export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose 
                           </p>
                         </div>
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                          <span style={{ fontSize: 10, fontWeight: 900, padding: "4px 10px", borderRadius: 6, background: "rgba(99, 102, 241, 0.15)", color: "var(--indigo)" }}>
+                          <span style={{ fontSize: 10, fontWeight: 900, padding: "4px 10px", borderRadius: 6, background: "rgba(224, 83, 5, 0.15)", color: "var(--indigo)" }}>
                             UPT: {marketBasket?.upt ?? 1.84}
                           </span>
                           <span style={{ fontSize: 10, fontWeight: 900, padding: "4px 10px", borderRadius: 6, background: "rgba(16, 185, 129, 0.15)", color: "var(--emerald)" }}>
@@ -747,7 +747,7 @@ export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose 
                                   fontWeight: 900,
                                   padding: "2px 8px",
                                   borderRadius: 4,
-                                  background: rule.lift >= 2.0 ? "rgba(16, 185, 129, 0.2)" : "rgba(99, 102, 241, 0.2)",
+                                  background: rule.lift >= 2.0 ? "rgba(16, 185, 129, 0.2)" : "rgba(224, 83, 5, 0.2)",
                                   color: rule.lift >= 2.0 ? "var(--emerald)" : "var(--indigo)",
                                 }}>
                                   {rule.lift}x LIFT
@@ -784,7 +784,7 @@ export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose 
                                   <span style={{ fontSize: 10, fontWeight: 900, color: "var(--indigo)" }}>PAIR #{idx + 1}</span>
                                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                                     {pair.lift && (
-                                      <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 6px", borderRadius: 4, background: "rgba(99, 102, 241, 0.15)", color: "var(--indigo)" }}>
+                                      <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 6px", borderRadius: 4, background: "rgba(224, 83, 5, 0.15)", color: "var(--indigo)" }}>
                                         {pair.lift}x
                                       </span>
                                     )}
@@ -812,7 +812,7 @@ export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose 
                     <div
                       style={{
                         background: "linear-gradient(135deg, rgba(24, 30, 48, 0.95), rgba(16, 21, 36, 0.95))",
-                        border: "1px solid rgba(99, 102, 241, 0.3)",
+                        border: "1px solid rgba(224, 83, 5, 0.3)",
                         padding: "16px 20px",
                         borderRadius: "var(--radius)",
                         display: "flex",
@@ -871,7 +871,7 @@ export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose 
                           <span style={{ fontSize: 10, color: "var(--sub)", display: "block", textTransform: "uppercase", fontWeight: 800 }}>
                             Measurement ID
                           </span>
-                          <span style={{ fontSize: 13, fontWeight: 900, color: "#6366f1", letterSpacing: 0.5 }}>
+                          <span style={{ fontSize: 13, fontWeight: 900, color: "var(--indigo)", letterSpacing: 0.5 }}>
                             {ga4Data?.config?.measurementId || "G-DEEN2026BD"}
                           </span>
                         </div>
@@ -882,9 +882,9 @@ export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose 
                           style={{
                             padding: "8px 14px",
                             borderRadius: 6,
-                            background: "rgba(99, 102, 241, 0.15)",
-                            border: "1px solid rgba(99, 102, 241, 0.4)",
-                            color: "#818cf8",
+                            background: "rgba(224, 83, 5, 0.15)",
+                            border: "1px solid rgba(224, 83, 5, 0.4)",
+                            color: "var(--indigo)",
                             fontSize: 12,
                             fontWeight: 800,
                             textDecoration: "none",
@@ -956,7 +956,7 @@ export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose 
 
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 }}>
                         {[
-                          { step: "1. Catalog Views", event: "view_item_list", count: 14200, pct: "100%", color: "#6366f1" },
+                          { step: "1. Catalog Views", event: "view_item_list", count: 14200, pct: "100%", color: "#E05305" },
                           { step: "2. PDP Product Views", event: "view_item", count: 8650, pct: "60.9%", color: "#3b82f6" },
                           { step: "3. Added to Bag", event: "add_to_cart", count: 2340, pct: "27.1%", color: "#06b6d4" },
                           { step: "4. Checkout Started", event: "begin_checkout", count: 1120, pct: "47.9%", color: "#f59e0b" },
@@ -1008,7 +1008,7 @@ export function AdminAnalyticsView({ isEmbedded = false, isOpen = true, onClose 
                         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                           {[
                             { name: "Google Organic Search", share: 38, sessions: 4820, color: "#4285F4" },
-                            { name: "Direct / App Launch", share: 29, sessions: 3680, color: "#6366f1" },
+                            { name: "Direct / App Launch", share: 29, sessions: 3680, color: "#E05305" },
                             { name: "Meta (Facebook & Instagram Ads)", share: 18, sessions: 2280, color: "#0666EB" },
                             { name: "WhatsApp Concierge (wa.me)", share: 11, sessions: 1390, color: "#25D366" },
                             { name: "Email & Referrals", share: 4, sessions: 510, color: "#f59e0b" },

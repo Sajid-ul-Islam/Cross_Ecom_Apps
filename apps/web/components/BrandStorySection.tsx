@@ -17,7 +17,7 @@ export default function BrandStorySection() {
       >
         <div className="container">
           <div style={{ maxWidth: 840, margin: "0 auto", textAlign: "center", marginBottom: 32 }}>
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(99, 102, 241, 0.12)", color: "var(--indigo)", padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", marginBottom: 12 }}>
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "var(--indigo-light)", color: "var(--indigo)", padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", marginBottom: 12 }}>
               <span>🧵</span> EST. DHAKA 2020 · HERITAGE &amp; CRAFT
             </div>
             <h2 style={{ fontSize: "clamp(22px, 3.5vw, 32px)", fontWeight: 900, color: "var(--ink)", letterSpacing: "-0.02em", marginBottom: 12 }}>
@@ -86,7 +86,7 @@ export default function BrandStorySection() {
                 borderRadius: 10,
                 textDecoration: "none",
                 letterSpacing: "0.04em",
-                boxShadow: "0 4px 14px rgba(99, 102, 241, 0.28)",
+                boxShadow: "0 4px 14px rgba(224, 83, 5, 0.28)",
               }}
             >
               DISCOVER OUR COLLECTIONS →
@@ -101,7 +101,7 @@ export default function BrandStorySection() {
           {/* Heritage & Craft narrative card */}
           <article className="story-card">
             <div className="story-card__header">
-              <span className="story-card__badge" style={{ color: "var(--indigo)", background: "rgba(99, 102, 241, 0.12)" }}>
+              <span className="story-card__badge" style={{ color: "var(--indigo)", background: "var(--indigo-light)" }}>
                 <AwardIcon size={13} /> HERITAGE &amp; CRAFT
               </span>
               <span className="story-card__right-tag">EST. DHAKA 2020</span>

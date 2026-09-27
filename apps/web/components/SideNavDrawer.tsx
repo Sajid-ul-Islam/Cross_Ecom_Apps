@@ -328,8 +328,8 @@ export default function SideNavDrawer({ isOpen, onClose, onOpenStories }: SideNa
                 gap: 4,
                 padding: "10px 12px",
                 borderRadius: 8,
-                background: "rgba(99, 102, 241, 0.08)",
-                border: "1px solid rgba(99, 102, 241, 0.25)",
+                background: "rgba(224, 83, 5, 0.08)",
+                border: "1px solid rgba(224, 83, 5, 0.25)",
                 textDecoration: "none",
               }}
             >
@@ -498,7 +498,7 @@ export default function SideNavDrawer({ isOpen, onClose, onOpenStories }: SideNa
                     fontSize: 10,
                     fontWeight: 700,
                     color: "var(--indigo)",
-                    background: "rgba(99, 102, 241, 0.1)",
+                    background: "rgba(224, 83, 5, 0.1)",
                     padding: "2px 6px",
                     borderRadius: 4,
                   }}

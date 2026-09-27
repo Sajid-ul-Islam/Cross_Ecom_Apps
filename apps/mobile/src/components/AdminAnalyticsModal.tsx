@@ -183,7 +183,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onClose,
                       borderRadius: 14,
                       borderWidth: 1,
                       borderColor: selectedCategory === cat.id ? colors.indigo : colors.border,
-                      backgroundColor: selectedCategory === cat.id ? "rgba(99, 102, 241, 0.15)" : colors.card,
+                      backgroundColor: selectedCategory === cat.id ? colors.indigoLight : colors.card,
                     }}
                     onPress={() => setSelectedCategory(cat.id)}
                   >
@@ -209,7 +209,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onClose,
                 {activeTab === "sales" && (
                   <>
                     {/* Today's Sales Card */}
-                    <View style={[styles.metricCard, { backgroundColor: colors.card, borderColor: "rgba(99, 102, 241, 0.35)", borderWidth: 1.5 }]}>
+                    <View style={[styles.metricCard, { backgroundColor: colors.card, borderColor: "rgba(224, 83, 5, 0.35)", borderWidth: 1.5 }]}>
                       <View style={styles.cardTop}>
                         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                           <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: "#10B981" }} />
@@ -264,7 +264,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onClose,
                             ✅ {lastDay?.deliveredCount ?? 4} Delivered ({bdt(lastDay?.deliveredValue ?? 9950)})
                           </Text>
                         </View>
-                        <View style={{ backgroundColor: "rgba(99, 102, 241, 0.12)", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: "rgba(99, 102, 241, 0.25)" }}>
+                        <View style={{ backgroundColor: colors.indigoLight, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: "rgba(224, 83, 5, 0.25)" }}>
                           <Text style={{ fontSize: 10, fontWeight: "800", color: colors.indigo }}>
                             🚚 {lastDay?.inTransitCount ?? 1} In Transit ({bdt(lastDay?.inTransitValue ?? 2450)})
                           </Text>
@@ -351,7 +351,7 @@ export const AdminAnalyticsView: React.FC<AdminAnalyticsViewProps> = ({ onClose,
                     <View
                       style={{
                         backgroundColor: colors.card,
-                        borderColor: "rgba(99, 102, 241, 0.35)",
+                        borderColor: "rgba(224, 83, 5, 0.35)",
                         borderWidth: 1.5,
                         borderRadius: 12,
                         padding: 14,

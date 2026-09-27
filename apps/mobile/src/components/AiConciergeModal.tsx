@@ -653,9 +653,9 @@ function createStyles(colors: ThemeColors) {
       marginTop: 2,
     },
     headerIconCircle: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: "rgba(37, 211, 102, 0.12)",
@@ -663,7 +663,14 @@ function createStyles(colors: ThemeColors) {
       borderColor: "rgba(37, 211, 102, 0.35)",
     },
     closeBtn: {
-      padding: 6,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.cardSecondary,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
     },
     messagesContainer: {
       flex: 1,

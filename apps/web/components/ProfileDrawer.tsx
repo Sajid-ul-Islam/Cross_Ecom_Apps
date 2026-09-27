@@ -116,7 +116,7 @@ export default function ProfileDrawer({
                   width: 38,
                   height: 38,
                   borderRadius: 10,
-                  backgroundColor: "rgba(99, 102, 241, 0.12)",
+                  backgroundColor: "var(--indigo-light)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",

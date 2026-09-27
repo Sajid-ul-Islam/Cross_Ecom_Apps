@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
     height: 36,
     borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: "#6366f1",
+    borderColor: "#E05305",
   },
   authorRow: {
     flexDirection: "row",
@@ -535,7 +535,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
-    backgroundColor: "#6366f1",
+    backgroundColor: "#E05305",
   },
   addBtnText: {
     color: "#FFFFFF",

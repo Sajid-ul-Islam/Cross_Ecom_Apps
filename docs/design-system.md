@@ -16,8 +16,9 @@ The design system enforces dynamic semantic color tokens. Per workspace rules, s
 
 | Token Name | Light Mode | Dark Mode | Semantic Purpose |
 | :--- | :--- | :--- | :--- |
-| `primary` / `indigo` | `#4F46E5` | `#6366F1` | Primary brand accent, CTAs, highlight badges |
-| `primaryDark` | `#3730A3` | `#4338CA` | Hover and active pressed states |
+| `primary` / `indigo` | `#E05305` | `#FB923C` | Primary brand accent (Artisanal Orange / Copper Rivets), CTAs, highlight badges |
+| `primaryDark` | `#7C2D12` | `#EA580C` | Hover and active pressed states |
+| `denimStitch` | `#C27803` | `#FDBA74` | Vintage shuttle-loom gold topstitching accent |
 | `emerald` / `accent` | `#059669` | `#10B981` | Success states, WhatsApp concierge, confirmed status |
 | `amber` / `gold` | `#D97706` | `#F59E0B` | Ratings, promo stars, cashback badges, alerts |
 | `coral` / `danger` | `#DC2626` | `#EF4444` | High demand, stock low warnings, errors, cancellation |

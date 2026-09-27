@@ -86,7 +86,7 @@ export const OrderStatusStepper: React.FC<OrderStatusStepperProps> = ({ order, o
                   ? "rgba(245, 158, 11, 0.12)"
                   : currentStep === 4
                   ? "rgba(16, 185, 129, 0.12)"
-                  : "rgba(99, 102, 241, 0.12)",
+                  : colors.indigoLight,
               },
             ]}
           >

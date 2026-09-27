@@ -1918,7 +1918,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       validTill: "31 Dec 2026",
       description: "Enjoy up to 12 months 0% EMI on City Bank, BRAC, EBL, SCB, DBBL cards on cart value ৳5,000+.",
       logoText: "0% EMI",
-      color: "#4F46E5",
+      color: "#E05305",
     },
   ];
 

@@ -130,7 +130,7 @@ export const CashbackBanner: React.FC = () => {
           >
             <View style={{
               width: 34, height: 34, borderRadius: 17,
-              backgroundColor: "rgba(99, 102, 241, 0.12)",
+              backgroundColor: colors.indigoLight,
               alignItems: "center", justifyContent: "center",
             }}>
               <CreditCard size={16} color={colors.indigo} />
@@ -149,7 +149,7 @@ export const CashbackBanner: React.FC = () => {
             <View style={{
               flexDirection: "row",
               alignItems: "center",
-              backgroundColor: "rgba(99, 102, 241, 0.1)",
+              backgroundColor: colors.indigoLight,
               paddingHorizontal: 8,
               paddingVertical: 4,
               borderRadius: 999,
@@ -247,7 +247,7 @@ export const DeliveryNoticeBanner: React.FC = () => {
           width: 22,
           height: 22,
           borderRadius: 11,
-          backgroundColor: isDark ? "rgba(99, 102, 241, 0.25)" : "rgba(99, 102, 241, 0.14)",
+          backgroundColor: isDark ? "rgba(224, 83, 5, 0.25)" : "rgba(224, 83, 5, 0.14)",
           alignItems: "center",
           justifyContent: "center",
         }}

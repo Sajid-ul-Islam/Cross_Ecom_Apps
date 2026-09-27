@@ -241,7 +241,7 @@ export default function StoriesFeedModal({
             <img
               src={currentReel.poster || "https://deencommerce.com/wp-content/uploads/2026/05/DEEN-90s-Blue-Jeans-Slim-Fit-101-0100-138-front.webp"}
               alt="DEEN Logo"
-              style={{ width: 34, height: 34, borderRadius: "50%", border: "2px solid #6366f1", objectFit: "cover" }}
+              style={{ width: 34, height: 34, borderRadius: "50%", border: "2px solid var(--indigo)", objectFit: "cover" }}
             />
             <div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

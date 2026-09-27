@@ -187,10 +187,10 @@ export default function Header() {
                     style={{
                       color: "var(--indigo)",
                       fontWeight: 900,
-                      background: "rgba(99, 102, 241, 0.12)",
+                      background: "var(--indigo-light)",
                       padding: "4px 10px",
                       borderRadius: 6,
-                      border: "1px solid rgba(99, 102, 241, 0.3)",
+                      border: "1px solid rgba(224, 83, 5, 0.3)",
                       display: "inline-flex",
                       alignItems: "center",
                       gap: 4,
@@ -323,7 +323,7 @@ export default function Header() {
             {/* Dedicated Cart Action (Desktop Only - Mobile uses bottom nav) */}
             <Link
               href="/cart"
-              className={`nav__icon-btn nav__cart-desktop-only ${totalItems > 0 ? "nav__cart-desktop-only--has-items" : ""} ${pathname === "/cart" ? "nav__icon-btn--active" : ""}`}
+              className={`nav__icon-btn nav__cart-desktop-only ${pathname === "/cart" ? "nav__icon-btn--active" : ""}`}
               aria-label={`Shopping bag, ${totalItems} items`}
               title="Shopping Bag & Cart"
             >
@@ -333,7 +333,7 @@ export default function Header() {
                 <path d="M16 10a4 4 0 0 1-8 0" />
               </svg>
               {totalItems > 0 && (
-                <span className="nav__badge nav__badge--indigo">
+                <span className="nav__badge nav__badge--cart">
                   {totalItems > 99 ? "99+" : totalItems}
                 </span>
               )}

@@ -100,14 +100,14 @@ export default function DynamicCampaignBanner() {
         };
       case "camp_cards":
         return {
-          bg: "linear-gradient(90deg, #0a0c16 0%, #121528 50%, #0a0c16 100%)",
-          border: "rgba(99, 102, 241, 0.4)",
-          shadow: "0 2px 14px rgba(99, 102, 241, 0.2)",
-          badgeBg: "linear-gradient(135deg, #4f46e5, #4338ca)",
-          ctaBg: "rgba(99, 102, 241, 0.2)",
-          ctaBorder: "rgba(99, 102, 241, 0.5)",
-          ctaColor: "#c7d2fe",
-          dotColor: "#818cf8",
+          bg: "linear-gradient(90deg, #130a04 0%, #201108 50%, #130a04 100%)",
+          border: "rgba(224, 83, 5, 0.4)",
+          shadow: "0 2px 14px rgba(224, 83, 5, 0.2)",
+          badgeBg: "linear-gradient(135deg, #e05305, #c2410c)",
+          ctaBg: "rgba(224, 83, 5, 0.2)",
+          ctaBorder: "rgba(224, 83, 5, 0.5)",
+          ctaColor: "#fed7aa",
+          dotColor: "#fb923c",
         };
       case "camp_delivery":
         return {
@@ -123,13 +123,13 @@ export default function DynamicCampaignBanner() {
       default:
         return {
           bg: "linear-gradient(90deg, #0a0a0a 0%, #161616 50%, #0a0a0a 100%)",
-          border: "rgba(99, 102, 241, 0.4)",
+          border: "rgba(224, 83, 5, 0.4)",
           shadow: "0 2px 14px rgba(0, 0, 0, 0.3)",
-          badgeBg: "linear-gradient(135deg, #4f46e5, #4338ca)",
+          badgeBg: "linear-gradient(135deg, #e05305, #c2410c)",
           ctaBg: "rgba(255, 255, 255, 0.15)",
           ctaBorder: "rgba(255, 255, 255, 0.35)",
           ctaColor: "#ffffff",
-          dotColor: "#6366f1",
+          dotColor: "#fb923c",
         };
     }
   };

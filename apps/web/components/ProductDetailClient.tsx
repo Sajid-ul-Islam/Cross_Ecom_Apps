@@ -198,9 +198,9 @@ export default function ProductDetailClient({
             ) : (
               <span
                 style={{
-                  background: "rgba(99, 102, 241, 0.1)",
+                  background: "rgba(224, 83, 5, 0.1)",
                   color: "var(--indigo)",
-                  border: "1px solid rgba(99, 102, 241, 0.3)",
+                  border: "1px solid rgba(224, 83, 5, 0.3)",
                   padding: "3px 8px",
                   borderRadius: 4,
                   fontSize: 11,

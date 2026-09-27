@@ -73,7 +73,7 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => voi
         An unexpected error occurred while rendering the profile. Tap reload to restore normal operation.
       </Text>
       <TouchableOpacity
-        style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#6366F1", paddingVertical: 12, paddingHorizontal: 24, borderRadius: 10 }}
+        style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#E05305", paddingVertical: 12, paddingHorizontal: 24, borderRadius: 10 }}
         onPress={retry}
       >
         <RotateCcw size={16} color="#FFFFFF" />
@@ -365,7 +365,7 @@ export default function ProfileScreen() {
               activeOpacity={0.75}
               onPress={() => setOrdersModalVisible(true)}
             >
-              <View style={[styles.menuItemIcon, { backgroundColor: "rgba(99, 102, 241, 0.12)" }]}>
+              <View style={[styles.menuItemIcon, { backgroundColor: colors.indigoLight }]}>
                 <Package size={20} color={colors.indigo} />
               </View>
               <View style={styles.menuItemContent}>
@@ -450,7 +450,7 @@ export default function ProfileScreen() {
               activeOpacity={0.75}
               onPress={() => setPreferencesModalVisible(true)}
             >
-              <View style={[styles.menuItemIcon, { backgroundColor: "rgba(99, 102, 241, 0.12)" }]}>
+              <View style={[styles.menuItemIcon, { backgroundColor: colors.indigoLight }]}>
                 <SlidersHorizontal size={20} color={colors.indigo} />
               </View>
               <View style={styles.menuItemContent}>
