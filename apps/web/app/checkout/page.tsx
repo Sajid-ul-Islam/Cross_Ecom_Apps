@@ -10,6 +10,8 @@ import {
   bdt,
   API_URL,
   fetchCampaigns,
+  fetchPaymentMethods,
+  type DeenPaymentMethod,
   fetchDeliveryFees,
   fetchDistricts,
   fetchProduct,
@@ -74,29 +76,6 @@ const DELIVERY_SLOTS = [
   { key: "evening", label: "Evening", time: "6:00 PM – 9:00 PM" },
 ];
 
-const PAYMENT_METHODS = [
-  {
-    id: "cod",
-    title: "Cash on Delivery (COD)",
-    description: "Pay cash upon receiving and inspecting your parcel at your doorstep.",
-    tag: "MOST POPULAR",
-    icon: "💵",
-  },
-  {
-    id: "bkash-for-woocommerce",
-    title: "bKash Online Payment",
-    description: "Instant, seamless payment via official bKash merchant gateway.",
-    tag: "INSTANT",
-    icon: "📱",
-  },
-  {
-    id: "sslcommerz",
-    title: "Debit / Credit Card (SSLCommerz)",
-    description: "256-bit encrypted Visa, Mastercard, UnionPay, Amex & internet banking.",
-    icon: "💳",
-  },
-];
-
 const PROFILE_STORAGE_KEY = "deen_web_user_profile";
 
 function CheckoutContent() {
@@ -113,7 +92,7 @@ function CheckoutContent() {
   useEffect(() => {
     const paramPid = searchParams.get("productId");
     const paramSize = searchParams.get("size");
-    const paramQty = Number(searchParams.get("qty") || "1");
+    const paramQty = Math.max(1, Math.min(50, Math.floor(Number(searchParams.get("qty") || "1")) || 1));
     if (paramPid && items.length === 0) {
       fetchProduct(paramPid).then((p) => {
         if (p) {
@@ -151,7 +130,14 @@ function CheckoutContent() {
   }, []);
   const [deliverySlot, setDeliverySlot] = useState<string>("any");
   const [deliveryNotes, setDeliveryNotes] = useState("");
-  const [payment, setPayment] = useState<string>("cod");
+  const [payment, setPayment] = useState<string>("");
+  const [paymentMethods, setPaymentMethods] = useState<DeenPaymentMethod[]>([]);
+  useEffect(() => {
+    fetchPaymentMethods().then((methods) => {
+      setPaymentMethods(methods);
+      setPayment(methods.find((method) => method.id === "cod")?.id || methods[0]?.id || "");
+    }).catch(() => {});
+  }, []);
   const [bkashNumber, setBkashNumber] = useState("");
   const [trxId, setTrxId] = useState("");
 
@@ -165,6 +151,11 @@ function CheckoutContent() {
     BD_DISTRICTS.find((d) => d.code === "BD-13") || BD_DISTRICTS[0]
   );
 
+  useEffect(() => {
+    const destination = isGift ? giftDistrict : district;
+    setSelectedArea((current) => current === "store_pickup" ? current : destination.code === "BD-13" ? (current === "dhaka_express" ? current : "dhaka_standard") : "outside");
+  }, [isGift, giftDistrict, district]);
+
   // Modals & UI States
   const [districtModalOpen, setDistrictModalOpen] = useState(false);
   const [districtSearch, setDistrictSearch] = useState("");
@@ -172,9 +163,7 @@ function CheckoutContent() {
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
 
-  // VIP Coins & Loyalty
-  const [coins] = useState<number>(450);
-  const [redeemPoints, setRedeemPoints] = useState<boolean>(false);
+
 
   // Campaign state from REST API
   const [campaign, setCampaign] = useState<ActiveCampaignState | null>(null);
@@ -320,9 +309,7 @@ function CheckoutContent() {
       : 0
     : 0;
 
-  // Coins Discount (up to 20% of subtotal or half of coin balance)
-  const maxCoinDiscount = Math.min(Math.floor(coins / 2), Math.floor(subtotal * 0.2));
-  const coinDiscountBDT = redeemPoints ? maxCoinDiscount : 0;
+
 
   // Coupon Discount
   const couponDiscountBDT = couponInfo
@@ -334,7 +321,7 @@ function CheckoutContent() {
   // Total Calculation
   const total = Math.max(
     0,
-    subtotal + deliveryFee - cashbackBDT - bogoDiscount - coinDiscountBDT - couponDiscountBDT
+    subtotal + deliveryFee - cashbackBDT - bogoDiscount - couponDiscountBDT
   );
 
   // Validate Bangladeshi phone number inline
@@ -418,6 +405,7 @@ function CheckoutContent() {
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading || !paymentMethods.some((method) => method.id === payment)) return;
     if (!handleValidateForm()) return;
     if (items.length === 0) {
       router.push("/shop");
@@ -1007,12 +995,17 @@ function CheckoutContent() {
             <div className="checkout-step-card">
               <h2 className="step-card-title">3. PAYMENT METHOD</h2>
 
-              <div className="payment-options-grid">
-                {PAYMENT_METHODS.map((m) => {
+              <div className="payment-options-grid" role="radiogroup" aria-label="Payment method">
+                {paymentMethods.length === 0 && <p role="status">Payment methods are unavailable. Please reload before placing an order.</p>}
+                {paymentMethods.map((m) => {
                   const active = payment === m.id;
                   return (
                     <div
                       key={m.id}
+                      role="radio"
+                      aria-checked={active}
+                      tabIndex={0}
+                      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setPayment(m.id); } }}
                       className={`payment-method-card ${active ? "payment-method-card--active" : ""}`}
                       onClick={() => setPayment(m.id)}
                     >
@@ -1020,10 +1013,10 @@ function CheckoutContent() {
                         <div className="pay-card-left">
                           <div className={`radio-circle ${active ? "radio-circle--selected" : ""}`} />
                           <span className="pay-card-title">
-                            {m.icon} {m.title}
+                            {m.type === "cod" ? "💵" : "💳"} {m.title}
                           </span>
                         </div>
-                        {m.tag && <span className="pay-popular-tag">{m.tag}</span>}
+                        {m.type === "cod" && <span className="pay-popular-tag">PAY ON DELIVERY</span>}
                       </div>
                       <p className="pay-card-desc">{m.description}</p>
                     </div>
@@ -1180,31 +1173,7 @@ function CheckoutContent() {
                 })}
               </div>
 
-              {/* DEEN VIP Loyalty Coins Redemption Card */}
-              {coins > 0 && maxCoinDiscount > 0 && (
-                <div
-                  className={`vip-coins-card ${redeemPoints ? "vip-coins-card--active" : ""}`}
-                  onClick={() => setRedeemPoints(!redeemPoints)}
-                >
-                  <div className="vip-coins-top">
-                    <div className="vip-coins-left">
-                      <span className="coin-emoji">🪙</span>
-                      <div>
-                        <p className="vip-coins-title">REDEEM DEEN VIP COINS</p>
-                        <p className="vip-coins-balance">Balance: {coins} Coins (Gold Member)</p>
-                      </div>
-                    </div>
-                    <div className={`coins-checkbox ${redeemPoints ? "coins-checkbox--checked" : ""}`}>
-                      {redeemPoints ? "✓" : ""}
-                    </div>
-                  </div>
-                  <p className="vip-coins-notice">
-                    {redeemPoints
-                      ? `✓ Applied ৳${coinDiscountBDT} instant checkout discount (-${coinDiscountBDT * 2} Coins)`
-                      : `Redeem up to ${maxCoinDiscount * 2} Coins for ৳${maxCoinDiscount} off this order`}
-                  </p>
-                </div>
-              )}
+
 
               {/* Coupon Entry Section */}
               <div className="checkout-coupon-card">
@@ -1328,12 +1297,7 @@ function CheckoutContent() {
                   </div>
                 )}
 
-                {redeemPoints && coinDiscountBDT > 0 && (
-                  <div className="price-breakdown-row price-breakdown-row--discount">
-                    <span>🪙 DEEN VIP Coins Discount</span>
-                    <span>-{bdt(coinDiscountBDT)}</span>
-                  </div>
-                )}
+
 
                 {couponInfo && couponDiscountBDT > 0 && (
                   <div className="price-breakdown-row price-breakdown-row--discount">
@@ -1364,7 +1328,7 @@ function CheckoutContent() {
                 <button
                   type="submit"
                   className="btn btn-primary btn-full btn-lg checkout-submit-btn"
-                  disabled={loading}
+                  disabled={loading || !paymentMethods.some((method) => method.id === payment)}
                 >
                   {loading ? (
                     <span className="submit-spinner-text">Placing Order…</span>
@@ -1390,7 +1354,7 @@ function CheckoutContent() {
           <button
             type="submit"
             className="mobile-bar-submit-btn"
-            disabled={loading}
+            disabled={loading || !paymentMethods.some((method) => method.id === payment)}
           >
             {loading ? (
               "Placing…"

@@ -658,9 +658,8 @@ export async function getOrders(phone?: string): Promise<Order[]> {
     // the request and scope orders to this session phone.
     const session = await getGuestSession();
     const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (session?.token) {
-      headers["Authorization"] = `Bearer ${session.token}`;
-    }
+    const token = await getAuthToken() || session?.token;
+    if (token) headers["Authorization"] = `Bearer ${token}`;
     const qs = phone ? `?phone=${encodeURIComponent(phone)}` : "";
     const list = await request<Order[]>(
       `/v1/deen/orders${qs}`,
@@ -677,7 +676,7 @@ export async function getOrders(phone?: string): Promise<Order[]> {
   const cached = await AsyncStorage.getItem("deen_gateway_orders_v1").catch(() => null);
   if (cached) {
     try {
-      const parsed = JSON.parse(cached) as Order[];
+      const parsed = (JSON.parse(cached) as Order[]).filter((o) => Boolean(o.wooId));
       if (phone) {
         const digits = phone.replace(/[^0-9]/g, "");
         return parsed.filter((o) => o.phone === digits);
@@ -763,7 +762,7 @@ export async function createOrder(
       variationId: (l as any).variationId || undefined,
     }));
 
-  const idempotencyKey =
+  let idempotencyKey =
     orderData.idempotencyKey ||
     `m_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
@@ -789,6 +788,9 @@ export async function createOrder(
       : getDistrictPostcode((orderData as any).state || (orderData as any).district || "BD-13"),
     area: areaMap[String(orderData.area)] || orderData.area || "dhaka",
     payment: orderData.payment,
+    email: orderData.email || undefined,
+    deliveryNotes: (orderData as any).deliveryNotes || undefined,
+    customerNote: (orderData as any).customerNote || (orderData as any).deliveryNotes || undefined,
     trxId: (orderData as any).trxId || undefined,
     coupon: (orderData as any).coupon || undefined,
     items: cleanItems,
@@ -801,115 +803,48 @@ export async function createOrder(
     ...(orderData.guestToken ? { guestToken: orderData.guestToken } : {}),
   };
 
-  const orderOrigins = [
-    ...GATEWAY_URLS.slice(preferredGatewayIdx),
-    ...GATEWAY_URLS.slice(0, preferredGatewayIdx),
-  ];
-
-  for (let i = 0; i < orderOrigins.length; i++) {
-    const base = orderOrigins[i];
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-    try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        "Idempotency-Key": idempotencyKey,
-        "x-idempotency-key": idempotencyKey,
-      };
-      if (API_KEY) headers["x-api-key"] = API_KEY;
-      if (orderData.guestToken) headers["Authorization"] = `Bearer ${orderData.guestToken}`;
-
-      const res = await fetch(`${base}/v1/deen/orders`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(orderPayload),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (res.ok) {
-        markOnline();
-        const created = (await res.json()) as Order;
-        // Update local cache
-        const prev = await AsyncStorage.getItem("deen_gateway_orders_v1").catch(() => null);
-        const arr = prev ? (JSON.parse(prev) as Order[]) : [];
-        await AsyncStorage.setItem(
-          "deen_gateway_orders_v1",
-          JSON.stringify([created, ...arr.filter((o) => o.id !== created.id)])
-        ).catch(() => {});
-        return created;
-      }
-
-      // 4xx is definitive validation/client error: DO NOT fail over or retry
-      if (res.status >= 400 && res.status < 500) {
-        const body = await res.text().catch(() => "");
-        let cleanMsg = `HTTP ${res.status}`;
-        try {
-          const parsed = JSON.parse(body);
-          if (parsed.message) cleanMsg = parsed.message;
-          else if (parsed.error) cleanMsg = parsed.error;
-        } catch {
-          if (body) cleanMsg = body.slice(0, 150);
-        }
-        throw new Error(cleanMsg);
-      }
-    } catch (err: any) {
-      clearTimeout(timeoutId);
-      // If it's a definitive 4xx error thrown above, rethrow immediately
-      const isDefinitiveClientError =
-        err?.message &&
-        !err?.name?.includes("Abort") &&
-        !err?.message?.includes("failed") &&
-        !err?.message?.includes("timed out") &&
-        !err?.message?.includes("Network request") &&
-        !err?.message?.includes("Failed to fetch");
-
-      if (isDefinitiveClientError && !err?.message?.startsWith("HTTP 5")) {
-        throw err;
-      }
-    }
-
-    // ── TWO-PHASE RECONCILIATION ──
-    // The request timed out, aborted, or returned 5xx. DO NOT blindly retry POST.
-    // First, check if the gateway or WooCommerce actually finished the order!
-    try {
-      const reconciliation = await reconcileOrder(idempotencyKey, cleanPhone);
-      if (reconciliation.reconciled && reconciliation.order) {
-        markOnline();
-        const existingOrder = reconciliation.order;
-        const prev = await AsyncStorage.getItem("deen_gateway_orders_v1").catch(() => null);
-        const arr = prev ? (JSON.parse(prev) as Order[]) : [];
-        await AsyncStorage.setItem(
-          "deen_gateway_orders_v1",
-          JSON.stringify([existingOrder, ...arr.filter((o) => o.id !== existingOrder.id)])
-        ).catch(() => {});
-        return existingOrder;
-      }
-    } catch {}
-
-    // Shift preferred index to next origin and continue loop with exact same idempotencyKey
-    const idx = GATEWAY_URLS.indexOf(base);
-    if (idx === preferredGatewayIdx) {
-      preferredGatewayIdx = (preferredGatewayIdx + 1) % GATEWAY_URLS.length;
-    }
+  const pendingKey = "deen_pending_checkout";
+  try {
+    const fingerprint = JSON.stringify({ ...orderPayload, idempotencyKey: undefined });
+    const saved = JSON.parse(await AsyncStorage.getItem(pendingKey) || "null");
+    if (saved?.fingerprint === fingerprint && saved?.key) idempotencyKey = saved.key;
+    await AsyncStorage.setItem(pendingKey, JSON.stringify({ fingerprint, key: idempotencyKey }));
+  } catch { /* storage failure must not cause another order POST */ }
+  orderPayload.idempotencyKey = idempotencyKey;
+  const token = await getAuthToken() || orderData.guestToken || (await getGuestSession())?.token;
+  const headers: Record<string, string> = { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey };
+  if (API_KEY) headers["x-api-key"] = API_KEY;
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 35_000);
+  let res: Response | undefined;
+  try {
+    res = await fetch(`${GATEWAY_URLS[preferredGatewayIdx]}/v1/deen/orders`, {
+      method: "POST", headers, body: JSON.stringify(orderPayload), signal: controller.signal,
+    });
+  } catch { /* reconcile ambiguous outcomes with reads only */ }
+  finally { clearTimeout(timeout); }
+  if (res && res.status >= 400 && res.status < 500) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || data.error || "Order validation failed.");
   }
-
-  // If all online gateways failed and reconciliation found nothing:
-  // Create local offline order record with idempotencyKey preserved for clean sync.
-  const created: Order = {
-    ...orderData,
-    phone: cleanPhone,
-    id: `offline-${Date.now()}`,
-    number: `DC-OFFLINE-${Math.floor(100000 + Math.random() * 900000)}`,
-    status: "received",
-    idempotencyKey,
-    createdAt: new Date().toISOString(),
-  };
-  const prev = await AsyncStorage.getItem("deen_gateway_orders_v1").catch(() => null);
-  const arr = prev ? (JSON.parse(prev) as Order[]) : [];
-  await AsyncStorage.setItem("deen_gateway_orders_v1", JSON.stringify([created, ...arr])).catch(() => {});
-  return created;
+  let confirmed: Order | undefined;
+  if (res?.ok) confirmed = await res.json().catch(() => undefined);
+  if (!confirmed?.wooId) {
+    const result = await reconcileOrder(idempotencyKey, cleanPhone);
+    confirmed = result.reconciled ? result.order : undefined;
+  }
+  if (!confirmed?.wooId || !confirmed.number) {
+    throw new Error("We could not confirm your order. Your bag is saved. Check order status before trying again.");
+  }
+  markOnline();
+  try {
+    const stored = JSON.parse(await AsyncStorage.getItem("deen_gateway_orders_v1") || "[]");
+    const previous: Order[] = Array.isArray(stored) ? stored : [];
+    await AsyncStorage.setItem("deen_gateway_orders_v1", JSON.stringify([confirmed, ...previous.filter((o) => o.id !== confirmed!.id)].slice(0, 50)));
+    await AsyncStorage.removeItem(pendingKey);
+  } catch { /* a cache failure cannot undo a confirmed WooCommerce order */ }
+  return confirmed;
 }
 
 /* --------------------------- cashback (from gateway = Woo source of truth) -----------
@@ -1325,25 +1260,17 @@ export async function registerCustomer(
   phone: string,
   email?: string,
   password?: string
-): Promise<{ success: boolean; message: string; returning: boolean } | null> {
+): Promise<AuthResult & { returning?: boolean }> {
   try {
-    const res = await request<{
-      success: boolean;
-      message: string;
-      returning: boolean;
-    }>("/v1/auth/register", {
-      method: "POST",
-      body: JSON.stringify({
-        name,
-        phone,
-        email: email || undefined,
-        password: password || undefined,
-      }),
-    }, 6000);
+    const res = await request<AuthResult & { returning?: boolean }>("/v1/auth/register", {
+      method: "POST", body: JSON.stringify({ name, phone, email: email || undefined, password }),
+    }, 12_000);
+    if (res.success && res.token && res.user) {
+      await AsyncStorage.setItem(AUTH_TOKEN_KEY, res.token);
+      await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(res.user));
+    }
     return res;
-  } catch {
-    return null;
-  }
+  } catch (error: any) { return { success: false, message: error?.message || "Registration failed." }; }
 }
 
 /**

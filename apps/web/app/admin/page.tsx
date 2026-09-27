@@ -11,7 +11,7 @@ export default function AdminPage() {
   const [profile, setProfile] = useState<{ role?: string; name?: string; email?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("admin");
+  const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -142,7 +142,7 @@ export default function AdminPage() {
                 className="form-input"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="admin"
+                placeholder="WordPress credentials"
                 required
               />
             </div>
@@ -154,7 +154,7 @@ export default function AdminPage() {
                 className="form-input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="admin"
+                placeholder="WordPress credentials"
                 required
               />
             </div>
@@ -168,18 +168,6 @@ export default function AdminPage() {
               {submitting ? "Authenticating…" : "👑 UNLOCK STORE ADMIN BI DASHBOARD"}
             </button>
 
-            <div style={{ textAlign: "center", marginTop: 14 }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setUsername("admin");
-                  setPassword("admin");
-                }}
-                style={{ background: "none", border: "none", color: "var(--indigo)", fontSize: 12, fontWeight: 800, cursor: "pointer" }}
-              >
-                Use Default Credentials (admin / admin)
-              </button>
-            </div>
           </form>
         </div>
       )}

@@ -33,8 +33,8 @@ export async function lookupOrderStatus(
   const targetPhone = cleanPhone(phone);
   const targetOrder = String(orderNumber).replace(/\D/g, "");
 
-  if (!targetOrder && !targetPhone) {
-    return { found: false, error: "Missing phone or order number" };
+  if (!targetOrder || !/^01[3-9]\d{8}$/.test(targetPhone)) {
+    return { found: false, error: "A valid phone and order number are required" };
   }
 
   // 1. Try fetching by order ID first
@@ -43,7 +43,7 @@ export async function lookupOrderStatus(
     if (order && order.id) {
       const billingPhone = cleanPhone(order.billing?.phone || "");
       // If phone was provided, verify ownership
-      if (targetPhone && !billingPhone.includes(targetPhone) && !targetPhone.includes(billingPhone)) {
+      if (billingPhone !== targetPhone) {
         return {
           found: false,
           error: "Phone number did not match the billing record on file for this order.",
@@ -86,7 +86,8 @@ export async function lookupOrderStatus(
   if (targetPhone) {
     const list = await getOrdersByPhone(targetPhone);
     if (list && list.length > 0) {
-      const latest = list[0];
+      const latest = list.find((order: any) => String(order.number || order.id) === targetOrder && cleanPhone(order.billing?.phone || "") === targetPhone);
+      if (!latest) return { found: false };
       const itemNames = (latest.line_items || [])
         .map((li: any) => `${li.name} (x${li.quantity})`)
         .join(", ") || "General Apparel";

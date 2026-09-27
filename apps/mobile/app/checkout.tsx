@@ -32,7 +32,6 @@ import { ScreenShell } from "../src/components/ScreenShell";
 import { useCart } from "../src/context/CartContext";
 import { useOrders } from "../src/context/OrderContext";
 import { useProfile } from "../src/context/ProfileContext";
-import { useRewards } from "../src/context/RewardsContext";
 import { bdt, DELIVERY_OPTIONS, createGuestSession, getGuestSession, fetchPaymentMethods, fetchCoupon, getCashbackAmount, fetchDistricts, type BdDistrict } from "../src/services/gateway";
 
 import { BD_DISTRICTS, getDistrictPostcode } from "../src/data/districts";
@@ -58,7 +57,6 @@ export default function CheckoutScreen() {
   const { cart, subtotal, clearCart, cashbackAmount = 0, bogoDiscount = 0, removeFromCart, updateQty, updateSize } = useCart();
   const { placeOrder } = useOrders();
   const { profile } = useProfile();
-  const { coins, tierLabel, redeemCoins, earnCoins } = useRewards();
   const insets = useSafeAreaInsets();
   const styles = createStyles(colors, s);
 
@@ -92,7 +90,6 @@ export default function CheckoutScreen() {
   const [paymentMethods, setPaymentMethods] = useState<{ id: string; title: string; description: string; type: "cod" | "redirect" }[]>([]);
   const [isGuestMode, setIsGuestMode] = useState<boolean>(profile.isGuest);
   const [guestSession, setGuestSession] = useState<null | Awaited<ReturnType<typeof getGuestSession>>>(null);
-  const [redeemPoints, setRedeemPoints] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   // Customer coupon (validated against Woo, exactly like the website).
@@ -133,14 +130,17 @@ export default function CheckoutScreen() {
   // Source of truth: real, ENABLED payment gateways from Woo (cod / bKash / sslcommerz).
   useEffect(() => {
     fetchPaymentMethods()
-      .then((m) => { if (m.length) setPaymentMethods(m); })
+      .then((m) => { setPaymentMethods(m); setPayment(m.find((method) => method.id === "cod")?.id || m[0]?.id || ""); })
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const destination = isGift ? giftDistrict : district;
+    setSelectedArea((current) => current === "store_pickup" ? current : destination.code === "BD-13" ? (current === "dhaka_express" ? current : "dhaka_standard") : "outside_standard");
+  }, [isGift, giftDistrict.code, district.code]);
+
   const deliveryOpt = DELIVERY_OPTIONS[selectedArea] || DELIVERY_OPTIONS.dhaka_standard;
   const deliveryFee = deliveryOpt.fee;
-  const maxCoinDiscount = Math.min(Math.floor(coins / 2), Math.floor(subtotal * 0.2));
-  const coinDiscountBDT = redeemPoints ? maxCoinDiscount : 0;
   const cashbackBDT = cashbackAmount ?? getCashbackAmount(subtotal);
   const couponDiscountBDT = couponInfo
     ? (couponInfo.type === "percent"
@@ -149,7 +149,7 @@ export default function CheckoutScreen() {
     : 0;
   const total = Math.max(
     0,
-    subtotal + deliveryFee - coinDiscountBDT - cashbackBDT - (bogoDiscount || 0) - couponDiscountBDT
+    subtotal + deliveryFee - cashbackBDT - (bogoDiscount || 0) - couponDiscountBDT
   );
 
   const handleApplyCoupon = async () => {
@@ -173,6 +173,7 @@ export default function CheckoutScreen() {
   };
 
   const handlePlaceOrder = async () => {
+    if (loading || !paymentMethods.some((method) => method.id === payment)) return;
     if (!name.trim()) {
       setErrorMsg("Please provide your full name");
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
@@ -265,12 +266,7 @@ export default function CheckoutScreen() {
       } as any);
 
 
-      // Deduct coins if redeemed & earn coins for order
-      if (redeemPoints && coinDiscountBDT > 0) {
-        await redeemCoins(coinDiscountBDT * 2);
-      }
       const actualOrderNumber = created.wooNumber || created.number;
-      await earnCoins(total, `Order #${actualOrderNumber}`);
 
       // Dispatch Google Analytics 4 Purchase Event
       Analytics.logPurchase({
@@ -753,18 +749,7 @@ export default function CheckoutScreen() {
           <Text style={[styles.stepTitle, { color: colors.indigoDark }]}>3. PAYMENT METHOD</Text>
 
           {paymentMethods.length === 0 ? (
-            // Fallback while loading / if fetch fails: safe default = COD only.
-            <TouchableOpacity
-              style={[styles.payOption, { backgroundColor: colors.paper, borderColor: colors.border }, payment === "cod" && [styles.payOptionActive, { borderColor: colors.indigo, backgroundColor: colors.indigoLight }]]}
-              onPress={() => setPayment("cod")}
-            >
-              <View style={[styles.radioOuter, { borderColor: colors.indigo }]}>{payment === "cod" && <View style={[styles.radioInner, { backgroundColor: colors.indigo }]} />}</View>
-              <View style={styles.payInfo}>
-                <Text style={[styles.payTitle, { color: colors.ink }]}>Cash on Delivery (COD)</Text>
-                <Text style={[styles.paySub, { color: colors.sub }]}>Pay cash upon receiving and inspecting your parcel</Text>
-              </View>
-              <View style={[styles.payTag, { backgroundColor: colors.indigo }]}><Text style={styles.payTagText}>MOST POPULAR</Text></View>
-            </TouchableOpacity>
+            <Text accessibilityLiveRegion="polite" style={{ color: colors.sub }}>Payment methods are unavailable. Please reload before placing an order.</Text>
           ) : (
             paymentMethods.map((m) => {
               const active = payment === m.id;
@@ -904,37 +889,7 @@ export default function CheckoutScreen() {
           })}
 
           {/* 3.5 DEEN VIP Club Loyalty Point Redemption */}
-          {coins > 0 && maxCoinDiscount > 0 && (
-            <TouchableOpacity
-              style={[
-                styles.coinsCard,
-                { backgroundColor: colors.indigoLight, borderColor: colors.indigo },
-                redeemPoints && [styles.coinsCardActive, { borderColor: colors.emerald, backgroundColor: colors.emeraldLight }],
-              ]}
-              activeOpacity={0.88}
-              onPress={() => setRedeemPoints(!redeemPoints)}
-            >
-              <View style={styles.coinsHeader}>
-                <View style={styles.coinsHeaderLeft}>
-                  <Text style={styles.coinIcon}>🪙</Text>
-                  <View>
-                    <Text style={[styles.coinsTitle, { color: colors.ink }]}>REDEEM DEEN VIP COINS</Text>
-                    <Text style={[styles.coinsSub, { color: colors.sub }]}>
-                      Balance: {coins} Coins ({tierLabel})
-                    </Text>
-                  </View>
-                </View>
-                <View style={[styles.coinsCheckbox, { borderColor: colors.indigo, backgroundColor: colors.paper }]}>
-                  {redeemPoints && <Check size={12} color={colors.emerald} />}
-                </View>
-              </View>
-              <Text style={[styles.coinsDiscountNotice, { color: colors.indigoDark }]}>
-                {redeemPoints
-                  ? `✓ Applied ৳${coinDiscountBDT} instant checkout discount (-${coinDiscountBDT * 2} Coins)`
-                  : `Redeem up to ${maxCoinDiscount * 2} Coins for ৳${maxCoinDiscount} off this order`}
-              </Text>
-            </TouchableOpacity>
-          )}
+
 
           {/* Coupon code — customer may have a code written down, like the website */}
           <View style={[styles.couponCard, { backgroundColor: colors.paper, borderColor: colors.borderLight }]}>
@@ -996,16 +951,7 @@ export default function CheckoutScreen() {
             </View>
           )}
 
-          {redeemPoints && coinDiscountBDT > 0 && (
-            <View style={styles.summaryRow}>
-              <Text style={[styles.summaryLabel, { color: colors.emerald }]}>
-                🪙 DEEN Coins Discount
-              </Text>
-              <Text style={[styles.summaryValue, { color: colors.emerald }]}>
-                -{bdt(coinDiscountBDT)}
-              </Text>
-            </View>
-          )}
+
 
           {couponInfo && couponDiscountBDT > 0 && (
             <View style={styles.summaryRow}>
@@ -1040,7 +986,7 @@ export default function CheckoutScreen() {
           style={[styles.placeOrderBtn, { backgroundColor: colors.indigo }]}
           activeOpacity={0.88}
           onPress={handlePlaceOrder}
-          disabled={loading}
+          disabled={loading || !paymentMethods.some((method) => method.id === payment)}
           accessibilityRole="button"
           accessibilityLabel={
             payment === "cod"

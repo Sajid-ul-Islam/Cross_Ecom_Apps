@@ -1,4 +1,5 @@
 import { ProductCard } from "./types";
+import { BD_DISTRICTS, getDistrictPostcode } from "./districts";
 import { getBundledProducts, resolveProductImage, decodeHtmlEntities } from "./api";
 
 const WOO_URL = (process.env.WOO_URL || "https://deencommerce.com/wp-json/wc/v3").replace(/\/$/, "");
@@ -178,7 +179,7 @@ export async function getOrdersByPhone(phone: string): Promise<any[]> {
         if (Array.isArray(orders)) {
           return orders.filter((o: any) => {
             const p = (o.billing?.phone || "").replace(/\D/g, "");
-            return p.includes(cleanPhone) || cleanPhone.includes(p);
+            return /^01[3-9]\d{8}$/.test(cleanPhone.slice(-11)) && p.slice(-11) === cleanPhone.slice(-11);
           });
         }
       }
@@ -196,68 +197,32 @@ export async function createOrder(payload: {
   customerName?: string;
   phone: string;
   address: string;
+  district: string;
+  idempotencyKey: string;
   items: Array<{ productId: string | number; size?: string; quantity: number }>;
   note?: string;
 }): Promise<{ id: number | string; total: number; number?: string } | null> {
+  const district = BD_DISTRICTS.find((entry) => entry.code === payload.district);
+  if (!district || !/^01[3-9]\d{8}$/.test(payload.phone) || payload.address.trim().length < 8) return null;
+  const base = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "https://cross-ecom-apps-4b4n.onrender.com";
+  const headers: Record<string, string> = { "Content-Type": "application/json", "Idempotency-Key": payload.idempotencyKey };
+  const apiKey = process.env.GATEWAY_API_KEY || process.env.NEXT_PUBLIC_GATEWAY_API_KEY;
+  if (apiKey) headers["x-api-key"] = apiKey;
   try {
-    const billingName = payload.customerName || "Customer";
-    const lineItems = payload.items.map((i) => ({
-      product_id: Number(i.productId) || 0,
-      quantity: i.quantity || 1,
-      meta_data: i.size ? [{ key: "Size", value: i.size }] : [],
-    }));
-
-    const orderBody = {
-      payment_method: "cod",
-      payment_method_title: "Cash on Delivery (COD)",
-      set_paid: false,
-      billing: {
-        first_name: billingName,
-        phone: payload.phone,
-        address_1: payload.address,
-        country: "BD",
-        city: "Dhaka",
-      },
-      shipping: {
-        first_name: billingName,
-        phone: payload.phone,
-        address_1: payload.address,
-        country: "BD",
-        city: "Dhaka",
-      },
-      line_items: lineItems,
-      customer_note: payload.note || "Placed via Multilingual E-commerce Chatbot",
-    };
-
-    if (WOO_KEY && WOO_SECRET) {
-      const url = `${WOO_URL}/orders`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: getAuthHeader(),
-        body: JSON.stringify(orderBody),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        return {
-          id: data.id,
-          number: data.number || String(data.id),
-          total: Number(data.total) || 0,
-        };
-      }
-    }
-
-    // Graceful offline mock if live WooCommerce is unreachable
-    const mockId = Math.floor(10000 + Math.random() * 90000);
-    return {
-      id: mockId,
-      number: String(mockId),
-      total: 2450,
-    };
-  } catch (err) {
-    console.error("[bot-woo] createOrder failed:", err);
-    return null;
-  }
+    const res = await fetch(`${base.replace(/\/$/, "")}/v1/deen/orders`, {
+      method: "POST", headers, signal: AbortSignal.timeout(30_000),
+      body: JSON.stringify({ name: payload.customerName || "Customer", phone: payload.phone,
+        address: payload.address, district: district.code, state: district.code, city: district.name,
+        postcode: getDistrictPostcode(district.code), area: district.code === "BD-13" ? "dhaka" : "outside",
+        payment: "cod", idempotencyKey: payload.idempotencyKey, customerNote: payload.note,
+        items: payload.items.map((item) => ({ productId: String(item.productId), size: item.size, qty: item.quantity })),
+      }),
+    });
+    if (!res.ok) return null;
+    const order = await res.json();
+    if (!order.wooId || !order.number || !Number.isFinite(order.total)) return null;
+    return { id: order.wooId, number: order.number, total: order.total };
+  } catch { return null; }
 }
 
 function mapWooProductToCard(raw: any): ProductCard {

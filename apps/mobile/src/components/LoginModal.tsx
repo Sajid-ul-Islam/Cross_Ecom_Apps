@@ -194,6 +194,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         signupEmail.trim() || undefined,
         signupPassword
       );
+      if (!res?.success || !res.token || !res.user) throw new Error(res?.message || "Account could not be created.");
       await registerCustomer({
         name: signupName.trim(),
         phone: cleanPhone,
@@ -206,9 +207,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         onClose();
         if (onSuccess) onSuccess();
       }, 600);
-    } catch {
+    } catch (error: any) {
       setSubmitting(false);
-      setNotice({ type: "error", text: "Network error during registration." });
+      setNotice({ type: "error", text: error?.message || "Network error during registration." });
     }
   };
 
@@ -460,35 +461,17 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                       alignItems: "center",
                       justifyContent: "center",
                       gap: 8,
-                      height: 42,
+                      height: 44,
                       borderRadius: 8,
                       backgroundColor: colors.cardSecondary,
                       borderWidth: 1.5,
                       borderColor: colors.indigo,
                     }}
                     activeOpacity={0.8}
-                    onPress={async () => {
+                    onPress={() => {
                       setUsername("admin");
-                      setPassword("admin");
-                      setSubmitting(true);
-                      try {
-                        const res = await loginAsAdmin("admin");
-                        if (res.success) {
-                          setNotice({ type: "success", text: "👑 Logged in as Store Administrator! Opening BI Dashboard..." });
-                          setTimeout(() => {
-                            setSubmitting(false);
-                            onClose();
-                            if (onSuccess) onSuccess("admin");
-                            router.push("/admin");
-                          }, 500);
-                        } else {
-                          setSubmitting(false);
-                          setNotice({ type: "error", text: res.message || "Admin login failed." });
-                        }
-                      } catch {
-                        setSubmitting(false);
-                        setNotice({ type: "error", text: "Admin login network error." });
-                      }
+                      setPassword("");
+                      setNotice({ type: "success", text: "Enter your WordPress administrator username and password, then sign in." });
                     }}
                     disabled={submitting}
                   >
@@ -498,7 +481,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                     </Text>
                   </TouchableOpacity>
                   <Text style={{ fontSize: 10, color: colors.sub, textAlign: "center", marginTop: 6 }}>
-                    Store Admin Privileges & BI Analytics (user: admin · pass: admin)
+                    Use your WordPress administrator credentials.
                   </Text>
                 </View>
 

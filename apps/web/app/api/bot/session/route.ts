@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => null);
     const sessionId = body?.sessionId;
 
-    if (!sessionId) {
+    if (typeof sessionId !== "string" || !sessionId.trim() || sessionId.length > 128) {
       return NextResponse.json({ error: "sessionId is required" }, { status: 400 });
     }
 

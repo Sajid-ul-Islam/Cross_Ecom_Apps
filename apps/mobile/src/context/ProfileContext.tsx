@@ -93,7 +93,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
         // Otherwise resume any locally-saved profile.
         const stored = await getProfile();
-        setProfile(normalizeProfile(stored));
+        setProfile(normalizeProfile({ ...stored, role: "customer", accountType: "guest", isGuest: true }));
       } catch {
         setProfile(normalizeProfile(DEFAULT_PROFILE));
       } finally {
@@ -123,6 +123,8 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const registerCustomer = async (data: { name: string; phone: string; email?: string; password?: string; address?: string; district?: string; city?: string }) => {
+    const verified = await authMe();
+    if (!verified) throw new Error("Sign in to save your account profile.");
     persist({
       ...profile,
       accountType: "customer",
@@ -178,7 +180,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return { success: res.success, message: res.message, role: undefined };
   };
 
-  const loginAsAdmin = async (passcode: string = "admin") => {
+  const loginAsAdmin = async (passcode: string = "") => {
     return login("admin", passcode);
   };
 

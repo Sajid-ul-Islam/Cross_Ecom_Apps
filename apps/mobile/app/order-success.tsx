@@ -15,7 +15,7 @@ import { LottieAnimation } from "../src/components/LottieAnimation";
 import { useTheme } from "../src/context/ThemeContext";
 import { ScreenShell } from "../src/components/ScreenShell";
 import { OrderStatusStepper } from "../src/components/OrderStatusStepper";
-import { bdt, lookupCustomer, registerCustomer } from "../src/services/gateway";
+import { bdt } from "../src/services/gateway";
 import { ThemeColors } from "../src/theme/colors";
 import { sharedStyles } from "../src/theme/sharedStyles";
 
@@ -177,41 +177,19 @@ function GuestSavePrompt({ name, phone }: { name: string; phone: string }) {
   const [checking, setChecking] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
 
-  const handleSave = async () => {
-    setChecking(true);
-    try {
-      // If this phone already has a profile, no need to re-register.
-      const existing = await lookupCustomer(phone);
-      if (existing?.found) {
-        setSaved(true);
-        Alert.alert("Welcome Back", "Your profile has been recognized and updated.");
-      } else {
-        const res = await registerCustomer(name, phone);
-        if (res?.success) {
-          setSaved(true);
-          Alert.alert("Profile Saved", "Your details are saved. Your next checkout will greet you by name.");
-        } else {
-          Alert.alert("Notice", res?.message || "Could not register customer at this time.");
-        }
-      }
-    } catch (e) {
-      Alert.alert("Notice", "Profile save skipped — you can save your details later from your profile screen.");
-    } finally {
-      setChecking(false);
-    }
-  };
+  const handleSave = () => router.push("/(tabs)/profile");
 
   if (saved) return null;
 
   return (
     <View style={[styles.guestPromptCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <Text style={[styles.guestPromptTitle, { color: colors.ink }]}>Save this order to your profile?</Text>
+      <Text style={[styles.guestPromptTitle, { color: colors.ink }]}>Create your DEEN account</Text>
       <Text style={[styles.guestPromptSub, { color: colors.sub }]}>
-        Save your guest checkout so next time DEEN greets you by name and shows your order history.
+        Sign in or create an account to save your details for future orders.
       </Text>
       <View style={styles.guestPromptRow}>
         <TouchableOpacity style={[styles.guestSaveBtn, { backgroundColor: colors.indigo }]} activeOpacity={0.85} onPress={handleSave} disabled={checking}>
-          <Text style={styles.guestSaveBtnText}>{checking ? "Saving…" : "Save My Profile"}</Text>
+          <Text style={styles.guestSaveBtnText}>{checking ? "Saving…" : "Sign In / Create Account"}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.guestSkipBtn} activeOpacity={0.7} onPress={() => setSaved(true)}>
           <Text style={[styles.guestSkipBtnText, { color: colors.sub }]}>Maybe later</Text>

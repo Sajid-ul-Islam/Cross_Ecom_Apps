@@ -49,7 +49,7 @@ const GUEST_TOKEN_KEY = "deen_web_guest_token";
 function getGuestToken(): string | null {
   if (typeof window === "undefined") return null;
   try {
-    return localStorage.getItem(GUEST_TOKEN_KEY);
+    return localStorage.getItem("deen_web_auth_token") || localStorage.getItem(GUEST_TOKEN_KEY);
   } catch {
     return null;
   }
@@ -1327,9 +1327,9 @@ export async function reconcileOrder(
 export async function placeOrder(
   payload: OrderPayload & { idempotencyKey?: string }
 ): Promise<OrderResult> {
-  const token = getGuestToken();
+  const token = await ensureGuestToken();
   const cleanPhone = String(payload.phone || "").replace(/[^0-9]/g, "");
-  const idempotencyKey =
+  let idempotencyKey =
     payload.idempotencyKey ||
     `w_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
@@ -1350,105 +1350,40 @@ export async function placeOrder(
     idempotencyKey,
   };
 
-  // When running in the browser, route through the Next.js Route Handler to shield the Gateway API key
+  const pendingKey = "deen_pending_checkout";
   if (typeof window !== "undefined") {
     try {
-      const res = await fetch("/api/checkout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": idempotencyKey,
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(orderPayload),
-      });
-      if (res.ok) {
-        return (await res.json()) as OrderResult;
-      }
-      if (res.status >= 400 && res.status < 500) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || data.error || "Order validation failed.");
-      }
-    } catch (err: any) {
-      if (err?.message && !err.message.includes("fetch")) {
-        throw err;
-      }
-      // If Route Handler is unreachable, fall through to direct multi-origin gateway failover
-    }
+      const fingerprint = JSON.stringify({ ...orderPayload, idempotencyKey: undefined });
+      const saved = JSON.parse(localStorage.getItem(pendingKey) || "null");
+      if (saved?.fingerprint === fingerprint && saved?.key) idempotencyKey = saved.key;
+      localStorage.setItem(pendingKey, JSON.stringify({ fingerprint, key: idempotencyKey }));
+    } catch { /* storage can be unavailable; server also deduplicates */ }
   }
-
-  const origins = Array.from(new Set([API_URL, BACKUP_GATEWAY_URL]));
-
-  let lastError: Error | null = null;
-
-  for (const base of origins) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-    try {
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        "Idempotency-Key": idempotencyKey,
-        "x-idempotency-key": idempotencyKey,
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      };
-      if (GATEWAY_API_KEY) headers["x-api-key"] = GATEWAY_API_KEY;
-
-      const res = await fetch(`${base}/v1/deen/orders`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(orderPayload),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      if (res.ok) {
-        return (await res.json()) as OrderResult;
-      }
-
-      // 4xx is definitive validation/client error: DO NOT fail over or retry
-      if (res.status >= 400 && res.status < 500) {
-        const body = await res.text().catch(() => "");
-        let cleanMsg = `HTTP ${res.status}`;
-        try {
-          const parsed = JSON.parse(body);
-          if (parsed.message) cleanMsg = parsed.message;
-          else if (parsed.error) cleanMsg = parsed.error;
-        } catch {
-          if (body) cleanMsg = body.slice(0, 150);
-        }
-        throw new Error(cleanMsg);
-      }
-
-      lastError = new Error(`Gateway returned ${res.status}`);
-    } catch (err: any) {
-      clearTimeout(timeoutId);
-      const isDefinitiveClientError =
-        err?.message &&
-        !err?.name?.includes("Abort") &&
-        !err?.message?.includes("failed") &&
-        !err?.message?.includes("timed out") &&
-        !err?.message?.includes("Network request") &&
-        !err?.message?.includes("Failed to fetch");
-
-      if (isDefinitiveClientError && !err?.message?.startsWith("HTTP 5")) {
-        throw err;
-      }
-      lastError = err instanceof Error ? err : new Error(String(err));
-    }
-
-    // ── TWO-PHASE RECONCILIATION ──
-    // The request timed out or returned 5xx. DO NOT blindly retry POST.
-    // Check if the order was created before trying the backup gateway!
-    try {
-      const reconciliation = await reconcileOrder(idempotencyKey, cleanPhone);
-      if (reconciliation.reconciled && reconciliation.order) {
-        return reconciliation.order;
-      }
-    } catch {}
+  orderPayload.idempotencyKey = idempotencyKey;
+  const headers: Record<string, string> = { "Content-Type": "application/json", "Idempotency-Key": idempotencyKey };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (typeof window === "undefined" && GATEWAY_API_KEY) headers["x-api-key"] = GATEWAY_API_KEY;
+  let res: Response | undefined;
+  try {
+    res = await fetch(typeof window !== "undefined" ? "/api/checkout" : `${API_URL}/v1/deen/orders`, {
+      method: "POST", headers, body: JSON.stringify(orderPayload), signal: AbortSignal.timeout(35_000),
+    });
+  } catch { /* reconcile a lost response with reads only */ }
+  if (res && res.status >= 400 && res.status < 500) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || data.error || "Order validation failed.");
   }
-
-  throw lastError || new Error("Order placement failed. Please check your connection and try again.");
+  let confirmed: OrderResult | undefined;
+  if (res?.ok) confirmed = await res.json().catch(() => undefined);
+  if (!confirmed?.wooId) {
+    const result = await reconcileOrder(idempotencyKey, cleanPhone);
+    confirmed = result.reconciled ? result.order : undefined;
+  }
+  if (!confirmed?.wooId || !confirmed.number) {
+    throw new Error("We could not confirm your order. Your bag is saved. Check order status before trying again.");
+  }
+  if (typeof window !== "undefined") { try { localStorage.removeItem(pendingKey); } catch {} }
+  return confirmed;
 }
 
 export function bdt(n: number) {
@@ -1697,7 +1632,7 @@ export async function changePassword(payload: {
   identifier?: string;
 }): Promise<{ success: boolean; message: string }> {
   try {
-    const token = typeof window !== "undefined" ? localStorage.getItem("deen_web_guest_token") : null;
+    const token = typeof window !== "undefined" ? getGuestToken() : null;
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
@@ -1722,7 +1657,7 @@ export async function updateCustomerProfile(profileData: {
   district?: string;
 }): Promise<{ success: boolean; message: string; profile?: any }> {
   try {
-    const token = typeof window !== "undefined" ? localStorage.getItem("deen_web_guest_token") : null;
+    const token = typeof window !== "undefined" ? getGuestToken() : null;
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 

@@ -10,10 +10,15 @@ import { BotResponse, ProductCard } from "@/lib/types";
 // In-memory rate limiting: max 20 messages per session per minute
 const rateLimitMap = new Map<string, { count: number; windowStart: number }>();
 const RATE_LIMIT_MAX = 20;
+const activeSessions = new Set<string>();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 
 function checkRateLimit(sessionId: string): boolean {
   const now = Date.now();
+  if (rateLimitMap.size >= 10_000) {
+    for (const [key, entry] of rateLimitMap) if (now - entry.windowStart >= RATE_LIMIT_WINDOW_MS) rateLimitMap.delete(key);
+    if (rateLimitMap.size >= 10_000 && !rateLimitMap.has(sessionId)) return false;
+  }
   const record = rateLimitMap.get(sessionId);
 
   if (!record || now - record.windowStart > RATE_LIMIT_WINDOW_MS) {
@@ -30,10 +35,11 @@ function checkRateLimit(sessionId: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  let activeSession: string | undefined;
   try {
     const body = await req.json().catch(() => null);
 
-    if (!body || typeof body.message !== "string" || !body.sessionId) {
+    if (!body || typeof body.message !== "string" || body.message.length > 500 || typeof body.sessionId !== "string" || body.sessionId.length > 128 || !body.sessionId) {
       return NextResponse.json(
         { error: "Invalid payload. 'message' and 'sessionId' are required." },
         { status: 400 }
@@ -61,6 +67,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (activeSessions.has(sessionId)) return NextResponse.json({ error: "CONFLICT", message: "Please wait for the previous message to finish." }, { status: 409 });
+    activeSessions.add(sessionId);
+    activeSession = sessionId;
     // 2. Load or create session
     let session = await sessionStore.get(sessionId);
     if (!session) {
@@ -93,23 +102,22 @@ export async function POST(req: NextRequest) {
     if (intent === "UNKNOWN" && session.state === "IDLE") {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.deencommerce.com";
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
+
 
         const aiRes = await fetch(`${apiUrl}/v1/deen/ai/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
+          signal: AbortSignal.timeout(4000),
           body: JSON.stringify({
             message: rawMessage,
-            phone: session.slots?.phone,
+            phone: undefined,
             history: session.history.slice(-4).map((h) => ({
               role: h.role === "user" ? "user" : "assistant",
               content: h.text,
             })),
           }),
         });
-        clearTimeout(timeoutId);
+
 
         if (aiRes.ok) {
           const aiData = await aiRes.json();
@@ -166,6 +174,8 @@ export async function POST(req: NextRequest) {
       state: "IDLE",
     };
 
-    return NextResponse.json(fallbackResponse, { status: 200 });
+    return NextResponse.json(fallbackResponse, { status: 503 });
+  } finally {
+    if (activeSession) activeSessions.delete(activeSession);
   }
 }

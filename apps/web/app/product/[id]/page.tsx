@@ -4,13 +4,14 @@ import { fetchProduct, fetchProducts, fetchDeliveryFees, resolveProductImage, ty
 import ProductDetailClient from "@/components/ProductDetailClient";
 
 interface ProductPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
-  const product = await fetchProduct(params.id);
+  const { id } = await params;
+  const product = await fetchProduct(id);
   if (!product) {
     return {
       title: "Product Not Found | DEEN",
@@ -38,7 +39,8 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 }
 
 export default async function ProductDetailPage({ params }: ProductPageProps) {
-  const product = await fetchProduct(params.id);
+  const { id } = await params;
+  const product = await fetchProduct(id);
   if (!product) {
     notFound();
   }
@@ -46,7 +48,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
   const [related, deliveryFees] = await Promise.all([
     product.category
       ? fetchProducts({ category: product.category, per_page: 4 }).then((res) =>
-          res.filter((item: Product) => String(item.id) !== String(params.id)).slice(0, 4)
+          res.filter((item: Product) => String(item.id) !== String(id)).slice(0, 4)
         )
       : Promise.resolve([]),
     fetchDeliveryFees(),

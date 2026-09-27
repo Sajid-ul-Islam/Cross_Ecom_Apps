@@ -46,26 +46,7 @@ function OrderSuccessContent() {
     } catch {}
   }, [guestPhone]);
 
-  const handleSaveGuestProfile = () => {
-    setSaveLoading(true);
-    try {
-      const updated = {
-        name: guestName,
-        phone: guestPhone,
-        email: "",
-        address: "",
-        city: "Dhaka",
-        district: "BD-13",
-        jeansSize: "32",
-        topSize: "L",
-        isGuest: false,
-        role: "customer",
-      };
-      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
-      setGuestSaved(true);
-    } catch {}
-    setSaveLoading(false);
-  };
+  const handleSaveGuestProfile = () => { window.location.href = "/profile"; };
 
   return (
     <div className="container" style={{ paddingBottom: 100 }}>
@@ -204,7 +185,7 @@ function OrderSuccessContent() {
         {/* Guest Profile Save Prompt */}
         {isGuestOrder && !guestSaved && (
           <div className="guest-save-prompt-card">
-            <h4 className="guest-save-title">Save this order to your DEEN profile?</h4>
+            <h4 className="guest-save-title">Create your DEEN account</h4>
             <p className="guest-save-sub">
               Save your details so next time DEEN greets you by name ({guestName}) and automatically remembers your addresses.
             </p>
@@ -216,7 +197,7 @@ function OrderSuccessContent() {
                 onClick={handleSaveGuestProfile}
                 disabled={saveLoading}
               >
-                {saveLoading ? "Saving…" : "Save My Profile"}
+                {saveLoading ? "Saving…" : "Sign In / Create Account"}
               </button>
               <button
                 type="button"

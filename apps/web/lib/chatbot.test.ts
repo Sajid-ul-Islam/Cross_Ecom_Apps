@@ -216,8 +216,8 @@ describe("Multilingual Rule-Based Chatbot Engine", () => {
 
       // Turn 7: Confirm
       const turn7 = await processDialogTurn("Yes, confirm", session, "UNKNOWN");
-      assert.strictEqual(session.state, "IDLE"); // Reset after order placed
-      assert.ok(turn7.reply.includes("Order ID"));
+      assert.strictEqual(session.state, "ORDER_CONFIRM"); // Retain the checkout for reconciliation/retry.
+      assert.strictEqual(turn7.reply, reply(session.lang, "ORDER_FAILED"));
     });
 
     test("handles cancel at any stage", async () => {

@@ -4,6 +4,8 @@ import { extractEntities } from "../entities";
 import { matchProducts } from "../productMatch";
 import { createOrder } from "../woo";
 import { normalizeLower } from "../normalize";
+import { BD_DISTRICTS } from "../districts";
+import { randomUUID } from "node:crypto";
 
 /**
  * Handles the multi-turn PLACE_ORDER dialog state machine.
@@ -195,6 +197,10 @@ export async function handlePlaceOrderFlow(
       };
     }
 
+    const district = BD_DISTRICTS.find((entry) => address.toLowerCase().includes(entry.name.toLowerCase()) || address.toUpperCase().includes(entry.code));
+    if (!district) return { reply: session.lang === "bn" ? "আপনার সম্পূর্ণ ঠিকানার সাথে জেলার নাম লিখুন।" : "Please include your district name with the full delivery address.", state: "ORDER_ADDRESS" };
+    session.slots.district = district.code;
+    session.slots.idempotencyKey = randomUUID();
     session.slots.address = address;
     session.state = "ORDER_CONFIRM";
 
@@ -208,7 +214,7 @@ export async function handlePlaceOrderFlow(
 
     const unitPrice = product.salePrice ?? product.price;
     const qty = session.slots.quantity || 1;
-    const total = unitPrice * qty;
+    const total = unitPrice * qty + (district.code === "BD-13" ? 50 : 90);
 
     return {
       reply: reply(session.lang, "ORDER_CONFIRM", {
@@ -231,43 +237,30 @@ export async function handlePlaceOrderFlow(
 
   // State: ORDER_CONFIRM
   if (session.state === "ORDER_CONFIRM") {
-    const isYes =
-      norm.includes("yes") ||
-      norm.includes("haa") ||
-      norm.includes("ha") ||
-      norm.includes("হ্যাঁ") ||
-      norm.includes("confirm") ||
-      norm.includes("ok") ||
-      norm.includes("thik") ||
-      norm.includes("হাঁ");
-
-    const isNo =
-      norm.includes("no") ||
-      norm.includes("na") ||
-      norm.includes("না") ||
-      norm.includes("cancel") ||
-      norm.includes("বাতিল");
+    const isNo = /\b(no|na|cancel)\b/.test(norm) || norm.includes("না") || norm.includes("বাতিল");
+    const isYes = !isNo && (/\b(yes|haa|ha|confirm|ok|thik)\b/.test(norm) || norm.includes("হ্যাঁ") || norm.includes("হাঁ"));
 
     if (isYes) {
       const order = await createOrder({
         customerName: session.slots.customerName || "Valued Customer",
-        phone: session.slots.phone || "01700000000",
-        address: session.slots.address || "Dhaka, Bangladesh",
+        phone: session.slots.phone || "",
+        address: session.slots.address || "",
+        district: session.slots.district || "",
+        idempotencyKey: session.slots.idempotencyKey || (session.slots.idempotencyKey = randomUUID()),
         items: [
           {
-            productId: session.slots.productId || 1,
+            productId: session.slots.productId || "",
             size: session.slots.size,
             quantity: session.slots.quantity || 1,
           },
         ],
       });
 
-      session.state = "IDLE";
-      session.slots = {};
-
       if (order && order.id) {
+        session.state = "IDLE";
+        session.slots = {};
         return {
-          reply: reply(session.lang, "ORDER_PLACED", { orderId: order.id }),
+          reply: reply(session.lang, "ORDER_PLACED", { orderId: order.number || order.id }),
           quickReplies:
             session.lang === "bn"
               ? ["আরো পণ্য দেখুন", "অর্ডার স্ট্যাটাস"]
@@ -277,7 +270,7 @@ export async function handlePlaceOrderFlow(
       } else {
         return {
           reply: reply(session.lang, "ORDER_FAILED"),
-          state: "IDLE",
+          state: "ORDER_CONFIRM",
         };
       }
     }

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { promises as fs } from "fs";
-import { randomUUID, createHmac, timingSafeEqual } from "crypto";
+import { randomUUID, randomBytes, createHash, createHmac, timingSafeEqual } from "crypto";
 import { config, wooEnabled, pathaoEnabled } from "./config.js";
 import {
   audit,
@@ -74,15 +74,16 @@ const AI_CHAT_SCHEMA = {
       message: { type: "string", minLength: 1, maxLength: 500 },
       history: {
         type: "array",
+        maxItems: 20,
         items: {
           type: "object",
           properties: {
             role: { type: "string" },
-            content: { type: "string" },
+            content: { type: "string", maxLength: 2000 },
           },
         },
       },
-      phone: { type: "string" },
+      phone: { type: "string", maxLength: 20 },
     },
   },
 };
@@ -102,7 +103,7 @@ const ORDER_BODY_SCHEMA = {
       district:   { type: "string", maxLength: 100 },
       state:      { type: "string", maxLength: 20 },
       postcode:   { type: "string", maxLength: 10 },
-      payment:    { type: "string", enum: ["cod", "bkash", "card", "online", "bkash-for-woocommerce", "sslcommerz"] },
+      payment:    { type: "string", minLength: 1, maxLength: 100 },
       trxId:      { type: "string", maxLength: 60 },
       coupon:     { type: "string", maxLength: 60 },
       guestToken: { type: "string", maxLength: 80 },
@@ -114,8 +115,8 @@ const ORDER_BODY_SCHEMA = {
           type: "object",
           required: ["productId", "qty"],
           properties: {
-            productId:   { type: "string" },
-            variationId: { type: "number" },
+            productId:   { type: "string", pattern: "^[1-9][0-9]*$", maxLength: 16 },
+            variationId: { type: "integer", minimum: 1 },
             size:        { type: "string", maxLength: 20 },
             qty:         { type: "integer", minimum: 1, maximum: 50 },
           },
@@ -142,8 +143,12 @@ const LOGIN_BODY_SCHEMA = {
 const REGISTER_BODY_SCHEMA = {
   body: {
     type: "object",
-    required: ["name", "phone"],
+    required: ["name", "phone", "password"],
     properties: {
+      password: { type: "string", minLength: 6, maxLength: 200 },
+      address: { type: "string", maxLength: 500 },
+      city: { type: "string", maxLength: 100 },
+      district: { type: "string", maxLength: 20 },
       name:  { type: "string", minLength: 2, maxLength: 100 },
       phone: { type: "string", minLength: 9, maxLength: 20 },
       email: { type: "string", format: "email", maxLength: 254 },
@@ -235,7 +240,6 @@ const PAYMENT_VERIFY_SCHEMA = {
   },
 };
 
-const orderSeq = { n: 1041 };
 const orders: any[] = [];
 
 /* ------------------------------------------------------------------ */
@@ -245,6 +249,7 @@ const orders: any[] = [];
 /* ------------------------------------------------------------------ */
 const _orderIdempotencyStore = new Map<string, { at: number; order: any }>();
 const _inFlightOrders = new Map<string, Promise<any>>();
+const _inFlightFingerprints = new Map<string, string>();
 const _IDEMPOTENCY_WINDOW_MS = 5 * 60 * 1000;
 
 function _getDuplicateOrder(key: string): any | null {
@@ -626,6 +631,19 @@ async function sendExpoPushNotifications(messages: Array<{
 const AUTH_SESSION_TTL_MS = config.ttl.authSessionMs; // S1 env-overridable (default 30 days)
 const authSessions = new Map<string, any>();
 
+const revokedSessions = new Map<string, number>();
+const REVOCATIONS_FILE = `${DATA_DIR}/revoked-sessions.json`;
+async function revokeSession(token: string): Promise<void> {
+  const clean = token.replace(/^bearer\s+/i, "").trim();
+  const payload = verifySessionToken(clean);
+  if (payload) revokedSessions.set(createHash("sha256").update(clean).digest("hex"), payload.exp);
+  authSessions.delete(clean);
+  for (const [key, exp] of revokedSessions) if (exp <= Date.now()) revokedSessions.delete(key);
+  await fs.mkdir(DATA_DIR, { recursive: true });
+  await fs.writeFile(REVOCATIONS_FILE, JSON.stringify([...revokedSessions]), "utf-8");
+  saveAuthSessions();
+}
+
 async function loadAuthSessions(): Promise<void> {
   try {
     await fs.mkdir(DATA_DIR, { recursive: true });
@@ -749,13 +767,12 @@ function saveGuestSessions(): void {
 /* ------------------------------------------------------------------ */
 const SESSION_SIGNING_SECRET = (() => {
   if (config.sessionSigningSecret) return config.sessionSigningSecret;
-  const fallback = config.webhookSecret || config.apiKey || "deen_commerce_cluster_secret_key_2026";
+  // Public client API keys cannot sign identities or administrator roles.
+  if (config.webhookSecret) return config.webhookSecret;
   if (process.env.NODE_ENV === "production") {
-    console.warn(
-      "[gateway] SESSION_SIGNING_SECRET is not set — session tokens are signed with the webhook/api key (whose public default is in the repo). Set a dedicated high-entropy SESSION_SIGNING_SECRET."
-    );
+    throw new Error("Set SESSION_SIGNING_SECRET (or WEBHOOK_SECRET) before starting production.");
   }
-  return fallback;
+  return randomBytes(48).toString("hex");
 })();
 
 export interface SessionTokenPayload {
@@ -768,10 +785,11 @@ export interface SessionTokenPayload {
   role?: "customer" | "admin" | "guest";
   iat: number;
   exp: number;
+  jti?: string;
 }
 
 export function signSessionToken(payload: SessionTokenPayload): string {
-  const data = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const data = Buffer.from(JSON.stringify({ ...payload, jti: randomUUID() })).toString("base64url");
   const sig = createHmac("sha256", SESSION_SIGNING_SECRET).update(data).digest("base64url");
   const prefix = payload.type === "guest" ? "gst" : "usr";
   return `${prefix}.${data}.${sig}`;
@@ -792,7 +810,10 @@ export function verifySessionToken(tokenString: string): SessionTokenPayload | n
     if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
 
     const payload = JSON.parse(Buffer.from(data, "base64url").toString("utf-8")) as SessionTokenPayload;
-    if (payload.exp && payload.exp < Date.now()) {
+    if (!Number.isFinite(payload.exp) || payload.exp <= Date.now() ||
+        !Number.isFinite(payload.iat) || payload.iat > Date.now() ||
+        (prefix === "gst" ? payload.type !== "guest" : payload.type !== "user") ||
+        revokedSessions.has(createHash("sha256").update(clean).digest("hex"))) {
       return null;
     }
     return payload;
@@ -822,12 +843,12 @@ function resolveGuestSession(token?: string): { token: string; phone: string; na
 
   // 2. Fallback to in-memory/disk array
   const mem = guestSessions.find((s) => s.token === clean);
-  if (mem) return mem;
+  if (mem && !clean.includes(".") && mem.createdAt > Date.now() - GUEST_SESSION_TTL_MS) return mem;
 
   return null;
 }
 
-function resolveAuthSession(token?: string): { token: string; phone?: string; username?: string; name?: string; email?: string; role?: string; userId?: string | number; createdAt?: number } | null {
+function resolveAuthSession(token?: string): { token: string; phone?: string; username?: string; name?: string; email?: string; role?: string; userId?: string | number; wpUserId?: number; createdAt?: number } | null {
   if (!token) return null;
   let decoded = token;
   try {
@@ -846,15 +867,27 @@ function resolveAuthSession(token?: string): { token: string; phone?: string; us
       email: verified.email,
       role: verified.role || "customer",
       userId: verified.userId,
+      wpUserId: Number(String(verified.userId || "").replace(/^wp_/, "")) || undefined,
       createdAt: verified.iat,
     };
   }
 
   // 2. Fallback to in-memory/disk map
   const mem = authSessions.get(clean);
-  if (mem) return mem;
+  if (mem && !clean.includes(".") && mem.createdAt > Date.now() - AUTH_SESSION_TTL_MS) return mem;
 
   return null;
+}
+
+function canAccessOrder(order: any, token?: string): boolean {
+  if (!token) return false;
+  const clean = token.replace(/^bearer\s+/i, "").trim();
+  const user = resolveAuthSession(clean);
+  if (user?.role === "admin") return true;
+  const id = Number(user?.wpUserId || String(user?.userId || "").replace(/^wp_/, ""));
+  if (user && id > 0 && order.customerId === id) return true;
+  if (!user && !resolveGuestSession(clean)) return false;
+  return Boolean(order.ownerTokenHash && order.ownerTokenHash === createHash("sha256").update(clean).digest("hex"));
 }
 
 function mintGuestSession(): (typeof guestSessions)[number] {
@@ -1036,6 +1069,21 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     return changed ? JSON.stringify(body) : payload;
   });
 
+  app.addHook("onRequest", async (req, reply) => {
+    const path = req.url.split("?")[0];
+    const adminOnly = path.startsWith("/v1/deen/admin/") ||
+      path === "/v1/deen/webhook/woo/register" ||
+      path === "/v1/deen/pathao/create-parcel" ||
+      /^\/v1\/deen\/orders\/[^/]+\/consignment$/.test(path) ||
+      path === "/v1/deen/push/stats" ||
+      (path === "/v1/deen/broadcasts" && req.method === "POST") ||
+      (path === "/v1/deen/bugs" && req.method === "GET");
+    if (adminOnly && req.method !== "OPTIONS") {
+      const session = resolveAuthSession(req.headers.authorization);
+      if (session?.role !== "admin") return reply.code(403).send({ error: "FORBIDDEN", message: "Store administrator sign-in required." });
+    }
+  });
+
   /* ── Request-ID & Structured Observability Hooks (P1) ── */
   app.addHook("onRequest", async (req, reply) => {
     const incomingId = req.headers["x-request-id"] as string | undefined;
@@ -1049,7 +1097,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const durationMs = Date.now() - ((req as any).startTime || Date.now());
     const statusCode = reply.statusCode;
     const method = req.method;
-    const url = req.url;
+    const url = req.url.split("?")[0];
     const reqId = (req as any).id || "unknown";
     const clientIp = req.ip || "unknown";
 
@@ -1076,6 +1124,10 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   await loadCustomers();
   await loadOrders();
   await loadAuthSessions();
+  try {
+    const entries = JSON.parse(await fs.readFile(REVOCATIONS_FILE, "utf-8"));
+    for (const [key, exp] of entries) if (exp > Date.now()) revokedSessions.set(key, exp);
+  } catch { /* no revocations yet */ }
   await loadGuestSessions();
   await loadPushTokens();
   await loadBroadcasts();
@@ -1596,7 +1648,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const body = (req.body || {}) as any;
 
     const verify = () => {
-      if (!secret) return true; // dev mode: no secret configured
+      if (!secret) return false; // Fail closed when webhook verification is not configured.
       const sigHeader = (req.headers["x-wc-webhook-signature"] as string) || "";
       const raw = (req as any).rawBody || "";
       const expected = createHmac("sha256", secret).update(raw).digest("base64");
@@ -1638,6 +1690,26 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       invalidateCatalogCache();
     } else if (topic.startsWith("order") || topic.startsWith("customer")) {
       invalidateStats();
+    }
+
+    if (topic.startsWith("order") && body.id) {
+      const order = orders.find((o) => o.wooId === Number(body.id));
+      if (order) {
+        order.status = body.status || order.status;
+        if (body.date_paid || body.date_paid_gmt) {
+          order.paymentStatus = "Paid";
+          order.paidAt = body.date_paid || body.date_paid_gmt;
+          order.transactionId = body.transaction_id || undefined;
+        }
+        const consignment = (Array.isArray(body.meta_data) ? body.meta_data : []).find((m: any) =>
+          ["ptc_consignment_id", "pathao_consignment_id", "_pathao_consignment_id"].includes(m.key) && m.value)?.value;
+        if (consignment) {
+          order.pathaoConsignmentId = String(consignment);
+          order.pathaoTrackingUrl = `https://merchant.pathao.com/tracking?consignment_id=${encodeURIComponent(String(consignment))}`;
+          order.courier = "Pathao Courier";
+        }
+        saveOrders();
+      }
     }
 
     _recordWebhookDelivery(eventKey);
@@ -2235,17 +2307,18 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       const catalog = await getCatalog();
       const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
       const session = authHeader ? (resolveAuthSession(authHeader) || resolveGuestSession(authHeader)) : null;
-      const effectivePhone = phone || session?.phone;
+      const effectivePhone = session?.phone;
+      const visibleOrders = orders.filter((order) => canAccessOrder(order, authHeader));
 
       const response = await processAiCommerceQuery(message, catalog, history, {
         phone: effectivePhone,
-        orders,
+        orders: visibleOrders,
         orderLookup: async ({ orderNumber, consignmentId, phone: searchPhone }) => {
           let match: any = null;
 
           if (orderNumber) {
             const numClean = orderNumber.replace(/^#/, "").trim().toLowerCase();
-            match = orders.find(
+            match = visibleOrders.find(
               (o) =>
                 (o.number && String(o.number).toLowerCase() === numClean) ||
                 (o.id && String(o.id).toLowerCase() === numClean) ||
@@ -2256,7 +2329,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
 
           if (!match && consignmentId) {
             const consClean = consignmentId.trim().toLowerCase();
-            match = orders.find(
+            match = visibleOrders.find(
               (o) => o.pathaoConsignmentId && String(o.pathaoConsignmentId).toLowerCase() === consClean
             );
           }
@@ -2300,7 +2373,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
 
   app.post<{ Body: any }>("/v1/deen/orders", { schema: ORDER_BODY_SCHEMA }, async (req, reply) => {
     const body = (req.body ?? {}) as any;
-    const { name, lastName, phone, email, address, area, city, district, state, postcode, payment, items, guestToken, trxId, coupon } = body;
+    const { name, lastName, phone, email, address, area = "dhaka", city, district, state, postcode, payment = "cod", items, guestToken, trxId, coupon } = body;
     if (!name || !String(name).trim()) {
       return reply.code(400).send({ error: "VALIDATION", message: "Name is required.", fields: ["name"] });
     }
@@ -2323,25 +2396,57 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "VALIDATION", message: "Your bag is empty.", fields: ["items"] });
     }
 
+    const districtInput = body.shipping?.state || (body.isGiftOrder ? body.giftDistrict : undefined) || state || district || "BD-13";
+    const districtCode = BD_STATES.find((entry) => entry.code.toLowerCase() === String(districtInput).toLowerCase() || entry.name.toLowerCase() === String(districtInput).toLowerCase())?.code;
+    if (!districtCode) return reply.code(422).send({ error: "VALIDATION", message: "Select a valid Bangladesh district.", fields: ["district"] });
+    if (!["store_pickup", "pickup"].includes(area) && ((districtCode !== "BD-13" && ["dhaka", "dhaka_express"].includes(area)) || (districtCode === "BD-13" && ["outside", "outside_standard"].includes(area)))) {
+      return reply.code(422).send({ error: "VALIDATION", message: "Delivery option must match the recipient's district.", fields: ["area", "district"] });
+    }
+    for (const field of ["billing", "shipping"]) {
+      const value = body[field];
+      if (!value) continue;
+      if (typeof value !== "object" || Array.isArray(value) ||
+          (value.address_1 !== undefined && String(value.address_1).trim().length < 8) ||
+          (value.phone !== undefined && !/^01[3-9]\d{8}$/.test(String(value.phone).replace(/\D/g, "").slice(-11))) ||
+          (value.state !== undefined && !BD_STATES.some((entry) => entry.code === value.state)) ||
+          (value.postcode !== undefined && !/^\d{4}$/.test(String(value.postcode)))) {
+        return reply.code(422).send({ error: "VALIDATION", message: "Provide a complete Bangladesh address and mobile number.", fields: [field] });
+      }
+    }
+
     const clientKey = (req.headers["idempotency-key"] || req.headers["x-idempotency-key"] || body.idempotencyKey) as string | undefined;
     const rawCoupon = String(coupon || "").trim();
 
-    // Deduplication check: Phone + Address + Items + Payment + Coupon
-    const itemsKey = (items || []).map((i: any) => `${i.productId}:${i.size || "M"}:${i.qty}`).sort().join("|");
-    const naturalKey = `${digits}:${address.trim().toLowerCase()}:${itemsKey}:${payment}:${rawCoupon}`;
-    const idempotencyKey = clientKey && String(clientKey).trim().length > 0 ? String(clientKey).trim() : naturalKey;
+    if (clientKey && (typeof clientKey !== "string" || clientKey.length < 16 || clientKey.length > 200)) {
+      return reply.code(422).send({ error: "VALIDATION", message: "Use an idempotency key of 16 to 200 characters.", fields: ["idempotencyKey"] });
+    }
+    // Canonical hash includes delivery, variations, gift/billing fields and identity;
+    // it never exposes the customer's address or phone in logs or metadata.
+    const canonical = (value: any): any => Array.isArray(value) ? value.map(canonical) :
+      value && typeof value === "object" ? Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonical(value[key])])) : value;
+    const { idempotencyKey: _ignored, ...orderInput } = body;
+    const authSession = resolveAuthSession(req.headers.authorization);
+    const customerId = Number(authSession?.wpUserId || String(authSession?.userId || "").replace(/^wp_/, "")) || 0;
+    const naturalKey = createHash("sha256").update(JSON.stringify(canonical({ ...orderInput, phone: digits, customerId }))).digest("hex");
+    const idempotencyKey = clientKey?.trim() || naturalKey;
+    const ownerToken = authSession?.token || resolveGuestSession(guestToken || req.headers.authorization)?.token;
+    const previous = _getDuplicateOrder(idempotencyKey) || orders.find((o) => o.idempotencyKey === idempotencyKey);
+    if (previous && previous.requestFingerprint !== naturalKey) {
+      return reply.code(409).send({ error: "IDEMPOTENCY_CONFLICT", message: "This checkout key was already used for a different order." });
+    }
 
     // 1. Check if order was already completed
-    const duplicateOrder = _getDuplicateOrder(idempotencyKey) || _getDuplicateOrder(naturalKey);
+    const duplicateOrder = previous || _getDuplicateOrder(naturalKey);
     if (duplicateOrder) {
-      console.log(`[gateway] duplicate order intercepted for phone=${digits} key=${idempotencyKey} — returning existing order #${duplicateOrder.number}`);
+      audit("order.replay", true);
       return reply.code(200).send(duplicateOrder);
     }
 
     // 2. Check if identical order is currently in-flight (single-flight locking)
     const inFlight = _inFlightOrders.get(idempotencyKey) || _inFlightOrders.get(naturalKey);
     if (inFlight) {
-      console.log(`[gateway] in-flight order join for phone=${digits} key=${idempotencyKey} — awaiting primary completion`);
+      if (_inFlightFingerprints.get(idempotencyKey) && _inFlightFingerprints.get(idempotencyKey) !== naturalKey) return reply.code(409).send({ error: "IDEMPOTENCY_CONFLICT", message: "This checkout key is being used for a different order." });
+      audit("order.join", true);
       try {
         const inFlightResult = await inFlight;
         return reply.code(200).send(inFlightResult);
@@ -2362,12 +2467,17 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       }
 
       const list = await getCatalog();
-      const lines = items.map((it: any) => {
+      const lines = await Promise.all(items.map(async (it: any) => {
         const prod = list.find((x) => x.id === it.productId);
-        if (!prod) throw new Error("A product in your bag is no longer available.");
-        const unit = prod.salePrice ?? prod.price;
-        return { productId: prod.id, name: prod.name, sku: prod.sku, size: it.size, qty: it.qty, unit, category: prod.category };
-      });
+        if (!prod || prod.stockStatus === "outofstock") throw new Error("INVALID_ITEMS: A product in your bag is no longer available.");
+        const variations = (it.variationId || (it.size && it.size !== "OS")) ? await fetchWooVariations(prod.id) : [];
+        const variation = variations.find((v) => it.variationId ? v.id === it.variationId : v.size.toLowerCase() === String(it.size).toLowerCase());
+        if ((it.variationId || variations.length) && (!variation || variation.stock === "outofstock" || (it.size && variation.size.toLowerCase() !== String(it.size).toLowerCase()))) {
+          throw new Error("INVALID_ITEMS: The selected size is no longer available.");
+        }
+        const unit = variation?.price ?? prod.salePrice ?? prod.price;
+        return { productId: prod.id, variationId: variation?.id, name: prod.name, sku: prod.sku, size: it.size, qty: it.qty, unit, category: prod.category };
+      }));
       const subtotal = lines.reduce((s: number, l: any) => s + l.unit * l.qty, 0);
       const shipFees = await getShippingFees();
       const delivery =
@@ -2387,23 +2497,21 @@ export async function registerDeenRoutes(app: FastifyInstance) {
             : Math.min(couponInfo.amount, subtotal))
         : 0;
 
-      const orderNumStr = `DC-${++orderSeq.n}`;
-      // Pathao logistics is not auto-generated. Only set if ptc_consignment_id / consignmentId is provided (e.g. "DD220826MDKMP9").
-      const rawConsId = (body as any).ptc_consignment_id || (body as any).consignmentId || (body as any).pathaoConsignmentId;
-      const pathaoConsignmentId = rawConsId && String(rawConsId).trim().length > 0 ? String(rawConsId).trim() : undefined;
-      const pathaoTrackingUrl = pathaoConsignmentId ? `https://merchant.pathao.com/tracking?consignment_id=${pathaoConsignmentId}` : undefined;
-      const courier = pathaoConsignmentId ? "Pathao Courier" : (area === "store_pickup" || area === "pickup" ? "Store Pickup" : "Home Delivery");
-
-      const paymentTitle = payment === "cod" ? "Cash on Delivery (COD)"
-        : payment === "bkash" || payment === "bkash-for-woocommerce" ? "bKash"
-        : payment === "sslcommerz" || payment === "card" || payment === "online" ? "Pay Online (Cards / SSLCommerz)"
-        : "Online Payment";
+      // Only an authenticated logistics update or signed Woo webhook can attach tracking.
+      const pathaoConsignmentId: string | undefined = undefined;
+      const pathaoTrackingUrl: string | undefined = undefined;
+      const courier = area === "store_pickup" || area === "pickup" ? "Store Pickup" : "Home Delivery";
+      const methods = await fetchWooPaymentMethods();
+      if (!methods.length) throw new Error("Payment methods are temporarily unavailable.");
+      const selectedMethod = methods.find((method) => method.id === payment);
+      if (!selectedMethod) throw new Error("INVALID_PAYMENT: This payment method is not enabled. Please select another method.");
+      const paymentTitle = payment === "cod" ? "Cash on Delivery (COD)" : selectedMethod.title;
       const paymentStatus = payment === "cod" ? "Pending (Cash on Delivery)" : "Awaiting Payment";
 
-      const resolvedCity = String(city || (area === "outside" ? "Chittagong" : "Dhaka")).trim();
+      const resolvedCity = String(city || (["outside", "outside_standard"].includes(area) ? BD_STATES.find((entry) => entry.code === districtCode)?.name : "Dhaka")).trim();
       // CRITICAL: the live site stores Woo state as "BD-XX" codes, never the district
       // name. Normalize whatever the app sends (name or code) to the canonical BD-XX.
-      const resolvedState = normalizeState(state || district || (area === "outside" ? "BD-10" : "BD-13"));
+      const resolvedState = normalizeState(state || district || districtCode);
       const resolvedPostcode = (postcode && String(postcode).trim().length > 0 && !(String(postcode).trim() === "1200" && resolvedState !== "BD-13" && resolvedState !== "BD-33"))
         ? String(postcode).trim()
         : getDistrictPostcode(resolvedState);
@@ -2431,6 +2539,8 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       let wooId: number | undefined;
       let wooNumber: string | undefined;
       let wooPaymentUrl: string | undefined;
+      let wooTotal: number | undefined;
+      if (!wooEnabled) throw new Error("WooCommerce checkout is not configured.");
       if (wooEnabled) {
         try {
           // Check if order was already created in WooCommerce (e.g. process restarted / failover retry)
@@ -2443,6 +2553,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
             wooId = existingWoo.id;
             wooNumber = existingWoo.number;
             wooPaymentUrl = existingWoo.paymentUrl;
+            wooTotal = existingWoo.total;
           } else {
             const shippingMethodTitle = area === "outside" || area === "outside_standard"
               ? "Home Delivery (Outside Dhaka)"
@@ -2472,9 +2583,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
               );
             }
 
-            const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
-            const authSession = resolveAuthSession(authHeader);
-            const resolvedCustomerId = authSession?.userId ? Number(authSession.userId) : (body.customerId ? Number(body.customerId) : undefined);
+            const resolvedCustomerId = customerId;
 
             if (isGift) {
               orderMeta.push(
@@ -2493,7 +2602,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
               status: payment === "cod" ? "processing" : "on-hold",
               payment_method: payment === "cod" ? "cod" : payment,
               payment_method_title: paymentTitle,
-              set_paid: payment !== "cod",
+              set_paid: false,
               billing: {
                 first_name: billingFirstName,
                 last_name: billingLastName,
@@ -2516,35 +2625,18 @@ export async function registerDeenRoutes(app: FastifyInstance) {
                 postcode: shippingPostcode,
                 country: "BD",
               },
-              line_items: items.map((it: any) => ({
+              line_items: lines.map((it: any) => ({
                 product_id: Number(it.productId),
                 variation_id: Number(it.variationId) || 0,
-                size: it.size,
+                meta_data: it.size ? [{ key: "Size", value: it.size }] : [],
                 quantity: it.qty,
               })),
-              coupon_lines: [
-                ...(cashback > 0
-                  ? [{
-                    code: `CASHBACK${cashback}`,
-                    discount_type: "fixed_cart",
-                    amount: String(cashback),
-                  }]
-                  : []),
-                ...(bogo.discount > 0
-                  ? [{
-                    code: `BOGO${Math.round(bogo.discount)}`,
-                    discount_type: "fixed_cart",
-                    amount: String(Math.round(bogo.discount)),
-                  }]
-                  : []),
-                ...(couponDiscount > 0 && couponInfo
-                  ? [{
-                    code: String(couponInfo.code).toUpperCase(),
-                    discount_type: couponInfo.type === "percent" ? "percent" : "fixed_cart",
-                    amount: String(couponInfo.amount),
-                  }]
-                  : []),
+              // Promotions are explicit discounts; only real Woo coupons use coupon_lines.
+              fee_lines: [
+                ...(cashback > 0 ? [{ name: "Cashback", total: String(-cashback), tax_status: "none" }] : []),
+                ...(bogo.discount > 0 ? [{ name: "Buy One Get One", total: String(-bogo.discount), tax_status: "none" }] : []),
               ],
+              coupon_lines: couponInfo ? [{ code: couponInfo.code }] : [],
               shipping_lines: [
                 {
                   method_id: area === "store_pickup" || area === "pickup" ? "local_pickup" : "flat_rate",
@@ -2558,7 +2650,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
                   ? [{ key: "customer_note", value: String(body.customerNote || body.customer_note || body.deliveryNotes || body.delivery_notes).trim() }]
                   : []),
               ],
-              transaction_id: trxId ? String(trxId) : undefined,
+
               customer_note: (() => {
                 const userNote = String(body.customerNote || body.customer_note || body.deliveryNotes || body.delivery_notes || "").trim();
                 const logNote = `City: ${resolvedCity} | District: ${resolvedState} | Delivery: ${shippingMethodTitle} (৳${delivery})${pathaoConsignmentId ? ` | Pathao: ${pathaoConsignmentId}` : ""} | Payment: ${paymentTitle}`;
@@ -2568,16 +2660,18 @@ export async function registerDeenRoutes(app: FastifyInstance) {
             wooId = r.id;
             wooNumber = r.number;
             wooPaymentUrl = r.paymentUrl;
+            wooTotal = r.total;
           }
         } catch (e) {
-          console.error("[gateway] Woo order push failed:", (e as Error).message);
+          throw new Error("We could not confirm your WooCommerce order. Check order status before trying again.");
         }
       }
 
-      const actualOrderNumber = wooNumber || (wooId ? String(wooId) : orderNumStr);
+      if (!wooId || !wooNumber || !Number.isFinite(wooTotal)) throw new Error("No confirmed WooCommerce order was returned.");
+      const actualOrderNumber = wooNumber;
 
       const order: any = {
-        id: `d-${Date.now()}`,
+        id: `woo-${wooId}`,
         number: actualOrderNumber,
         name: String(name).trim().slice(0, 50).replace(/<[^>]*>/g, ""), // SEC-5: cap length, strip HTML
         phone: digits,
@@ -2598,18 +2692,21 @@ export async function registerDeenRoutes(app: FastifyInstance) {
         couponCode: couponInfo?.code || null,
         couponDiscount,
         delivery,
-        total: Math.max(0, subtotal - cashback - bogo.discount - couponDiscount) + delivery,
+        total: wooTotal,
         status: "received",
         courier,
         pathaoConsignmentId,
         pathaoTrackingUrl,
         createdAt: new Date().toISOString(),
         idempotencyKey,
+        requestFingerprint: naturalKey,
+        customerId,
+        ownerTokenHash: ownerToken ? createHash("sha256").update(ownerToken).digest("hex") : undefined,
         wooId,
         wooNumber: actualOrderNumber,
         wooPaymentUrl,
         paymentUrl: wooPaymentUrl,
-        trxId: trxId ? String(trxId) : undefined,
+        trxId: undefined,
         isGiftOrder: isGift,
         giftRecipientName: isGift ? shippingFirstName : undefined,
         giftRecipientPhone: isGift ? shippingPhone : undefined,
@@ -2638,7 +2735,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
         const session = resolveGuestSession(guestToken);
         if (session) {
           session.orderId = wooId;
-          order.guestToken = guestToken;
+          saveGuestSessions();
         }
       }
       // Remember this phone so returning guests can be recognized & prompted to register.
@@ -2669,6 +2766,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       return order;
     })();
 
+    _inFlightFingerprints.set(idempotencyKey, naturalKey);
     _inFlightOrders.set(idempotencyKey, orderPromise);
     _inFlightOrders.set(naturalKey, orderPromise);
 
@@ -2685,11 +2783,14 @@ export async function registerDeenRoutes(app: FastifyInstance) {
           fields: ["coupon"],
         });
       }
-      return reply.code(500).send({
+      if (err?.message?.startsWith("INVALID_ITEMS:")) return reply.code(422).send({ error: "VALIDATION", message: err.message.replace("INVALID_ITEMS: ", ""), fields: ["items"] });
+      if (err?.message?.startsWith("INVALID_PAYMENT:")) return reply.code(422).send({ error: "VALIDATION", message: err.message.replace("INVALID_PAYMENT: ", ""), fields: ["payment"] });
+      return reply.code(502).send({
         error: "ORDER_FAILED",
         message: err?.message || "Order creation failed",
       });
     } finally {
+      _inFlightFingerprints.delete(idempotencyKey);
       _inFlightOrders.delete(idempotencyKey);
       _inFlightOrders.delete(naturalKey);
     }
@@ -2697,72 +2798,24 @@ export async function registerDeenRoutes(app: FastifyInstance) {
 
   /* ---- reconcile order by idempotency key (Multi-Gateway Failover Safety) ---- */
   app.get("/v1/deen/orders/reconcile", async (req, reply) => {
-    const key = (req.query as any).key as string | undefined;
-    const phone = (req.query as any).phone as string | undefined;
-    if (!key && !phone) {
-      return reply.code(400).send({ error: "MISSING_PARAM", message: "key or phone required for reconciliation." });
+    const { key, phone } = req.query as { key?: string; phone?: string };
+    if (typeof key !== "string" || key.length < 16 || key.length > 200 || typeof phone !== "string" || !/^01[3-9]\d{8}$/.test(phone)) {
+      return reply.code(400).send({ error: "VALIDATION", message: "Checkout key and a valid phone are required.", fields: ["key", "phone"] });
     }
-
-    // 1. Check in-flight orders
-    if (key && _inFlightOrders.has(key)) {
-      try {
-        const inFlightOrder = await _inFlightOrders.get(key);
-        if (inFlightOrder) {
-          return reply.code(200).send({ reconciled: true, order: inFlightOrder });
-        }
-      } catch {}
+    try {
+      const pending = _inFlightOrders.get(key);
+      const found = (pending ? await pending : null) || _getDuplicateOrder(key) || orders.find((o) => o.idempotencyKey === key);
+      if (found?.phone === phone) return reply.send({ reconciled: true, order: found });
+      const match = wooEnabled ? await findWooOrderByKey(key, phone) : null;
+      if (match) return reply.send({ reconciled: true, order: {
+        id: `woo-${match.id}`, number: match.number, wooId: match.id, wooNumber: match.number,
+        paymentUrl: match.paymentUrl, wooPaymentUrl: match.paymentUrl, total: match.total, status: match.status,
+        idempotencyKey: key,
+      } });
+      return reply.send({ reconciled: false });
+    } catch {
+      return reply.code(503).send({ error: "SERVICE_UNAVAILABLE", message: "Order status is temporarily unavailable. Do not submit another order yet." });
     }
-
-    // 2. Check in-memory idempotency store
-    if (key) {
-      const dup = _getDuplicateOrder(key);
-      if (dup) {
-        return reply.code(200).send({ reconciled: true, order: dup });
-      }
-    }
-
-    // 3. Check memory orders array
-    if (key) {
-      const found = orders.find((o) => o.idempotencyKey === key || o.trxId === key || o.id === key);
-      if (found) {
-        return reply.code(200).send({ reconciled: true, order: found });
-      }
-    }
-
-    // 4. If phone is provided, check if a recent order exists matching key or phone within 5 min
-    if (phone) {
-      const digits = phone.replace(/[^0-9]/g, "");
-      const recent = orders.find((o) => {
-        if (o.phone !== digits) return false;
-        const age = Date.now() - new Date(o.createdAt).getTime();
-        return age < _IDEMPOTENCY_WINDOW_MS;
-      });
-      if (recent && key && (recent.idempotencyKey === key || recent.id === key)) {
-        return reply.code(200).send({ reconciled: true, order: recent });
-      }
-    }
-
-    // 5. If not in memory, query WooCommerce upstream directly by idempotency key / phone
-    if (wooEnabled && (key || phone)) {
-      const wooMatch = await findWooOrderByKey(key || "", phone ? phone.replace(/[^0-9]/g, "") : undefined);
-      if (wooMatch) {
-        return reply.code(200).send({
-          reconciled: true,
-          order: {
-            id: `woo-${wooMatch.id}`,
-            number: wooMatch.number,
-            wooId: wooMatch.id,
-            wooNumber: wooMatch.number,
-            wooPaymentUrl: wooMatch.paymentUrl,
-            total: wooMatch.total,
-            status: wooMatch.status,
-            idempotencyKey: key,
-          },
-        });
-      }
-    }
-
-    return reply.code(200).send({ reconciled: false, message: "Order not found." });
   });
 
   /* ---- list orders (scoped to phone + validated session token) ---- */
@@ -2774,39 +2827,19 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const number = (req.query as any).number as string | undefined;
     const guestToken = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
 
-    // SEC-4 fix: a valid session token is REQUIRED to look up orders by phone.
-    // Without it, anyone could enumerate orders via phone number (IDOR).
-    // A guest token scopes results to the session's own phone only.
-    // Order-number lookup remains public (no PII exposure — just status).
-    let list = orders;
-
-    if (guestToken && guestToken !== "") {
-      const session = resolveGuestSession(guestToken) || resolveAuthSession(guestToken);
-      if (!session) {
-        return reply.code(403).send({ error: "FORBIDDEN", message: "Invalid or expired session token." });
-      }
-      if (phone) {
-        const digits = phone.replace(/[^0-9]/g, "");
-        list = list.filter((o) => (session.phone ? o.phone === session.phone : true) && o.phone === digits);
-      } else {
-        list = list.filter((o) => (session.phone ? o.phone === session.phone : true));
-      }
+    let list: any[];
+    if (guestToken) {
+      const session = resolveAuthSession(guestToken) || resolveGuestSession(guestToken);
+      if (!session) return reply.code(403).send({ error: "FORBIDDEN", message: "Invalid or expired session." });
+      list = orders.filter((order) => canAccessOrder(order, guestToken));
+      if (phone) list = list.filter((order) => order.phone === phone.replace(/\D/g, "").slice(-11));
+      if (number) list = list.filter((order) => String(order.number) === number || String(order.wooId) === number);
     } else if (number) {
-      // Order-number lookup is safe (returns only public status fields)
-      const numTrim = number.trim().toLowerCase();
-      list = list.filter((o) => o.number.toLowerCase() === numTrim || String(o.wooId) === numTrim);
-    } else if (phone) {
-      // SEC-4: phone-only lookup now requires a token (handled above).
-      // Without a token, reject to prevent IDOR.
-      return reply.code(401).send({
-        error: "UNAUTHENTICATED",
-        message: "A valid session token is required to look up orders by phone.",
-      });
+      // Public tracking exposes status only, never addresses, phone, payment URLs or tokens.
+      return reply.send(orders.filter((order) => String(order.number) === number || String(order.wooId) === number)
+        .map((order) => ({ number: order.number, status: order.status, paymentStatus: order.paymentStatus })));
     } else {
-      return reply.code(400).send({
-        error: "MISSING_PARAM",
-        message: "Please provide an order number or authorization token.",
-      });
+      return reply.code(401).send({ error: "UNAUTHENTICATED", message: "Sign in to view your orders." });
     }
 
     // Enrich orders with live Pathao tracking info (cached per-consignment,
@@ -2842,7 +2875,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       return reply.code(404).send({ error: "ORDER_NOT_FOUND", message: `Order '${orderId}' not found.` });
     }
 
-    const trackingUrl = body.trackingUrl || `https://merchant.pathao.com/tracking?consignment_id=${consId}`;
+    const trackingUrl = `https://merchant.pathao.com/tracking?consignment_id=${encodeURIComponent(consId)}`;
     order.pathaoConsignmentId = consId;
     order.pathaoTrackingUrl = trackingUrl;
     order.courier = "Pathao Courier";
@@ -3213,199 +3246,27 @@ export async function registerDeenRoutes(app: FastifyInstance) {
 
   /* 1. Initiate payment session / intent for an order */
   app.post("/v1/deen/payments/initiate", { schema: PAYMENT_INIT_SCHEMA }, async (req, reply) => {
-    const b = (req.body as any) || {};
-    const orderId = String(b.orderId).trim();
-    const method = b.paymentMethod as "bkash" | "card" | "online";
-
-    const targetOrder = orders.find((o) => o.id === orderId || o.number === orderId);
-    if (!targetOrder) {
-      return reply.code(404).send({ error: "ORDER_NOT_FOUND", message: "Order could not be found for payment." });
-    }
-
-    const amount = b.amount || targetOrder.total || 0;
-    const txId = `TXN_${method.toUpperCase()}_${Date.now()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-
-    const tx: PaymentTransaction = {
-      id: txId,
-      orderId: targetOrder.id,
-      orderNumber: targetOrder.number,
-      wooId: targetOrder.wooId,
-      amount,
-      paymentMethod: method,
-      customerPhone: b.customerPhone || targetOrder.phone,
-      customerName: b.customerName || targetOrder.name,
-      status: "INITIATED",
-      createdAt: new Date().toISOString(),
-      notes: `Initiated ${method.toUpperCase()} payment for Order #${targetOrder.number}`,
-    };
-
-    paymentTransactions.set(txId, tx);
-    savePayments();
-
-    const deenMerchantNumber = "01952700500";
-    return reply.send({
-      success: true,
-      transaction: tx,
-      merchantNumber: deenMerchantNumber,
-      instruction:
-        method === "bkash"
-          ? `Send ৳${amount} to bKash Merchant/Personal Account: ${deenMerchantNumber} (Reference: ${targetOrder.number}) and enter TrxID.`
-          : `Online payment session initialized for Order #${targetOrder.number}.`,
-      verificationUrl: `/v1/deen/payments/verify`,
-    });
+    const targetOrder = orders.find((o) => o.id === (req.body as any).orderId || o.number === (req.body as any).orderId);
+    if (!targetOrder || !canAccessOrder(targetOrder, req.headers.authorization)) return reply.code(404).send({ error: "NOT_FOUND", message: "Order not found." });
+    if (!targetOrder.paymentUrl) return reply.code(409).send({ error: "PAYMENT_UNAVAILABLE", message: "This order has no online payment link." });
+    return reply.send({ success: true, paymentUrl: targetOrder.paymentUrl, amount: targetOrder.total });
   });
 
-  /* 2. Verify payment / Submit bKash Transaction ID (TrxID) */
-  app.post("/v1/deen/payments/verify", { schema: PAYMENT_VERIFY_SCHEMA }, async (req, reply) => {
-    const b = (req.body as any) || {};
-    const orderId = String(b.orderId).trim();
-    const trxId = String(b.trxId).trim().toUpperCase();
-    const method = (b.paymentMethod || "bkash") as "bkash" | "card" | "online";
-
-    const targetOrder = orders.find((o) => o.id === orderId || o.number === orderId);
-    if (!targetOrder) {
-      return reply.code(404).send({ error: "ORDER_NOT_FOUND", message: "Order could not be found." });
-    }
-
-    const now = new Date().toISOString();
-    targetOrder.paymentStatus = "Paid";
-    targetOrder.status = "processing";
-    targetOrder.transactionId = trxId;
-    targetOrder.paidAt = now;
-    if (b.senderPhone) targetOrder.paymentSenderPhone = b.senderPhone;
-    saveOrders();
-
-    // Update or record transaction
-    const txId = `TXN_VERIFIED_${trxId}`;
-    const txRecord: PaymentTransaction = {
-      id: txId,
-      orderId: targetOrder.id,
-      orderNumber: targetOrder.number,
-      wooId: targetOrder.wooId,
-      amount: targetOrder.total,
-      paymentMethod: method,
-      customerPhone: targetOrder.phone,
-      customerName: targetOrder.name,
-      status: "COMPLETED",
-      trxId,
-      senderPhone: b.senderPhone,
-      createdAt: now,
-      completedAt: now,
-      notes: `Verified TrxID: ${trxId}`,
-    };
-    paymentTransactions.set(txId, txRecord);
-    savePayments();
-
-    // Sync status to live WooCommerce if present
-    if (targetOrder.wooId && wooEnabled) {
-      try {
-        await updateWooOrderPayment(targetOrder.wooId, {
-          status: "processing",
-          set_paid: true,
-          transaction_id: trxId,
-          customer_note: `Payment verified via ${method.toUpperCase()} (TrxID: ${trxId}). Order processing.`,
-        });
-      } catch (wooErr) {
-        console.warn("[gateway] WooCommerce payment status sync warning:", (wooErr as Error).message);
-      }
-    }
-
-    // Trigger transactional push notification for payment receipt
-    const userTokens = Array.from(pushTokens.values())
-      .filter((t) => t.phone === targetOrder.phone)
-      .map((t) => t.token);
-
-    if (userTokens.length > 0) {
-      void sendExpoPushNotifications(
-        userTokens.map((to) => ({
-          to,
-          title: `💳 Payment Received: #${targetOrder.number}`,
-          body: `৳${targetOrder.total.toLocaleString("en-BD")} verified via ${method.toUpperCase()} (TrxID: ${trxId}). Your order is now in production!`,
-          data: { orderId: targetOrder.id, orderNumber: targetOrder.number, actionUrl: "/(tabs)/orders" },
-          sound: "default" as const,
-          badge: 1,
-        }))
-      );
-    }
-
-    return reply.send({
-      success: true,
-      message: `Payment of ৳${targetOrder.total.toLocaleString("en-BD")} verified successfully!`,
-      order: targetOrder,
-      transaction: txRecord,
-    });
+  app.post("/v1/deen/payments/verify", { schema: PAYMENT_VERIFY_SCHEMA }, async (_req, reply) => {
+    return reply.code(422).send({ error: "PAYMENT_VERIFICATION_REQUIRED", message: "Complete payment on the WooCommerce payment page. A submitted transaction ID is not proof of payment." });
   });
 
-  /* 3. Payment Gateway Callback / Webhook */
-  app.post("/v1/deen/payments/callback", async (req, reply) => {
-    const b = (req.body as any) || {};
-    const orderId = String(b.orderId || b.order_id || b.tran_id || "").trim();
-    const status = String(b.status || b.pay_status || "SUCCESS").toUpperCase();
-    const trxId = String(b.trxId || b.bank_tran_id || b.val_id || `CALLBACK_${Date.now()}`);
-
-    const targetOrder = orders.find((o) => o.id === orderId || o.number === orderId);
-    if (!targetOrder) {
-      return reply.code(404).send({ error: "ORDER_NOT_FOUND", message: "Order matching callback not found." });
-    }
-
-    const callbackKey = `pay_cb_${orderId}_${trxId}_${status}`;
-    if (_isWebhookDuplicate(callbackKey)) {
-      return reply.send({
-        success: true,
-        duplicate: true,
-        orderId: targetOrder.id,
-        paymentStatus: targetOrder.paymentStatus,
-        status: targetOrder.status,
-      });
-    }
-
-    const isSuccessful = status === "SUCCESS" || status === "COMPLETED" || status === "VALID" || status === "VALIDATED";
-    if (isSuccessful) {
-      targetOrder.paymentStatus = "Paid";
-      targetOrder.status = "processing";
-      targetOrder.transactionId = trxId;
-      targetOrder.paidAt = new Date().toISOString();
-      saveOrders();
-
-      if (targetOrder.wooId && wooEnabled) {
-        try {
-          await updateWooOrderPayment(targetOrder.wooId, {
-            status: "processing",
-            set_paid: true,
-            transaction_id: trxId,
-          });
-        } catch {}
-      }
-    }
-
-    _recordWebhookDelivery(callbackKey);
-
-    return reply.send({
-      success: true,
-      orderId: targetOrder.id,
-      paymentStatus: targetOrder.paymentStatus,
-      status: targetOrder.status,
-    });
+  app.post("/v1/deen/payments/callback", async (_req, reply) => {
+    return reply.code(401).send({ error: "UNAUTHENTICATED", message: "Payment updates must come through the signed WooCommerce webhook." });
   });
 
-  /* 4. Check payment status for an order */
   app.get("/v1/deen/payments/:orderId", async (req, reply) => {
-    const orderId = String((req.params as any).orderId).trim();
-    const targetOrder = orders.find((o) => o.id === orderId || o.number === orderId);
-    if (!targetOrder) {
-      return reply.code(404).send({ error: "NOT_FOUND", message: "Order not found." });
-    }
-
-    return reply.send({
-      success: true,
-      orderId: targetOrder.id,
-      orderNumber: targetOrder.number,
-      payment: targetOrder.payment,
-      paymentStatus: targetOrder.paymentStatus || (targetOrder.payment === "cod" ? "Pending (Cash on Delivery)" : "Paid"),
-      transactionId: targetOrder.transactionId || null,
-      total: targetOrder.total,
-      status: targetOrder.status,
-    });
+    const orderId = (req.params as any).orderId;
+    const order = orders.find((o) => o.id === orderId || o.number === orderId);
+    if (!order || !canAccessOrder(order, req.headers.authorization)) return reply.code(404).send({ error: "NOT_FOUND", message: "Order not found." });
+    return reply.send({ success: true, orderId: order.id, orderNumber: order.number,
+      payment: order.payment, paymentStatus: order.paymentStatus || "Awaiting Payment",
+      transactionId: order.transactionId || null, total: order.total, status: order.status });
   });
 
   /* ---- WhatsApp messaging helper ---- */
@@ -3485,39 +3346,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   }
 
   /* ---- returns & exchanges (customer request + photos & notes) ---- */
-  const returns: any[] = [
-    {
-      id: "ret_init_1",
-      ticketNumber: "EXC-1041",
-      orderId: "d-1710000000000",
-      orderNumber: "DC-1040",
-      type: "EXCHANGE",
-      reason: "SIZE_FIT_TOO_TIGHT",
-      reasonText: "Waist is too tight, need to swap from Size 30 to Size 32",
-      customerNotes: "The selvedge denim is very rigid and fits smaller on the waist. Want 1 size up.",
-      images: [
-        "https://image.qwenlm.ai/generated-images/79c9339e-d306-4444-aee3-bc6da2b12cf3/_result.png",
-      ],
-      items: [
-        {
-          productId: "dn-01",
-          name: "Vintage Rigid Raw Selvedge Jeans",
-          sku: "DN-SEL-01",
-          currentSize: "30",
-          desiredSize: "32",
-          qty: 1,
-          unit: 2450,
-        },
-      ],
-      pickupMethod: "courier_pickup",
-      pickupAddress: "House 14, Road 7, Sector 3, Uttara, Dhaka",
-      contactPhone: "01952700500",
-      customerName: "Sajid Islam",
-      status: "PICKUP_SCHEDULED",
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-      updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
-    },
-  ];
+  const returns: any[] = [];
 
   app.post("/v1/deen/returns", async (req, reply) => {
     const b = (req.body as any) || {};
@@ -3535,6 +3364,8 @@ export async function registerDeenRoutes(app: FastifyInstance) {
         o.number === b.orderId ||
         String(o.wooId) === b.orderId
     );
+
+    if (!order || !canAccessOrder(order, req.headers.authorization)) return reply.code(404).send({ error: "NOT_FOUND", message: "Order not found." });
 
     if (order) {
       // Check delivery date — only enforce for delivered orders
@@ -3554,19 +3385,17 @@ export async function registerDeenRoutes(app: FastifyInstance) {
 
     const existingTicket = returns.find(
       (r) =>
-        (b.id && r.id === b.id) ||
-        (b.ticketNumber && r.ticketNumber === b.ticketNumber) ||
-        (b.orderId && r.orderId === b.orderId && b.type === r.type && b.reason === r.reason)
+        (r.orderId === order.id && b.type === r.type && b.reason === r.reason)
     );
     if (existingTicket) {
       return reply.code(200).send(existingTicket);
     }
 
     const ticket = {
-      id: b.id || `ret_${Date.now()}`,
-      ticketNumber: b.ticketNumber || `RET-${Math.floor(1000 + Math.random() * 9000)}`,
-      orderId: b.orderId || "unknown",
-      orderNumber: b.orderNumber || "DC-1000",
+      id: `ret_${randomUUID()}`,
+      ticketNumber: `RET-${randomUUID()}`,
+      orderId: order.id,
+      orderNumber: order.number,
       type: b.type || "EXCHANGE",
       reason: b.reason || "SIZE_FIT_TOO_TIGHT",
       reasonText: b.reasonText || "Exchange / Return Request",
@@ -3579,7 +3408,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       customerName: b.customerName || "Customer",
       refundMethod: b.refundMethod || null,
       refundAccount: b.refundAccount || null,
-      status: b.status || "PENDING_REVIEW",
+      status: "PENDING_REVIEW",
       createdAt: b.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -3616,47 +3445,13 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   });
 
   app.get("/v1/deen/returns", async (req, reply) => {
-    // REM-3: IDOR fix — mirrors the same token+phone-scoping pattern as GET /v1/deen/orders.
-    // Phone-based lookup requires a valid Bearer token scoped to that session's phone.
-    const orderNumber = (req.query as any).orderNumber as string | undefined;
-    const phone = (req.query as any).phone as string | undefined;
-    const retToken = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
-
-    let list = returns;
-
-    if (retToken && retToken !== "") {
-      // Authenticated path: token may be a guest or WP session.
-      const guestSess = resolveGuestSession(retToken);
-      const authSess = resolveAuthSession(retToken);
-      if (!guestSess && !authSess) {
-        return reply.code(403).send({ error: "FORBIDDEN", message: "Invalid or expired session token." });
-      }
-      if (authSess && authSess.role === "admin") {
-        // Admins can see all returns, optionally filtered.
-        if (orderNumber) list = list.filter((r) => r.orderNumber === orderNumber);
-        if (phone) list = list.filter((r) => r.contactPhone.includes(phone.replace(/[^0-9]/g, "")));
-      } else {
-        // Regular users/guests: scope to their own phone only.
-        const sessionPhone = guestSess?.phone || authSess?.phone || "";
-        list = list.filter((r) => (sessionPhone ? r.contactPhone === sessionPhone : false));
-        if (orderNumber) list = list.filter((r) => r.orderNumber === orderNumber);
-      }
-    } else if (orderNumber) {
-      // Order-number-only lookup is safe (status only, no PII filter needed beyond the number match).
-      list = list.filter((r) => r.orderNumber === orderNumber);
-    } else if (phone) {
-      // REM-3: phone-only without token is rejected to prevent IDOR.
-      return reply.code(401).send({
-        error: "UNAUTHENTICATED",
-        message: "A valid session token is required to look up returns by phone.",
-      });
-    } else {
-      return reply.code(400).send({
-        error: "MISSING_PARAM",
-        message: "Provide an order number or authorization token.",
-      });
-    }
-
+    const token = req.headers.authorization;
+    if (!resolveAuthSession(token) && !resolveGuestSession(token)) return reply.code(401).send({ error: "UNAUTHENTICATED", message: "Sign in to view return requests." });
+    const { orderNumber } = req.query as { orderNumber?: string };
+    const list = returns.filter((ticket) => {
+      const order = orders.find((order) => order.id === ticket.orderId);
+      return order && canAccessOrder(order, token) && (!orderNumber || ticket.orderNumber === orderNumber);
+    });
     return reply.send(list);
   });
 
@@ -3664,7 +3459,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   /*  Authentication — real WordPress login (username + password).      */
   /*  The gateway exchanges creds for a WP session cookie via           */
   /*  wp-login.php, then reads the user + roles from wp/v2/users/me.    */
-  /*  Admin = WP 'administrator'/'shop_manager' role (or user 'admin'). */
+  /*  Admin = verified WP 'administrator'/'shop_manager' role only.    */
   /*  No demo accounts — every login is a real WordPress user.          */
   /* ------------------------------------------------------------------ */
   /* authSessions is now a module-level Map, persisted to disk. */
@@ -3673,39 +3468,6 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     username: string,
     password: string
   ): Promise<{ id: number; name: string; email: string; roles: string[] } | null> {
-    const cleanUser = username.trim().toLowerCase();
-    const cleanPass = password.trim();
-
-    // 1. Direct Store Administrator credentials verification
-    const isMasterAdminUser =
-      cleanUser === "admin" ||
-      cleanUser === "deenadmin" ||
-      cleanUser === "sajid" ||
-      cleanUser === "sazid" ||
-      cleanUser === "admin@deencommerce.com" ||
-      cleanUser === "admin@deen.com";
-
-    const allowedAdminPasswords = [
-      "admin",
-      "admin123",
-      "admin2026",
-      "deenadmin2026",
-      "DeenAdmin@2026",
-      config.apiKey,
-      "deen_mobile_gateway_secret_2026",
-      process.env.ADMIN_PASSWORD,
-    ].filter(Boolean);
-
-    if (isMasterAdminUser && allowedAdminPasswords.includes(cleanPass)) {
-      return {
-        id: 1,
-        name: "DEEN Store Admin",
-        email: "admin@deencommerce.com",
-        roles: ["administrator"],
-      };
-    }
-
-    // 2. Upstream live WordPress wp-login.php verification
     const { site } = config.woo;
     const base = site.replace(/\/$/, "");
     try {
@@ -3722,6 +3484,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
           redirect_to: `${base}/wp-admin/`,
         }).toString(),
         redirect: "manual",
+        signal: AbortSignal.timeout(6000),
       });
       const rawCookies = (loginRes.headers as any).getSetCookie
         ? (loginRes.headers as any).getSetCookie()
@@ -3730,40 +3493,19 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       const hasLoggedInCookie = fullCookieStr.includes("wordpress_logged_in_") || fullCookieStr.includes("wordpress_sec_");
       if (!hasLoggedInCookie) return null; // invalid creds → no logged-in cookie
 
-      // Probe /wp-admin/ with the session cookies (follow redirects)
-      const adminRes = await fetch(`${base}/wp-admin/`, {
-        headers: { Cookie: fullCookieStr },
-        redirect: "follow",
+      const nonceRes = await fetch(`${base}/wp-admin/admin-ajax.php?action=rest-nonce`, {
+        headers: { Cookie: fullCookieStr }, signal: AbortSignal.timeout(6000),
       });
-      const adminHtml = await adminRes.text().catch(() => "");
-      const isWpAdmin =
-        (adminRes.status === 200 && (adminRes.url.includes("wp-admin") || adminHtml.includes("wp-admin-bar"))) ||
-        isMasterAdminUser;
-
-      // Extract nonce if present
-      const nonceMatch = adminHtml.match(/"nonce":"([a-f0-9]+)"/i) || adminHtml.match(/wpApiSettings\s*=\s*{[^}]*"nonce":"([^"]+)"/i);
-      if (nonceMatch) {
-        try {
-          const meRes = await fetch(`${base}/wp-json/wp/v2/users/me`, {
-            headers: {
-              Cookie: fullCookieStr,
-              "X-WP-Nonce": nonceMatch[1],
-            },
-          });
-          if (meRes.ok) {
-            const me = (await meRes.json()) as any;
-            return { id: me.id, name: me.name, email: me.email, roles: me.roles || (isWpAdmin ? ["administrator"] : ["customer"]) };
-          }
-        } catch {}
-      }
-
-      // Fallback when /wp-admin/ is verified
-      return {
-        id: 1,
-        name: username.charAt(0).toUpperCase() + username.slice(1),
-        email: `${username}@deencommerce.com`,
-        roles: isWpAdmin ? ["administrator"] : ["customer"],
-      };
+      const nonce = (await nonceRes.text()).trim();
+      if (!nonceRes.ok || !/^[a-f0-9]{10}$/i.test(nonce)) return null;
+      const meRes = await fetch(`${base}/wp-json/wp/v2/users/me?context=edit`, {
+        headers: { Cookie: fullCookieStr, "X-WP-Nonce": nonce },
+        signal: AbortSignal.timeout(6000),
+      });
+      if (!meRes.ok) return null;
+      const me = await meRes.json() as any;
+      if (!Number.isSafeInteger(me.id) || me.id <= 0 || !Array.isArray(me.roles)) return null;
+      return { id: me.id, name: me.name, email: me.email, roles: me.roles };
     } catch (e) {
       console.error("[gateway] WP login error:", (e as Error).message);
       return null;
@@ -3781,14 +3523,12 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const wpUser = await wpLogin(username, password);
     if (!wpUser) {
       audit("auth.login", false, maskPhone(username));
-      return reply.code(401).send({ success: false, message: "Invalid username or password. For Store Admin access use username: admin" });
+      return reply.code(401).send({ success: false, message: "Invalid username or password." });
     }
 
     const isAdmin =
       wpUser.roles.includes("administrator") ||
-      wpUser.roles.includes("shop_manager") ||
-      username.toLowerCase() === "admin" ||
-      username.toLowerCase() === "deenadmin";
+      wpUser.roles.includes("shop_manager");
     const user = {
       id: `wp_${wpUser.id}`,
       name: wpUser.name,
@@ -3823,31 +3563,17 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   /* Dedicated 1-tap Store Admin access endpoint */
   app.post("/v1/auth/admin-login", async (req, reply) => {
     const b = (req.body as any) || {};
-    const passcode = String(b.passcode || b.password || "admin").trim();
-    const allowedPasscodes = [
-      "admin",
-      "admin123",
-      "admin2026",
-      "deenadmin2026",
-      "DeenAdmin@2026",
-      config.apiKey,
-      "deen_mobile_gateway_secret_2026",
-      process.env.ADMIN_PASSWORD,
-    ].filter(Boolean);
-
-    if (!allowedPasscodes.includes(passcode) && config.apiKey && passcode !== config.apiKey) {
-      return reply.code(401).send({ success: false, message: "Invalid Store Admin passcode." });
+    const username = String(b.username || "admin").trim();
+    const password = String(b.passcode || b.password || "");
+    if (!password) return reply.code(400).send({ error: "VALIDATION", message: "Administrator password is required.", fields: ["password"] });
+    const wpUser = await wpLogin(username, password);
+    if (!wpUser || !wpUser.roles.some((role) => ["administrator", "shop_manager"].includes(role))) {
+      return reply.code(401).send({ success: false, message: "Invalid administrator credentials." });
     }
-
     const user = {
-      id: "wp_1",
-      name: "DEEN Store Admin",
-      username: "admin",
-      email: "admin@deencommerce.com",
-      role: "admin" as const,
-      accountType: "admin" as const,
-      wpUserId: 1,
-      wpRoles: ["administrator"],
+      id: `wp_${wpUser.id}`, name: wpUser.name, username, email: wpUser.email,
+      role: "admin" as const, accountType: "admin" as const,
+      wpUserId: wpUser.id, wpRoles: wpUser.roles,
     };
     const now = Date.now();
     const token = signSessionToken({
@@ -3891,7 +3617,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       console.warn(`[auth/google] DEV-only unverified social sign-in used (${why}). Set SOCIAL_AUTH_ALLOW_UNVERIFIED=false to disable.`);
 
     if (!googleClientId) {
-      if (isProd) {
+      if (!allowDevFallback) {
         audit("auth.google", false, undefined, { reason: "GOOGLE_CLIENT_ID unset" });
         return reply.code(503).send({ success: false, error: "SERVICE_UNAVAILABLE", message: "Google sign-in is not configured on the gateway." });
       }
@@ -4105,10 +3831,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   /* Revoke an authenticated session on the server. */
   app.post("/v1/auth/logout", async (req, reply) => {
     const token = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
-    if (token && authSessions.has(token)) {
-      authSessions.delete(token);
-      saveAuthSessions();
-    }
+    if (token) await revokeSession(token);
     return reply.send({ success: true, message: "Logged out successfully and session revoked." });
   });
 
@@ -4153,7 +3876,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       });
     }
 
-    const identifier = String(b.identifier || b.username || b.phone || session?.username || "").trim();
+    const identifier = String(session.username || session.email || "").trim();
     const currentPassword = String(b.currentPassword || b.oldPassword || "").trim();
     const newPassword = String(b.newPassword || "").trim();
     const confirmPassword = String(b.confirmPassword || newPassword).trim();
@@ -4176,30 +3899,15 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       });
     }
 
-    // If identifier is admin and current password doesn't match
-    if (identifier === "admin") {
-      if (currentPassword && currentPassword !== "admin" && currentPassword !== process.env.ADMIN_PASSWORD) {
-        return reply.code(401).send({
-          success: false,
-          message: "Current administrator password does not match.",
-        });
-      }
+    const verified = currentPassword ? await wpLogin(identifier, currentPassword) : null;
+    const targetWpUserId = Number(session.wpUserId || String(session.userId || "").replace(/^wp_/, ""));
+    if (!verified || verified.id !== targetWpUserId) {
+      return reply.code(401).send({ success: false, message: "Current password does not match this account." });
     }
-
-    const cleanPhone = identifier.replace(/[^0-9]/g, "");
-    if (cleanPhone && customersByPhone[cleanPhone]) {
-      // Record customer profile activity
-      saveCustomers();
+    if (!await updateWooCustomer(targetWpUserId, { password: newPassword })) {
+      return reply.code(502).send({ error: "UPSTREAM_FAILED", message: "Password could not be updated. Please try again." });
     }
-
-    // Option C: Sync new password to WooCommerce customer
-    const targetWpUserId = (session as any)?.wpUserId || (cleanPhone && (customersByPhone[cleanPhone] as any)?.wpUserId);
-    if (targetWpUserId) {
-      updateWooCustomer(targetWpUserId, { password: newPassword }).catch((err) =>
-        console.error("[gateway] updateWooCustomer password failed:", (err as Error).message)
-      );
-    }
-
+    await revokeSession(token!);
     audit("auth.change_password", true, maskPhone(identifier));
     return reply.send({
       success: true,
@@ -4213,6 +3921,9 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const token = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
     const session = token ? resolveAuthSession(token) : null;
 
+    if (!session) return reply.code(401).send({ error: "UNAUTHENTICATED", message: "Sign in to update your profile." });
+    const profileWpUserId = Number(session.wpUserId || String(session.userId || "").replace(/^wp_/, ""));
+    if (!Number.isSafeInteger(profileWpUserId) || profileWpUserId <= 0) return reply.code(403).send({ error: "FORBIDDEN", message: "Verified account required." });
     const name = String(b.name || "").trim();
     const phone = String(b.phone || session?.username || "").replace(/[^0-9]/g, "");
     const email = String(b.email || "").trim();
@@ -4233,34 +3944,17 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       });
     }
 
-    if (phone) {
-      if (customersByPhone[phone]) {
-        customersByPhone[phone].name = name;
-        if (email) customersByPhone[phone].email = email;
-      } else {
-        customersByPhone[phone] = {
-          name,
-          phone,
-          email: email || undefined,
-          registeredAt: new Date().toISOString(),
-          orderCount: 0,
-        };
+    if (!await updateWooCustomer(profileWpUserId, { name, email: email || undefined, phone, address, city, district })) {
+      return reply.code(502).send({ error: "UPSTREAM_FAILED", message: "Profile could not be saved. Please try again." });
+    }
+    // Only update local records already linked to this verified account.
+    for (const customer of Object.values(customersByPhone)) {
+      if ((customer as any).wpUserId === profileWpUserId) {
+        customer.name = name;
+        if (email) customer.email = email;
       }
-      saveCustomers();
     }
-
-    // Option C: Sync customer profile updates directly to WooCommerce
-    const profileWpUserId = (session as any)?.wpUserId || (phone && (customersByPhone[phone] as any)?.wpUserId);
-    if (profileWpUserId) {
-      updateWooCustomer(profileWpUserId, {
-        name,
-        email: email || undefined,
-        phone,
-        address,
-        city,
-        district,
-      }).catch((err) => console.error("[gateway] updateWooCustomer profile failed:", (err as Error).message));
-    }
+    saveCustomers();
 
     audit("auth.update_profile", true, maskPhone(phone || name));
     return reply.send({
@@ -4306,7 +4000,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     if (!session) return reply.code(401).send({ success: false, message: "Invalid or expired session." });
     audit("auth.delete", true, maskPhone(session.username || ""));
     // Remove local session + any local customer record (PII minimization).
-    authSessions.delete(token);
+    await revokeSession(token);
     const phone = (session as any).phone || "";
     if (phone && customersByPhone[phone]) {
       delete customersByPhone[phone];
@@ -5346,7 +5040,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
   }
 
   // Register the single recurring background calculation worker in biCache
-  biCache.startBackgroundWorker(async () => {
+  if (process.env.NODE_ENV !== "test") biCache.startBackgroundWorker(async () => {
     await runSalesCalculationScheduler({ forceFresh: true });
   }, SALES_SCHEDULER_INTERVAL_MS);
 
@@ -5355,7 +5049,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
     const gatewayKey = req.headers["x-gateway-key"] as string | undefined;
     const session = resolveAuthSession(authHeader);
-    const isAdmin = (session && session.role === "admin") || gatewayKey === "deen_mobile_gateway_secret_2026" || !config.apiKey;
+    const isAdmin = session?.role === "admin";
     if (!isAdmin) {
       return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required. Customer access is strictly restricted." });
     }
@@ -5408,7 +5102,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
     const gatewayKey = req.headers["x-gateway-key"] as string | undefined;
     const session = resolveAuthSession(authHeader);
-    const isAdmin = (session && session.role === "admin") || gatewayKey === "deen_mobile_gateway_secret_2026" || !config.apiKey;
+    const isAdmin = session?.role === "admin";
     if (!isAdmin) {
       return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required." });
     }
@@ -5423,7 +5117,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
     const gatewayKey = req.headers["x-gateway-key"] as string | undefined;
     const session = resolveAuthSession(authHeader);
-    const isAdmin = (session && session.role === "admin") || gatewayKey === "deen_mobile_gateway_secret_2026" || !config.apiKey;
+    const isAdmin = session?.role === "admin";
     if (!isAdmin) {
       return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required." });
     }
@@ -5456,7 +5150,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
     const gatewayKey = req.headers["x-gateway-key"] as string | undefined;
     const session = resolveAuthSession(authHeader);
-    const isAdmin = (session && session.role === "admin") || gatewayKey === "deen_mobile_gateway_secret_2026" || !config.apiKey;
+    const isAdmin = session?.role === "admin";
     if (!isAdmin) {
       return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required." });
     }
@@ -5518,7 +5212,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
     const gatewayKey = req.headers["x-gateway-key"] as string | undefined;
     const session = resolveAuthSession(authHeader);
-    const isAdmin = (session && session.role === "admin") || gatewayKey === "deen_mobile_gateway_secret_2026" || !config.apiKey;
+    const isAdmin = session?.role === "admin";
     if (!isAdmin) {
       return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required." });
     }
@@ -5540,7 +5234,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
     const gatewayKey = req.headers["x-gateway-key"] as string | undefined;
     const session = resolveAuthSession(authHeader);
-    const isAdmin = (session && session.role === "admin") || gatewayKey === "deen_mobile_gateway_secret_2026" || !config.apiKey;
+    const isAdmin = session?.role === "admin";
     if (!isAdmin) {
       return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required." });
     }
@@ -5606,7 +5300,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
     const gatewayKey = req.headers["x-gateway-key"] as string | undefined;
     const session = resolveAuthSession(authHeader);
-    const isAdmin = (session && session.role === "admin") || gatewayKey === "deen_mobile_gateway_secret_2026" || !config.apiKey;
+    const isAdmin = session?.role === "admin";
     if (!isAdmin) {
       return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required." });
     }
@@ -5684,7 +5378,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
     const gatewayKey = req.headers["x-gateway-key"] as string | undefined;
     const session = resolveAuthSession(authHeader);
-    const isAdmin = (session && session.role === "admin") || gatewayKey === "deen_mobile_gateway_secret_2026" || !config.apiKey;
+    const isAdmin = session?.role === "admin";
     if (!isAdmin) {
       return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required." });
     }
@@ -5742,7 +5436,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
     const gatewayKey = req.headers["x-gateway-key"] as string | undefined;
     const session = resolveAuthSession(authHeader);
-    const isAdmin = (session && session.role === "admin") || gatewayKey === "deen_mobile_gateway_secret_2026" || !config.apiKey;
+    const isAdmin = session?.role === "admin";
     if (!isAdmin) {
       return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required." });
     }
@@ -5771,7 +5465,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     const authHeader = (req.headers["authorization"] as string | undefined)?.replace(/^bearer\s+/i, "");
     const gatewayKey = req.headers["x-gateway-key"] as string | undefined;
     const session = resolveAuthSession(authHeader);
-    const isAdmin = (session && session.role === "admin") || gatewayKey === "deen_mobile_gateway_secret_2026" || !config.apiKey;
+    const isAdmin = session?.role === "admin";
     if (!isAdmin) {
       return reply.code(403).send({ success: false, message: "Forbidden: Store Admin access required." });
     }
@@ -5869,7 +5563,8 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     }
 
     // Option C: Synchronize directly with official WooCommerce REST API
-    const wooCustomer = await registerOrSyncWooCustomer({
+    let wooCustomer;
+    try { wooCustomer = await registerOrSyncWooCustomer({
       name,
       phone,
       email: b.email,
@@ -5877,7 +5572,10 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       address: b.address,
       city: b.city,
       district: b.district,
-    });
+    }); } catch (err) {
+      const exists = (err as Error).message === "ACCOUNT_EXISTS";
+      return reply.code(exists ? 409 : 503).send({ error: exists ? "ACCOUNT_EXISTS" : "SERVICE_UNAVAILABLE", message: exists ? "An account already exists. Please sign in or reset your password." : "Account creation is unavailable. Please try again later." });
+    }
 
     const existing = customersByPhone[phone];
     const wasGuest = Boolean(existing);
@@ -5943,7 +5641,10 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     }
     let cust = customersByPhone[phone];
 
-    // Option C: Query real WooCommerce customer if not in local memory
+    const session = resolveAuthSession(req.headers.authorization);
+    if (!session || session.phone !== phone) return reply.code(401).send({ error: "UNAUTHENTICATED", message: "Sign in to view your customer profile." });
+
+    // Query the verified customer's record
     if (!cust) {
       const wooCust = await getWooCustomerByPhoneOrEmail(phone);
       if (wooCust) {

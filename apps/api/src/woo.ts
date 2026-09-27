@@ -181,7 +181,7 @@ export function decodeHtmlEntities(str: string): string {
 
 function mapWooToDeen(p: WooProduct): DeenProduct | null {
   // Skip draft/pending products — customers should never see them
-  if (p.status && p.status !== "publish" && p.status !== "private") return null;
+  if (p.status && p.status !== "publish") return null;
   const cleanName = decodeHtmlEntities(p.name || "");
   const catNames = p.categories.map((c) => c.name);
   const category = mapCategory(catNames);
@@ -453,7 +453,7 @@ export async function wooPost<T = any>(path: string, body: Record<string, unknow
   const url = new URL(`${site.replace(/\/$/, "")}/wp-json/wc/v3/${path}`);
   url.searchParams.set("consumer_key", consumerKey);
   url.searchParams.set("consumer_secret", consumerSecret);
-  const MAX_RETRIES = 2;
+  const MAX_RETRIES = 0;
   let lastErr: unknown;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const controller = new AbortController();
@@ -991,224 +991,28 @@ export async function fetchWooSectionBanners(): Promise<DeenSectionBanner[]> {
   return out;
 }
 
-export async function pushStoreApiOrder(order: any): Promise<{ id: number; number: string; paymentUrl?: string; orderKey?: string }> {
-  const siteUrl = config.woo.site || "https://deencommerce.com";
-
-  // 1. Initialize cart session & nonce
-  const cartRes = await fetch(`${siteUrl}/wp-json/wc/store/v1/cart`, {
-    headers: { "User-Agent": "DEEN-Commerce-Gateway/1.0" },
-    signal: AbortSignal.timeout(8000),
-  });
-  if (!cartRes.ok) {
-    throw new Error(`Store API cart init failed: ${cartRes.status}`);
-  }
-  let nonce = cartRes.headers.get("nonce") || "";
-  let cartToken = cartRes.headers.get("cart-token") || "";
-
-  // 2. Add line items to Store API cart
-  const lineItems = Array.isArray(order.line_items) ? order.line_items : [];
-  for (const it of lineItems) {
-    let targetId = Number(it.variation_id || it.product_id);
-    const qty = Math.max(1, Number(it.quantity) || 1);
-
-    // If product is variable, check if targetId needs variation mapping
-    const variations = storeProductVariationsMap.get(String(it.product_id));
-    if (variations && variations.length > 0 && (!it.variation_id || it.variation_id <= 0)) {
-      const matched = (it.size && variations.find((v) => v.size.toLowerCase() === String(it.size).toLowerCase())) || variations[0];
-      if (matched) {
-        targetId = matched.id;
-      }
-    }
-
-    const candidateIds: number[] = [];
-    if (targetId && !isNaN(targetId) && targetId > 0) {
-      candidateIds.push(targetId);
-    }
-    if (variations && variations.length > 0) {
-      for (const v of variations) {
-        if (!candidateIds.includes(v.id)) candidateIds.push(v.id);
-      }
-    }
-    // Safe fallbacks (simple product Mug 14649, Jacket XL 14991)
-    if (!candidateIds.includes(14649)) candidateIds.push(14649);
-    if (!candidateIds.includes(14991)) candidateIds.push(14991);
-
-    for (const candId of candidateIds) {
-      const addRes = await fetch(`${siteUrl}/wp-json/wc/store/v1/cart/add-item`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Nonce": nonce,
-          "Cart-Token": cartToken,
-          "User-Agent": "DEEN-Commerce-Gateway/1.0",
-        },
-        body: JSON.stringify({ id: candId, quantity: qty }),
-        signal: AbortSignal.timeout(8000),
-      });
-
-      if (addRes.headers.get("nonce")) nonce = addRes.headers.get("nonce")!;
-      if (addRes.headers.get("cart-token")) cartToken = addRes.headers.get("cart-token")!;
-
-      if (addRes.ok) {
-        break;
-      }
-    }
-  }
-
-  // 3. Apply coupons if any
-  const coupons = Array.isArray(order.coupon_lines) ? order.coupon_lines : [];
-  for (const c of coupons) {
-    if (c.code) {
-      try {
-        const coupRes = await fetch(`${siteUrl}/wp-json/wc/store/v1/cart/apply-coupon`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Nonce": nonce,
-            "Cart-Token": cartToken,
-            "User-Agent": "DEEN-Commerce-Gateway/1.0",
-          },
-          body: JSON.stringify({ code: String(c.code).trim() }),
-          signal: AbortSignal.timeout(6000),
-        });
-        if (coupRes.headers.get("nonce")) nonce = coupRes.headers.get("nonce")!;
-        if (coupRes.headers.get("cart-token")) cartToken = coupRes.headers.get("cart-token")!;
-      } catch {}
-    }
-  }
-
-  // 4. Normalize payment method for Store API
-  const rawPayment = String(order.payment_method || "cod").toLowerCase();
-  let normalizedPayment = "cod";
-  if (rawPayment.includes("bkash")) {
-    normalizedPayment = "bkash-for-woocommerce";
-  } else if (rawPayment.includes("ssl") || rawPayment.includes("card") || rawPayment.includes("online")) {
-    normalizedPayment = "sslcommerz";
-  } else if (rawPayment === "cod") {
-    normalizedPayment = "cod";
-  }
-
-  // 5. Update customer billing & shipping addresses
-  const b = order.billing || {};
-  const s = order.shipping || b;
-  const billingAddress = {
-    first_name: b.first_name || "Customer",
-    last_name: b.last_name || "",
-    company: "",
-    address_1: b.address_1 || "Dhaka, Bangladesh",
-    address_2: b.address_2 || "",
-    city: b.city || "Dhaka",
-    state: b.state || "BD-13",
-    postcode: b.postcode || "1200",
-    country: "BD",
-    email: b.email || "customer@deencommerce.com",
-    phone: b.phone || "01700000000",
-  };
-
-  const shippingAddress = {
-    first_name: s.first_name || billingAddress.first_name,
-    last_name: s.last_name || billingAddress.last_name,
-    company: "",
-    address_1: s.address_1 || billingAddress.address_1,
-    address_2: s.address_2 || "",
-    city: s.city || billingAddress.city,
-    state: s.state || billingAddress.state,
-    postcode: s.postcode || billingAddress.postcode,
-    country: "BD",
-    phone: s.phone || billingAddress.phone,
-  };
-
-  try {
-    const custRes = await fetch(`${siteUrl}/wp-json/wc/store/v1/cart/update-customer`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Nonce": nonce,
-        "Cart-Token": cartToken,
-        "User-Agent": "DEEN-Commerce-Gateway/1.0",
-      },
-      body: JSON.stringify({
-        billing_address: billingAddress,
-        shipping_address: shippingAddress,
-      }),
-      signal: AbortSignal.timeout(8000),
-    });
-    if (custRes.headers.get("nonce")) nonce = custRes.headers.get("nonce")!;
-    if (custRes.headers.get("cart-token")) cartToken = custRes.headers.get("cart-token")!;
-  } catch {}
-
-  // 6. Final Checkout POST
-  const checkoutPayload = {
-    payment_method: normalizedPayment,
-    billing_address: billingAddress,
-    shipping_address: shippingAddress,
-    customer_note: order.customer_note || "",
-  };
-
-  const checkoutRes = await fetch(`${siteUrl}/wp-json/wc/store/v1/checkout`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Nonce": nonce,
-      "Cart-Token": cartToken,
-      "User-Agent": "DEEN-Commerce-Gateway/1.0",
-    },
-    body: JSON.stringify(checkoutPayload),
-    signal: AbortSignal.timeout(12000),
-  });
-
-  if (!checkoutRes.ok) {
-    const errText = await checkoutRes.text().catch(() => "");
-    throw new Error(`Store API checkout failed: ${checkoutRes.status} ${errText.slice(0, 150)}`);
-  }
-
-  const j = await checkoutRes.json();
-  const orderId = Number(j.order_id);
-  const orderNumber = String(j.order_number ?? j.order_id);
-  const orderKey = String(j.order_key ?? "");
-  let redirectUrl: string | undefined = j.payment_result?.redirect_url;
-  if (!redirectUrl && normalizedPayment !== "cod" && orderId > 0 && orderKey) {
-    redirectUrl = `${siteUrl}/checkout/order-pay/${orderId}/?pay_for_order=true&key=${orderKey}`;
-  }
-
-  return {
-    id: orderId,
-    number: orderNumber,
-    paymentUrl: redirectUrl,
-    orderKey,
-  };
+export interface WooOrderReceipt {
+  id: number;
+  number: string;
+  paymentUrl?: string;
+  orderKey?: string;
+  total: number;
+  status?: string;
+  phone?: string;
 }
 
-export async function pushWooOrder(order: unknown): Promise<{ id: number; number: string; paymentUrl?: string; orderKey?: string }> {
-  // 1. Primary: Use live WooCommerce Store API (creates authentic WooCommerce orders & provides live bKash/SSLCommerz redirect URLs)
-  try {
-    const storeRes = await pushStoreApiOrder(order);
-    if (storeRes && storeRes.id > 0) {
-      console.log(`[woo] Store API order created successfully: #${storeRes.number} (id: ${storeRes.id})`);
-      return storeRes;
-    }
-  } catch (err: any) {
-    console.warn(`[woo] Store API order push failed, attempting REST v3 fallback:`, err?.message);
+export async function pushWooOrder(order: unknown): Promise<WooOrderReceipt> {
+  const { consumerKey, consumerSecret } = config.woo;
+  if (!consumerKey || !consumerSecret) throw new Error("WooCommerce checkout is not configured.");
+  // One authoritative write preserves addresses, fees, coupons and idempotency metadata.
+  const data = await wooPost<any>("orders", { ...(order as Record<string, unknown>), set_paid: false });
+  if (!Number.isSafeInteger(data.id) || data.id <= 0 || !Number.isFinite(Number(data.total))) {
+    throw new Error("WooCommerce returned an invalid order receipt. Check order status before retrying.");
   }
-
-  // 2. Secondary: Fallback to WooCommerce REST v3 if keys are present
-  const { site, consumerKey, consumerSecret } = config.woo;
-  if (consumerKey && consumerSecret) {
-    const url = new URL(`${site.replace(/\/$/, "")}/wp-json/wc/v3/orders`);
-    url.searchParams.set("consumer_key", consumerKey);
-    url.searchParams.set("consumer_secret", consumerSecret);
-    const r = await fetch(url.toString(), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(order),
-    });
-    if (r.ok) {
-      const j = (await r.json()) as { id: number; number?: string; payment_url?: string; order_key?: string };
-      return { id: j.id, number: String(j.number ?? j.id), paymentUrl: j.payment_url, orderKey: j.order_key };
-    }
-  }
-
-  throw new Error("Failed to push order to WooCommerce upstream.");
+  const paymentUrl = data.payment_url || (data.order_key
+    ? `${config.woo.site.replace(/\/$/, "")}/checkout/order-pay/${data.id}/?pay_for_order=true&key=${encodeURIComponent(data.order_key)}`
+    : undefined);
+  return { id: data.id, number: String(data.number || data.id), paymentUrl, orderKey: data.order_key, total: Number(data.total), status: data.status };
 }
 
 export interface DeenPaymentMethod {
@@ -1231,78 +1035,29 @@ export async function fetchWooPaymentMethods(): Promise<DeenPaymentMethod[]> {
     return _cachedPaymentMethods.data;
   }
 
-  const siteUrl = config.woo.site || "https://deencommerce.com";
   try {
-    const res = await fetch(`${siteUrl}/wp-json/wc/store/v1/cart`, {
-      headers: { "User-Agent": "DEEN-Commerce-Gateway/1.0" },
-      signal: AbortSignal.timeout(6000),
-    });
-    if (res.ok) {
-      const cart = await res.json();
-      const methods: string[] = cart.payment_methods || [];
-      if (methods.length > 0) {
-        const out: DeenPaymentMethod[] = [];
-        for (const m of methods) {
-          if (m === "cod") {
-            out.push({
-              id: "cod",
-              title: "Cash on Delivery (COD)",
-              description: "Pay cash upon receiving and inspecting your parcel at your doorstep.",
-              type: "cod",
-            });
-          } else if (m === "bkash-for-woocommerce" || m === "bkash") {
-            out.push({
-              id: "bkash-for-woocommerce",
-              title: "bKash Online Payment",
-              description: "Instant, seamless payment via official bKash merchant gateway.",
-              type: "redirect",
-            });
-          } else if (m === "sslcommerz" || m === "card") {
-            out.push({
-              id: "sslcommerz",
-              title: "Debit / Credit Card (SSLCommerz)",
-              description: "256-bit encrypted Visa, Mastercard, UnionPay, Amex & internet banking.",
-              type: "redirect",
-            });
-          } else {
-            out.push({
-              id: m,
-              title: m.toUpperCase(),
-              description: "Pay securely with online payment gateway.",
-              type: "redirect",
-            });
-          }
-        }
-        _cachedPaymentMethods = { data: out, expiresAt: now + 15 * 60 * 1000 };
-        return out;
-      }
-    }
-  } catch (err) {
-    console.warn("[woo] Store API payment methods fetch failed, using authentic defaults:", (err as Error).message);
+    const gateways = await wooFetch("payment_gateways") as any[];
+    if (!Array.isArray(gateways)) throw new Error("Invalid gateway response");
+    const methods: DeenPaymentMethod[] = gateways.filter((g) => g.enabled === true || g.enabled === "yes")
+      .map((g) => ({ id: String(g.id), title: String(g.title || g.method_title || g.id),
+        description: String(g.description || "").replace(/<[^>]*>/g, ""),
+        type: g.id === "cod" ? "cod" : "redirect" }));
+    _cachedPaymentMethods = { data: methods, expiresAt: now + 5 * 60 * 1000 };
+    return methods;
+  } catch {
+    // Browsing may use the public Store API, but never invent enabled gateways.
+    try {
+      const res = await fetch(`${config.woo.site.replace(/\/$/, "")}/wp-json/wc/store/v1/cart`, { signal: AbortSignal.timeout(6000) });
+      if (!res.ok) return [];
+      const cart = await res.json() as any;
+      if (!Array.isArray(cart.payment_methods)) return [];
+      const methods: DeenPaymentMethod[] = cart.payment_methods.filter((id: unknown) => typeof id === "string").map((id: string) => ({
+        id, title: id === "cod" ? "Cash on Delivery (COD)" : id, description: "", type: id === "cod" ? "cod" : "redirect",
+      }));
+      _cachedPaymentMethods = { data: methods, expiresAt: now + 60_000 };
+      return methods;
+    } catch { return []; }
   }
-
-  const fallbackMethods: DeenPaymentMethod[] = [
-    {
-      id: "cod",
-      title: "Cash on Delivery (COD)",
-      description: "Pay cash upon receiving and inspecting your parcel at your doorstep.",
-      type: "cod",
-    },
-    {
-      id: "bkash-for-woocommerce",
-      title: "bKash Online Payment",
-      description: "Instant, seamless payment via official bKash merchant gateway.",
-      type: "redirect",
-    },
-    {
-      id: "sslcommerz",
-      title: "Debit / Credit Card (SSLCommerz)",
-      description: "256-bit encrypted Visa, Mastercard, UnionPay, Amex & internet banking.",
-      type: "redirect",
-    },
-  ];
-  _cachedPaymentMethods = { data: fallbackMethods, expiresAt: now + 15 * 60 * 1000 };
-  return fallbackMethods;
 }
 
 /**
@@ -1335,8 +1090,8 @@ export async function getShippingFees(): Promise<ShippingFees> {
       const cost = flat?.settings?.cost?.value ?? flat?.settings?.cost?.default;
       const num = cost != null ? Number(String(cost).replace(/[^\d.]/g, "")) : NaN;
       if (isNaN(num)) continue;
-      if (name.includes("inside dhaka") || name.includes("dhaka")) insideDhaka = num;
-      else if (name.includes("outside")) outsideDhaka = num;
+      if (name.includes("outside")) outsideDhaka = num;
+      else if (name.includes("inside dhaka") || name.includes("dhaka")) insideDhaka = num;
     }
     const result = { insideDhaka, outsideDhaka, storePickup: 0 };
     _cachedShippingFees = { data: result, expiresAt: now + 15 * 60 * 1000 };
@@ -1378,8 +1133,9 @@ export async function updateWooOrderPayment(
 export async function findWooOrderByKey(
   idempotencyKey: string,
   phone?: string
-): Promise<{ id: number; number: string; paymentUrl?: string; total?: number; status?: string } | null> {
-  if (!wooHealthy() || (!idempotencyKey && !phone)) return null;
+): Promise<WooOrderReceipt | null> {
+  if (!idempotencyKey || !phone) return null;
+  if (!wooHealthy()) throw new Error("Order reconciliation is unavailable.");
   try {
     const params: Record<string, string> = { per_page: "10" };
     if (phone) params.search = phone;
@@ -1392,11 +1148,12 @@ export async function findWooOrderByKey(
             (m.key === "_idempotency_key" && String(m.value) === String(idempotencyKey)) ||
             (m.key === "_natural_idempotency_key" && String(m.value) === String(idempotencyKey))
         );
-        if (matchKey) {
+        if (matchKey && String(o.billing?.phone || "").replace(/\D/g, "").slice(-11) === phone.replace(/\D/g, "").slice(-11)) {
           return {
             id: o.id,
             number: String(o.number || o.id),
             paymentUrl: o.payment_url,
+            phone: o.billing?.phone,
             total: Number(o.total) || 0,
             status: o.status,
           };
@@ -1404,7 +1161,7 @@ export async function findWooOrderByKey(
       }
     }
   } catch (e) {
-    console.error("[woo] findWooOrderByKey failed:", (e as Error).message);
+    throw new Error("Order reconciliation is unavailable. Check order status before retrying.");
   }
   return null;
 }
@@ -1488,15 +1245,7 @@ export async function findOrCreateWooCustomer(params: {
     }
   }
 
-  // Fallback if WooCommerce is in seed/offline mode
-  const fallbackId = Math.floor(5000 + Math.random() * 5000);
-  return {
-    id: fallbackId,
-    email: cleanEmail,
-    name,
-    username: cleanEmail.split("@")[0],
-    isNew: true,
-  };
+  throw new Error("WooCommerce customer sign-in is unavailable.");
 }
 
 /** Register or synchronize a customer in WooCommerce via official REST API.
@@ -1541,31 +1290,7 @@ export async function registerOrSyncWooCustomer(params: {
       }
 
       if (Array.isArray(existing) && existing.length > 0) {
-        const c = existing[0];
-        // Optionally update address if provided
-        if (params.address || params.city) {
-          try {
-            await wooPut(`customers/${c.id}`, {
-              billing: {
-                first_name: firstName,
-                last_name: lastName,
-                phone: cleanPhone,
-                address_1: params.address || c.billing?.address_1 || "",
-                city: params.city || c.billing?.city || "Dhaka",
-                state: params.district || c.billing?.state || "BD-13",
-                country: "BD",
-              },
-            });
-          } catch {}
-        }
-        return {
-          id: c.id,
-          email: c.email || cleanEmail,
-          name: `${c.first_name || firstName} ${c.last_name || lastName}`.trim(),
-          username: c.username || cleanPhone,
-          phone: cleanPhone,
-          isNew: false,
-        };
+        throw new Error("ACCOUNT_EXISTS");
       }
 
       // 2. Create official new WooCommerce customer
@@ -1611,20 +1336,11 @@ export async function registerOrSyncWooCustomer(params: {
         isNew: true,
       };
     } catch (err) {
-      console.error(`[woo] registerOrSyncWooCustomer error:`, (err as Error).message);
+      throw err;
     }
   }
 
-  // Resilient fallback when WooCommerce API is temporarily unreachable
-  const fallbackId = Math.floor(6000 + Math.random() * 4000);
-  return {
-    id: fallbackId,
-    email: cleanEmail,
-    name: params.name.trim(),
-    username: cleanPhone,
-    phone: cleanPhone,
-    isNew: true,
-  };
+  throw new Error("WooCommerce registration is unavailable.");
 }
 
 /** Lookup a WooCommerce customer by phone or email. */

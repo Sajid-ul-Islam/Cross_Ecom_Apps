@@ -4,17 +4,18 @@ import { fetchProducts, fetchCategoryCovers, type Category } from "@/lib/api";
 import ShopClient from "@/components/ShopClient";
 
 interface ShopPageProps {
-  searchParams: {
+  searchParams: Promise<{
     category?: string;
     segment?: string;
     search?: string;
     sort?: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({ searchParams }: ShopPageProps): Promise<Metadata> {
-  const category = searchParams.category ? searchParams.category.toUpperCase() : "ALL";
-  const segment = (searchParams.segment || "all").toLowerCase();
+  const sp = await searchParams;
+  const category = sp.category ? sp.category.toUpperCase() : "ALL";
+  const segment = (sp.segment || "all").toLowerCase();
 
   let title = "All Apparel & Denim | DEEN Official Store";
   let description = "Shop raw selvedge denim, shirts, panjabis, polos, and trousers online with nationwide doorstep delivery across Bangladesh.";
@@ -41,10 +42,11 @@ export async function generateMetadata({ searchParams }: ShopPageProps): Promise
 }
 
 export default async function ShopPage({ searchParams }: ShopPageProps) {
-  const category = (searchParams.category as Category) || "ALL";
-  const segment = (searchParams.segment as "all" | "collection" | "select") || "all";
-  const search = searchParams.search || "";
-  const sort = searchParams.sort || "default";
+  const sp = await searchParams;
+  const category = (sp.category as Category) || "ALL";
+  const segment = (sp.segment as "all" | "collection" | "select") || "all";
+  const search = sp.search || "";
+  const sort = sp.sort || "default";
 
   const [products, remoteCovers] = await Promise.all([
     fetchProducts({ category, segment, search, sort }),
