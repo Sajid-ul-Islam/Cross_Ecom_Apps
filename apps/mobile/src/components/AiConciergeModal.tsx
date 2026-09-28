@@ -12,9 +12,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   Linking,
+  Alert,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { X, Sparkles, Send, Phone, MessageCircle } from "./Icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter, type Href } from "expo-router";
+import { X, Sparkles, Send, Phone, MessageCircle, Trash2 } from "./Icons";
 import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useCart } from "../context/CartContext";
@@ -23,6 +25,46 @@ import { bdt, GATEWAY_URL, getInStockSizes } from "../services/gateway";
 import { QuickAddBottomSheet } from "./QuickAddBottomSheet";
 
 const { width, height } = Dimensions.get("window");
+
+const WHATSAPP_NUMBER = "8801952700500";
+const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}`;
+const MESSENGER_URL = "https://m.me/deencommerce";
+const SUPPORT_HOTLINE = "tel:+8801952700500";
+const CHAT_STORAGE_KEY = "@deen/ai_chat_history_v1";
+const MAX_STORED_MESSAGES = 40;
+
+const WELCOME_MESSAGE: AiMessage = {
+  id: "welcome",
+  sender: "ai",
+  text: "👋 Welcome to **DEEN Denim Concierge**! I can recommend menswear outfits from our live catalog, calculate Bangladesh delivery charges, guide you on waist & chest sizing, explain our 7-day doorstep size exchange, or check your live order tracking.\n\nHow can I help you today?",
+  quickReplies: [
+    "জিন্স কালেকশন 👖",
+    "পাঞ্জাবি কালেকশন 🕌",
+    "শার্ট কালেকশন 👔",
+    "সাইজ গাইড 📏",
+    "অর্ডার স্ট্যাটাস চেক 📦",
+  ],
+};
+
+/** In-chat informational cards for gateway actions that need no navigation. */
+const INFO_CARDS: Record<string, { text: string; quickReplies?: string[] }> = {
+  open_bank_offers: {
+    text: "💳 **Bank Card Offers & Cashback**\n\n• **0% EMI** — 3, 6 & 12-month plans on major credit cards (via SSLCommerz)\n• **Instant cashback** — ৳500 on ৳2500+ orders, ৳700 on ৳3000+ orders (auto-applied at checkout)\n• **COD** available nationwide with zero advance payment",
+    quickReplies: ["Jeans Collection 👖", "Delivery charge?", "Cash on Delivery"],
+  },
+  open_size_guide: {
+    text: "📐 **Quick Size Chart**\n\n• **Jeans (waist inches):** 28 · 30 · 32 · 34 · 36 · 38\n• Measure your snug natural waist — between sizes? Go one up.\n• **Panjabi/Shirts (chest):** M (38″) · L (40″) · XL (42″) · XXL (44″)\n\nStill unsure? Our 7-day doorstep size exchange has you covered!",
+    quickReplies: ["Show size 32 jeans", "7-day size exchange", "Jeans Collection 👖"],
+  },
+  open_care_guide: {
+    text: "🧼 **Denim Care Guide**\n\n• Wash rarely, inside-out, in **cold water**\n• Mild detergent only — **never bleach**\n• **Air-dry in shade**; avoid tumble drying\n• Iron inside-out on low heat\n\nProper care keeps your raw denim fading beautifully!",
+    quickReplies: ["Selvedge Jeans Collection", "Size Guide 📏", "Delivery charge?"],
+  },
+  open_exchange: {
+    text: "🔄 **7-Day Doorstep Size Exchange**\n\n• Request within **7 days** of delivery\n• Same product, different size — our rider **swaps at your door**\n• Item must be unworn with tags intact\n\nTo start an exchange, open your order from My Orders!",
+    quickReplies: ["My Orders 📦", "Size Guide 📏", "WhatsApp Support"],
+  },
+};
 
 interface AiMessage {
   id: string;
@@ -190,23 +232,131 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [addedIds, setAddedIds] = useState<Record<string, boolean>>({});
+  const [hydrated, setHydrated] = useState(false);
 
-  const [messages, setMessages] = useState<AiMessage[]>([
-    {
-      id: "welcome",
-      sender: "ai",
-      text: "👋 Welcome to **DEEN Denim Concierge**! I can recommend menswear outfits from our live catalog, calculate Bangladesh delivery charges, guide you on waist & chest sizing, explain our 7-day doorstep size exchange, or check your live order tracking.\n\nHow can I help you today?",
-      quickReplies: [
-        "জিন্স কালেকশন 👖",
-        "পাঞ্জাবি কালেকশন 🕌",
-        "শার্ট কালেকশন 👔",
-        "সাইজ গাইড 📏",
-        "অর্ডার স্ট্যাটাস চেক 📦",
-      ],
-    },
-  ]);
+  const [messages, setMessages] = useState<AiMessage[]>([WELCOME_MESSAGE]);
 
   const scrollRef = useRef<ScrollView>(null);
+
+  // ── Restore persisted conversation once on mount ──
+  useEffect(() => {
+    let cancelled = false;
+    AsyncStorage.getItem(CHAT_STORAGE_KEY)
+      .then((raw) => {
+        if (cancelled || !raw) return;
+        try {
+          const stored = JSON.parse(raw) as AiMessage[];
+          if (Array.isArray(stored) && stored.length > 0) {
+            setMessages(stored);
+          }
+        } catch {
+          // Corrupt payload — keep the fresh welcome state
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setHydrated(true);
+      });
+  }, []);
+
+  // ── Persist conversation after every change (post-hydration) ──
+  useEffect(() => {
+    if (!hydrated) return;
+    AsyncStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages.slice(-MAX_STORED_MESSAGES))).catch(
+      () => {}
+    );
+  }, [messages, hydrated]);
+
+  const clearConversation = () => {
+    Alert.alert(
+      "Clear conversation?",
+      "This will erase your chat history on this device.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Clear",
+          style: "destructive",
+          onPress: () => setMessages([WELCOME_MESSAGE]),
+        },
+      ]
+    );
+  };
+
+  const pushBotNote = (text: string, quickReplies?: string[]) => {
+    setMessages((prev) => [
+      ...prev,
+      { id: `ai_${Date.now()}`, sender: "ai", text, quickReplies },
+    ]);
+  };
+
+  /**
+   * Navigation from chat:
+   * - Floating modal → dismiss, then navigate.
+   * - Embedded (Chat tab) → navigate directly; chat stays mounted.
+   */
+  const navigateFromChat = (path: Href) => {
+    if (isEmbedded) {
+      router.push(path);
+    } else {
+      onClose?.();
+      router.push(path);
+    }
+  };
+
+  /**
+   * Central gateway-action dispatcher. Every action the AI agent can emit
+   * is handled here — nothing silently no-ops or closes the chat.
+   */
+  const handleAction = (act: { label: string; action: string; payload?: any }) => {
+    switch (act.action) {
+      // External deep links (never close the chat)
+      case "open_url":
+        if (act.payload?.url) Linking.openURL(act.payload.url).catch(() => {});
+        break;
+      case "open_whatsapp":
+        openWhatsApp();
+        break;
+      case "open_messenger":
+        openMessenger();
+        break;
+      case "contact_support":
+        Linking.openURL(SUPPORT_HOTLINE).catch(() => openWhatsApp());
+        break;
+
+      // In-app navigation (modal dismisses; tab chat stays open)
+      case "navigate_shop":
+      case "search_jeans":
+      case "search_delivery":
+        navigateFromChat("/(tabs)/shop");
+        break;
+      case "navigate_orders":
+        navigateFromChat("/(tabs)/orders");
+        break;
+      case "navigate_checkout":
+        navigateFromChat("/checkout");
+        break;
+      case "navigate_returns":
+        navigateFromChat("/(tabs)/orders");
+        break;
+
+      // In-chat informational cards
+      case "open_bank_offers":
+      case "open_size_guide":
+      case "open_care_guide":
+      case "open_exchange": {
+        const card = INFO_CARDS[act.action];
+        if (card) pushBotNote(card.text, card.quickReplies);
+        break;
+      }
+
+      // Future-proof: unknown actions inform instead of silently dying
+      default:
+        pushBotNote(
+          `“${act.label}” is on our roadmap! Meanwhile, ask me about orders, sizes, offers or delivery.`
+        );
+        break;
+    }
+  };
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -289,8 +439,8 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
   };
 
   const openWhatsApp = async () => {
-    const appUrl = "whatsapp://send?phone=8801952700500";
-    const webUrl = "https://wa.me/8801952700500";
+    const appUrl = `whatsapp://send?phone=${WHATSAPP_NUMBER}`;
+    const webUrl = WHATSAPP_URL;
     try {
       const canOpen = await Linking.canOpenURL(appUrl);
       if (canOpen) {
@@ -303,7 +453,7 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
 
   const openMessenger = async () => {
     const appUrl = "fb-messenger://user-thread/100981575058964";
-    const webUrl = "https://m.me/deencommerce";
+    const webUrl = MESSENGER_URL;
     try {
       const canOpen = await Linking.canOpenURL(appUrl);
       if (canOpen) {
@@ -349,6 +499,16 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <MessageCircle size={15} color="#0084FF" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.closeBtn}
+            onPress={clearConversation}
+            accessibilityRole="button"
+            accessibilityLabel="Clear chat history"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Trash2 size={16} color={colors.sub} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -447,25 +607,12 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
                   <View style={styles.actionsRow}>
                     {m.actions.map((act) => (
                       <TouchableOpacity
-                        key={act.action}
+                        key={`${m.id}_${act.action}`}
                         style={styles.actionChip}
                         activeOpacity={0.8}
-                        onPress={() => {
-                          onClose?.();
-                          if (act.action === "open_url" && act.payload?.url) {
-                            Linking.openURL(act.payload.url);
-                          } else if (act.action === "open_messenger") {
-                            Linking.openURL("https://m.me/deencommerce");
-                          } else if (act.action === "open_whatsapp") {
-                            Linking.openURL("https://wa.me/8801952700500");
-                          } else if (act.action === "navigate_shop") {
-                            router.push("/(tabs)/shop");
-                          } else if (act.action === "navigate_orders") {
-                            router.push("/(tabs)/orders");
-                          } else if (act.action === "navigate_checkout") {
-                            router.push("/checkout");
-                          }
-                        }}
+                        onPress={() => handleAction(act)}
+                        accessibilityRole="button"
+                        accessibilityLabel={act.label}
                       >
                         <Text style={styles.actionChipText}>{act.label}</Text>
                       </TouchableOpacity>

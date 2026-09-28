@@ -23,6 +23,32 @@ const QUICK_PROMPTS = [
   "💬 WhatsApp Concierge Hotline",
 ];
 
+/**
+ * In-chat informational cards mirroring the mobile app (web ⇄ mobile parity rule §7).
+ * Keys = gateway agent suggestedActions that carry no navigation.
+ */
+const INFO_CARDS: Record<string, { text: string; quickReplies?: string[] }> = {
+  open_bank_offers: {
+    text: "💳 **Bank Card Offers & Cashback**\n\n• **0% EMI** — 3, 6 & 12-month plans on major credit cards (via SSLCommerz)\n• **Instant cashback** — ৳500 on ৳2500+ orders, ৳700 on ৳3000+ orders (auto-applied at checkout)\n• **COD** available nationwide with zero advance payment",
+    quickReplies: ["Jeans Collection 👖", "Delivery charge?", "Cash on Delivery"],
+  },
+  open_size_guide: {
+    text: "📐 **Quick Size Chart**\n\n• **Jeans (waist inches):** 28 · 30 · 32 · 34 · 36 · 38\n• Measure your snug natural waist — between sizes? Go one up.\n• **Panjabi/Shirts (chest):** M (38″) · L (40″) · XL (42″) · XXL (44″)\n\nStill unsure? Our 7-day doorstep size exchange has you covered!",
+    quickReplies: ["Show size 32 jeans", "7-day size exchange", "Jeans Collection 👖"],
+  },
+  open_care_guide: {
+    text: "🧼 **Denim Care Guide**\n\n• Wash rarely, inside-out, in **cold water**\n• Mild detergent only — **never bleach**\n• **Air-dry in shade**; avoid tumble drying\n• Iron inside-out on low heat\n\nProper care keeps your raw denim fading beautifully!",
+    quickReplies: ["Selvedge Jeans Collection", "Size Guide 📏", "Delivery charge?"],
+  },
+  open_exchange: {
+    text: "🔄 **7-Day Doorstep Size Exchange**\n\n• Request within **7 days** of delivery\n• Same product, different size — our rider **swaps at your door**\n• Item must be unworn with tags intact\n\nTo start an exchange, open your order from My Orders!",
+    quickReplies: ["My Orders 📦", "Size Guide 📏", "WhatsApp Support"],
+  },
+};
+
+const CHAT_HISTORY_KEY = "deen_chat_history_v1";
+const MAX_STORED_MESSAGES = 40;
+
 function WhatsAppIcon({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
@@ -49,6 +75,7 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [detectedLang, setDetectedLang] = useState<string>("EN");
   const [quickAddProduct, setQuickAddProduct] = useState<Product | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const desktopInputRef = useRef<HTMLInputElement | null>(null);
@@ -82,8 +109,31 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
       ],
       ts: Date.now(),
     };
-    setMessages([initialGreeting]);
+
+    // Restore persisted conversation (localStorage) before falling back to greeting
+    try {
+      const raw = localStorage.getItem(CHAT_HISTORY_KEY);
+      const stored = raw ? (JSON.parse(raw) as MessageItem[]) : null;
+      if (Array.isArray(stored) && stored.length > 0) {
+        setMessages(stored);
+      } else {
+        setMessages([initialGreeting]);
+      }
+    } catch {
+      setMessages([initialGreeting]);
+    }
+    setHydrated(true);
   }, []);
+
+  // Persist conversation after every change (post-hydration)
+  useEffect(() => {
+    if (typeof window === "undefined" || !hydrated) return;
+    try {
+      localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages.slice(-MAX_STORED_MESSAGES)));
+    } catch {
+      // Storage full/blocked — chat still works, just won't restore
+    }
+  }, [messages, hydrated]);
 
   // Auto-scroll to bottom when messages update
   useEffect(() => {
@@ -212,6 +262,12 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
   const handleResetSession = async () => {
     if (!sessionId) return;
     try {
+      // Wipe persisted chat history along with the server session
+      try {
+        localStorage.removeItem(CHAT_HISTORY_KEY);
+      } catch {
+        // storage unavailable — proceed with in-memory reset
+      }
       await fetch("/api/bot/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -263,19 +319,77 @@ export default function ChatAssistant({ isEmbedded = false }: ChatAssistantProps
     setQuickAddProduct(fullProd);
   };
 
-  const handleAction = (action: string) => {
-    if (action === "navigate_shop") {
-      router.push("/shop");
+  /** Append an in-chat informational bot note (mirrors mobile pushBotNote). */
+  const pushBotNote = (text: string, quickReplies?: string[]) => {
+    setMessages((prev) => [
+      ...prev,
+      { id: `bot_${Date.now()}`, role: "bot", text, quickReplies, ts: Date.now() },
+    ]);
+  };
+
+  /**
+   * Central gateway-action dispatcher — mirrors the mobile AiChatView handler.
+   * Every action the AI agent emits is handled; nothing silently no-ops.
+   */
+  const handleAction = (action: string, payload?: any) => {
+    const closeOnMobile = () => {
       if (window.innerWidth < 769) setIsOpen(false);
-    } else if (action === "navigate_orders") {
-      router.push("/orders");
-      if (window.innerWidth < 769) setIsOpen(false);
-    } else if (action === "open_whatsapp") {
-      window.open("https://wa.me/8801952700500", "_blank");
-    } else if (action === "search_jeans") {
-      sendMessage("Show me selvedge jeans");
-    } else if (action === "search_delivery") {
-      sendMessage("What are the delivery charges inside and outside Dhaka?");
+    };
+
+    switch (action) {
+      // External deep links (chat stays open)
+      case "open_url":
+        if (payload?.url) window.open(payload.url, "_blank");
+        break;
+      case "open_whatsapp":
+        window.open("https://wa.me/8801952700500", "_blank");
+        break;
+      case "open_messenger":
+        window.open("https://m.me/deencommerce", "_blank");
+        break;
+      case "contact_support":
+        window.location.href = "tel:+8801952700500";
+        break;
+
+      // In-app navigation
+      case "navigate_shop":
+        router.push("/shop");
+        closeOnMobile();
+        break;
+      case "navigate_orders":
+      case "navigate_returns":
+        router.push("/orders");
+        closeOnMobile();
+        break;
+      case "navigate_checkout":
+        router.push("/checkout");
+        closeOnMobile();
+        break;
+
+      // Catalog follow-up queries (richer than plain navigation)
+      case "search_jeans":
+        sendMessage("Show me selvedge jeans");
+        break;
+      case "search_delivery":
+        sendMessage("What are the delivery charges inside and outside Dhaka?");
+        break;
+
+      // In-chat informational cards (parity with mobile INFO_CARDS)
+      case "open_bank_offers":
+      case "open_size_guide":
+      case "open_care_guide":
+      case "open_exchange": {
+        const card = INFO_CARDS[action];
+        if (card) pushBotNote(card.text, card.quickReplies);
+        break;
+      }
+
+      // Future-proof: unknown actions inform instead of silently dying
+      default:
+        pushBotNote(
+          `This shortcut is on our roadmap! Meanwhile, ask me about orders, sizes, offers or delivery.`
+        );
+        break;
     }
   };
 
