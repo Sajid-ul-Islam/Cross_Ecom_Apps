@@ -21,7 +21,7 @@ import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useCart } from "../context/CartContext";
 import { useProfile } from "../context/ProfileContext";
-import { bdt, GATEWAY_URL, getInStockSizes } from "../services/gateway";
+import { bdt, getInStockSizes, request, getAuthToken, getGuestSession } from "../services/gateway";
 import { QuickAddBottomSheet } from "./QuickAddBottomSheet";
 
 const { width, height } = Dimensions.get("window");
@@ -381,22 +381,40 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
     setLoading(true);
 
     try {
-      const res = await fetch(`${GATEWAY_URL}/v1/deen/ai/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: text,
-          phone: profile?.phone,
-          history: messages.slice(-4).map((m) => ({
-            role: m.sender === "user" ? "user" : "assistant",
-            content: m.text,
-          })),
-        }),
-      });
+      // Use request() so x-api-key is injected automatically (same as every other
+      // gateway call). Bare fetch() omitted the key -> gateway answered 401 and
+      // the concierge never rendered retrieved catalog/order data.
+      // Also send the user's auth/session token so the gateway scopes visible
+      // orders to THIS account (order tracking works in-chat for signed-in users).
+      const guestSession = await getGuestSession();
+      const token = (await getAuthToken()) || guestSession?.token;
+      const authHeaders: Record<string, string> = {};
+      if (token) authHeaders.Authorization = `Bearer ${token}`;
 
-      if (!res.ok) throw new Error("Failed to consult AI");
+      const data = await request<{
+        reply: string;
+        suggestedProducts?: any[];
+        suggestedActions?: { label: string; action: string; payload?: any }[];
+        quickReplies?: string[];
+      }>(
+        "/v1/deen/ai/chat",
+        {
+          method: "POST",
+          headers: authHeaders,
+          body: JSON.stringify({
+            message: text,
+            phone: profile?.phone,
+            history: messages.slice(-4).map((m) => ({
+              role: m.sender === "user" ? "user" : "assistant",
+              content: m.text,
+            })),
+          }),
+        },
+        8000
+      );
 
-      const data = await res.json();
+      if (!data?.reply) throw new Error("Empty AI response");
+
       const aiMsg: AiMessage = {
         id: `ai_${Date.now()}`,
         sender: "ai",

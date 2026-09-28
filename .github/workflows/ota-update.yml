@@ -1,16 +1,36 @@
-name: EAS OTA Update (Mobile)
+name: EAS OTA Update (Mobile) — MANUAL ONLY
+
+# ══════════════════════════════════════════════════════════════════════════
+#  OWNER RULE: no automatic OTA pushes to production.
+#  A JS-only OTA update can change what every installed user sees — that is
+#  a publish, and publishing happens only when YOU decide it is ready.
+#
+#  How to publish an OTA update deliberately:
+#    1. Verify the change on Expo (expo start / dev build / preview APK).
+#    2. Run this workflow manually (Actions → Run workflow) — it validates
+#       the update to the "preview" channel for a final check, OR
+#    3. Push directly from your machine when fully satisfied:
+#         cd apps/mobile && eas update --channel production -m "Your message"
+# ══════════════════════════════════════════════════════════════════════════
 
 on:
-  push:
-    branches:
-      - master
-    paths:
-      # Only trigger when mobile app JS/assets change (skip API/Web-only changes)
-      - "apps/mobile/**"
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: "OTA channel to validate against"
+        type: choice
+        default: preview
+        options:
+          - preview
+          - production # only if you truly intend to ship it now
+
+concurrency:
+  group: ota-update
+  cancel-in-progress: false
 
 jobs:
   publish-ota-update:
-    name: Publish EAS OTA Update
+    name: Publish EAS OTA Update (manual)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -21,6 +41,7 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
+          cache-dependency-path: apps/mobile/package-lock.json
 
       - name: Install root dependencies
         run: npm ci
@@ -32,12 +53,14 @@ jobs:
       - name: Install EAS CLI
         run: npm install -g eas-cli
 
-      - name: Publish OTA Update to production channel
+      - name: Publish OTA Update
         working-directory: apps/mobile
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          OTA_CHANNEL: ${{ inputs.channel || 'preview' }}
         run: |
+          echo "Publishing OTA to channel: $OTA_CHANNEL (manual run)"
           eas update \
-            --channel production \
-            --message "Auto OTA: ${{ github.event.head_commit.message }}" \
+            --channel "$OTA_CHANNEL" \
+            --message "Manual OTA: ${{ github.sha }}" \
             --non-interactive

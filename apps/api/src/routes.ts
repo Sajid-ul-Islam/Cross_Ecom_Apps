@@ -60,6 +60,11 @@ import {
 } from "./pathao.js";
 import { processAiCommerceQuery } from "./ai/agent.js";
 import { verifyGoogleIdToken, verifyFacebookAccessToken } from "./socialAuth.js";
+import {
+  verifyPaymentSettlement,
+  verifySslCommerzIpnSignature,
+  isPaymentsProviderConfigured,
+} from "./payments.js";
 
 /* ------------------------------------------------------------------ */
 /*  JSON Schema validation (Fastify native AJV) — SEC-6 / request hardening */
@@ -229,9 +234,12 @@ const PAYMENT_INIT_SCHEMA = {
 const PAYMENT_VERIFY_SCHEMA = {
   body: {
     type: "object",
-    required: ["orderId", "trxId"],
+    required: ["orderId"],
     properties: {
       orderId:       { type: "string", minLength: 1, maxLength: 100 },
+      /** SSLCommerz val_id or bKash paymentID — server-to-server verification reference. */
+      valId:         { type: "string", minLength: 4, maxLength: 100 },
+      /** Legacy field: a customer-visible transaction ID alone is NOT proof of payment. */
       trxId:         { type: "string", minLength: 4, maxLength: 60 },
       paymentMethod: { type: "string", enum: ["bkash", "card", "online"] },
       senderPhone:   { type: "string", maxLength: 20 },
@@ -3252,12 +3260,226 @@ export async function registerDeenRoutes(app: FastifyInstance) {
     return reply.send({ success: true, paymentUrl: targetOrder.paymentUrl, amount: targetOrder.total });
   });
 
-  app.post("/v1/deen/payments/verify", { schema: PAYMENT_VERIFY_SCHEMA }, async (_req, reply) => {
-    return reply.code(422).send({ error: "PAYMENT_VERIFICATION_REQUIRED", message: "Complete payment on the WooCommerce payment page. A submitted transaction ID is not proof of payment." });
+  /* ---- payment verification engine (roadmap P2-1) ----------------------
+     Customer-submitted transaction IDs are never proof of payment. When the
+     provider is configured, settlement is confirmed by querying the provider
+     directly, then — and only then — the Woo order is marked paid. Without a
+     provider config the old safe behaviour is preserved. */
+
+  const _inFlightPaymentVerifications = new Map<string, Promise<{ code: number; body: any }>>();
+
+  function _paymentProviderFor(order: any): "sslcommerz" | "bkash" | null {
+    const method = String(order?.payment || order?.paymentMethod || "").toLowerCase();
+    if (method.includes("sslcommerz") || method.includes("card") || method.includes("online")) return "sslcommerz";
+    if (method.includes("bkash")) return "bkash";
+    return null;
+  }
+
+  async function _applyVerifiedPayment(order: any, trxId: string, validation: any): Promise<void> {
+    // Upstream write first: WooCommerce is the source of truth for payment state.
+    await updateWooOrderPayment(order.wooId, {
+      status: "processing",
+      set_paid: true,
+      transaction_id: trxId,
+      customer_note: `Payment verified via provider (val_id: ${validation?.valId || "n/a"}).`,
+    });
+    order.paymentStatus = "Paid";
+    order.paidAt = new Date().toISOString();
+    order.transactionId = trxId;
+    if (order.wooId) order.wooStatus = "processing";
+    saveOrders();
+    biCache.invalidate("analytics:");
+  }
+
+  app.post("/v1/deen/payments/verify", { schema: PAYMENT_VERIFY_SCHEMA }, async (req, reply) => {
+    const b = req.body as any;
+    const order = orders.find((o) => o.id === b.orderId || o.number === b.orderId || String(o.wooId) === String(b.orderId));
+    if (!order || !canAccessOrder(order, req.headers.authorization)) return reply.code(404).send({ error: "NOT_FOUND", message: "Order not found." });
+
+    if (String(order.payment).toLowerCase() === "cod") {
+      return reply.code(409).send({ error: "NOT_VERIFIABLE", message: "Cash on delivery orders are settled by the courier — nothing to verify online." });
+    }
+
+    // Idempotent: a confirmed payment is never re-written upstream.
+    if (order.paymentStatus === "Paid") {
+      return reply.send({ success: true, orderId: order.id, orderNumber: order.number, paymentStatus: order.paymentStatus, transactionId: order.transactionId || null, alreadyVerified: true });
+    }
+
+    const provider = _paymentProviderFor(order);
+    if (!provider || !isPaymentsProviderConfigured()) {
+      return reply.code(422).send({ error: "PAYMENT_VERIFICATION_REQUIRED", message: "Complete payment on the WooCommerce payment page. A submitted transaction ID is not proof of payment." });
+    }
+
+    const reference = String(b.valId || b.trxId || "").trim();
+    if (!reference) {
+      return reply.code(422).send({ error: "VALIDATION", message: "A provider reference (valId) is required for verification.", fields: ["valId"] });
+    }
+
+    // Single-flight per order: concurrent double-taps share one upstream check.
+    const existing = _inFlightPaymentVerifications.get(order.id);
+    if (existing) return reply.send(await existing);
+
+    const job = (async (): Promise<{ code: number; body: any }> => {
+      const result = await verifyPaymentSettlement({
+        provider,
+        reference,
+        trxId: b.trxId ? String(b.trxId) : undefined,
+        amount: Number(order.total),
+        expectedTranId: order.wooNumber ? String(order.wooNumber) : undefined,
+      });
+
+      if (!result.verified) {
+        audit("payment_verify", false, maskPhone(order.phone), { reason: result.reason, orderId: order.id });
+        switch (result.reason) {
+          case "NOT_CONFIGURED":
+            return { code: 422, body: { error: "PAYMENT_VERIFICATION_REQUIRED", message: "Online verification is not available for this payment method. Complete payment on the WooCommerce payment page." } };
+          case "PROVIDER_ERROR":
+            return { code: 502, body: { error: "PROVIDER_UNAVAILABLE", message: "Could not reach the payment provider. Please try again shortly." } };
+          case "AMOUNT_MISMATCH":
+            return { code: 409, body: { error: "AMOUNT_MISMATCH", message: result.message || "Settled amount differs from the order total." } };
+          case "TRANSACTION_MISMATCH":
+            return { code: 409, body: { error: "TRANSACTION_MISMATCH", message: result.message || "This transaction belongs to a different order." } };
+          case "RISKY_TRANSACTION":
+            return { code: 409, body: { error: "RISKY_TRANSACTION", message: result.message || "The provider flagged this transaction for review." } };
+          default:
+            return { code: 409, body: { error: "NOT_SETTLED", message: result.message || "The provider has not confirmed this payment." } };
+        }
+      }
+
+      try {
+        await _applyVerifiedPayment(order, result.trxId || reference, result.validation);
+      } catch (e: any) {
+        audit("payment_verify", false, maskPhone(order.phone), { reason: "WOO_WRITE_FAILED", orderId: order.id });
+        return { code: 502, body: { error: "PAYMENT_UPDATE_FAILED", message: "Payment verified upstream but the order could not be updated. Staff will reconcile — please contact support." } };
+      }
+      audit("payment_verify", true, maskPhone(order.phone), { orderId: order.id, trxId: result.trxId || reference });
+      return {
+        code: 200,
+        body: {
+          success: true,
+          orderId: order.id,
+          orderNumber: order.number,
+          paymentStatus: order.paymentStatus,
+          transactionId: order.transactionId,
+        },
+      };
+    })();
+
+    _inFlightPaymentVerifications.set(order.id, job);
+    try {
+      const out = await job;
+      return reply.code(out.code).send(out.body);
+    } finally {
+      _inFlightPaymentVerifications.delete(order.id);
+    }
   });
 
-  app.post("/v1/deen/payments/callback", async (_req, reply) => {
-    return reply.code(401).send({ error: "UNAUTHENTICATED", message: "Payment updates must come through the signed WooCommerce webhook." });
+  /* ---- SSLCommerz IPN listener (server-to-server notification) ----
+     Signed with verify_sign (MD5 of sorted k=v pairs per verify_key) and
+     always re-validated against the Order Validation API before any state
+     change. Form-encoded per the provider contract. */
+  app.addContentTypeParser("application/x-www-form-urlencoded", { parseAs: "string" }, (req, bodyStr, done) => {
+    try {
+      const params = new URLSearchParams(String(bodyStr || ""));
+      const parsed: Record<string, string> = {};
+      for (const [k, v] of params.entries()) parsed[k] = v;
+      (req as any).rawBody = String(bodyStr || "");
+      done(null, parsed);
+    } catch (e) {
+      done(e as Error, undefined);
+    }
+  });
+
+  app.post("/v1/deen/payments/callback", async (req, reply) => {
+    const b = (req.body || {}) as Record<string, string>;
+    const contentType = String(req.headers["content-type"] || "");
+
+    // Signature must verify (when present) and IPN must be enabled.
+    const hasSignature = Boolean(b.verify_sign && b.verify_key);
+    if (hasSignature && !verifySslCommerzIpnSignature(b)) {
+      audit("payment_ipn", false, "REJECTED bad verify_sign");
+      return reply.code(401).send({ error: "BAD_SIGNATURE", message: "Invalid IPN signature." });
+    }
+    if (!hasSignature && !config.payments.sslcommerzIpnEnabled) {
+      return reply.code(401).send({ error: "UNAUTHENTICATED", message: "Payment updates must come through the signed WooCommerce webhook or a verified provider IPN." });
+    }
+    if (!hasSignature && !contentType.includes("application/x-www-form-urlencoded")) {
+      // Unsigned non-form posts are never provider traffic.
+      return reply.code(401).send({ error: "UNAUTHENTICATED", message: "Payment updates must come through the signed WooCommerce webhook or a verified provider IPN." });
+    }
+
+    const tranId = String(b.tran_id || "");
+    const valId = String(b.val_id || "");
+    const status = String(b.status || "").toUpperCase();
+    if (!tranId || !status) {
+      return reply.code(422).send({ error: "VALIDATION", message: "IPN is missing tran_id or status.", fields: ["tran_id", "status"] });
+    }
+
+    // Match the order: the merchant tran_id is stored on the local order as
+    // wooNumber; fall back to a Woo-side metadata lookup when absent.
+    let order = orders.find((o) => String(o.wooNumber) === tranId || String(o.number) === tranId);
+    if (!order && wooEnabled) {
+      const wooMatch = await findWooOrderByKey(tranId, String(b.cus_phone || order?.phone || "")).catch(() => null);
+      if (wooMatch) {
+        order = orders.find((o) => o.wooId === wooMatch.id) || null;
+      }
+    }
+    if (!order) {
+      audit("payment_ipn", false, `unknown tran_id=${tranId.slice(0, 8)}…`);
+      return reply.code(404).send({ error: "UNKNOWN_TRANSACTION", message: "No order matches this transaction." });
+    }
+
+    // Duplicate IPN deliveries are acknowledged idempotently.
+    const ipnKey = `ssl_ipn_${valId || tranId}_${status}`;
+    if (_isWebhookDuplicate(ipnKey)) {
+      return reply.code(200).send({ ok: true, duplicate: true });
+    }
+    _recordWebhookDelivery(ipnKey);
+
+    const provider = _paymentProviderFor(order) || "sslcommerz";
+    if (status === "VALID") {
+      if (!valId) {
+        return reply.code(422).send({ error: "VALIDATION", message: "IPN reports VALID without a val_id; cannot re-validate.", fields: ["val_id"] });
+      }
+      // The IPN body is only a hint — settlement is proven by the Validation API.
+      const result = await verifyPaymentSettlement({
+        provider,
+        reference: valId,
+        amount: Number(order.total),
+        expectedTranId: tranId,
+      });
+      if (!result.verified) {
+        audit("payment_ipn", false, maskPhone(order.phone), { reason: result.reason, orderId: order.id });
+        if (result.reason === "PROVIDER_ERROR") return reply.code(502).send({ error: "PROVIDER_UNAVAILABLE", message: "Validation API unavailable; IPN recorded for retry." });
+        return reply.code(409).send({ error: "NOT_VERIFIED", message: result.message || "Provider validation did not confirm this payment." });
+      }
+      if (order.paymentStatus !== "Paid") {
+        try {
+          await _applyVerifiedPayment(order, result.trxId || tranId, result.validation);
+        } catch {
+          audit("payment_ipn", false, maskPhone(order.phone), { reason: "WOO_WRITE_FAILED", orderId: order.id });
+          return reply.code(502).send({ error: "PAYMENT_UPDATE_FAILED", message: "Payment verified but the order could not be updated." });
+        }
+      }
+      audit("payment_ipn", true, maskPhone(order.phone), { orderId: order.id, trxId: result.trxId || tranId });
+      return reply.code(200).send({ ok: true, verified: true, orderNumber: order.number });
+    }
+
+    if (["FAILED", "CANCELLED", "UNATTEMPTED", "EXPIRED"].includes(status)) {
+      if (order.paymentStatus === "Paid" || String(order.status).toLowerCase() === "processing") {
+        return reply.code(200).send({ ok: true, ignored: "order already confirmed" });
+        }
+      try {
+        await updateWooOrderPayment(order.wooId, { status: status === "FAILED" ? "failed" : "cancelled" });
+      } catch { /* best-effort upstream; local state is updated regardless */ }
+      order.status = status === "FAILED" ? "failed" : "cancelled";
+      order.paymentStatus = status === "FAILED" ? "Failed" : "Cancelled";
+      saveOrders();
+      audit("payment_ipn", true, maskPhone(order.phone), { orderId: order.id, ipnStatus: status });
+      return reply.code(200).send({ ok: true, orderNumber: order.number, status: order.status });
+    }
+
+    return reply.code(422).send({ error: "UNKNOWN_STATUS", message: `Unrecognized IPN status: ${status}` });
   });
 
   app.get("/v1/deen/payments/:orderId", async (req, reply) => {

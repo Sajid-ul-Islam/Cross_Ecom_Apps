@@ -2,7 +2,7 @@
 
 **Repository**: `Cross_Ecom_Apps`  
 **Authoritative Tech Stack Reference**: [`docs/TECH_STACK.md`](./TECH_STACK.md)  
-**Verification Baseline**: `npm run typecheck:all` (0 errors) · `npm test` (23/23 passing)
+**Verification Baseline**: `npm run typecheck:all` (0 errors) · `npm test` (115/115 passing)
 
 ---
 
@@ -16,8 +16,8 @@
 | **Webhook Delivery Resilience** | `9.6 / 10` | 🟢 **DONE** | Topic-aware invalidation, signature check, 10-min delivery deduplication |
 | **Observability & Request Tracing** | `9.5 / 10` | 🟢 **DONE** | `X-Request-ID` correlation propagation, latency & masked PII audit logs |
 | **Offline-First Mobile Experience** | `9.7 / 10` | 🟢 **DONE** | Bundled snapshot, 3-failure hysteresis, persistent offline sync key |
-| **Payment Verification Engine** | `8.8 / 10` | 🟡 **IN PROGRESS** | Callback deduplication done; upstream IPN query validation next |
-| **Automated Test Coverage** | `9.5 / 10` | 🟢 **DONE** | 23 automated unit/integration tests (`pricing.test.ts`, `idempotency.test.ts`) |
+| **Payment Verification Engine** | `9.6 / 10` | 🟢 **DONE** | SSLCommerz Validation API + signed IPN listener; settlement proven server-to-server before any order is marked paid |
+| **Automated Test Coverage** | `9.5 / 10` | 🟢 **DONE** | 115 automated unit/integration tests (`pricing`, `idempotency`, `payments`, `checkout`, `security`, `socialAuth`) |
 | **End-to-End Test Suite** | `—` | ⚪ **PLANNED** | Full staging flow tests (Mobile/Web → Fastify → WooCommerce) |
 
 ---
@@ -70,7 +70,7 @@
 - [x] **Social Auth Tests**: Google & Facebook customer linking, WooCommerce `customer_id` order attachment.
 
 ### 7. Web & Mobile App Strict Feature & UX Parity
-- [x] **5-Tab Navigation**: Unified `[ 🏠 Home ] [ 🗂️ Categories ] [ 🛒 Cart (live badge) ] [ 📦 Orders ] [ 👤 Profile ]` with active states on both native mobile app and Next.js mobile view.
+- [x] **5-Tab Navigation**: Unified `[ 🏠 Home ] [ 🗂️ Categories ] [ 🛒 Cart (live badge) ] [ 💬 Chat ] [ 👤 Profile ]` with active states on both native mobile app and Next.js mobile view (Orders stays reachable via Profile & the order-success flow).
 - [x] **Graphical Order Status Timeline (`OrderStatusStepper`)**: 5-step milestone tracking (`[ 1. Placed ] ➔ [ 2. Confirmed ] ➔ [ 3. Packed ] ➔ [ 4. In Transit ] ➔ [ 5. Delivered ]`) with live Pathao courier tracking on Web (`/orders`, `/order-success`) and Mobile (`orders.tsx`, `order-success.tsx`).
 - [x] **Customer Wishlist & Saved Items Suite**: Offline-persistent favorites, heart toggles on cards & PDP, `WishlistModal` drawer with 1-click "Move to Bag", and dedicated `/wishlist` view.
 - [x] **Instant Search Modal Drawer**: Fast debounced catalog discovery with category quick-chips and instant PDP routing on both Web and Mobile.
@@ -79,14 +79,17 @@
 - [x] **Product Detail Page (PDP)**: Full parity with `SizeGuideModal`, `DenimCareGuideModal`, `StoreStockModal`, `WhatsAppButton`, `CompleteTheLook` carousels, and image zoom lightbox.
 - [x] **Shopping Bag (Cart)**: Live coupon validation (`/v1/deen/coupon/:code`), BOGO Jeans 50% discount calculator, dynamic cashback progress bar, and 4-tier shipping area picker.
 - [x] **Orders & Logistics**: Phone lookup, live multi-step Pathao tracking timeline (`PathaoTrackingModal`), doorstep size exchange/return submission (`ReturnExchangeModal`), and 1-tap WhatsApp support.
-- [x] **Profile & Admin BI**: Role-based access to `AdminAnalyticsModal` (KPIs, revenue, top products, CSV order export), 64 BD district sizing preferences, and social login buttons.
+- [x] **Profile & Customer Suite**: 64 BD district sizing preferences, customer analytics KPIs, and order history with live Pathao tracking (store administration lives in WordPress — client-side admin dashboards and social sign-in sheets were retired 2026-09).
 
 ---
 
 ## 🟡 P2 — What to Implement Next (Actionable Queue)
 
-1. [ ] **Upstream Payment IPN Verification (`POST /v1/deen/payments/callback`)**:
-   - Query SSLCommerz / bKash merchant validation API directly to confirm settlement before marking orders `processing` in WooCommerce.
+1. [x] **Upstream Payment IPN Verification (`POST /v1/deen/payments/callback`)** — SHIPPED 2026-09-28:
+   - [x] **`apps/api/src/payments.ts`**: server-to-server settlement checks — SSLCommerz Order Validation API (`val_id`, amount cross-check, `risk_level === 0`) and bKash tokenized transaction status; repo-standard jittered retries (200ms×2ⁿ + jitter, `MAX_RETRIES = 2`, 6s timeout).
+   - [x] **`POST /v1/deen/payments/verify`**: auth-scoped (404 for non-owners), single-flight per order, idempotent for already-paid orders; marks the Woo order `processing` + `set_paid` ONLY on provider-confirmed settlement — 409 on amount/transaction mismatch or risky settlement, 502 on provider outage (no fake confirmation), legacy safe 422 when no provider is configured.
+   - [x] **`POST /v1/deen/payments/callback`**: SSLCommerz IPN listener (form-encoded, `verify_sign` MD5 over sorted `verify_key` pairs, constant-time compare) — every notice is re-validated against the Validation API before state changes; duplicate deliveries acknowledged idempotently; FAILED/CANCELLED notices flip pending orders to failed/cancelled.
+   - [x] **17 new tests** in `payments.test.ts` (115 total passing) incl. signature tampering, amount mismatch, provider outage and no-credentials fallback.
 2. [ ] **End-to-End Automated Test Pipeline (`npm run test:e2e`)**:
    - Multi-hop flow test simulating customer order placement $\to$ Fastify gateway $\to$ WooCommerce order creation $\to$ Pathao parcel allocation.
 3. [ ] **Automated CI/CD Verification Workflow**:

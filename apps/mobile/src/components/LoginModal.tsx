@@ -13,7 +13,6 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { useRouter } from "expo-router";
 import {
   X,
   Lock,
@@ -31,7 +30,6 @@ import { ThemeColors } from "../theme/colors";
 import { useTheme } from "../context/ThemeContext";
 import { useProfile } from "../context/ProfileContext";
 import { forgotPassword, registerCustomer as registerCustomerAPI } from "../services/gateway";
-import { SocialAuthModal } from "./SocialAuthModal";
 
 const { width, height } = Dimensions.get("window");
 
@@ -49,9 +47,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   initialMode = "signin",
 }) => {
   if (!visible) return null;
-  const router = useRouter();
-  const { colors, isDark } = useTheme();
-  const { login, loginAsAdmin, loginWithGoogle, loginWithFacebook, registerCustomer, profile } = useProfile();
+  const { colors } = useTheme();
+  const { login, registerCustomer, profile } = useProfile();
   const styles = createStyles(colors);
 
   const [mode, setMode] = useState<"signin" | "signup">(initialMode);
@@ -66,42 +63,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   const [submitting, setSubmitting] = useState(false);
   const [notice, setNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [socialModalProvider, setSocialModalProvider] = useState<"google" | "facebook" | null>(null);
-
-  const handleSocialGoogle = () => {
-    setSocialModalProvider("google");
-  };
-
-  const handleSocialFacebook = () => {
-    setSocialModalProvider("facebook");
-  };
-
-  const handleSocialAccountPicked = async (email: string, name: string) => {
-    setSubmitting(true);
-    try {
-      const isG = socialModalProvider === "google";
-      const token = `mobile_${isG ? "google" : "facebook"}_token_${Date.now()}`;
-      const res = isG
-        ? await loginWithGoogle(token, email, name)
-        : await loginWithFacebook(token, email, name);
-
-      if (res.success) {
-        setNotice({ type: "success", text: `Signed in as ${name}!` });
-        setTimeout(() => {
-          setSubmitting(false);
-          setSocialModalProvider(null);
-          onClose();
-          if (onSuccess) onSuccess();
-        }, 500);
-      } else {
-        setSubmitting(false);
-        setNotice({ type: "error", text: res.message || "Social sign-in failed." });
-      }
-    } catch {
-      setSubmitting(false);
-      setNotice({ type: "error", text: "Social sign-in error." });
-    }
-  };
 
   useEffect(() => {
     if (visible) {
@@ -146,20 +107,14 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     try {
       const res = await login(username, password);
       if (res.success) {
-        const isAdminUser = res.role === "admin" || username.trim().toLowerCase() === "admin";
         setNotice({
           type: "success",
-          text: isAdminUser
-            ? "👑 Logged in as Store Administrator! Opening BI Dashboard..."
-            : `Welcome back, ${username.trim()}!`,
+          text: `Welcome back, ${username.trim()}!`,
         });
         setTimeout(() => {
           setSubmitting(false);
           onClose();
-          if (onSuccess) onSuccess(isAdminUser ? "admin" : "customer");
-          if (isAdminUser) {
-            router.push("/admin");
-          }
+          if (onSuccess) onSuccess("customer");
         }, 500);
       } else {
         setSubmitting(false);
@@ -243,6 +198,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               style={[styles.closeBtn, { backgroundColor: colors.cardSecondary }]}
               onPress={onClose}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Close sign in"
             >
               <X size={20} color={colors.ink} />
             </TouchableOpacity>
@@ -403,88 +360,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   )}
                 </TouchableOpacity>
 
-                {/* Social Divider */}
-                <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 14, gap: 10 }}>
-                  <View style={{ flex: 1, height: 1, backgroundColor: colors.borderLight }} />
-                  <Text style={{ fontSize: 10, fontWeight: "800", color: colors.sub, letterSpacing: 0.5 }}>OR CONTINUE WITH</Text>
-                  <View style={{ flex: 1, height: 1, backgroundColor: colors.borderLight }} />
-                </View>
-
-                {/* Social Buttons */}
-                <View style={{ flexDirection: "row", gap: 10, marginBottom: 6 }}>
-                  <TouchableOpacity
-                    style={{
-                      flex: 1,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 8,
-                      height: 44,
-                      borderRadius: 8,
-                      backgroundColor: colors.paper,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                    }}
-                    activeOpacity={0.8}
-                    onPress={handleSocialGoogle}
-                    disabled={submitting}
-                  >
-                    <Text style={{ fontSize: 13, fontWeight: "800", color: colors.ink }}>G  Google</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={{
-                      flex: 1,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 8,
-                      height: 44,
-                      borderRadius: 8,
-                      backgroundColor: colors.paper,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                    }}
-                    activeOpacity={0.8}
-                    onPress={handleSocialFacebook}
-                    disabled={submitting}
-                  >
-                    <Text style={{ fontSize: 13, fontWeight: "800", color: "#1877F2" }}>f  Facebook</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Store Admin Quick Access */}
-                <View style={{ marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.borderLight }}>
-                  <TouchableOpacity
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 8,
-                      height: 44,
-                      borderRadius: 8,
-                      backgroundColor: colors.cardSecondary,
-                      borderWidth: 1.5,
-                      borderColor: colors.indigo,
-                    }}
-                    activeOpacity={0.8}
-                    onPress={() => {
-                      setUsername("admin");
-                      setPassword("");
-                      setNotice({ type: "success", text: "Enter your WordPress administrator username and password, then sign in." });
-                    }}
-                    disabled={submitting}
-                  >
-                    <Sparkles size={15} color={colors.indigo} />
-                    <Text style={{ fontSize: 12, fontWeight: "800", color: colors.indigo }}>
-                      👑 LOGIN AS STORE ADMIN
-                    </Text>
-                  </TouchableOpacity>
-                  <Text style={{ fontSize: 10, color: colors.sub, textAlign: "center", marginTop: 6 }}>
-                    Use your WordPress administrator credentials.
-                  </Text>
-                </View>
-
                 <TouchableOpacity onPress={onClose} style={styles.guestLink}>
                   <Text style={[styles.guestLinkText, { color: colors.sub }]}>
                     Continue as guest shopper
@@ -637,56 +512,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   )}
                 </TouchableOpacity>
 
-                {/* Social Divider */}
-                <View style={{ flexDirection: "row", alignItems: "center", marginVertical: 14, gap: 10 }}>
-                  <View style={{ flex: 1, height: 1, backgroundColor: colors.borderLight }} />
-                  <Text style={{ fontSize: 10, fontWeight: "800", color: colors.sub, letterSpacing: 0.5 }}>OR JOIN WITH</Text>
-                  <View style={{ flex: 1, height: 1, backgroundColor: colors.borderLight }} />
-                </View>
-
-                {/* Social Buttons */}
-                <View style={{ flexDirection: "row", gap: 10, marginBottom: 6 }}>
-                  <TouchableOpacity
-                    style={{
-                      flex: 1,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 8,
-                      height: 44,
-                      borderRadius: 8,
-                      backgroundColor: colors.paper,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                    }}
-                    activeOpacity={0.8}
-                    onPress={handleSocialGoogle}
-                    disabled={submitting}
-                  >
-                    <Text style={{ fontSize: 13, fontWeight: "800", color: colors.ink }}>G  Google</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={{
-                      flex: 1,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 8,
-                      height: 44,
-                      borderRadius: 8,
-                      backgroundColor: colors.paper,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                    }}
-                    activeOpacity={0.8}
-                    onPress={handleSocialFacebook}
-                    disabled={submitting}
-                  >
-                    <Text style={{ fontSize: 13, fontWeight: "800", color: "#1877F2" }}>f  Facebook</Text>
-                  </TouchableOpacity>
-                </View>
-
                 <TouchableOpacity onPress={onClose} style={styles.guestLink}>
                   <Text style={[styles.guestLinkText, { color: colors.sub }]}>
                     Continue as guest shopper
@@ -697,16 +522,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
-
-      {/* Social Account Chooser Modal Sheet */}
-      <SocialAuthModal
-        visible={Boolean(socialModalProvider)}
-        provider={socialModalProvider || "google"}
-        onClose={() => setSocialModalProvider(null)}
-        onSelectAccount={handleSocialAccountPicked}
-        currentEmailHint={signupEmail || profile.email}
-        currentNameHint={signupName || profile.name}
-      />
     </Modal>
   );
 };
@@ -755,9 +570,9 @@ function createStyles(colors: ThemeColors) {
       marginTop: 2,
     },
     closeBtn: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       alignItems: "center",
       justifyContent: "center",
     },

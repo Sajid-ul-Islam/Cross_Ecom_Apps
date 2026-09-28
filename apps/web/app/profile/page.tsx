@@ -13,9 +13,8 @@ import {
   updateCustomerProfile,
   type OrderResult,
   type BdDistrict,
-  type AuthResult,
 } from "@/lib/api";
-import SocialAuthModal from "@/components/SocialAuthModal";
+
 import AboutDeenDrawer from "@/components/AboutDeenDrawer";
 import ProfileDrawer from "@/components/ProfileDrawer";
 import CustomerAnalyticsKPIs from "@/components/CustomerAnalyticsKPIs";
@@ -32,7 +31,7 @@ interface UserProfile {
   jeansSize: string;
   topSize: string;
   isGuest: boolean;
-  role: "customer" | "admin";
+  role: "customer";
 }
 
 const DEFAULT_PROFILE: UserProfile = {
@@ -78,7 +77,7 @@ export default function ProfilePage() {
   const [signupPassword, setSignupPassword] = useState("");
   const [authNotice, setAuthNotice] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [authSubmitting, setAuthSubmitting] = useState(false);
-  const [socialModalProvider, setSocialModalProvider] = useState<"google" | "facebook" | null>(null);
+
 
   // Security & Password update state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -223,12 +222,11 @@ export default function ProfilePage() {
     try {
       const data = await loginCustomer(loginIdent.trim(), loginPass);
       if (data.success) {
-        const role = data.role === "admin" || (data.user && data.user.role === "admin") ? "admin" : "customer";
         const updated: UserProfile = {
           ...profile,
           name: data.name || (data.user && data.user.name) || loginIdent.trim(),
           email: data.email || (data.user && data.user.email) || "",
-          role,
+          role: "customer",
           isGuest: false,
         };
         setProfile(updated);
@@ -240,20 +238,11 @@ export default function ProfilePage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token: data.token, profile: updated }),
         }).catch(() => {});
-        if (role === "admin") {
-          setAuthNotice({ type: "success", text: "👑 Welcome back, Store Administrator! Opening BI Control Room..." });
-          setTimeout(() => {
-            setAuthSubmitting(false);
-            setAuthModalOpen(false);
-            router.push("/admin");
-          }, 400);
-        } else {
-          setAuthNotice({ type: "success", text: `Welcome back, ${updated.name}!` });
-          setTimeout(() => {
-            setAuthSubmitting(false);
-            setAuthModalOpen(false);
-          }, 500);
-        }
+        setAuthNotice({ type: "success", text: `Welcome back, ${updated.name}!` });
+        setTimeout(() => {
+          setAuthSubmitting(false);
+          setAuthModalOpen(false);
+        }, 500);
       } else {
         setAuthSubmitting(false);
         setAuthNotice({ type: "error", text: data.message || "Invalid credentials." });
@@ -316,30 +305,7 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSocialSuccess = (res: AuthResult) => {
-    if (res.success && res.user) {
-      const updated: UserProfile = {
-        ...profile,
-        name: res.user.name || profile.name || "Customer",
-        email: res.user.email || profile.email,
-        role: "customer",
-        isGuest: false,
-      };
-      setProfile(updated);
-      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
-      if (res.token) localStorage.setItem("deen_web_guest_token", res.token);
-      fetch("/api/auth/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: res.token, profile: updated }),
-      }).catch(() => {});
-      setAuthNotice({ type: "success", text: `✓ Signed in successfully as ${res.user.name}!` });
-      setTimeout(() => {
-        setAuthModalOpen(false);
-        setSocialModalProvider(null);
-      }, 500);
-    }
-  };
+
 
   const districtName = districts.find((d) => d.code === profile.district)?.name || "Dhaka";
   const isPhoneValid = signupPhone.replace(/[^0-9]/g, "").length === 11 && signupPhone.startsWith("01");
@@ -352,9 +318,7 @@ export default function ProfilePage() {
       <div className="profile-hero-card" style={{ padding: "20px", marginBottom: 16 }}>
         <div className="profile-hero-top">
           <div className="profile-avatar">
-            {profile.role === "admin"
-              ? "👑"
-              : profile.isGuest
+            {profile.isGuest
               ? "👤"
               : profile.name
               ? profile.name.charAt(0).toUpperCase()
@@ -364,24 +328,16 @@ export default function ProfilePage() {
             <div className="profile-badge-row">
               <span
                 className={`profile-role-badge ${
-                  profile.role === "admin"
-                    ? "profile-role-badge--admin"
-                    : profile.isGuest
+                  profile.isGuest
                     ? "profile-role-badge--guest"
                     : "profile-role-badge--member"
                 }`}
               >
-                {profile.role === "admin"
-                  ? "👑 STORE ADMINISTRATOR"
-                  : profile.isGuest
-                  ? "🛍️ GUEST SHOPPER"
-                  : "💎 DEEN CLUB MEMBER"}
+                {profile.isGuest ? "🛍️ GUEST SHOPPER" : "💎 DEEN CLUB MEMBER"}
               </span>
             </div>
             <h2 className="profile-name">
-              {profile.role === "admin"
-                ? profile.name || "Store Administrator"
-                : profile.isGuest
+              {profile.isGuest
                 ? "Guest Shopper"
                 : profile.name || "DEEN Customer"}
             </h2>
@@ -483,60 +439,7 @@ export default function ProfilePage() {
         onOrdersClick={() => setActiveDrawer("orders")}
       />
 
-      {/* ── Priority for Admin: Executive BI Command Hub ── */}
-      {profile.role === "admin" && (
-        <div
-          className="profile-section-card"
-          style={{
-            borderColor: "var(--indigo)",
-            borderWidth: 1.5,
-            boxShadow: "0 4px 16px rgba(79, 70, 229, 0.12)",
-            marginBottom: 16,
-            padding: "16px",
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 18 }}>📊</span>
-              <strong style={{ fontSize: 13, color: "var(--indigo)", letterSpacing: 0.3 }}>
-                BUSINESS INTELLIGENCE (BI) COMMAND HUB
-              </strong>
-            </div>
-            <span
-              style={{
-                background: "rgba(16, 185, 129, 0.15)",
-                color: "var(--emerald)",
-                fontSize: 10,
-                fontWeight: 900,
-                padding: "3px 7px",
-                borderRadius: 999,
-              }}
-            >
-              ● LIVE BI
-            </span>
-          </div>
-          <p style={{ fontSize: 12, color: "var(--sub)", margin: "0 0 12px", lineHeight: 1.4 }}>
-            Net revenues, gross margins, return intelligence, and Pathao logistics control.
-          </p>
-          <Link
-            href="/admin"
-            className="btn btn--primary"
-            style={{
-              width: "100%",
-              padding: "11px 16px",
-              fontSize: 12.5,
-              fontWeight: 900,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              textDecoration: "none",
-            }}
-          >
-            OPEN DEDICATED BI CONTROL ROOM →
-          </Link>
-        </div>
-      )}
+
 
       {/* ── 2. Minimal Profile Drawer Menu Rows (Simple, Clean & Fast) ── */}
       <div className="profile-menu-list">
@@ -1305,95 +1208,6 @@ export default function ProfilePage() {
                     required
                   />
                 </div>
-                <button
-                  type="submit"
-                  className="btn btn--primary"
-                  style={{ width: "100%", padding: 12, marginTop: 10, fontWeight: 800 }}
-                  disabled={authSubmitting}
-                >
-                  {authSubmitting ? "Signing in…" : "SIGN IN TO YOUR ACCOUNT"}
-                </button>
-
-                <div style={{ display: "flex", alignItems: "center", margin: "16px 0", gap: 10 }}>
-                  <div style={{ flex: 1, height: 1, backgroundColor: "var(--border)" }} />
-                  <span style={{ fontSize: 10, fontWeight: 800, color: "var(--text-sub)", letterSpacing: 0.5 }}>
-                    OR CONTINUE WITH
-                  </span>
-                  <div style={{ flex: 1, height: 1, backgroundColor: "var(--border)" }} />
-                </div>
-
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button
-                    type="button"
-                    onClick={() => setSocialModalProvider("google")}
-                    disabled={authSubmitting}
-                    className="btn btn--outline"
-                    style={{
-                      flex: 1,
-                      padding: 10,
-                      fontSize: 13,
-                      fontWeight: 800,
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      gap: 8,
-                    }}
-                  >
-                    <span>G</span> Google
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSocialModalProvider("facebook")}
-                    disabled={authSubmitting}
-                    className="btn btn--outline"
-                    style={{
-                      flex: 1,
-                      padding: 10,
-                      fontSize: 13,
-                      fontWeight: 800,
-                      color: "#1877F2",
-                      borderColor: "rgba(24, 119, 242, 0.3)",
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      gap: 8,
-                    }}
-                  >
-                    <span>f</span> Facebook
-                  </button>
-                </div>
-
-                {/* Store Admin Quick Access */}
-                <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setLoginIdent("admin");
-                      setLoginPass("");
-                      setAuthNotice({ type: "success", text: "Enter your WordPress administrator username and password, then sign in." });
-                    }}
-                    disabled={authSubmitting}
-                    className="btn btn--outline"
-                    style={{
-                      width: "100%",
-                      padding: 10,
-                      fontSize: 12.5,
-                      fontWeight: 800,
-                      borderColor: "var(--indigo)",
-                      color: "var(--indigo)",
-                      background: "var(--surface-2)",
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      gap: 8,
-                    }}
-                  >
-                    👑 LOGIN AS STORE ADMIN
-                  </button>
-                  <p style={{ fontSize: 11, color: "var(--text-sub)", textAlign: "center", marginTop: 6 }}>
-                    Use your WordPress administrator credentials.
-                  </p>
-                </div>
               </form>
             ) : (
               <form onSubmit={handleSignUp} className="modal-form">
@@ -1467,15 +1281,7 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Social Auth Modal */}
-      <SocialAuthModal
-        isOpen={Boolean(socialModalProvider)}
-        provider={socialModalProvider || "google"}
-        onClose={() => setSocialModalProvider(null)}
-        onSuccess={handleSocialSuccess}
-        currentEmailHint={signupEmail || profile.email}
-        currentNameHint={signupName || profile.name}
-      />
+
 
       {/* About DEEN Sliding Drawer */}
       <AboutDeenDrawer

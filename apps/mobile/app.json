@@ -21,13 +21,19 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.deencommerce.app",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "icon": {
+        "light": "./assets/icon_light.png",
+        "dark": "./assets/icon_dark.png"
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#000000"
+        "foregroundImage": "./assets/icon_light.png",
+        "monochromeImage": "./assets/icon_dark.png",
+        "backgroundColor": "#FF6B00"
       },
+      "icon": "./assets/icon_light.png",
       "package": "com.deencommerce.app",
       "versionCode": 1,
       "permissions": [],
