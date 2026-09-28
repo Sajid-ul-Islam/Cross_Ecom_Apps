@@ -8,7 +8,7 @@ module.exports = ({ config }) => {
     ...config,
     name: "DEEN",
     slug: "deen-commerce",
-    version: "1.0.1",
+    version: "1.0.2",
     orientation: "portrait",
     icon: "./assets/icon.png",
     scheme: "deen",
@@ -32,7 +32,7 @@ module.exports = ({ config }) => {
         backgroundColor: "#000000",
       },
       package: "com.deencommerce.app",
-      versionCode: 1,
+      versionCode: 2,
     },
     web: {
       bundler: "metro",
@@ -43,6 +43,7 @@ module.exports = ({ config }) => {
       "expo-router",
       "expo-font",
       "expo-status-bar",
+      "./plugins/withLocalSigning.js",
       [
         "expo-build-properties",
         {
