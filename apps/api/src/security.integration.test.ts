@@ -48,7 +48,8 @@ test("production handlers enforce authentication and session boundaries", async 
   });
 
   await t.test("unverified payment submissions never report payment success", async () => {
-    assert.equal((await app.inject({ method: "POST", url: "/v1/deen/payments/verify", payload: { orderId: "123", trxId: "MADEUP" } })).statusCode, 422);
+    // Anonymous callers can't address an order at all (order lookup is auth-scoped).
+    assert.equal((await app.inject({ method: "POST", url: "/v1/deen/payments/verify", payload: { orderId: "123", trxId: "MADEUP" } })).statusCode, 404);
     assert.equal((await app.inject({ method: "POST", url: "/v1/deen/payments/callback", payload: { orderId: "123", status: "SUCCESS" } })).statusCode, 401);
   });
 

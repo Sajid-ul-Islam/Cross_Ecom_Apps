@@ -124,6 +124,24 @@ export const config = {
     password: process.env.PATHAO_PASSWORD ?? "",
     storeId: process.env.PATHAO_STORE_ID ?? "",
   },
+  /** Server-to-server payment settlement verification (roadmap P2-1).
+      When configured, POST /v1/deen/payments/verify queries the provider
+      DIRECTLY (SSLCommerz Validation API / bKash tokenized status) and only
+      marks a Woo order paid on a verified settlement. Leave blank to keep
+      the current safe behaviour (customer trxIds are never trusted). */
+  payments: {
+    sslcommerzStoreId: process.env.SSLCOMMERZ_STORE_ID ?? "",
+    sslcommerzStorePasswd: process.env.SSLCOMMERZ_STORE_PASSWD ?? "",
+    sslcommerzMode: (process.env.SSLCOMMERZ_MODE as "live" | "sandbox") ?? "live",
+    bkashAppKey: process.env.BKASH_APP_KEY ?? "",
+    bkashAppSecret: process.env.BKASH_APP_SECRET ?? "",
+    bkashUsername: process.env.BKASH_USERNAME ?? "",
+    bkashPassword: process.env.BKASH_PASSWORD ?? "",
+    bkashBaseUrl: process.env.BKASH_BASE_URL ?? "https://tokenized.pay.bka.sh/v1.2.0-beta",
+    /** Shared secret for the provider IPN listener; required to accept
+        POST /v1/deen/payments/callback with a signed SSLCommerz IPN. */
+    sslcommerzIpnEnabled: process.env.SSLCOMMERZ_IPN_ENABLED === "true",
+  },
   /** Exchange fees — admin-editable via env without app rebuild. */
   exchangeFees: {
     insideDhaka: Number(process.env.EXCHANGE_FEE_INSIDE ?? "50"),
