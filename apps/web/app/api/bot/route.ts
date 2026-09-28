@@ -34,6 +34,48 @@ function checkRateLimit(sessionId: string): boolean {
   return true;
 }
 
+// ── Gateway addressing ────────────────────────────────────────────────────
+// Primary Render gateway with backup failover — mirrors lib/api.ts. The old
+// hardcoded api.deencommerce.com default no longer resolves for AI chat.
+const DEFAULT_GATEWAY_URL = "https://cross-ecom-apps-4b4n.onrender.com";
+const BACKUP_GATEWAY_URL = "https://cross-ecom-apps.onrender.com";
+const GATEWAY_URL = process.env.NEXT_PUBLIC_API_URL || DEFAULT_GATEWAY_URL;
+
+// Shared gateway key — every request to the gateway must carry x-api-key or
+// the gateway rejects with 401 and the chat shows no retrieved data.
+const GATEWAY_API_KEY = process.env.GATEWAY_API_KEY || "fa002b126085801f23d9375d94409752503639919e39690c42877fc58c624973";
+
+// ── Gateway AI fallback helper (single-flight per request) ────────────────
+async function consultGatewayAi(
+  rawMessage: string,
+  history: Array<{ role: "user" | "assistant"; content: string }>,
+  authHeader?: string
+): Promise<{ reply: string; suggestedProducts?: any[]; suggestedActions?: any[] } | null> {
+  try {
+    const res = await fetch(`${GATEWAY_URL}/v1/deen/ai/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": GATEWAY_API_KEY,
+        ...(authHeader ? { Authorization: authHeader } : {}),
+      },
+      signal: AbortSignal.timeout(4000),
+      body: JSON.stringify({ message: rawMessage, history }),
+    });
+
+    if (!res.ok) return null;
+
+    const aiData = await res.json();
+    if (aiData?.reply && !aiData.reply.includes("I'm having trouble connecting")) {
+      return aiData;
+    }
+    return null;
+  } catch {
+    // Gateway AI offline/timeout — caller falls back safely
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   let activeSession: string | undefined;
   try {
@@ -100,51 +142,39 @@ export async function POST(req: NextRequest) {
 
     // If intent was UNKNOWN and session is IDLE, consult gateway AI concierge for live RAG answer & catalog products
     if (intent === "UNKNOWN" && session.state === "IDLE") {
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.deencommerce.com";
+      // Forward the caller's Authorization token (if any) so the gateway can
+      // scope visible orders to THIS account — enables in-chat order tracking.
+      const callerAuth = req.headers.get("authorization") || undefined;
 
+      const aiData = await consultGatewayAi(
+        rawMessage,
+        session.history.slice(-4).map((h) => ({
+          role: h.role === "user" ? ("user" as const) : ("assistant" as const),
+          content: h.text,
+        })),
+        callerAuth
+      );
 
-        const aiRes = await fetch(`${apiUrl}/v1/deen/ai/chat`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: AbortSignal.timeout(4000),
-          body: JSON.stringify({
-            message: rawMessage,
-            phone: undefined,
-            history: session.history.slice(-4).map((h) => ({
-              role: h.role === "user" ? "user" : "assistant",
-              content: h.text,
-            })),
-          }),
-        });
+      if (aiData) {
+        const mappedProducts: ProductCard[] | undefined = aiData.suggestedProducts?.map((p: any) => ({
+          id: String(p.id),
+          name: p.name,
+          price: Number(p.price) || 0,
+          salePrice: p.salePrice ? Number(p.salePrice) : undefined,
+          regularPrice: p.regularPrice ? Number(p.regularPrice) : undefined,
+          image: p.image || "/images/placeholder.jpg",
+          category: p.category,
+          sizes: p.sizes || [],
+          in_stock: p.stockStatus ? p.stockStatus === "instock" : true,
+        }));
 
-
-        if (aiRes.ok) {
-          const aiData = await aiRes.json();
-          if (aiData?.reply && !aiData.reply.includes("I'm having trouble connecting")) {
-            const mappedProducts: ProductCard[] | undefined = aiData.suggestedProducts?.map((p: any) => ({
-              id: String(p.id),
-              name: p.name,
-              price: Number(p.price) || 0,
-              salePrice: p.salePrice ? Number(p.salePrice) : undefined,
-              regularPrice: p.regularPrice ? Number(p.regularPrice) : undefined,
-              image: p.image || "/images/placeholder.jpg",
-              category: p.category,
-              sizes: p.sizes || [],
-              in_stock: p.stockStatus ? p.stockStatus === "instock" : true,
-            }));
-
-            botResponse = {
-              reply: aiData.reply,
-              products: mappedProducts && mappedProducts.length > 0 ? mappedProducts : undefined,
-              actions: aiData.suggestedActions,
-              quickReplies: botResponse.quickReplies,
-              state: "IDLE",
-            };
-          }
-        }
-      } catch {
-        // Gateway AI offline/timeout; fallback safely remains in botResponse
+        botResponse = {
+          reply: aiData.reply,
+          products: mappedProducts && mappedProducts.length > 0 ? mappedProducts : undefined,
+          actions: aiData.suggestedActions,
+          quickReplies: botResponse.quickReplies,
+          state: "IDLE",
+        };
       }
     }
 

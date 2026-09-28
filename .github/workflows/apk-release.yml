@@ -1,0 +1,115 @@
+name: APK Build — Manual Publish (Expo-first)
+
+# ══════════════════════════════════════════════════════════════════════════
+#  PUBLISHING RULE (owner workflow):
+#   1. Build the APK and check it on Expo / a real device FIRST.
+#   2. Publish to the Releases page ONLY when you decide it is ready.
+#
+#  Nothing is ever published automatically:
+#   • No build on push/PR — this workflow never starts by itself.
+#   • Every run is triggered by YOU from the GitHub Actions tab
+#     (Actions → "APK Build — Manual Publish (Expo-first)" → Run workflow).
+#   • A GitHub Release is created ONLY when you tick "publish_release".
+# ══════════════════════════════════════════════════════════════════════════
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_profile:
+        description: "EAS build profile"
+        type: choice
+        default: preview
+        options:
+          - preview # internal distribution APK (shareable install link)
+          - production-apk # production-channel APK
+      publish_release:
+        description: "Publish APK to GitHub Releases after build?"
+        type: boolean
+        default: false
+      release_tag:
+        description: "Release tag (required only when publishing, e.g. v1.0.1)"
+        required: false
+        default: ""
+  # Tag push builds are ALSO manual in effect: they only run when you
+  # deliberately push a vX.Y.Z tag, never on ordinary commits.
+  push:
+    tags:
+      - "v*.*.*"
+
+concurrency:
+  group: apk-release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write # needed to create a Release (artifact upload needs none)
+
+jobs:
+  build-apk:
+    name: Build DEEN APK (EAS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Install mobile dependencies
+        run: npm ci
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Build APK on Expo servers (EAS)
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          PROFILE="preview"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ inputs.build_profile }}" ]; then
+            PROFILE="${{ inputs.build_profile }}"
+          else
+            # Tag builds (push of vX.Y.Z) use the production-apk profile
+            PROFILE="production-apk"
+          fi
+          echo "Building with EAS profile: $PROFILE"
+          eas build \
+            --platform android \
+            --profile "$PROFILE" \
+            --non-interactive \
+            --no-wait \
+            --output /tmp/deen.apk
+
+      - name: Upload build artifact (check on Expo / device first)
+        uses: actions/upload-artifact@v4
+        with:
+          name: deen-apk-${{ github.sha }}
+          path: /tmp/deen.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish to GitHub Releases (ONLY when explicitly requested)
+        if: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish_release == true) || github.event_name == 'push' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ inputs.release_tag }}"
+          if [ -z "$TAG" ]; then
+            TAG="${GITHUB_REF_NAME}"
+          fi
+          if [ -z "$TAG" ]; then
+            echo "No release tag provided — skipping publish."; exit 0
+          fi
+          cd "$GITHUB_WORKSPACE"
+          gh release create "$TAG" /tmp/deen.apk \
+            --title "DEEN $TAG" \
+            --notes "APK build $TAG. Install and verify before wide distribution." \
+            --verify-tag || \
+          gh release upload "$TAG" /tmp/deen.apk --clobber
+          echo "Published release $TAG"

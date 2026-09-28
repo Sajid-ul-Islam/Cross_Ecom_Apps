@@ -5,8 +5,6 @@ import {
   getProfile,
   saveProfile as apiSaveProfile,
   login as gatewayLogin,
-  loginWithGoogle as gatewayLoginWithGoogle,
-  loginWithFacebook as gatewayLoginWithFacebook,
   authMe,
   logout as gatewayLogout,
   createGuestSession,
@@ -15,16 +13,15 @@ import {
 
 function normalizeProfile(p: Partial<UserProfile> | null): UserProfile {
   if (!p) return DEFAULT_PROFILE;
-  const isAdmin = p.role === "admin";
-  const isGuest = !isAdmin && (p.isGuest === true || p.accountType === "guest" || (!p.phone && !p.name));
+  const isGuest = p.isGuest === true || p.accountType === "guest" || (!p.phone && !p.name);
 
-  const accountType: AccountType = isAdmin ? "admin" : isGuest ? "guest" : "customer";
-  const role = isAdmin ? "admin" : "customer";
+  const accountType: AccountType = isGuest ? "guest" : "customer";
+  const role = "customer";
 
   return {
     accountType,
     isGuest,
-    username: isAdmin ? p.username || "admin" : p.username,
+    username: p.username,
     role,
     name: p.name ?? (isGuest ? "" : DEFAULT_PROFILE.name),
     phone: p.phone ?? (isGuest ? "" : DEFAULT_PROFILE.phone),
@@ -46,7 +43,7 @@ function normalizeProfile(p: Partial<UserProfile> | null): UserProfile {
   };
 }
 
-export type UserMode = "admin" | "registered" | "guest";
+export type UserMode = "registered" | "guest";
 
 interface ProfileContextType {
   profile: UserProfile;
@@ -59,9 +56,6 @@ interface ProfileContextType {
   addSavedAddress: (addr: Omit<SavedAddress, "id">) => Promise<void>;
   removeSavedAddress: (id: string) => Promise<void>;
   login: (username: string, password: string) => Promise<{ success: boolean; message?: string; role?: string }>;
-  loginAsAdmin: (passcode?: string) => Promise<{ success: boolean; message?: string; role?: string }>;
-  loginWithGoogle: (idToken?: string, email?: string, name?: string) => Promise<{ success: boolean; message?: string }>;
-  loginWithFacebook: (accessToken?: string, email?: string, name?: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => Promise<void>;
 }
 
@@ -83,8 +77,8 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
               username: me.username,
               name: me.name,
               email: me.email,
-              role: me.role,
-              accountType: me.accountType,
+              role: "customer",
+              accountType: "customer",
               isGuest: false,
             })
           );
@@ -171,51 +165,13 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         username: me.username,
         name: me.name,
         email: me.email,
-        role: me.role,
-        accountType: me.accountType,
+        role: "customer",
+        accountType: "customer",
         isGuest: false,
       });
-      return { success: true, message: res.message, role: me.role };
+      return { success: true, message: res.message, role: "customer" };
     }
     return { success: res.success, message: res.message, role: undefined };
-  };
-
-  const loginAsAdmin = async (passcode: string = "") => {
-    return login("admin", passcode);
-  };
-
-  const loginWithGoogle = async (idToken?: string, email?: string, name?: string) => {
-    const res = await gatewayLoginWithGoogle(idToken, email, name);
-    if (res.success && res.user) {
-      const me = res.user;
-      persist({
-        ...DEFAULT_PROFILE,
-        username: me.username,
-        name: me.name,
-        email: me.email,
-        role: me.role,
-        accountType: me.accountType,
-        isGuest: false,
-      });
-    }
-    return { success: res.success, message: res.message };
-  };
-
-  const loginWithFacebook = async (accessToken?: string, email?: string, name?: string) => {
-    const res = await gatewayLoginWithFacebook(accessToken, email, name);
-    if (res.success && res.user) {
-      const me = res.user;
-      persist({
-        ...DEFAULT_PROFILE,
-        username: me.username,
-        name: me.name,
-        email: me.email,
-        role: me.role,
-        accountType: me.accountType,
-        isGuest: false,
-      });
-    }
-    return { success: res.success, message: res.message };
   };
 
   const logout = async () => {
@@ -223,8 +179,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     persist(normalizeProfile(DEFAULT_PROFILE));
   };
 
-  const currentMode: UserMode =
-    profile.role === "admin" ? "admin" : profile.isGuest ? "guest" : "registered";
+  const currentMode: UserMode = profile.isGuest ? "guest" : "registered";
 
   const isLoggedIn = !profile.isGuest && !!profile.username;
 
@@ -241,9 +196,6 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         addSavedAddress,
         removeSavedAddress,
         login,
-        loginAsAdmin,
-        loginWithGoogle,
-        loginWithFacebook,
         logout,
       }}
     >

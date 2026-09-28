@@ -13,7 +13,6 @@ import { useRouter } from "expo-router";
 import {
   RotateCcw,
   AlertCircle,
-  TrendingUp,
   ArrowRight,
   Package,
   MapPin,
@@ -25,7 +24,6 @@ import {
   Facebook,
   Instagram,
   LinkedIn,
-  WhatsApp,
   Sparkles,
 } from "../../src/components/Icons";
 import * as Updates from "expo-updates";
@@ -53,8 +51,6 @@ import { ProfileDrawerModal } from "../../src/components/ProfileDrawerModal";
 import { CustomerAnalyticsKPIs } from "../../src/components/profile/CustomerAnalyticsKPIs";
 
 // Modals
-import { AdminBroadcastModal } from "../../src/components/AdminBroadcastModal";
-import { AdminCustomersModal } from "../../src/components/AdminCustomersModal";
 import { LoginModal } from "../../src/components/LoginModal";
 import { AboutModal } from "../../src/components/AboutModal";
 import { CourierTrackingModal } from "../../src/components/CourierTrackingModal";
@@ -96,7 +92,7 @@ export default function ProfileScreen() {
   const { isDark, colors } = useTheme();
   const s = sharedStyles(colors);
   const styles = createStyles(colors, s);
-  const isAdmin = profile?.role === "admin" || profile?.accountType === "admin";
+
 
   // Profile form fields
   const [name, setName] = useState(profile?.name || "");
@@ -129,8 +125,6 @@ export default function ProfileScreen() {
   const [preferencesModalVisible, setPreferencesModalVisible] = useState(false);
 
   // Other Modal visibility
-  const [broadcastModalVisible, setBroadcastModalVisible] = useState(false);
-  const [customersModalVisible, setCustomersModalVisible] = useState(false);
   const [loginModalVisible, setLoginModalVisible] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<"signin" | "signup">("signin");
   const [aboutModalVisible, setAboutModalVisible] = useState(false);
@@ -240,122 +234,7 @@ export default function ProfileScreen() {
             onOrdersPress={() => setOrdersModalVisible(true)}
           />
 
-          {/* Priority 1 for Admin: Executive BI Control Hub */}
-          {isAdmin && (
-            <View
-              style={{
-                backgroundColor: colors.card,
-                borderRadius: 14,
-                borderWidth: 1.5,
-                borderColor: colors.indigo,
-                padding: 16,
-                marginBottom: 16,
-                shadowColor: colors.indigo,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.18,
-                shadowRadius: 8,
-                elevation: 3,
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  <View
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 16,
-                      backgroundColor: colors.indigoLight,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <TrendingUp size={18} color={colors.indigo} />
-                  </View>
-                  <View>
-                    <Text style={{ fontSize: 13, fontWeight: "900", color: colors.ink, letterSpacing: 0.5 }}>
-                      BUSINESS INTELLIGENCE (BI)
-                    </Text>
-                    <Text style={{ fontSize: 10, color: colors.sub, fontWeight: "700" }}>
-                      Executive Operations &amp; Real-Time Analytics
-                    </Text>
-                  </View>
-                </View>
-                <View
-                  style={{
-                    backgroundColor: "rgba(16, 185, 129, 0.15)",
-                    paddingHorizontal: 8,
-                    paddingVertical: 3,
-                    borderRadius: 6,
-                  }}
-                >
-                  <Text style={{ fontSize: 9.5, fontWeight: "900", color: colors.emerald }}>
-                    ● LIVE BI
-                  </Text>
-                </View>
-              </View>
 
-              <Text style={{ fontSize: 12, color: colors.sub, lineHeight: 18, marginBottom: 14 }}>
-                Real-time tracking of net revenues, gross margins, return intelligence, and Pathao logistics dispatch.
-              </Text>
-
-              {/* Primary BI Action */}
-              <TouchableOpacity
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  backgroundColor: colors.indigo,
-                  paddingVertical: 12,
-                  borderRadius: 8,
-                  marginBottom: 10,
-                }}
-                activeOpacity={0.88}
-                onPress={() => router.push("/admin")}
-              >
-                <Text style={{ color: "#FFFFFF", fontSize: 13, fontWeight: "900", letterSpacing: 0.5 }}>
-                  OPEN DEDICATED BI PAGE →
-                </Text>
-              </TouchableOpacity>
-
-              {/* Admin Shortcuts Grid */}
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                <TouchableOpacity
-                  style={{
-                    flex: 1,
-                    backgroundColor: colors.cardSecondary,
-                    paddingVertical: 10,
-                    borderRadius: 8,
-                    alignItems: "center",
-                    borderWidth: 1,
-                    borderColor: colors.borderLight,
-                  }}
-                  onPress={() => setCustomersModalVisible(true)}
-                >
-                  <Text style={{ fontSize: 11, fontWeight: "800", color: colors.ink }}>
-                    👥 Customers
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={{
-                    flex: 1,
-                    backgroundColor: colors.cardSecondary,
-                    paddingVertical: 10,
-                    borderRadius: 8,
-                    alignItems: "center",
-                    borderWidth: 1,
-                    borderColor: colors.borderLight,
-                  }}
-                  onPress={() => setBroadcastModalVisible(true)}
-                >
-                  <Text style={{ fontSize: 11, fontWeight: "800", color: colors.ink }}>
-                    📢 Push Alert
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
 
           {/* ── 2. Minimal Profile Drawer Menu Rows (Simple, Clean & Fast) ── */}
           <View style={styles.menuList}>
@@ -781,31 +660,16 @@ export default function ProfileScreen() {
         </ProfileDrawerModal>
 
         {/* ── 4. Global Modals ── */}
-        {isAdmin && customersModalVisible && (
-          <AdminCustomersModal
-            visible={customersModalVisible}
-            onClose={() => setCustomersModalVisible(false)}
-          />
-        )}
 
-        {isAdmin && broadcastModalVisible && (
-          <AdminBroadcastModal
-            visible={broadcastModalVisible}
-            onClose={() => setBroadcastModalVisible(false)}
-          />
-        )}
 
         {loginModalVisible && (
           <LoginModal
             visible={loginModalVisible}
             initialMode={authModalMode}
             onClose={() => setLoginModalVisible(false)}
-            onSuccess={(role) => {
+            onSuccess={() => {
               setLoginModalVisible(false);
-              showToast("✓ Authenticated successfully!");
-              if (role === "admin" || profile?.role === "admin") {
-                router.push("/admin");
-              }
+              showToast("✓ Signed in successfully!");
             }}
           />
         )}
