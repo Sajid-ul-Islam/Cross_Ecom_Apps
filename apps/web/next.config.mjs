@@ -52,8 +52,8 @@ const nextConfig = {
             value: "nosniff",
           },
           {
-            key: "X-Frame-Options",
-            value: "SAMEORIGIN",
+            key: "Content-Security-Policy",
+            value: "frame-ancestors 'self' https://sajid-ul-islam.vercel.app https://*.vercel.app http://localhost:* http://127.0.0.1:* https://*.github.io",
           },
           {
             key: "Referrer-Policy",
