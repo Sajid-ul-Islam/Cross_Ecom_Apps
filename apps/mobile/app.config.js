@@ -10,7 +10,13 @@ module.exports = ({ config }) => {
     slug: "deen-commerce",
     version: "1.0.2",
     orientation: "portrait",
-    icon: "./assets/icon.png",
+    icon: "./assets/logo_white.png",
+    logo: "./assets/logo_white.png",
+    splash: {
+      image: "./assets/splash.png",
+      resizeMode: "contain",
+      backgroundColor: "#000000",
+    },
     scheme: "deen",
     userInterfaceStyle: "automatic",
     runtimeVersion: {

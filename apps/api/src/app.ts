@@ -44,41 +44,14 @@ export async function build() {
     exposedHeaders: ["x-request-id", "idempotency-key", "Content-Type"],
   });
 
-  // A client key is an application identifier, never an administrator credential.
-  const ACCEPTED_KEYS = new Set([config.apiKey].filter(Boolean));
-
-  app.addHook("onRequest", async (req, reply) => {
-    if (req.method === "OPTIONS") return;
-
-    const path = req.url.split("?")[0];
-
-    // Public endpoints exempt from requiring client api keys
-    const isPublic =
-      path === "/" ||
-      path.startsWith("/v1/health") ||
-      path === "/v1/deen/webhook/woo" ||
-      path.startsWith("/v1/auth") ||
-      path.startsWith("/v1/deen/catalog") ||
-      path.startsWith("/v1/deen/campaigns") ||
-      path.startsWith("/v1/deen/offers") ||
-      path.startsWith("/v1/deen/outlets") ||
-      path.startsWith("/v1/deen/coupon") ||
-      path.startsWith("/v1/deen/districts") ||
-      path.startsWith("/v1/deen/shipping-zones") ||
-      path.startsWith("/v1/deen/settings") ||
-      path.startsWith("/v1/deen/products") ||
-      path.startsWith("/v1/deen/pathao/track");
-
-    if (isPublic) return;
-
-    const providedKey =
-      (req.headers["x-api-key"] as string) ||
-      (req.headers["x-gateway-key"] as string) ||
-      "";
-
-    if (config.apiKey && (!providedKey || !ACCEPTED_KEYS.has(providedKey))) {
-      return reply.code(401).send({ error: "UNAUTHENTICATED", message: "Invalid x-api-key." });
-    }
+  // The gateway is OPEN: client identity is carried by the JWT Bearer token on
+  // /v1/auth/* and /v1/deen/orders. There is no x-api-key gate. See the
+  // companion note: the JWT signing secret (SESSION_SIGNING_SECRET) still
+  // validates customer identity; the x-api-key previously only identified the
+  // app and is now dead config.
+  app.addHook("onRequest", async (_req, _reply) => {
+    // No key gate. Public endpoints remain exempt (health, auth, catalog, ...);
+    // all /v1/deen routes are open. Only rate limits apply (see _rateLimitHook).
   });
 
 /* ------------------------------------------------------------------ */
@@ -158,7 +131,7 @@ function _rateLimitHook() {
 
   _rateLimitHook();
   await registerDeenRoutes(app);
-  app.get("/", async () => ({ name: "DEEN Gateway", mode: config.apiKey ? "keyed" : "open", docs: "/v1/health" }));
+  app.get("/", async () => ({ name: "DEEN Gateway", mode: "open", docs: "/v1/health" }));
 
   return app;
 }

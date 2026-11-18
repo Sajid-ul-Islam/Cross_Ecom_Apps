@@ -1623,7 +1623,7 @@ export async function registerDeenRoutes(app: FastifyInstance) {
       ok: true,
       gateway: "ok" as const,
       woo,
-      mode: config.apiKey ? "keyed" : "open",
+      mode: "open",
       timestamp: new Date().toISOString(),
     };
   }

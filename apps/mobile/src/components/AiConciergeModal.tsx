@@ -22,6 +22,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useCart } from "../context/CartContext";
 import { useProfile } from "../context/ProfileContext";
 import { bdt, getInStockSizes, request, getAuthToken, getGuestSession } from "../services/gateway";
+import { summarizeOffline, proofreadOffline, generateOfflineSuggestions, runOfflineAi, isNanoSupported, isNanoReady, prepareNano } from "../services/ai";
 import { QuickAddBottomSheet } from "./QuickAddBottomSheet";
 
 const { width, height } = Dimensions.get("window");
@@ -366,6 +367,9 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
     }
   }, [messages, loading]);
 
+  const [aiAnalysis, setAiAnalysis] = useState<{ reply: string; quickReplies?: string[]; source: "offline" | "cloud"; sourceDetail: string } | null>(null);
+  const [aiAnalysisDone, setAiAnalysisDone] = useState(false);
+
   const handleSend = async (userText: string) => {
     const text = userText.trim();
     if (!text || loading) return;
@@ -379,60 +383,82 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
+    setAiAnalysisDone(false);
 
     try {
-      // Use request() so x-api-key is injected automatically (same as every other
-      // gateway call). Bare fetch() omitted the key -> gateway answered 401 and
-      // the concierge never rendered retrieved catalog/order data.
-      // Also send the user's auth/session token so the gateway scopes visible
-      // orders to THIS account (order tracking works in-chat for signed-in users).
-      const guestSession = await getGuestSession();
-      const token = (await getAuthToken()) || guestSession?.token;
-      const authHeaders: Record<string, string> = {};
-      if (token) authHeaders.Authorization = `Bearer ${token}`;
+      // 1) Try on-device Gemini Nano (offline, zero cost, zero network).
+      //    Only used for explicit "Summarize"/"Proofread" intent + smart replies,
+      //    so the AI doesn't silently hand the customer over to the phone.
+      const matches = await isNanoSupported();
+      const offlineOk = matches && (await isNanoReady());
+      let offlineResult: { reply: string; quickReplies?: string[]; sourceDetail: string } | null = null;
+      if (offlineOk) {
+        const t = text.toLowerCase();
+        if (t.includes("summar") || t.includes("short") || t.includes("make it short") || t.includes("summarize")) {
+          const s = await summarizeOffline(text, 600);
+          if (s) offlineResult = { reply: s, quickReplies: undefined, sourceDetail: "offline Gemini Nano" };
+        } else if (t.includes("proofread") || t.includes("check") || t.includes("spelling") || t.includes("grammar")) {
+          const s = await proofreadOffline(text, 400);
+          if (s) offlineResult = { reply: s, quickReplies: undefined, sourceDetail: "offline Gemini Nano" };
+        } else if (t.includes("reply") || t.includes("suggest") || t.includes("option")) {
+          const sug = await generateOfflineSuggestions(text, "Customer is chatting with DEEN assistant in the mobile app.");
+          if (sug.length > 0) {
+            offlineResult = { reply: sug.map((s) => s.text).join("\n"), quickReplies: sug.map((s) => s.text), sourceDetail: "offline Gemini Nano smart replies" };
+          }
+        }
+      }
 
-      const data = await request<{
-        reply: string;
-        suggestedProducts?: any[];
-        suggestedActions?: { label: string; action: string; payload?: any }[];
-        quickReplies?: string[];
-      }>(
-        "/v1/deen/ai/chat",
-        {
-          method: "POST",
-          headers: authHeaders,
-          body: JSON.stringify({
-            message: text,
-            phone: profile?.phone,
-            history: messages.slice(-4).map((m) => ({
-              role: m.sender === "user" ? "user" : "assistant",
-              content: m.text,
-            })),
-          }),
-        },
-        8000
-      );
+      // 2) Cloud concierge / knowledge base as the primary fallback.
+      let cloudData: { reply: string; suggestedProducts?: any[]; suggestedActions?: any[]; quickReplies?: string[] } | null = null;
+      if (!offlineResult) {
+        const guestSession = await getGuestSession();
+        const token = (await getAuthToken()) || guestSession?.token;
+        const authHeaders: Record<string, string> = {};
+        if (token) authHeaders.Authorization = `Bearer ${token}`;
 
-      if (!data?.reply) throw new Error("Empty AI response");
+        const data = await request<{ reply: string; suggestedProducts?: any[]; suggestedActions?: { label: string; action: string; payload?: any }[]; quickReplies?: string[] }>(
+          "/v1/deen/ai/chat",
+          { method: "POST", headers: authHeaders, body: JSON.stringify({ message: text, phone: "", history: [] }) },
+          8000
+        );
+        if (data?.reply) cloudData = data;
+      }
+
+      // 3) Wrap the final reply with an explicit source tag so the customer
+      //    always knows whether the answer came from the phone or the cloud.
+      const sourceLabel = offlineResult
+        ? `🤖 OFFLINE (device AI)`
+        : cloudData
+          ? `☁️ Cloud concierge`
+          : "ℹ️ No AI answer";
+      const aiReply = offlineResult?.reply ?? cloudData?.reply ?? "";
 
       const aiMsg: AiMessage = {
         id: `ai_${Date.now()}`,
         sender: "ai",
-        text: data.reply,
-        products: data.suggestedProducts,
-        actions: data.suggestedActions,
-        quickReplies: data.quickReplies,
+        text: aiReply,
+        products: offlineResult ? undefined : cloudData?.suggestedProducts,
+        actions: offlineResult ? undefined : cloudData?.suggestedActions,
+        quickReplies: offlineResult?.quickReplies ?? cloudData?.quickReplies,
       };
-
       setMessages((prev) => [...prev, aiMsg]);
+
+      // 4) Store the source tag separately so it renders above the bubble
+      //    without polluting the message bubble itself.
+      if (offlineResult) {
+        setAiAnalysis({ reply: offlineResult.reply, quickReplies: offlineResult.quickReplies, source: "offline", sourceDetail: offlineResult.sourceDetail });
+      } else if (cloudData) {
+        setAiAnalysis({ reply: cloudData.reply, quickReplies: cloudData.quickReplies, source: "cloud", sourceDetail: "/v1/deen/ai/chat" });
+      } else {
+        setAiAnalysis({ reply: "I couldn't process that right now. Please try again or contact our support desk.", source: "cloud", sourceDetail: "fallback" });
+      }
+      setAiAnalysisDone(true);
     } catch {
+      setAiAnalysis({ reply: "I experienced a brief connection blip with our AI. You can also chat directly with our Dhaka stylists on WhatsApp at 01952-700500!", source: "cloud", sourceDetail: "fallback" });
+      setAiAnalysisDone(true);
       setMessages((prev) => [
         ...prev,
-        {
-          id: `ai_err_${Date.now()}`,
-          sender: "ai",
-          text: "I experienced a brief connection blip with our catalog knowledge base. You can also chat directly with our Dhaka stylists on WhatsApp at 01952-700500!",
-        },
+        { id: `ai_err_${Date.now()}`, sender: "ai", text: "I experienced a brief connection blip with our AI. You can also chat directly with our Dhaka stylists on WhatsApp at 01952-700500!" },
       ]);
     } finally {
       setLoading(false);
@@ -665,6 +691,34 @@ export const AiChatView: React.FC<AiChatViewProps> = ({
               </View>
             )}
           </ScrollView>
+
+          {/* AI Analysis Footer */}
+          {aiAnalysisDone && aiAnalysis && (
+            <View style={styles.analysisFooter}>
+              <View style={styles.analysisLeft}>
+                <Text style={styles.analysisLabel}>{aiAnalysis.source === "offline" ? "🤖 OFFLINE (device AI)" : "☁️ Cloud concierge"}</Text>
+                {aiAnalysis.sourceDetail && aiAnalysis.source !== "cloud" && (
+                  <Text style={styles.analysisDetail}>{aiAnalysis.sourceDetail}</Text>
+                )}
+              </View>
+              {aiAnalysis.quickReplies && aiAnalysis.quickReplies.length > 0 && (
+                <View style={styles.analysisQuickReplies}>
+                  {aiAnalysis.quickReplies.map((qr, i) => (
+                    <TouchableOpacity
+                      key={i}
+                      style={styles.analysisQuickReply}
+                      onPress={() => handleSend(qr)}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Quick reply: ${qr}`}
+                    >
+                      <Text style={styles.analysisQuickReplyText}>{qr}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Quick Prompts */}
           {messages.length <= 2 && (
@@ -1036,6 +1090,48 @@ function createStyles(colors: ThemeColors) {
     },
     sendBtnDisabled: {
       opacity: 0.5,
+    },
+    analysisFooter: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 10,
+      backgroundColor: colors.cardSecondary,
+      borderTopWidth: 1,
+      borderTopColor: colors.borderLight,
+    },
+    analysisLeft: {
+      flex: 1,
+    },
+    analysisLabel: {
+      fontSize: 11,
+      fontWeight: "800",
+      color: colors.indigo,
+      textTransform: "uppercase",
+    },
+    analysisDetail: {
+      fontSize: 10,
+      fontStyle: "italic",
+      color: colors.sub,
+      marginTop: 2,
+    },
+    analysisQuickReplies: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 6,
+    },
+    analysisQuickReply: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 14,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    analysisQuickReplyText: {
+      fontSize: 11,
+      fontWeight: "700",
+      color: colors.indigo,
     },
   });
 }

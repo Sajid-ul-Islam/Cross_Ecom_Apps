@@ -14,6 +14,7 @@ import { startGatewayKeepAlive, reportBug } from "../src/services/gateway";
 
 import { AnimatedSplashScreen } from "../src/components/AnimatedSplashScreen";
 import { OTAUpdateBanner } from "../src/components/OTAUpdateBanner";
+import { ChatFloatingWidget } from "../src/components/ChatFloatingWidget";
 
 // Tell TypeScript that React Native's `global` exists (RN exposes it at runtime
 // but TS 6 strict lib doesn't include it).
@@ -97,6 +98,7 @@ export default function RootLayout() {
                     <CartProvider>
                       <OrderProvider>
                         <RootNavigator />
+                        <ChatFloatingWidget />
                         {isSplashVisible && (
                           <AnimatedSplashScreen onAnimationComplete={() => setSplashVisible(false)} />
                         )}

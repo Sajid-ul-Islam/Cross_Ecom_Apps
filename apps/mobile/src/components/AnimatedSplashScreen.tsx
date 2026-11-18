@@ -59,8 +59,8 @@ export function AnimatedSplashScreen({ onAnimationComplete }: { onAnimationCompl
           style={{
             width: 220,
             height: 64,
+            resizeMode: "contain",
           }}
-          resizeMode="contain"
         />
         <Text
           style={{
