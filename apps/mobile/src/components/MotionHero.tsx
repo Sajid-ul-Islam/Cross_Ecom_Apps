@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Dimensions,
   Animated,
+  AccessibilityInfo,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
@@ -103,12 +104,23 @@ export const MotionHero: React.FC<MotionHeroProps> = () => {
   const router = useRouter();
   const { colors } = useTheme();
   const [activeIndex, setActiveIndex] = useState(0);
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion).catch(() => {});
+    const sub = AccessibilityInfo.addEventListener("reduceMotionChanged", setReduceMotion);
+    return () => sub?.remove?.();
+  }, []);
 
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
   const currentSlide = SLIDES[activeIndex];
 
   const advanceToNextSlide = useCallback(() => {
+    if (reduceMotion) {
+      setActiveIndex((prev) => (prev + 1) % SLIDES.length);
+      return;
+    }
     Animated.timing(fadeAnim, {
       toValue: 0.2,
       duration: 350,
@@ -121,9 +133,10 @@ export const MotionHero: React.FC<MotionHeroProps> = () => {
         useNativeDriver: true,
       }).start();
     });
-  }, [fadeAnim]);
+  }, [fadeAnim, reduceMotion]);
 
   useEffect(() => {
+    if (reduceMotion) return;
     // For static images, advance after 5.5 seconds.
     // For video slides, advance upon playback completion (via onEnded) with a 30s safety watchdog.
     if (currentSlide.videoUrl) {
@@ -133,7 +146,7 @@ export const MotionHero: React.FC<MotionHeroProps> = () => {
 
     const timer = setTimeout(advanceToNextSlide, 5500);
     return () => clearTimeout(timer);
-  }, [activeIndex, currentSlide.videoUrl, advanceToNextSlide]);
+  }, [activeIndex, currentSlide.videoUrl, advanceToNextSlide, reduceMotion]);
 
   const handlePrimaryPress = () => {
     if (currentSlide.categorySlug) {
@@ -175,11 +188,13 @@ export const MotionHero: React.FC<MotionHeroProps> = () => {
             <TouchableOpacity
               key={i}
               onPress={() => setActiveIndex(i)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel={`Show slide ${i + 1} of ${SLIDES.length}`}
+              hitSlop={{ top: 20, bottom: 20, left: 12, right: 12 }}
               style={[
                 styles.indicatorBar,
                 {
-                  width: i === activeIndex ? 20 : 6,
+                  width: i === activeIndex ? 20 : 8,
                   backgroundColor:
                     i === activeIndex ? "#FFFFFF" : "rgba(255,255,255,0.45)",
                 },

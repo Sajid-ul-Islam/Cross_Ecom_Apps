@@ -457,6 +457,42 @@ export default function SideNavDrawer({ isOpen, onClose, onOpenStories }: SideNa
               <span style={{ fontSize: 16 }}>💬</span>
               <span>Live Support &amp; AI Concierge</span>
             </Link>
+
+            <Link
+              href="/profile"
+              onClick={onClose}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "8px 0",
+                color: "var(--ink)",
+                textDecoration: "none",
+                fontSize: 13,
+                fontWeight: 600,
+              }}
+            >
+              <span style={{ fontSize: 16 }}>🎁</span>
+              <span>Daily Rewards &amp; Vouchers</span>
+            </Link>
+
+            <Link
+              href="/profile"
+              onClick={onClose}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "8px 0",
+                color: "var(--ink)",
+                textDecoration: "none",
+                fontSize: 13,
+                fontWeight: 600,
+              }}
+            >
+              <span style={{ fontSize: 16 }}>💳</span>
+              <span>DEEN Gift Cards</span>
+            </Link>
           </div>
         </div>
 

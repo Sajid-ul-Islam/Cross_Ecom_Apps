@@ -18,6 +18,8 @@ import {
 import AboutDeenDrawer from "@/components/AboutDeenDrawer";
 import ProfileDrawer from "@/components/ProfileDrawer";
 import CustomerAnalyticsKPIs from "@/components/CustomerAnalyticsKPIs";
+import DailyRewardsModal from "@/components/DailyRewardsModal";
+import GiftCardModal from "@/components/GiftCardModal";
 
 const PROFILE_STORAGE_KEY = "deen_web_user_profile";
 
@@ -60,6 +62,8 @@ export default function ProfilePage() {
     "orders" | "address" | "sizing" | "security" | "preferences" | null
   >(null);
   const [aboutDrawerOpen, setAboutDrawerOpen] = useState(false);
+  const [dailyRewardsOpen, setDailyRewardsOpen] = useState(false);
+  const [giftCardOpen, setGiftCardOpen] = useState(false);
 
   // Theme & notification preferences
   const [currentTheme, setCurrentTheme] = useState<"light" | "dark">("dark");
@@ -545,6 +549,38 @@ export default function ProfilePage() {
             <div className="profile-menu-item__title">About DEEN &amp; Socials</div>
             <p className="profile-menu-item__subtitle">
               Online brand story, operations &amp; official socials
+            </p>
+          </div>
+          <div className="profile-menu-item__chevron">→</div>
+        </button>
+
+        {/* 6.5. Daily Rewards & Streaks */}
+        <button
+          type="button"
+          className="profile-menu-item"
+          onClick={() => setDailyRewardsOpen(true)}
+        >
+          <div className="profile-menu-item__icon">🎁</div>
+          <div className="profile-menu-item__content">
+            <div className="profile-menu-item__title">Daily Rewards &amp; Coin Bonus</div>
+            <p className="profile-menu-item__subtitle">
+              Claim streak points, discount vouchers &amp; VIP perks
+            </p>
+          </div>
+          <div className="profile-menu-item__chevron">→</div>
+        </button>
+
+        {/* 6.6. Gift Cards & Vouchers */}
+        <button
+          type="button"
+          className="profile-menu-item"
+          onClick={() => setGiftCardOpen(true)}
+        >
+          <div className="profile-menu-item__icon">💳</div>
+          <div className="profile-menu-item__content">
+            <div className="profile-menu-item__title">DEEN Gift Cards &amp; Vouchers</div>
+            <p className="profile-menu-item__subtitle">
+              Create artisanal Eid &amp; denim gift cards for loved ones
             </p>
           </div>
           <div className="profile-menu-item__chevron">→</div>
@@ -1287,6 +1323,18 @@ export default function ProfilePage() {
       <AboutDeenDrawer
         isOpen={aboutDrawerOpen}
         onClose={() => setAboutDrawerOpen(false)}
+      />
+
+      {/* Daily Rewards Modal */}
+      <DailyRewardsModal
+        isOpen={dailyRewardsOpen}
+        onClose={() => setDailyRewardsOpen(false)}
+      />
+
+      {/* Gift Card Modal */}
+      <GiftCardModal
+        isOpen={giftCardOpen}
+        onClose={() => setGiftCardOpen(false)}
       />
     </div>
   );

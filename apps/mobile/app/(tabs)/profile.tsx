@@ -54,6 +54,8 @@ import { CustomerAnalyticsKPIs } from "../../src/components/profile/CustomerAnal
 import { LoginModal } from "../../src/components/LoginModal";
 import { AboutModal } from "../../src/components/AboutModal";
 import { CourierTrackingModal } from "../../src/components/CourierTrackingModal";
+import { DailyRewardsModal } from "../../src/components/DailyRewardsModal";
+import { GiftCardModal } from "../../src/components/GiftCardModal";
 
 /**
  * Expo Router Error Boundary for Profile route.
@@ -130,6 +132,8 @@ export default function ProfileScreen() {
   const [aboutModalVisible, setAboutModalVisible] = useState(false);
   const [trackingModalVisible, setTrackingModalVisible] = useState(false);
   const [selectedOrderForTracking, setSelectedOrderForTracking] = useState<any>(null);
+  const [dailyRewardsModalVisible, setDailyRewardsModalVisible] = useState(false);
+  const [giftCardModalVisible, setGiftCardModalVisible] = useState(false);
 
   useEffect(() => {
     fetchDistricts()
@@ -354,6 +358,42 @@ export default function ProfileScreen() {
                 <Text style={styles.menuItemTitle}>About DEEN &amp; Socials</Text>
                 <Text style={styles.menuItemSub} numberOfLines={1}>
                   Online brand story, operations &amp; official socials
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.sub} />
+            </TouchableOpacity>
+
+            {/* 6.5. Daily Rewards & Streaks */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.75}
+              onPress={() => setDailyRewardsModalVisible(true)}
+            >
+              <View style={[styles.menuItemIcon, { backgroundColor: "rgba(245, 158, 11, 0.15)" }]}>
+                <Text style={{ fontSize: 18 }}>🎁</Text>
+              </View>
+              <View style={styles.menuItemContent}>
+                <Text style={styles.menuItemTitle}>Daily Rewards &amp; Coin Bonus</Text>
+                <Text style={styles.menuItemSub} numberOfLines={1}>
+                  Claim streak points, discount vouchers &amp; VIP perks
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.sub} />
+            </TouchableOpacity>
+
+            {/* 6.6. Gift Cards & Vouchers */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.75}
+              onPress={() => setGiftCardModalVisible(true)}
+            >
+              <View style={[styles.menuItemIcon, { backgroundColor: "rgba(139, 92, 246, 0.15)" }]}>
+                <Text style={{ fontSize: 18 }}>💳</Text>
+              </View>
+              <View style={styles.menuItemContent}>
+                <Text style={styles.menuItemTitle}>DEEN Gift Cards &amp; Vouchers</Text>
+                <Text style={styles.menuItemSub} numberOfLines={1}>
+                  Create artisanal Eid &amp; denim gift cards for loved ones
                 </Text>
               </View>
               <ChevronRight size={18} color={colors.sub} />
@@ -680,6 +720,16 @@ export default function ProfileScreen() {
             onClose={() => setAboutModalVisible(false)}
           />
         )}
+
+        <DailyRewardsModal
+          visible={dailyRewardsModalVisible}
+          onClose={() => setDailyRewardsModalVisible(false)}
+        />
+
+        <GiftCardModal
+          visible={giftCardModalVisible}
+          onClose={() => setGiftCardModalVisible(false)}
+        />
 
         {trackingModalVisible && selectedOrderForTracking && (
           <CourierTrackingModal

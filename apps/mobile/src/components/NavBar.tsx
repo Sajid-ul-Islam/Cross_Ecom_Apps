@@ -37,6 +37,8 @@ export const NavBar: React.FC<NavBarProps> = ({
         <TouchableOpacity
           style={[styles.iconBtn, { backgroundColor: colors.cardSecondary }]}
           onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <ArrowLeft size={20} color={colors.ink} />
@@ -66,6 +68,8 @@ export const NavBar: React.FC<NavBarProps> = ({
         <TouchableOpacity
           style={[styles.bagBtn, { backgroundColor: colors.cardSecondary }]}
           onPress={() => router.push("/(tabs)/cart")}
+          accessibilityRole="button"
+          accessibilityLabel={`Shopping bag, ${totalItems} items`}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <ShoppingBag size={20} color={colors.ink} />
@@ -95,9 +99,9 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
       borderBottomColor: colors.border,
     },
     iconBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: colors.cardSecondary,
       alignItems: "center",
       justifyContent: "center",
@@ -121,9 +125,9 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
       marginTop: 2,
     },
     bagBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
       backgroundColor: colors.cardSecondary,
       alignItems: "center",
       justifyContent: "center",

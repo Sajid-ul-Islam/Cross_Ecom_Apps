@@ -7,20 +7,21 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "export:android": "NODE_OPTIONS=\"--require ./scripts/node18-polyfill.cjs\" expo export -p android",
+    "export:android": "expo export -p android",
     "build:apk": "eas build -p android --profile production-apk",
     "build:android": "eas build -p android --profile preview",
+    "test": "npx tsx --test src/domain/__tests__/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@lottiefiles/dotlottie-react": "^0.13.5",
-    "@react-native-ai/android": "^0.13.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~57.0.17",
     "expo-build-properties": "~57.0.15",
     "expo-constants": "~57.0.15",
     "expo-font": "~57.0.1",
     "expo-linking": "~57.0.8",
+    "expo-notifications": "^58.1.9",
     "expo-router": "~57.0.17",
     "expo-status-bar": "~57.0.1",
     "expo-updates": "~57.0.21",
@@ -33,7 +34,8 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-svg": "15.15.4",
-    "react-native-web": "^0.21.2"
+    "react-native-web": "^0.21.2",
+    "react-native-webview": "^14.0.1"
   },
   "devDependencies": {
     "@babel/core": "^7.26.0",

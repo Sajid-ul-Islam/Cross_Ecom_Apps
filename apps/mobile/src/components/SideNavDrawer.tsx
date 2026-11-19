@@ -30,6 +30,8 @@ interface SideNavDrawerProps {
   visible: boolean;
   onClose: () => void;
   onOpenStories: () => void;
+  onOpenRewards?: () => void;
+  onOpenGiftCards?: () => void;
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -39,6 +41,8 @@ export const SideNavDrawer: React.FC<SideNavDrawerProps> = ({
   visible,
   onClose,
   onOpenStories,
+  onOpenRewards,
+  onOpenGiftCards,
 }) => {
   const router = useRouter();
   const { colors, isDark, setThemeMode } = useTheme();
@@ -239,6 +243,30 @@ export const SideNavDrawer: React.FC<SideNavDrawerProps> = ({
               >
                 <Sparkles size={18} color={colors.indigo} />
                 <Text style={[styles.simpleNavText, { color: colors.ink }]}>AI Concierge & Live Chat</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.simpleNavRow}
+                onPress={() => {
+                  onClose();
+                  if (onOpenRewards) onOpenRewards();
+                  else router.push("/(tabs)/profile");
+                }}
+              >
+                <Text style={{ fontSize: 16 }}>🎁</Text>
+                <Text style={[styles.simpleNavText, { color: colors.ink }]}>Daily Rewards & Vouchers</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.simpleNavRow}
+                onPress={() => {
+                  onClose();
+                  if (onOpenGiftCards) onOpenGiftCards();
+                  else router.push("/(tabs)/profile");
+                }}
+              >
+                <Text style={{ fontSize: 16 }}>💳</Text>
+                <Text style={[styles.simpleNavText, { color: colors.ink }]}>DEEN Gift Cards</Text>
               </TouchableOpacity>
             </View>
 

@@ -3,6 +3,11 @@ import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { NotificationItem, BroadcastMessage, NotificationType } from "../types";
 import { sendBroadcastAPI, fetchBroadcastsAPI, registerPushTokenAPI, fetchActiveCampaigns } from "../services/gateway";
+import {
+  setupAndroidNotificationChannels,
+  requestNotificationPermission,
+  sendAndroidSystemNotification,
+} from "../services/notifications";
 
 const NOTIFICATIONS_STORAGE_KEY = "deen_mobile_notifications_v1";
 const BROADCASTS_STORAGE_KEY = "deen_mobile_broadcasts_v1";
@@ -178,6 +183,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         // Initialize push token and sync live broadcasts from REST API
         await initPushToken();
         await syncLiveBroadcasts();
+
+        // Initialize Android system notification channels & request permission
+        await setupAndroidNotificationChannels();
+        await requestNotificationPermission();
       } catch (e) {
         console.error("Failed to load notifications", e);
       } finally {
@@ -220,6 +229,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       read: false,
     };
     await saveNotifications([newNotif, ...notifications]);
+
+    // Dispatch directly to Android system notification drawer
+    await sendAndroidSystemNotification(item.title, item.body, { actionUrl: item.actionUrl });
   };
 
   const sendBroadcast = async (
@@ -253,6 +265,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     await saveBroadcasts([newBroadcast, ...broadcasts]);
     await saveNotifications([newNotif, ...notifications]);
+
+    // Push into Android system notification drawer
+    await sendAndroidSystemNotification(msg.title, msg.body, { actionUrl: msg.actionUrl });
     return newBroadcast;
   };
 

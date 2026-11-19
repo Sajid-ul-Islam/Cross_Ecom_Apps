@@ -11,6 +11,8 @@ import { WishlistModal } from "./WishlistModal";
 import { AiConciergeModal } from "./AiConciergeModal";
 import { SideNavDrawer } from "./SideNavDrawer";
 import { StoriesFeedModal } from "./StoriesFeedModal";
+import { DailyRewardsModal } from "./DailyRewardsModal";
+import { GiftCardModal } from "./GiftCardModal";
 import { DEFAULT_SOCIAL_FEED } from "../services/gateway";
 
 interface HeaderProps {
@@ -42,6 +44,8 @@ export const Header: React.FC<HeaderProps> = ({
   const [aiVisible, setAiVisible] = useState(false);
   const [sideNavVisible, setSideNavVisible] = useState(false);
   const [storiesVisible, setStoriesVisible] = useState(false);
+  const [rewardsVisible, setRewardsVisible] = useState(false);
+  const [giftCardsVisible, setGiftCardsVisible] = useState(false);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.paper, borderBottomColor: colors.border }]}>
@@ -50,6 +54,8 @@ export const Header: React.FC<HeaderProps> = ({
           <TouchableOpacity
             style={[styles.iconButton, { backgroundColor: colors.cardSecondary }]}
             onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <ArrowLeft size={22} color={colors.ink} />
@@ -180,6 +186,8 @@ export const Header: React.FC<HeaderProps> = ({
         visible={sideNavVisible}
         onClose={() => setSideNavVisible(false)}
         onOpenStories={() => setStoriesVisible(true)}
+        onOpenRewards={() => setRewardsVisible(true)}
+        onOpenGiftCards={() => setGiftCardsVisible(true)}
       />
 
       {/* Shoppable Stories Modal */}
@@ -187,6 +195,18 @@ export const Header: React.FC<HeaderProps> = ({
         visible={storiesVisible}
         onClose={() => setStoriesVisible(false)}
         feedData={DEFAULT_SOCIAL_FEED}
+      />
+
+      {/* Daily Rewards Modal */}
+      <DailyRewardsModal
+        visible={rewardsVisible}
+        onClose={() => setRewardsVisible(false)}
+      />
+
+      {/* Gift Card Modal */}
+      <GiftCardModal
+        visible={giftCardsVisible}
+        onClose={() => setGiftCardsVisible(false)}
       />
     </View>
   );

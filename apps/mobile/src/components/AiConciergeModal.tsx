@@ -22,7 +22,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useCart } from "../context/CartContext";
 import { useProfile } from "../context/ProfileContext";
 import { bdt, getInStockSizes, request, getAuthToken, getGuestSession } from "../services/gateway";
-import { summarizeOffline, proofreadOffline, generateOfflineSuggestions, runOfflineAi, isNanoSupported, isNanoReady, prepareNano } from "../services/ai";
+import { summarizeOffline, proofreadOffline, generateOfflineSuggestions, runOfflineAi, isNanoSupported, isNanoReady } from "../services/ai";
 import { QuickAddBottomSheet } from "./QuickAddBottomSheet";
 
 const { width, height } = Dimensions.get("window");

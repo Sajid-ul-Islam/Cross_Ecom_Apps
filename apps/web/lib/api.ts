@@ -63,7 +63,8 @@ async function ensureGuestToken(): Promise<string | null> {
   const existing = getGuestToken();
   if (existing) return existing;
   try {
-    const res = await apiFetch(`${API_URL}/v1/auth/guest`, {
+    const url = typeof window !== "undefined" ? "/api/auth/guest" : `${API_URL}/v1/auth/guest`;
+    const res = await apiFetch(url, {
       method: "POST",
     });
     if (!res.ok) return null;
@@ -562,36 +563,7 @@ export async function fetchProducts(params?: {
   sort?: string;
   per_page?: number;
 }): Promise<Product[]> {
-  try {
-    const qs = new URLSearchParams();
-    if (params?.category && params.category !== "ALL")
-      qs.set("category", params.category);
-    if (params?.segment && params.segment !== "all")
-      qs.set("segment", params.segment);
-    if (params?.search) {
-      qs.set("search", params.search);
-      qs.set("q", params.search);
-    }
-    if (params?.sort) qs.set("sort", params.sort);
-    if (params?.per_page) qs.set("per_page", String(params.per_page));
-
-    const res = await apiFetch(
-      `${API_URL}/v1/deen/products${qs.toString() ? "?" + qs.toString() : ""}`,
-      { next: { revalidate: 60, tags: ["catalog", "products"] } }
-    );
-    if (res.ok) {
-      const data: Product[] = await res.json();
-      if (Array.isArray(data) && data.length > 0) {
-        return data
-          .filter((p) => (p.stockStatus || "instock") !== "outofstock")
-          .map(sanitizeProduct);
-      }
-    }
-  } catch {
-    // Primary and backup Render gateways failed or timed out
-  }
-
-  // Tier 2: Direct WordPress WooCommerce Store API fallback
+  // Tier 1: Direct WordPress WooCommerce Store API from live deencommerce.com
   try {
     const directWp = await fetchDirectStoreProductsWeb(params?.per_page || 100);
     if (Array.isArray(directWp) && directWp.length > 0) {
@@ -601,7 +573,7 @@ export async function fetchProducts(params?: {
         params?.search,
         params?.sort,
         params?.segment
-      ).map(sanitizeProduct);
+      );
       if (params?.per_page && params.per_page > 0) {
         return filtered.slice(0, params.per_page);
       }
@@ -609,7 +581,7 @@ export async function fetchProducts(params?: {
     }
   } catch {}
 
-  // Tier 3: Graceful fallback to bundled catalog snapshot
+  // Tier 2: Graceful fallback to bundled catalog snapshot
   const fallback = applyLocalFilters(
     getBundledProducts(),
     params?.category,
@@ -1223,7 +1195,8 @@ export async function fetchSectionBanners(): Promise<SectionBannerItem[]> {
  */
 export async function fetchCampaigns(): Promise<ActiveCampaignState | null> {
   try {
-    const res = await apiFetch(`${API_URL}/v1/deen/campaigns`, {
+    const url = typeof window !== "undefined" ? "/api/campaigns" : `${API_URL}/v1/deen/campaigns`;
+    const res = await apiFetch(url, {
       cache: "no-store",
     });
     if (res.ok) return res.json();
@@ -1417,7 +1390,8 @@ export interface DeenPaymentMethod {
  */
 export async function fetchPaymentMethods(): Promise<DeenPaymentMethod[]> {
   try {
-    const res = await apiFetch(`${API_URL}/v1/deen/payment-methods`, {
+    const url = typeof window !== "undefined" ? "/api/payment-methods" : `${API_URL}/v1/deen/payment-methods`;
+    const res = await apiFetch(url, {
       next: { revalidate: 300, tags: ["payment-methods"] },
     });
     if (res.ok) {
@@ -1582,7 +1556,8 @@ export async function loginCustomer(
   password: string
 ): Promise<{ success: boolean; token?: string; user?: any; name?: string; email?: string; role?: string; message?: string }> {
   try {
-    const res = await apiFetch(`${API_URL}/v1/auth/login`, {
+    const url = typeof window !== "undefined" ? "/api/auth/login" : `${API_URL}/v1/auth/login`;
+    const res = await apiFetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username: identifier.trim(), password }),
@@ -1604,7 +1579,8 @@ export async function registerCustomer(
   email?: string
 ): Promise<{ success: boolean; token?: string; user?: any; name?: string; role?: string; message?: string }> {
   try {
-    const res = await apiFetch(`${API_URL}/v1/auth/register`, {
+    const url = typeof window !== "undefined" ? "/api/auth/register" : `${API_URL}/v1/auth/register`;
+    const res = await apiFetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

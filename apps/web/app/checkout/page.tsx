@@ -22,6 +22,7 @@ import {
 } from "@/lib/api";
 import { BD_DISTRICTS, getDistrictPostcode } from "@/lib/districts";
 import BankOffersModal from "@/components/BankOffersModal";
+import PaymentDrawer from "@/components/PaymentDrawer";
 
 
 interface DeliveryOption {
@@ -83,6 +84,20 @@ function CheckoutContent() {
   // User Profile & Guest mode
   const [isGuestMode, setIsGuestMode] = useState<boolean>(true);
   const [profileData, setProfileData] = useState<any>(null);
+
+  // In-App Payment Drawer (Native feel, PCI-DSS, zero context switching)
+  const [paymentDrawerOpen, setPaymentDrawerOpen] = useState(false);
+  const [pendingPayment, setPendingPayment] = useState<{
+    orderId: string | number;
+    orderNumber: string;
+    total: number;
+    paymentUrl: string;
+    wooId?: number;
+    delivery: number;
+    payment: string;
+    consignment?: string;
+    tracking?: string;
+  } | null>(null);
 
 
   // Auto-add product if navigating directly with ?productId=...
@@ -450,13 +465,26 @@ function CheckoutContent() {
         localStorage.setItem("deen_web_orders", JSON.stringify(existingList.slice(0, 50)));
       } catch {}
 
-      clearCart();
-
-      // If online payment gateway (bKash or SSLCommerz), redirect to the authentic payment gateway
+      // If online payment gateway (bKash or SSLCommerz), open in-app PaymentDrawer
+      // Keeps user in-app and provides seamless native look & feel
       if (payment !== "cod" && orderResult.paymentUrl) {
-        window.location.href = orderResult.paymentUrl;
+        setPendingPayment({
+          orderId: orderResult.id,
+          orderNumber: String(actualOrderNumber),
+          total: Number(orderResult.total),
+          paymentUrl: orderResult.paymentUrl,
+          wooId: orderResult.wooId,
+          delivery: orderResult.delivery,
+          payment: orderResult.paymentTitle || orderResult.payment,
+          consignment: orderResult.pathaoConsignmentId,
+          tracking: orderResult.pathaoTrackingUrl,
+        });
+        setPaymentDrawerOpen(true);
+        setLoading(false);
         return;
       }
+
+      clearCart();
 
       // If COD (or gateway fallback), navigate to order success screen
       router.push(
@@ -1328,6 +1356,36 @@ function CheckoutContent() {
       <BankOffersModal
         isOpen={bankOffersOpen}
         onClose={() => setBankOffersOpen(false)}
+      />
+
+      {/* In-App Native Payment Drawer */}
+      <PaymentDrawer
+        isOpen={paymentDrawerOpen}
+        paymentUrl={pendingPayment?.paymentUrl || ""}
+        orderId={pendingPayment?.orderId || ""}
+        orderNumber={pendingPayment?.orderNumber || ""}
+        total={pendingPayment?.total || total}
+        onSuccess={(id, num) => {
+          setPaymentDrawerOpen(false);
+          clearCart();
+          router.push(
+            `/order-success?id=${id}&number=${num}&total=${pendingPayment?.total || total}&wooId=${pendingPayment?.wooId || ""}&delivery=${pendingPayment?.delivery || 0}&payment=${encodeURIComponent(pendingPayment?.payment || "Online Payment")}&consignment=${pendingPayment?.consignment || ""}&tracking=${encodeURIComponent(pendingPayment?.tracking || "")}&paymentUrl=${encodeURIComponent(pendingPayment?.paymentUrl || "")}&guestName=${encodeURIComponent(isGuestMode ? name.trim() : "")}&guestPhone=${encodeURIComponent(isGuestMode ? cleanPhoneDigits : "")}`
+          );
+        }}
+        onClose={() => {
+          setPaymentDrawerOpen(false);
+          clearCart();
+          router.push(
+            `/order-success?id=${pendingPayment?.orderId}&number=${pendingPayment?.orderNumber}&total=${pendingPayment?.total || total}&wooId=${pendingPayment?.wooId || ""}&delivery=${pendingPayment?.delivery || 0}&payment=${encodeURIComponent(pendingPayment?.payment || "Online Payment")}&consignment=${pendingPayment?.consignment || ""}&tracking=${encodeURIComponent(pendingPayment?.tracking || "")}&paymentUrl=${encodeURIComponent(pendingPayment?.paymentUrl || "")}&guestName=${encodeURIComponent(isGuestMode ? name.trim() : "")}&guestPhone=${encodeURIComponent(isGuestMode ? cleanPhoneDigits : "")}`
+          );
+        }}
+        onSwitchToCod={() => {
+          setPaymentDrawerOpen(false);
+          clearCart();
+          router.push(
+            `/order-success?id=${pendingPayment?.orderId}&number=${pendingPayment?.orderNumber}&total=${pendingPayment?.total || total}&wooId=${pendingPayment?.wooId || ""}&delivery=${pendingPayment?.delivery || 0}&payment=Cash%20on%20Delivery&consignment=${pendingPayment?.consignment || ""}&tracking=${encodeURIComponent(pendingPayment?.tracking || "")}&paymentUrl=${encodeURIComponent(pendingPayment?.paymentUrl || "")}&guestName=${encodeURIComponent(isGuestMode ? name.trim() : "")}&guestPhone=${encodeURIComponent(isGuestMode ? cleanPhoneDigits : "")}`
+          );
+        }}
       />
 
 

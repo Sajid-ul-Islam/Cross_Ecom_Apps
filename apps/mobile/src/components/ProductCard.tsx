@@ -165,7 +165,7 @@ function ProductCardBase({ product, style }: ProductCardProps) {
                 <TouchableOpacity
                   key={s}
                   style={[styles.sizeChip, { backgroundColor: colors.paper, borderColor: colors.borderLight }]}
-                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                  hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
                   onPress={(e) => {
                     e.stopPropagation();
                     setPreselectSize(s);

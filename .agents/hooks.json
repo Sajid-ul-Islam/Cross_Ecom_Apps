@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .agents/hooks/safety_guard.cjs",
+            "command": "node -e \"const p = require('fs').existsSync('hooks/safety_guard.cjs') ? './hooks/safety_guard.cjs' : './.agents/hooks/safety_guard.cjs'; require(p);\",
             "timeout": 10
           }
         ]

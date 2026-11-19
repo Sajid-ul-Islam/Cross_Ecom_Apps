@@ -78,9 +78,7 @@ function HeroVideoItem({ videoUrl, poster, isActive, isFirst, onEnded }: HeroVid
           objectFit: "cover",
           display: "block",
         }}
-      >
-        <source src={videoUrl} type="video/mp4" />
-      </video>
+      />
     </div>
   );
 }
@@ -169,8 +167,13 @@ export default function HeroSlider({ bannerData }: HeroSliderProps) {
   const currentSlide = slides[current];
 
   // Auto-advance: videos advance when full video finishes (onEnded); static images advance after 5.5s
+  // Disabled when user prefers reduced motion (WCAG 2.2 AA)
   useEffect(() => {
-    if (isPaused || slides.length <= 1) return;
+    const prefersReduced =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (isPaused || slides.length <= 1 || prefersReduced) return;
 
     if (currentSlide?.videoUrl) {
       // 30s safety watchdog in case network stalls or video fails to buffer

@@ -36,6 +36,8 @@ import { bdt, DELIVERY_OPTIONS, createGuestSession, getGuestSession, fetchPaymen
 
 import { BD_DISTRICTS, getDistrictPostcode } from "../src/data/districts";
 import { Analytics } from "../src/services/analytics";
+import { PaymentDrawer } from "../src/components/PaymentDrawer";
+import { notifyOrderConfirmed } from "../src/services/notifications";
 import {
   DeliveryOptionKey,
   DeliverySlot,
@@ -97,6 +99,16 @@ export default function CheckoutScreen() {
   const [couponInfo, setCouponInfo] = useState<{ code: string; type: string; amount: number; description: string } | null>(null);
   const [couponBusy, setCouponBusy] = useState(false);
   const [couponError, setCouponError] = useState("");
+
+  // In-App Native Payment Drawer State (Google Play & PCI-DSS Compliant)
+  const [paymentDrawerVisible, setPaymentDrawerVisible] = useState(false);
+  const [pendingPayment, setPendingPayment] = useState<{
+    orderId: string | number;
+    orderNumber: string;
+    gatewayRef: string;
+    total: number;
+    paymentUrl: string;
+  } | null>(null);
 
   // Gift / Separate Shipping
   const [isGift, setIsGift] = useState(false);
@@ -276,12 +288,22 @@ export default function CheckoutScreen() {
         paymentMethod: payment,
       });
 
-      clearCart();
-
-      // If online payment gateway (bKash or SSLCommerz), open payment redirect URL
+      // If online payment gateway (bKash or SSLCommerz), render in-app native PaymentDrawer
+      // Complies with Google Play Store policy (physical goods exemption) and keeps user in-app
       if (payment !== "cod" && created.paymentUrl) {
-        Linking.openURL(created.paymentUrl).catch(() => {});
+        setPendingPayment({
+          orderId: created.id,
+          orderNumber: String(actualOrderNumber),
+          gatewayRef: String(created.number || actualOrderNumber),
+          total: Number(created.total || total),
+          paymentUrl: created.paymentUrl,
+        });
+        setPaymentDrawerVisible(true);
+        return;
       }
+
+      clearCart();
+      notifyOrderConfirmed(actualOrderNumber, Number(created.total || total)).catch(() => {});
 
       router.replace({
         pathname: "/order-success",
@@ -1215,6 +1237,65 @@ export default function CheckoutScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Native In-App Payment Drawer (Google Play Compliant & Seamless UX) */}
+      <PaymentDrawer
+        visible={paymentDrawerVisible}
+        paymentUrl={pendingPayment?.paymentUrl || ""}
+        orderId={pendingPayment?.orderId || ""}
+        orderNumber={pendingPayment?.orderNumber || ""}
+        total={pendingPayment?.total || total}
+        onSuccess={(id, num) => {
+          setPaymentDrawerVisible(false);
+          clearCart();
+          notifyOrderConfirmed(num, Number(pendingPayment?.total || total)).catch(() => {});
+          router.replace({
+            pathname: "/order-success",
+            params: {
+              orderId: String(id),
+              orderNumber: num,
+              gatewayRef: pendingPayment?.gatewayRef || num,
+              total: String(pendingPayment?.total || total),
+              paymentMethodId: payment,
+              guestName: isGuestMode ? name.trim() : undefined,
+              guestPhone: isGuestMode ? phone : undefined,
+            },
+          });
+        }}
+        onClose={() => {
+          setPaymentDrawerVisible(false);
+          clearCart();
+          router.replace({
+            pathname: "/order-success",
+            params: {
+              orderId: String(pendingPayment?.orderId || ""),
+              orderNumber: pendingPayment?.orderNumber || "",
+              gatewayRef: pendingPayment?.gatewayRef || "",
+              total: String(pendingPayment?.total || total),
+              paymentUrl: pendingPayment?.paymentUrl || "",
+              paymentMethodId: payment,
+              guestName: isGuestMode ? name.trim() : undefined,
+              guestPhone: isGuestMode ? phone : undefined,
+            },
+          });
+        }}
+        onSwitchToCod={() => {
+          setPaymentDrawerVisible(false);
+          clearCart();
+          router.replace({
+            pathname: "/order-success",
+            params: {
+              orderId: String(pendingPayment?.orderId || ""),
+              orderNumber: pendingPayment?.orderNumber || "",
+              gatewayRef: pendingPayment?.gatewayRef || "",
+              total: String(pendingPayment?.total || total),
+              paymentMethodId: "cod",
+              guestName: isGuestMode ? name.trim() : undefined,
+              guestPhone: isGuestMode ? phone : undefined,
+            },
+          });
+        }}
+      />
     </ScreenShell>
   );
 }

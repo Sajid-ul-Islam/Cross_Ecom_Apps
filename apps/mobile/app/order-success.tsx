@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { OrderStatusStepper } from "../src/components/OrderStatusStepper";
 import { bdt } from "../src/services/gateway";
 import { ThemeColors } from "../src/theme/colors";
 import { sharedStyles } from "../src/theme/sharedStyles";
+import { PaymentDrawer } from "../src/components/PaymentDrawer";
 
 export default function OrderSuccessScreen() {
   const router = useRouter();
@@ -35,6 +36,7 @@ export default function OrderSuccessScreen() {
   const styles = createStyles(colors);
   const isGuestCheckout = Boolean(params.guestName && params.guestPhone);
   const needsPayment = Boolean(params.paymentUrl) && params.paymentMethodId !== "cod";
+  const [paymentDrawerVisible, setPaymentDrawerVisible] = useState(false);
 
   return (
     <ScreenShell title="ORDER CONFIRMED" showSearch={false} showBag={false} showNotif={false}>
@@ -127,10 +129,7 @@ export default function OrderSuccessScreen() {
             <TouchableOpacity
               style={[styles.trackBtn, { backgroundColor: colors.emerald }]}
               activeOpacity={0.88}
-              onPress={() => {
-                const url = params.paymentUrl || "";
-                if (url) Linking.openURL(url).catch(() => Alert.alert("Could not open payment page", url));
-              }}
+              onPress={() => setPaymentDrawerVisible(true)}
             >
               <Text style={styles.trackBtnText}>COMPLETE PAYMENT</Text>
               <ArrowRight size={16} color="#FFFFFF" />
@@ -165,6 +164,20 @@ export default function OrderSuccessScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Native In-App Payment Drawer */}
+      <PaymentDrawer
+        visible={paymentDrawerVisible}
+        paymentUrl={params.paymentUrl || ""}
+        orderId={params.orderId || params.orderNumber || ""}
+        orderNumber={params.orderNumber || ""}
+        total={Number(params.total || 0)}
+        onSuccess={() => {
+          setPaymentDrawerVisible(false);
+          Alert.alert("Payment Received!", "Your payment has been successfully recorded. Thank you!");
+        }}
+        onClose={() => setPaymentDrawerVisible(false)}
+      />
     </ScreenShell>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import { useTheme } from "../../src/context/ThemeContext";
 import { sharedStyles } from "../../src/theme/sharedStyles";
 import { usePullToRefresh } from "../../src/hooks/usePullToRefresh";
 import { fetchProducts, CATEGORIES, useCatalogRefreshOnFocus, fetchSubCategories, type WooCategoryNode } from "../../src/services/gateway";
+import { notifyNewProductDrop } from "../../src/services/notifications";
 import { Product, DeenCategory } from "../../src/types";
 import { getCategoryInfo, CategoryInfo } from "../../src/data/categories";
 
@@ -69,11 +70,21 @@ export default function ShopScreen() {
     }
   }, [params.category]);
 
+  const notifiedDropsRef = useRef<Set<string>>(new Set());
+
   const loadProducts = useCallback(async () => {
     const sortParam = sort === "default" ? undefined : (sort as "price-asc" | "price-desc" | "name-asc" | "new");
     try {
       const data = await fetchProducts(selectedCategory, deferredQuery, sortParam, segment);
       setProducts(data);
+      // Auto-dispatch notification for newly dropped arrivals into Android notification drawer
+      if (Array.isArray(data)) {
+        const freshDrop = data.find((p) => p.isNew && !notifiedDropsRef.current.has(p.id));
+        if (freshDrop) {
+          notifiedDropsRef.current.add(freshDrop.id);
+          notifyNewProductDrop(freshDrop.name, freshDrop.category, freshDrop.salePrice || freshDrop.price, freshDrop.id).catch(() => {});
+        }
+      }
     } catch {}
   }, [selectedCategory, deferredQuery, sort, segment]);
 
@@ -133,6 +144,15 @@ export default function ShopScreen() {
 
     return sections;
   }, [products, selectedCategory, deferredQuery]);
+
+  const renderProductItem = React.useCallback(
+    ({ item }: { item: Product }) => (
+      <View style={styles.gridItem}>
+        <ProductCard product={item} />
+      </View>
+    ),
+    [styles.gridItem]
+  );
 
   return (
     <ScreenShell title="CATEGORIES" showSearch={false}>
@@ -528,11 +548,7 @@ export default function ShopScreen() {
               </TouchableOpacity>
             ) : null
           }
-          renderItem={({ item }) => (
-            <View style={styles.gridItem}>
-              <ProductCard product={item} />
-            </View>
-          )}
+          renderItem={renderProductItem}
         />
       )}
     </ScreenShell>
