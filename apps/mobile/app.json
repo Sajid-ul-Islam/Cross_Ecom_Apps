@@ -51,6 +51,7 @@
       "expo-router",
       "expo-font",
       "expo-status-bar",
+      "expo-notifications",
       [
         "expo-build-properties",
         {
