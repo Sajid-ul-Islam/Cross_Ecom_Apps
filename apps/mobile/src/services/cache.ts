@@ -398,33 +398,37 @@ async function getStaleData<T>(
 }
 
 /* ------------------------------------------------------------------ */
-/*  Auth Token Persistence (Cross-Platform Identity)                   */
+/*  Auth Token Persistence (SecureStore + Migration)                   */
 /* ------------------------------------------------------------------ */
 
-const AUTH_TOKEN_KEY = "deen_auth_token";
+import {
+  AUTH_TOKEN_KEY,
+  getSecureAuthToken,
+  setSecureAuthToken,
+  deleteSecureAuthToken,
+} from "./secureStore";
+
 const GUEST_SESSION_KEY = "deen_guest_session_v1";
 
 /**
- * Save auth token to AsyncStorage.
- * Mobile uses AsyncStorage (equivalent to web's localStorage + cookies).
- * Both platforms share the same server-side session via /v1/auth/guest.
+ * Save auth token to SecureStore (hardware encrypted).
  */
 export async function saveAuthToken(token: string): Promise<void> {
-  await AsyncStorage.setItem(AUTH_TOKEN_KEY, token).catch(() => {});
+  await setSecureAuthToken(token);
 }
 
 /**
- * Get auth token from AsyncStorage.
+ * Get auth token from SecureStore with backward-compatible migration.
  */
 export async function getAuthToken(): Promise<string | null> {
-  return AsyncStorage.getItem(AUTH_TOKEN_KEY).catch(() => null);
+  return getSecureAuthToken();
 }
 
 /**
- * Clear auth token from AsyncStorage.
+ * Clear auth token from SecureStore and legacy AsyncStorage.
  */
 export async function clearAuthToken(): Promise<void> {
-  await AsyncStorage.removeItem(AUTH_TOKEN_KEY).catch(() => {});
+  await deleteSecureAuthToken();
 }
 
 /**

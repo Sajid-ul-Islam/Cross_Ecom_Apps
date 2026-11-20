@@ -1509,48 +1509,6 @@ export interface AuthResult {
   isNewCustomer?: boolean;
 }
 
-export async function loginWithGoogle(
-  idToken?: string,
-  email?: string,
-  name?: string
-): Promise<AuthResult> {
-  try {
-    const res = await apiFetch(`${API_URL}/v1/auth/google`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idToken, email, name }),
-    });
-    const data = await res.json();
-    if (!res.ok && !data.message) {
-      return { success: false, message: data.error || `Authentication failed (HTTP ${res.status})` };
-    }
-    return data;
-  } catch (err: any) {
-    return { success: false, message: err?.message || "Google sign-in network error." };
-  }
-}
-
-export async function loginWithFacebook(
-  accessToken?: string,
-  email?: string,
-  name?: string
-): Promise<AuthResult> {
-  try {
-    const res = await apiFetch(`${API_URL}/v1/auth/facebook`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ accessToken, email, name }),
-    });
-    const data = await res.json();
-    if (!res.ok && !data.message) {
-      return { success: false, message: data.error || `Authentication failed (HTTP ${res.status})` };
-    }
-    return data;
-  } catch (err: any) {
-    return { success: false, message: err?.message || "Facebook sign-in network error." };
-  }
-}
-
 export async function loginCustomer(
   identifier: string,
   password: string

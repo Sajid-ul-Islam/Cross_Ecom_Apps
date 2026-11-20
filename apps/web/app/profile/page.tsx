@@ -14,6 +14,7 @@ import {
   type OrderResult,
   type BdDistrict,
 } from "@/lib/api";
+import { saveAuthToken, clearAuthToken } from "@/lib/cache";
 
 import AboutDeenDrawer from "@/components/AboutDeenDrawer";
 import ProfileDrawer from "@/components/ProfileDrawer";
@@ -212,6 +213,7 @@ export default function ProfilePage() {
   };
 
   const handleLogout = () => {
+    clearAuthToken();
     const guest: UserProfile = { ...DEFAULT_PROFILE, isGuest: true };
     setProfile(guest);
     localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(guest));
@@ -239,7 +241,10 @@ export default function ProfilePage() {
         };
         setProfile(updated);
         localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
-        if (data.token) localStorage.setItem("deen_web_guest_token", data.token);
+        if (data.token) {
+          saveAuthToken(data.token);
+          localStorage.setItem("deen_web_guest_token", data.token);
+        }
         if (typeof window !== "undefined") window.dispatchEvent(new Event("deen_profile_updated"));
         fetch("/api/auth/session", {
           method: "POST",
@@ -295,7 +300,10 @@ export default function ProfilePage() {
       };
       setProfile(updated);
       localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
-      if (data.token) localStorage.setItem("deen_web_guest_token", data.token);
+      if (data.token) {
+        saveAuthToken(data.token);
+        localStorage.setItem("deen_web_guest_token", data.token);
+      }
       if (typeof window !== "undefined") window.dispatchEvent(new Event("deen_profile_updated"));
       fetch("/api/auth/session", {
         method: "POST",
@@ -1284,7 +1292,7 @@ export default function ProfilePage() {
                     className="form-input"
                     value={loginIdent}
                     onChange={(e) => setLoginIdent(e.target.value)}
-                    placeholder="your username"
+                    placeholder="e.g. sazid or user@deencommerce.com"
                     required
                   />
                 </div>
@@ -1295,10 +1303,36 @@ export default function ProfilePage() {
                     className="form-input"
                     value={loginPass}
                     onChange={(e) => setLoginPass(e.target.value)}
-                    placeholder="your password"
+                    placeholder="Enter your account password"
                     required
                   />
                 </div>
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}>
+                  <a
+                    href="https://deencommerce.com/my-account/lost-password/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ fontSize: 11.5, color: "var(--indigo)", fontWeight: 700, textDecoration: "none" }}
+                  >
+                    Forgot Password?
+                  </a>
+                </div>
+                <button
+                  type="submit"
+                  className="btn btn--primary"
+                  style={{ width: "100%", padding: 12, marginTop: 4, fontWeight: 800 }}
+                  disabled={authSubmitting}
+                >
+                  {authSubmitting ? "Signing in…" : "SIGN IN TO YOUR ACCOUNT"}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--outline"
+                  style={{ width: "100%", padding: 10, marginTop: 10, fontSize: 12 }}
+                  onClick={() => setAuthModalOpen(false)}
+                >
+                  Continue as guest shopper
+                </button>
               </form>
             ) : (
               <form onSubmit={handleSignUp} className="modal-form">

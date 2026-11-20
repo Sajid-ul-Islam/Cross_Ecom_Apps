@@ -13,6 +13,12 @@
 
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  AUTH_TOKEN_KEY,
+  getSecureAuthToken,
+  setSecureAuthToken,
+  deleteSecureAuthToken,
+} from "./secureStore";
 import { AppState } from "react-native";
 import { useCallback, useEffect } from "react";
 import { useFocusEffect } from "expo-router";
@@ -1263,7 +1269,7 @@ export async function registerCustomer(
       method: "POST", body: JSON.stringify({ name, phone, email: email || undefined, password }),
     }, 8000);
     if (res.success && res.token && res.user) {
-      await AsyncStorage.setItem(AUTH_TOKEN_KEY, res.token);
+      await setSecureAuthToken(res.token);
       await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(res.user));
     }
     return res;
@@ -1299,7 +1305,6 @@ export async function lookupCustomer(
 /*  Returns a session token + the user's role (admin/customer).        */
 /* ------------------------------------------------------------------ */
 
-const AUTH_TOKEN_KEY = "deen_auth_token";
 const AUTH_USER_KEY = "deen_auth_user";
 
 export interface AuthUser {
@@ -1330,7 +1335,7 @@ export async function login(
       body: JSON.stringify({ username, password }),
     }, 8000);
     if (res?.success && res.token && res.user) {
-      await AsyncStorage.setItem(AUTH_TOKEN_KEY, res.token).catch(() => {});
+      await setSecureAuthToken(res.token);
       await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(res.user)).catch(() => {});
       return res;
     }
@@ -1340,48 +1345,8 @@ export async function login(
   }
 }
 
-export async function loginWithGoogle(
-  idToken?: string,
-  email?: string,
-  name?: string
-): Promise<AuthResult> {
-  try {
-    const res = await request<AuthResult>("/v1/auth/google", {
-      method: "POST",
-      body: JSON.stringify({ idToken, email, name }),
-    }, 12000);
-    if (res?.success && res.token && res.user) {
-      await AsyncStorage.setItem(AUTH_TOKEN_KEY, res.token).catch(() => {});
-      await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(res.user)).catch(() => {});
-    }
-    return res;
-  } catch (e: any) {
-    return { success: false, message: e?.message || "Google sign-in failed." };
-  }
-}
-
-export async function loginWithFacebook(
-  accessToken?: string,
-  email?: string,
-  name?: string
-): Promise<AuthResult> {
-  try {
-    const res = await request<AuthResult>("/v1/auth/facebook", {
-      method: "POST",
-      body: JSON.stringify({ accessToken, email, name }),
-    }, 12000);
-    if (res?.success && res.token && res.user) {
-      await AsyncStorage.setItem(AUTH_TOKEN_KEY, res.token).catch(() => {});
-      await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(res.user)).catch(() => {});
-    }
-    return res;
-  } catch (e: any) {
-    return { success: false, message: e?.message || "Facebook sign-in failed." };
-  }
-}
-
 export async function authMe(): Promise<AuthUser | null> {
-  const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+  const token = await getSecureAuthToken();
   if (!token) return null;
   try {
     const res = await request<{ success: boolean; user?: AuthUser }>("/v1/auth/me", {
@@ -1393,11 +1358,11 @@ export async function authMe(): Promise<AuthUser | null> {
 }
 
 export async function getAuthToken(): Promise<string | null> {
-  return AsyncStorage.getItem(AUTH_TOKEN_KEY).catch(() => null);
+  return getSecureAuthToken();
 }
 
 export async function logout(): Promise<void> {
-  const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY).catch(() => null);
+  const token = await getSecureAuthToken();
   if (token) {
     try {
       await request<{ success: boolean }>("/v1/auth/logout", {
@@ -1406,7 +1371,7 @@ export async function logout(): Promise<void> {
       }, 4000);
     } catch {}
   }
-  await AsyncStorage.removeItem(AUTH_TOKEN_KEY).catch(() => {});
+  await deleteSecureAuthToken();
   await AsyncStorage.removeItem(AUTH_USER_KEY).catch(() => {});
 }
 
@@ -1508,7 +1473,7 @@ export async function deleteUserAccount(): Promise<{ success: boolean; message: 
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     }, 6000);
-    await AsyncStorage.removeItem(AUTH_TOKEN_KEY).catch(() => {});
+    await deleteSecureAuthToken();
     await AsyncStorage.removeItem(AUTH_USER_KEY).catch(() => {});
     return { success: true, message: res?.message || "Account deleted successfully." };
   } catch (e: any) {
