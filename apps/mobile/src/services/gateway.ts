@@ -1261,32 +1261,15 @@ export async function registerCustomer(
   try {
     const res = await request<AuthResult & { returning?: boolean }>("/v1/auth/register", {
       method: "POST", body: JSON.stringify({ name, phone, email: email || undefined, password }),
-    }, 6000);
+    }, 8000);
     if (res.success && res.token && res.user) {
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, res.token);
       await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(res.user));
-      return res;
     }
-  } catch {}
-
-  // Resilient customer registration: creates verified local profile
-  if (name.trim() && phone) {
-    const cleanPhone = phone.replace(/[^0-9]/g, "").slice(-11);
-    const fallbackUser: AuthUser = {
-      id: `usr_${cleanPhone}`,
-      name: name.trim(),
-      username: cleanPhone,
-      email: email ? email.trim() : `${cleanPhone}@deencommerce.com`,
-      role: "customer",
-      accountType: "customer",
-    };
-    const token = `deen_auth_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    await AsyncStorage.setItem(AUTH_TOKEN_KEY, token);
-    await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(fallbackUser));
-    return { success: true, token, user: fallbackUser, message: "Account created successfully" };
+    return res;
+  } catch (error: any) {
+    return { success: false, message: error?.message || "Registration failed. Please try again." };
   }
-
-  return { success: false, message: "Please provide a valid name and phone number." };
 }
 
 /**
@@ -1345,32 +1328,16 @@ export async function login(
     const res = await request<AuthResult>("/v1/auth/login", {
       method: "POST",
       body: JSON.stringify({ username, password }),
-    }, 6000);
+    }, 8000);
     if (res?.success && res.token && res.user) {
       await AsyncStorage.setItem(AUTH_TOKEN_KEY, res.token).catch(() => {});
       await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(res.user)).catch(() => {});
       return res;
     }
-  } catch {}
-
-  // Resilient authentication fallback: ensures customer can always log in without server disruption
-  if (username.trim() && password.length >= 4) {
-    const clean = username.trim();
-    const fallbackUser: AuthUser = {
-      id: `usr_${clean.replace(/[^a-zA-Z0-9]/g, "") || "101"}`,
-      name: clean.includes("@") ? clean.split("@")[0] : clean,
-      username: clean,
-      email: clean.includes("@") ? clean : `${clean}@deencommerce.com`,
-      role: "customer",
-      accountType: "customer",
-    };
-    const token = `deen_auth_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    await AsyncStorage.setItem(AUTH_TOKEN_KEY, token).catch(() => {});
-    await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(fallbackUser)).catch(() => {});
-    return { success: true, token, user: fallbackUser, message: "Signed in successfully" };
+    return res || { success: false, message: "Invalid username or password." };
+  } catch (e: any) {
+    return { success: false, message: e?.message || "Login failed. Please check your credentials and internet connection." };
   }
-
-  return { success: false, message: "Invalid credentials. Password must be at least 4 characters." };
 }
 
 export async function loginWithGoogle(

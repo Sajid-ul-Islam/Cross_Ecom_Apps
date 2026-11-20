@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { Ruler, Edit } from "../Icons";
+import { Ruler, Edit, Sparkles } from "../Icons";
 import { ThemeColors } from "../../theme/colors";
 import { sharedStyles } from "../../theme/sharedStyles";
 import { useTheme } from "../../context/ThemeContext";
@@ -14,6 +14,7 @@ interface SizingPreferencesProps {
   onJeansSizeChange: (size: string) => void;
   onTopSizeChange: (size: string) => void;
   onSave?: () => void;
+  onOpenSmartFit?: () => void;
 }
 
 export const SizingPreferences: React.FC<SizingPreferencesProps> = ({
@@ -22,6 +23,7 @@ export const SizingPreferences: React.FC<SizingPreferencesProps> = ({
   onJeansSizeChange,
   onTopSizeChange,
   onSave,
+  onOpenSmartFit,
 }) => {
   const { colors } = useTheme();
   const s = sharedStyles(colors);
@@ -55,16 +57,37 @@ export const SizingPreferences: React.FC<SizingPreferencesProps> = ({
 
       {!editing ? (
         /* Clean Summary Display */
-        <View style={styles.summaryRow}>
-          <View style={[styles.sizeBadge, { backgroundColor: colors.paper, borderColor: colors.border }]}>
-            <Text style={[styles.sizeBadgeLabel, { color: colors.sub }]}>Jeans Waist</Text>
-            <Text style={[styles.sizeBadgeValue, { color: colors.indigo }]}>👖 {jeansSize}"</Text>
+        <View>
+          <View style={styles.summaryRow}>
+            <View style={[styles.sizeBadge, { backgroundColor: colors.paper, borderColor: colors.border }]}>
+              <Text style={[styles.sizeBadgeLabel, { color: colors.sub }]}>Jeans Waist</Text>
+              <Text style={[styles.sizeBadgeValue, { color: colors.indigo }]}>👖 {jeansSize}"</Text>
+            </View>
+
+            <View style={[styles.sizeBadge, { backgroundColor: colors.paper, borderColor: colors.border }]}>
+              <Text style={[styles.sizeBadgeLabel, { color: colors.sub }]}>Top / Panjabi</Text>
+              <Text style={[styles.sizeBadgeValue, { color: colors.indigo }]}>👕 Size {topSize}</Text>
+            </View>
           </View>
 
-          <View style={[styles.sizeBadge, { backgroundColor: colors.paper, borderColor: colors.border }]}>
-            <Text style={[styles.sizeBadgeLabel, { color: colors.sub }]}>Top / Panjabi</Text>
-            <Text style={[styles.sizeBadgeValue, { color: colors.indigo }]}>👕 Size {topSize}</Text>
-          </View>
+          {onOpenSmartFit && (
+            <TouchableOpacity
+              style={[
+                styles.smartFitCta,
+                {
+                  backgroundColor: "rgba(245, 158, 11, 0.1)",
+                  borderColor: "rgba(245, 158, 11, 0.3)",
+                },
+              ]}
+              activeOpacity={0.85}
+              onPress={onOpenSmartFit}
+            >
+              <Sparkles size={14} color="#F59E0B" />
+              <Text style={styles.smartFitCtaText}>
+                ⚡ PREDICT ACCURATE FIT WITH GOOGLE LITE-RT AI
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       ) : (
         /* Edit Chips */
@@ -214,6 +237,23 @@ function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
       fontSize: 12,
       fontWeight: "900",
       letterSpacing: 0.5,
+    },
+    smartFitCta: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      marginTop: 10,
+    },
+    smartFitCtaText: {
+      color: "#F59E0B",
+      fontSize: 11,
+      fontWeight: "800",
+      letterSpacing: 0.3,
     },
   });
 }

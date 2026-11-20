@@ -1,5 +1,6 @@
 import React from "react";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
+import * as Notifications from "expo-notifications";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ThemeProvider, useTheme } from "../src/context/ThemeContext";
 import { CartProvider } from "../src/context/CartContext";
@@ -80,6 +81,57 @@ function RootNavigator() {
   );
 }
 
+/**
+ * Handles incoming notification clicks from Android System Notification Drawer
+ * and deep-links directly to product drops (/product/[id]) or order screens.
+ */
+function NotificationDeepLinkHandler() {
+  const router = useRouter();
+
+  React.useEffect(() => {
+    // 1. Background / Foreground notification response listener
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response?.notification?.request?.content?.data;
+      if (!data) return;
+
+      if (typeof data.url === "string" && data.url.length > 0) {
+        router.push(data.url as any);
+      } else if (data.productId) {
+        router.push(`/product/${data.productId}` as any);
+      } else if (data.orderNumber) {
+        router.push("/(tabs)/profile" as any);
+      } else if (typeof data.actionUrl === "string" && data.actionUrl.length > 0) {
+        router.push(data.actionUrl as any);
+      }
+    });
+
+    // 2. Cold-start notification tap handler
+    Notifications.getLastNotificationResponseAsync()
+      .then((response) => {
+        if (!response) return;
+        const data = response?.notification?.request?.content?.data;
+        if (!data) return;
+
+        if (typeof data.url === "string" && data.url.length > 0) {
+          router.push(data.url as any);
+        } else if (data.productId) {
+          router.push(`/product/${data.productId}` as any);
+        } else if (data.orderNumber) {
+          router.push("/(tabs)/profile" as any);
+        } else if (typeof data.actionUrl === "string" && data.actionUrl.length > 0) {
+          router.push(data.actionUrl as any);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      subscription.remove();
+    };
+  }, [router]);
+
+  return null;
+}
+
 export default function RootLayout() {
   const [isSplashVisible, setSplashVisible] = React.useState(true);
 
@@ -98,6 +150,7 @@ export default function RootLayout() {
                   <ReturnProvider>
                     <CartProvider>
                       <OrderProvider>
+                        <NotificationDeepLinkHandler />
                         <ScreenErrorBoundary fallbackTitle="DEEN Commerce App">
                           <RootNavigator />
                         </ScreenErrorBoundary>

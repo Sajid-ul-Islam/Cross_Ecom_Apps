@@ -56,6 +56,8 @@ import { AboutModal } from "../../src/components/AboutModal";
 import { CourierTrackingModal } from "../../src/components/CourierTrackingModal";
 import { DailyRewardsModal } from "../../src/components/DailyRewardsModal";
 import { GiftCardModal } from "../../src/components/GiftCardModal";
+import { LiteRTSmartFitModal } from "../../src/components/LiteRTSmartFitModal";
+import { GeminiNanoAssistantModal } from "../../src/components/GeminiNanoAssistantModal";
 
 /**
  * Expo Router Error Boundary for Profile route.
@@ -134,6 +136,8 @@ export default function ProfileScreen() {
   const [selectedOrderForTracking, setSelectedOrderForTracking] = useState<any>(null);
   const [dailyRewardsModalVisible, setDailyRewardsModalVisible] = useState(false);
   const [giftCardModalVisible, setGiftCardModalVisible] = useState(false);
+  const [smartFitModalVisible, setSmartFitModalVisible] = useState(false);
+  const [geminiAssistantVisible, setGeminiAssistantVisible] = useState(false);
 
   useEffect(() => {
     fetchDistricts()
@@ -253,7 +257,7 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.menuItemContent}>
                 <View style={styles.menuItemTitleRow}>
-                  <Text style={styles.menuItemTitle}>My Orders &amp; Logistics Tracking</Text>
+                  <Text style={styles.menuItemTitle}>My Orders & Logistics Tracking</Text>
                   {orders.length > 0 && (
                     <View style={styles.menuItemBadge}>
                       <Text style={styles.menuItemBadgeText}>{orders.length}</Text>
@@ -299,9 +303,34 @@ export default function ProfileScreen() {
                 <Ruler size={20} color={colors.amber} />
               </View>
               <View style={styles.menuItemContent}>
-                <Text style={styles.menuItemTitle}>Fit &amp; Sizing Preferences</Text>
+                <Text style={styles.menuItemTitle}>Fit & Sizing Preferences</Text>
                 <Text style={styles.menuItemSub} numberOfLines={1}>
                   Jeans Waist {jeansSize}&quot; · Top {topSize} · Tap to adjust
+                </Text>
+              </View>
+              <ChevronRight size={18} color={colors.sub} />
+            </TouchableOpacity>
+
+            {/* 3.5. On-Device AI Denim Concierge & Styling */}
+            <TouchableOpacity
+              style={styles.menuItem}
+              activeOpacity={0.75}
+              onPress={() => setGeminiAssistantVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Open Google Gemini Nano On-Device AI Assistant"
+            >
+              <View style={[styles.menuItemIcon, { backgroundColor: "rgba(168, 85, 247, 0.12)" }]}>
+                <Sparkles size={20} color="#A855F7" />
+              </View>
+              <View style={styles.menuItemContent}>
+                <View style={styles.menuItemTitleRow}>
+                  <Text style={[styles.menuItemTitle, { color: "#A855F7" }]}>AI Styling & Care Concierge</Text>
+                  <View style={[styles.menuItemBadge, { backgroundColor: "rgba(168, 85, 247, 0.2)" }]}>
+                    <Text style={[styles.menuItemBadgeText, { color: "#A855F7" }]}>0ms AI</Text>
+                  </View>
+                </View>
+                <Text style={styles.menuItemSub} numberOfLines={1}>
+                  Google Gemini Nano · On-device styling advice & wash preservation
                 </Text>
               </View>
               <ChevronRight size={18} color={colors.sub} />
@@ -317,7 +346,7 @@ export default function ProfileScreen() {
                 <ShieldCheck size={20} color={colors.crimson} />
               </View>
               <View style={styles.menuItemContent}>
-                <Text style={styles.menuItemTitle}>Account Security &amp; Password</Text>
+                <Text style={styles.menuItemTitle}>Account Security & Password</Text>
                 <Text style={styles.menuItemSub} numberOfLines={1}>
                   {profile?.isGuest
                     ? "Guest user · Set password & protect account"
@@ -337,7 +366,7 @@ export default function ProfileScreen() {
                 <SlidersHorizontal size={20} color={colors.indigo} />
               </View>
               <View style={styles.menuItemContent}>
-                <Text style={styles.menuItemTitle}>Appearance &amp; Notifications</Text>
+                <Text style={styles.menuItemTitle}>Appearance & Notifications</Text>
                 <Text style={styles.menuItemSub} numberOfLines={1}>
                   Theme: {isDark ? "DARK" : "LIGHT"} · Notification alerts active
                 </Text>
@@ -355,9 +384,9 @@ export default function ProfileScreen() {
                 <Store size={20} color={colors.indigo} />
               </View>
               <View style={styles.menuItemContent}>
-                <Text style={styles.menuItemTitle}>About DEEN &amp; Socials</Text>
+                <Text style={styles.menuItemTitle}>About DEEN & Socials</Text>
                 <Text style={styles.menuItemSub} numberOfLines={1}>
-                  Online brand story, operations &amp; official socials
+                  Online brand story, operations & official socials
                 </Text>
               </View>
               <ChevronRight size={18} color={colors.sub} />
@@ -373,9 +402,9 @@ export default function ProfileScreen() {
                 <Text style={{ fontSize: 18 }}>🎁</Text>
               </View>
               <View style={styles.menuItemContent}>
-                <Text style={styles.menuItemTitle}>Daily Rewards &amp; Coin Bonus</Text>
+                <Text style={styles.menuItemTitle}>Daily Rewards & Coin Bonus</Text>
                 <Text style={styles.menuItemSub} numberOfLines={1}>
-                  Claim streak points, discount vouchers &amp; VIP perks
+                  Claim streak points, discount vouchers & VIP perks
                 </Text>
               </View>
               <ChevronRight size={18} color={colors.sub} />
@@ -391,9 +420,9 @@ export default function ProfileScreen() {
                 <Text style={{ fontSize: 18 }}>💳</Text>
               </View>
               <View style={styles.menuItemContent}>
-                <Text style={styles.menuItemTitle}>DEEN Gift Cards &amp; Vouchers</Text>
+                <Text style={styles.menuItemTitle}>DEEN Gift Cards & Vouchers</Text>
                 <Text style={styles.menuItemSub} numberOfLines={1}>
-                  Create artisanal Eid &amp; denim gift cards for loved ones
+                  Create artisanal Eid & denim gift cards for loved ones
                 </Text>
               </View>
               <ChevronRight size={18} color={colors.sub} />
@@ -645,6 +674,10 @@ export default function ProfileScreen() {
               await handleSave();
               setSizingModalVisible(false);
             }}
+            onOpenSmartFit={() => {
+              setSizingModalVisible(false);
+              setSmartFitModalVisible(true);
+            }}
           />
         </ProfileDrawerModal>
 
@@ -729,6 +762,26 @@ export default function ProfileScreen() {
         <GiftCardModal
           visible={giftCardModalVisible}
           onClose={() => setGiftCardModalVisible(false)}
+        />
+
+        {/* Google LiteRT On-Device Smart Sizing Modal */}
+        <LiteRTSmartFitModal
+          visible={smartFitModalVisible}
+          onClose={() => setSmartFitModalVisible(false)}
+          onSelectSize={async (sz) => {
+            setJeansSize(sz);
+            await updateProfile({ jeansSize: sz });
+            showToast(`✓ Google LiteRT predicted size ${sz} saved to your profile!`);
+          }}
+          currentSize={jeansSize}
+        />
+
+        {/* Google Gemini Nano On-Device AI Denim Concierge Modal */}
+        <GeminiNanoAssistantModal
+          visible={geminiAssistantVisible}
+          onClose={() => setGeminiAssistantVisible(false)}
+          productName="DEEN Artisanal Selvedge Denim & Apparel"
+          category="Denim"
         />
 
         {trackingModalVisible && selectedOrderForTracking && (

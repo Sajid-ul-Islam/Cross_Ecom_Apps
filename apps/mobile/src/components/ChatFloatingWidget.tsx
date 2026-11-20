@@ -1,30 +1,26 @@
 /**
- * DEEN Mobile — Floating Chat Widget.
+ * DEEN Mobile — Floating Concierge & Support Widget.
  *
- * A draggable, badge-driven chat widget that pins to the bottom-right edge
- * of the screen. Tapping the badge opens the AI chat. Tapping the WhatsApp
- * or Messenger icon shows the user a choice (WhatsApp or Messenger); the
- * other icon is hidden after a short delay and re-appears when the user
- * taps back into the widget. When the chat is open the home screen stays
- * reachable underneath a full-height slide-over sheet.
+ * Draggable, badge-driven support widget that pins to the bottom-right of the screen
+ * above the bottom navigation bar. Provides instant access to:
+ * 1. AI Concierge chat sheet (Sparkles badge)
+ * 2. WhatsApp direct hotline (01952-700500)
+ * 3. Facebook Messenger direct channel
  */
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import {
   View,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
   Animated,
-  Alert,
   PanResponder,
   Linking,
 } from "react-native";
 import { useTheme } from "../context/ThemeContext";
-import { useCart } from "../context/CartContext";
 import { WhatsApp, Messenger, X, Sparkles } from "./Icons";
 import { AiConciergeModal } from "./AiConciergeModal";
-import type { PanResponderGestureState } from "react-native";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -43,127 +39,57 @@ export function ChatFloatingWidget({
   setVisible,
 }: ChatFloatingWidgetProps) {
   const { colors } = useTheme();
-  // ── Draggable position (Animated values) ────────────────────────────
-  const translateX = new Animated.Value(16);
-  const translateY = new Animated.Value(-SCREEN_HEIGHT + 120);
+  const [chatOpen, setChatOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
 
+  // Position animated coordinates
+  const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+
   const resetPosition = useCallback(() => {
-    translateX.setValue(16);
-    translateY.setValue(-SCREEN_HEIGHT + 120);
-    Animated.spring(translateX, {
-      toValue: 16,
-      useNativeDriver: true,
-      speed: 25,
+    Animated.spring(pan, {
+      toValue: { x: 0, y: 0 },
+      useNativeDriver: false,
+      friction: 6,
     }).start();
-    Animated.spring(translateY, {
-      toValue: -SCREEN_HEIGHT + 120,
-      useNativeDriver: true,
-      speed: 25,
-    }).start();
-  }, [translateX, translateY]);
+  }, [pan]);
 
-  // ── Dragging via PanResponder ───────────────────────────────────────
-  const panResponder = useCallback(() => {
-    return (
-      {
-        onStartShouldSetResponder: () => true,
-        onMoveShouldSetResponder: () => true,
-        onResponderGrant: (e: any, gs: any) => {
-          setDragging(true);
-          // gs.x / gs.y are the coordinates of the responder grant
-          translateX.setValue(gs.x);
-          translateY.setValue(gs.y);
-        },
-        onResponderMove: (e: any, gs: any) => {
-          if (gs.numberActive > 0) {
-            translateX.setValue(gs.x);
-            translateY.setValue(gs.y);
-          }
-        },
-        onResponderRelease: (e: any, gs: any) => {
-          setDragging(false);
-          const clampedX = Math.max(
-            8,
-            Math.min(SCREEN_WIDTH - 8 - 56, gs.x),
-          );
-          const clampedY = Math.max(
-            8,
-            Math.min(SCREEN_HEIGHT - 8 - 120, gs.y),
-          );
-          translateX.setValue(clampedX);
-          translateY.setValue(clampedY);
-          Animated.spring(translateX, {
-            toValue: clampedX,
-            useNativeDriver: true,
-            friction: 5,
-          }).start();
-          Animated.spring(translateY, {
-            toValue: clampedY,
-            useNativeDriver: true,
-            friction: 5,
-          }).start();
-        },
-        onResponderTerminate: () => {
-          setDragging(false);
-        },
-      } as any
-    );
-  }, [translateX, translateY]);
-
-  // ── Icon visibility (auto-hide one after 2.5s) ─────────────────────
-  const [showWhatsApp, setShowWhatsApp] = useState(true);
-  const [showMessenger, setShowMessenger] = useState(true);
-  const [chatOpen, setChatOpen] = useState(false);
-
-  useEffect(() => {
-    if (!visible) return;
-    const t1 = setTimeout(() => {
-      if (showWhatsApp && showMessenger) setShowWhatsApp(false);
-    }, 2500);
-    const t2 = setTimeout(() => {
-      if (showWhatsApp && showMessenger) setShowMessenger(false);
-    }, 2500);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, [visible, showWhatsApp, showMessenger]);
-
-  // ── Icon tap → chooser sheet ───────────────────────────────────────
-  const handleIconTap = (icon: "whatsapp" | "messenger") => {
-    Alert.alert(
-      "Choose your chat app",
-      "Pick one to open a conversation with DEEN's concierge.\n\n• WhatsApp — 01952-700500 (online)\n• Messenger — deencommerce",
-      [
-        { text: "WhatsApp", onPress: () => openWhatsApp() },
-        { text: "Messenger", onPress: () => openMessenger() },
-        { text: "Cancel", style: "cancel" },
-      ],
-    );
-  };
+  // Draggable gesture responder
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gesture) =>
+        Math.abs(gesture.dx) > 6 || Math.abs(gesture.dy) > 6,
+      onPanResponderGrant: () => {
+        setDragging(true);
+        pan.extractOffset();
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dx: pan.x, dy: pan.y }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: (_, gesture) => {
+        setDragging(false);
+        pan.flattenOffset();
+      },
+      onPanResponderTerminate: () => {
+        setDragging(false);
+        pan.flattenOffset();
+      },
+    })
+  ).current;
 
   const openWhatsApp = async () => {
     try {
       await Linking.openURL(WHATSAPP_URL);
-    } catch {
-      // fall through
-    }
-    setShowWhatsApp(false);
-    setShowMessenger(true);
+    } catch {}
   };
 
   const openMessenger = async () => {
     try {
       await Linking.openURL(MESSENGER_URL);
-    } catch {
-      // fall through
-    }
-    setShowMessenger(false);
-    setShowWhatsApp(true);
+    } catch {}
   };
 
-  // ── Toggle chat open / closed ──────────────────────────────────────
   const toggleChat = () => {
     setChatOpen((prev) => {
       const next = !prev;
@@ -177,7 +103,6 @@ export function ChatFloatingWidget({
     });
   };
 
-  // ── Render ─────────────────────────────────────────────────────────
   if (!visible) return null;
 
   return (
@@ -193,81 +118,68 @@ export function ChatFloatingWidget({
         />
       )}
 
-      {/* Draggable floating widget (badge container) */}
+      {/* Floating draggable container */}
       <Animated.View
         style={[
           styles.widgetContainer,
           {
-            transform: [
-              { translateX },
-              { translateY },
-            ],
+            transform: pan.getTranslateTransform(),
           },
           dragging ? styles.widgetDragging : {},
         ]}
-        {...panResponder()}
+        {...panResponder.panHandlers}
       >
-        {/* ── Main badge (sparkle) ── */}
-        <TouchableOpacity
-          style={[styles.badge, { backgroundColor: colors.indigo }]}
-          activeOpacity={0.8}
-          onPress={toggleChat}
-          accessibilityRole="button"
-          accessibilityLabel="Open DEEN AI concierge chat"
-        >
-          <Sparkles size={18} color="#FFFFFF" />
-        </TouchableOpacity>
-
-        {/* ── WhatsApp + Messenger icons ── */}
+        {/* Support App Buttons (WhatsApp & Messenger) */}
         <View style={styles.iconRow}>
           <TouchableOpacity
             style={[styles.iconBtn, { backgroundColor: "#25D366" }]}
             activeOpacity={0.85}
-            onPress={() => handleIconTap("whatsapp")}
+            onPress={openWhatsApp}
             accessibilityRole="button"
-            accessibilityLabel="WhatsApp support"
+            accessibilityLabel="WhatsApp support hotline"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            {showWhatsApp && <WhatsApp size={20} color="#FFFFFF" />}
+            <WhatsApp size={22} color="#FFFFFF" />
           </TouchableOpacity>
+
           <TouchableOpacity
-            style={[styles.iconBtn, { backgroundColor: "rgba(0,132,255,0.12)" }]}
+            style={[styles.iconBtn, { backgroundColor: "#0084FF" }]}
             activeOpacity={0.85}
-            onPress={() => handleIconTap("messenger")}
+            onPress={openMessenger}
             accessibilityRole="button"
-            accessibilityLabel="Messenger support"
+            accessibilityLabel="Facebook Messenger support"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            {showMessenger && <Messenger size={20} color="#0084FF" />}
+            <Messenger size={22} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 
-        {/* Close (✕) — only when chat is open */}
-        {chatOpen && (
-          <TouchableOpacity
-            style={[styles.iconBtn, { backgroundColor: colors.cardSecondary }]}
-            activeOpacity={0.8}
-            onPress={() => {
-              setChatOpen(false);
-              resetPosition();
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Close chat"
-          >
-            <X size={14} color={colors.ink} />
-          </TouchableOpacity>
-        )}
+        {/* AI Concierge Trigger Badge */}
+        <TouchableOpacity
+          style={[styles.badge, { backgroundColor: colors.indigo, marginTop: 10 }]}
+          activeOpacity={0.85}
+          onPress={toggleChat}
+          accessibilityRole="button"
+          accessibilityLabel="Open DEEN AI concierge chat"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          {chatOpen ? (
+            <X size={20} color="#FFFFFF" />
+          ) : (
+            <Sparkles size={20} color="#FFFFFF" />
+          )}
+        </TouchableOpacity>
       </Animated.View>
 
-      {/* ── Chat slide-over (full-height sheet) ── */}
+      {/* Slide-over AI Concierge Modal */}
       {chatOpen && (
-        <View style={styles.sheetContainer}>
-          <AiConciergeModal
-            visible={true}
-            onClose={() => {
-              setChatOpen(false);
-              resetPosition();
-            }}
-          />
-        </View>
+        <AiConciergeModal
+          visible={true}
+          onClose={() => {
+            setChatOpen(false);
+            resetPosition();
+          }}
+        />
       )}
     </>
   );
@@ -276,30 +188,30 @@ export function ChatFloatingWidget({
 const styles = StyleSheet.create({
   widgetContainer: {
     position: "absolute",
-    bottom: 16,
+    bottom: 76,
     right: 16,
     alignItems: "center",
-    zIndex: 1000,
+    zIndex: 999,
   },
   widgetDragging: {
-    opacity: 0.92,
+    opacity: 0.88,
   },
   badge: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
   },
   iconRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 10,
+    flexDirection: "column",
+    gap: 8,
+    alignItems: "center",
   },
   iconBtn: {
     width: 44,
@@ -307,11 +219,10 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
-  },
-  sheetContainer: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    left: 0,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });

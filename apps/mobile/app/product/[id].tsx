@@ -48,6 +48,8 @@ import { StoreStockModal } from "../../src/components/StoreStockModal";
 import { ProductReviewsModal } from "../../src/components/ProductReviewsModal";
 import { DenimCareGuideModal } from "../../src/components/DenimCareGuideModal";
 import { WhatsAppConciergeButton } from "../../src/components/WhatsAppConciergeButton";
+import { LiteRTSmartFitModal } from "../../src/components/LiteRTSmartFitModal";
+import { GeminiNanoAssistantModal } from "../../src/components/GeminiNanoAssistantModal";
 import { Analytics } from "../../src/services/analytics";
 
 const { width } = Dimensions.get("window");
@@ -88,6 +90,8 @@ export default function ProductDetailScreen() {
   const [stockModalVisible, setStockModalVisible] = useState(false);
   const [reviewsModalVisible, setReviewsModalVisible] = useState(false);
   const [careGuideVisible, setCareGuideVisible] = useState(false);
+  const [smartFitVisible, setSmartFitVisible] = useState(false);
+  const [geminiAssistantVisible, setGeminiAssistantVisible] = useState(false);
   const [commentsCount, setCommentsCount] = useState(0);
   const [averageRating, setAverageRating] = useState(4.9);
 
@@ -491,14 +495,35 @@ export default function ProductDetailScreen() {
                 </Text>
               </View>
 
-              <TouchableOpacity
-                style={styles.sizeGuideBtn}
-                activeOpacity={0.8}
-                onPress={() => setSizeGuideVisible(true)}
-              >
-                <Ruler size={14} color={colors.indigoDark} />
-                <Text style={styles.sizeGuideBtnText}>SIZE CHART</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <TouchableOpacity
+                  style={[
+                    styles.sizeGuideBtn,
+                    {
+                      backgroundColor: isDark ? "rgba(245, 158, 11, 0.15)" : "rgba(245, 158, 11, 0.1)",
+                      borderColor: "rgba(245, 158, 11, 0.35)",
+                    },
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={() => setSmartFitVisible(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open LiteRT smart sizing predictor"
+                >
+                  <Sparkles size={14} color="#F59E0B" />
+                  <Text style={[styles.sizeGuideBtnText, { color: "#F59E0B", fontWeight: "800" }]}>
+                    SMART FIT (AI)
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.sizeGuideBtn}
+                  activeOpacity={0.8}
+                  onPress={() => setSizeGuideVisible(true)}
+                >
+                  <Ruler size={14} color={colors.indigoDark} />
+                  <Text style={styles.sizeGuideBtnText}>SIZE CHART</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.sizeGrid}>
@@ -597,8 +622,22 @@ export default function ProductDetailScreen() {
             category={product.category}
           />
 
-          {/* Quick Action Portals: Physical Store Stock, Reviews, Denim Care */}
+          {/* Quick Action Portals: Physical Store Stock, Reviews, Denim Care, AI Concierge */}
           <View style={styles.quickFeaturesGrid}>
+            <TouchableOpacity
+              style={styles.featurePillCard}
+              activeOpacity={0.8}
+              onPress={() => setGeminiAssistantVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Open Gemini Nano AI Styling & Care Assistant"
+            >
+              <Sparkles size={15} color="#A855F7" />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.featurePillTitle, { color: "#A855F7" }]}>AI STYLING & CARE</Text>
+                <Text style={styles.featurePillSub}>Google Gemini Nano · 0ms Offline</Text>
+              </View>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.featurePillCard}
               activeOpacity={0.8}
@@ -864,6 +903,22 @@ export default function ProductDetailScreen() {
         onClose={() => setCareGuideVisible(false)}
         category={product.category}
         productName={decodeHtmlEntities(product.name)}
+      />
+
+      {/* Google LiteRT On-Device Smart Sizing Modal */}
+      <LiteRTSmartFitModal
+        visible={smartFitVisible}
+        onClose={() => setSmartFitVisible(false)}
+        onSelectSize={(sz) => handleSizeSelect(sz)}
+        currentSize={selectedSize}
+      />
+
+      {/* Google Gemini Nano On-Device Styling & Care Assistant Modal */}
+      <GeminiNanoAssistantModal
+        visible={geminiAssistantVisible}
+        onClose={() => setGeminiAssistantVisible(false)}
+        productName={decodeHtmlEntities(product.name)}
+        category={product.category}
       />
     </ScreenShell>
   );

@@ -85,7 +85,7 @@ export function GeminiNanoAssistantModal({
 
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: isDark ? "#1C2030" : "#F3F4F6" }]}>
-            <div>
+            <View>
               <View style={styles.badgeRow}>
                 <View style={styles.nanoBadge}>
                   <Text style={styles.nanoBadgeText}>✨ GOOGLE GEMINI NANO</Text>
@@ -95,7 +95,7 @@ export function GeminiNanoAssistantModal({
               <Text style={[styles.title, { color: isDark ? "#FFFFFF" : "#111827" }]}>
                 On-Device Denim Concierge
               </Text>
-            </div>
+            </View>
             <TouchableOpacity
               onPress={onClose}
               style={[styles.closeBtn, { backgroundColor: isDark ? "#191D2B" : "#F3F4F6" }]}

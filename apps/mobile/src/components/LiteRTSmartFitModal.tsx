@@ -64,17 +64,17 @@ export function LiteRTSmartFitModal({
 
           {/* Header */}
           <View style={[styles.header, { borderBottomColor: isDark ? "#1C2030" : "#F3F4F6" }]}>
-            <div>
+            <View>
               <View style={styles.badgeRow}>
                 <View style={styles.aiBadge}>
-                  <Text style={styles.aiBadgeText}>⚡ GOOGLE LITERt ON-DEVICE AI</Text>
+                  <Text style={styles.aiBadgeText}>⚡ GOOGLE LITE-RT ON-DEVICE AI</Text>
                 </View>
                 <Text style={styles.latencyText}>0ms Inference</Text>
               </View>
               <Text style={[styles.title, { color: isDark ? "#FFFFFF" : "#111827" }]}>
                 Smart Sizing & Fit Predictor
               </Text>
-            </div>
+            </View>
             <TouchableOpacity
               onPress={onClose}
               style={[styles.closeBtn, { backgroundColor: isDark ? "#191D2B" : "#F3F4F6" }]}

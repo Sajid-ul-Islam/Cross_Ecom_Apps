@@ -20,6 +20,8 @@ import ProfileDrawer from "@/components/ProfileDrawer";
 import CustomerAnalyticsKPIs from "@/components/CustomerAnalyticsKPIs";
 import DailyRewardsModal from "@/components/DailyRewardsModal";
 import GiftCardModal from "@/components/GiftCardModal";
+import LiteRTSmartFitModal from "@/components/LiteRTSmartFitModal";
+import GeminiNanoAssistantModal from "@/components/GeminiNanoAssistantModal";
 
 const PROFILE_STORAGE_KEY = "deen_web_user_profile";
 
@@ -64,6 +66,8 @@ export default function ProfilePage() {
   const [aboutDrawerOpen, setAboutDrawerOpen] = useState(false);
   const [dailyRewardsOpen, setDailyRewardsOpen] = useState(false);
   const [giftCardOpen, setGiftCardOpen] = useState(false);
+  const [smartFitOpen, setSmartFitOpen] = useState(false);
+  const [geminiAssistantOpen, setGeminiAssistantOpen] = useState(false);
 
   // Theme & notification preferences
   const [currentTheme, setCurrentTheme] = useState<"light" | "dark">("dark");
@@ -504,6 +508,26 @@ export default function ProfilePage() {
             </p>
           </div>
           <div className="profile-menu-item__chevron">→</div>
+        </button>
+
+        {/* 3.5. On-Device AI Denim Concierge & Styling */}
+        <button
+          type="button"
+          className="profile-menu-item"
+          onClick={() => setGeminiAssistantOpen(true)}
+          style={{ borderColor: "rgba(168,85,247,0.3)" }}
+        >
+          <div className="profile-menu-item__icon" style={{ backgroundColor: "rgba(168,85,247,0.12)" }}>✨</div>
+          <div className="profile-menu-item__content">
+            <div className="profile-menu-item__title" style={{ color: "#c084fc" }}>
+              <span>AI Styling &amp; Care Concierge</span>
+              <span className="profile-menu-item__badge" style={{ backgroundColor: "rgba(168,85,247,0.2)", color: "#c084fc" }}>0ms AI</span>
+            </div>
+            <p className="profile-menu-item__subtitle">
+              Google Gemini Nano · On-device personal styling advice &amp; wash care
+            </p>
+          </div>
+          <div className="profile-menu-item__chevron" style={{ color: "#c084fc" }}>→</div>
         </button>
 
         {/* 4. Account Security & Password */}
@@ -959,6 +983,37 @@ export default function ProfilePage() {
                 </button>
               ))}
             </div>
+
+            <div
+              onClick={() => {
+                setActiveDrawer(null);
+                setSmartFitOpen(true);
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "10px 14px",
+                borderRadius: "var(--radius-sm, 8px)",
+                backgroundColor: "rgba(245, 158, 11, 0.1)",
+                border: "1px dashed #f59e0b",
+                cursor: "pointer",
+                marginTop: 12,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 16 }}>⚡</span>
+                <div>
+                  <strong style={{ fontSize: 12, color: "#f59e0b", display: "block" }}>
+                    Predict Fit with Google LiteRT AI
+                  </strong>
+                  <span style={{ fontSize: 11, color: "var(--sub)" }}>
+                    0ms on-device waist prediction from height &amp; weight
+                  </span>
+                </div>
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 800, color: "#f59e0b" }}>Predict →</span>
+            </div>
           </div>
 
           <div>
@@ -1335,6 +1390,31 @@ export default function ProfilePage() {
       <GiftCardModal
         isOpen={giftCardOpen}
         onClose={() => setGiftCardOpen(false)}
+      />
+
+      {/* Google LiteRT On-Device Smart Sizing Modal */}
+      <LiteRTSmartFitModal
+        isOpen={smartFitOpen}
+        onClose={() => setSmartFitOpen(false)}
+        onSelectSize={(sz) => {
+          const updated = { ...profile, jeansSize: sz };
+          setProfile(updated);
+          try {
+            localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(updated));
+          } catch {}
+          setSavedMessage(`✓ Google LiteRT predicted size ${sz}" saved to your profile!`);
+          setTimeout(() => setSavedMessage(""), 3500);
+          setSmartFitOpen(false);
+        }}
+        currentSize={profile.jeansSize}
+      />
+
+      {/* Google Gemini Nano On-Device AI Denim Concierge Modal */}
+      <GeminiNanoAssistantModal
+        isOpen={geminiAssistantOpen}
+        onClose={() => setGeminiAssistantOpen(false)}
+        productName="DEEN Artisanal Selvedge Denim & Apparel"
+        category="Denim"
       />
     </div>
   );

@@ -11,6 +11,8 @@ import SizeGuideModal from "@/components/SizeGuideModal";
 import DenimCareGuideModal from "@/components/DenimCareGuideModal";
 import StoreStockModal from "@/components/StoreStockModal";
 import BankOffersModal from "@/components/BankOffersModal";
+import LiteRTSmartFitModal from "@/components/LiteRTSmartFitModal";
+import GeminiNanoAssistantModal from "@/components/GeminiNanoAssistantModal";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import ProductCard from "@/components/ProductCard";
 import CompleteTheLook from "@/components/CompleteTheLook";
@@ -48,6 +50,8 @@ export default function ProductDetailClient({
   const [careGuideOpen, setCareGuideOpen] = useState(false);
   const [stockModalOpen, setStockModalOpen] = useState(false);
   const [bankOffersOpen, setBankOffersOpen] = useState(false);
+  const [smartFitOpen, setSmartFitOpen] = useState(false);
+  const [geminiAssistantOpen, setGeminiAssistantOpen] = useState(false);
 
   const { addItem } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
@@ -399,6 +403,39 @@ export default function ProductDetailClient({
             </span>
           </div>
 
+          {/* On-Device AI Styling & Concierge */}
+          <div
+            onClick={() => setGeminiAssistantOpen(true)}
+            style={{
+              background: "rgba(168,85,247,0.06)",
+              border: "1px dashed #a855f7",
+              borderRadius: "var(--radius)",
+              padding: "10px 14px",
+              marginBottom: 20,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+              transition: "background 0.2s",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 18 }}>✨</span>
+              <div>
+                <strong style={{ fontSize: 12, color: "var(--ink)", display: "block" }}>
+                  Google Gemini Nano AI Styling &amp; Care
+                </strong>
+                <span style={{ fontSize: 11, color: "var(--sub)" }}>
+                  0ms on-device personal styling advice, wash care &amp; sizing
+                </span>
+              </div>
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "#a855f7", whiteSpace: "nowrap" }}>
+              Ask Gemini Nano →
+            </span>
+          </div>
+
           {/* Size Selector Header with Size Guide CTA */}
           {product.sizes && product.sizes.length > 0 && (
             <div style={{ marginBottom: 20 }}>
@@ -406,23 +443,44 @@ export default function ProductDetailClient({
                 <span style={{ fontSize: 12, fontWeight: 800, color: "var(--ink)", textTransform: "uppercase", letterSpacing: 0.5 }}>
                   Select Size: <strong>{selectedSize}</strong>
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setSizeGuideOpen(true)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "var(--indigo)",
-                    fontSize: 12,
-                    fontWeight: 800,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 4,
-                  }}
-                >
-                  📐 Size Guide
-                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <button
+                    type="button"
+                    onClick={() => setSmartFitOpen(true)}
+                    style={{
+                      backgroundColor: "rgba(245, 158, 11, 0.12)",
+                      border: "1px solid rgba(245, 158, 11, 0.35)",
+                      color: "#f59e0b",
+                      fontSize: 11,
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      padding: "4px 10px",
+                      borderRadius: 6,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    <span>⚡</span> SMART FIT (AI)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSizeGuideOpen(true)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "var(--indigo)",
+                      fontSize: 12,
+                      fontWeight: 800,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                  >
+                    📐 Size Guide
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -735,6 +793,23 @@ export default function ProductDetailClient({
       <BankOffersModal
         isOpen={bankOffersOpen}
         onClose={() => setBankOffersOpen(false)}
+      />
+
+      <LiteRTSmartFitModal
+        isOpen={smartFitOpen}
+        onClose={() => setSmartFitOpen(false)}
+        onSelectSize={(s) => {
+          setSelectedSize(s);
+          setSmartFitOpen(false);
+        }}
+        currentSize={selectedSize}
+      />
+
+      <GeminiNanoAssistantModal
+        isOpen={geminiAssistantOpen}
+        onClose={() => setGeminiAssistantOpen(false)}
+        productName={product.name}
+        category={product.category}
       />
 
       {/* Mobile Sticky Bottom Floating Action Bar (YC UX Ergonomics) */}

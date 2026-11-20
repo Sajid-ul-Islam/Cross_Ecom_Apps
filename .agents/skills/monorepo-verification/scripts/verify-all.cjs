@@ -28,23 +28,18 @@ function runStep(title, command, cwd = repoRoot) {
 
 let allPassed = true;
 
-// 1. API Typecheck
-if (!runStep('API Typecheck (Fastify)', 'npm run typecheck:api')) {
+// 1. Web Typecheck
+if (!runStep('Web Typecheck (Next.js)', 'npm run typecheck:web')) {
   allPassed = false;
 }
 
-// 2. Web Typecheck
-if (!runStep('Web Typecheck (Next.js 15)', 'npm run typecheck:web')) {
-  allPassed = false;
-}
-
-// 3. Mobile Typecheck
+// 2. Mobile Typecheck
 if (!runStep('Mobile Typecheck (Expo / React Native)', 'npm run typecheck:mobile')) {
   allPassed = false;
 }
 
-// 4. API Automated Unit Tests
-if (!runStep('API Unit Tests (Pricing, BOGO, Cashback, Phone, Chatbot)', 'npm test')) {
+// 3. Monorepo Automated Unit Tests (Web + Mobile)
+if (!runStep('Monorepo Unit Tests (Pricing, BOGO, Cashback, AI & Usecases)', 'npm test')) {
   allPassed = false;
 }
 

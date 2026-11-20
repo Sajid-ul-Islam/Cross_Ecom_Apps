@@ -133,29 +133,38 @@ export async function POST(req: Request) {
           orderKey,
           pathaoConsignmentId: wooData.meta_data?.find((m: any) => m.key === "ptc_consignment_id")?.value,
         });
+      } else {
+        const errText = await wooRes.text().catch(() => "");
+        console.error("[checkout/route] Woo error response:", wooRes.status, errText);
+        return NextResponse.json(
+          {
+            error: "ORDER_UNCONFIRMED",
+            message: "We could not confirm the order with WooCommerce. Please verify and try again.",
+            status: 502,
+          },
+          { status: 502 }
+        );
       }
-    } catch (err) {
-      console.warn("[checkout/route] Woo direct call failed, generating verified receipt:", err);
+    } catch (err: any) {
+      console.error("[checkout/route] Woo network/timeout exception:", err);
+      return NextResponse.json(
+        {
+          error: "ORDER_UNCONFIRMED",
+          message: "Upstream order creation timed out. Please check your order history before retrying.",
+          status: 502,
+        },
+        { status: 502 }
+      );
     }
   }
 
-  // Authoritative verified direct order receipt with authentic WooCommerce order-pay URL
-  const syntheticId = Math.floor(10000 + Math.random() * 90000);
-  const syntheticOrderKey = `wc_order_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-  const directPaymentUrl = `${WOO_SITE_URL}/checkout/order-pay/${syntheticId}/?pay_for_order=true&key=${syntheticOrderKey}`;
-
-  return NextResponse.json({
-    id: syntheticId,
-    number: `DC-${syntheticId}`,
-    wooId: syntheticId,
-    wooNumber: `DC-${syntheticId}`,
-    status: payment === "cod" ? "processing" : "pending",
-    total: Number(total || 0),
-    delivery: Number(delivery ?? 50),
-    payment: payment || "cod",
-    paymentTitle: payment === "cod" ? "Cash on Delivery" : "Online Merchant Payment",
-    paymentUrl: payment !== "cod" ? directPaymentUrl : undefined,
-    orderKey: syntheticOrderKey,
-    createdAt: new Date().toISOString(),
-  });
+  // Upstream WooCommerce credentials not configured on server
+  return NextResponse.json(
+    {
+      error: "GATEWAY_UNAVAILABLE",
+      message: "Order processing is temporarily unavailable. Upstream credentials are not configured.",
+      status: 502,
+    },
+    { status: 502 }
+  );
 }

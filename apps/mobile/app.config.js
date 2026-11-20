@@ -2,16 +2,17 @@
 const fallbackGatewayApiKey = "fa002b126085801f23d9375d94409752503639919e39690c42877fc58c624973";
 
 module.exports = ({ config }) => {
-  const gatewayApiKey = process.env.EXPO_PUBLIC_GATEWAY_API_KEY || fallbackGatewayApiKey;
+  const isProd = process.env.NODE_ENV === "production" || process.env.EAS_BUILD_PROFILE === "production";
+  const gatewayApiKey = process.env.EXPO_PUBLIC_GATEWAY_API_KEY || (isProd ? "" : fallbackGatewayApiKey);
 
   return {
     ...config,
     name: "DEEN",
     slug: "deen-commerce",
-    version: "1.0.2",
+    version: "1.0.1",
     orientation: "portrait",
-    icon: "./assets/logo_white.png",
-    logo: "./assets/logo_white.png",
+    icon: "./assets/icon.png",
+    logo: "./assets/logo.png",
     splash: {
       image: "./assets/splash.png",
       resizeMode: "contain",

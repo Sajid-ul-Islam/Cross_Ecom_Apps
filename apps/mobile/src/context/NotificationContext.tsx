@@ -180,13 +180,13 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           await AsyncStorage.setItem(BROADCASTS_STORAGE_KEY, JSON.stringify([]));
         }
 
-        // Initialize push token and sync live broadcasts from REST API
-        await initPushToken();
-        await syncLiveBroadcasts();
+        // Initialize push token and sync live broadcasts in background
+        initPushToken().catch(() => {});
+        syncLiveBroadcasts().catch(() => {});
 
-        // Initialize Android system notification channels & request permission
-        await setupAndroidNotificationChannels();
-        await requestNotificationPermission();
+        // Initialize Android system notification channels & request permission asynchronously
+        setupAndroidNotificationChannels().catch(() => {});
+        requestNotificationPermission().catch(() => {});
       } catch (e) {
         console.error("Failed to load notifications", e);
       } finally {
