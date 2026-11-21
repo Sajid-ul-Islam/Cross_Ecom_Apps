@@ -2,7 +2,7 @@
   "expo": {
     "name": "DEEN",
     "slug": "deen-commerce",
-    "version": "1.0.1",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "deen",
@@ -35,7 +35,7 @@
       },
       "icon": "./assets/icon_light.png",
       "package": "com.deencommerce.app",
-      "versionCode": 1,
+      "versionCode": 3,
       "permissions": [],
       "softwareKeyboardLayoutMode": "pan",
       "runtimeVersion": {
