@@ -177,9 +177,9 @@ export default function ProductCard({ product }: Props) {
               className={primaryBadge.className}
               style={{
                 position: "absolute",
-                left: 8,
-                top: 8,
-                padding: "3px 8px",
+                left: 10,
+                top: 10,
+                padding: "4px 9px",
                 borderRadius: 4,
                 fontSize: 10,
                 fontWeight: 800,
@@ -201,8 +201,8 @@ export default function ProductCard({ product }: Props) {
             title={isSaved ? "Saved in Wishlist" : "Save to Wishlist"}
             style={{
               position: "absolute",
-              top: 8,
-              right: 8,
+              top: 10,
+              right: 10,
               width: 32,
               height: 32,
               borderRadius: "50%",

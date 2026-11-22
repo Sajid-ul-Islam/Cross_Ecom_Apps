@@ -421,7 +421,7 @@ export default function HomeScreen() {
 }
 
 const createStyles = (colors: ThemeColors, s: ReturnType<typeof sharedStyles>) => StyleSheet.create({
-  scrollContent: { ...s.scrollContent, paddingBottom: 24 },
+  scrollContent: { ...s.scrollContent, paddingBottom: 88 },
   heroWrapper: {
     marginHorizontal: 16, marginTop: 8, marginBottom: 16, height: 380,
     borderRadius: 12, overflow: "hidden", backgroundColor: colors.indigoDark, position: "relative",

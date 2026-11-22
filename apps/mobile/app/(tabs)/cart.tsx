@@ -562,7 +562,7 @@ export default function BagScreen() {
 
 function createStyles(colors: ThemeColors, s: ReturnType<typeof sharedStyles>) {
   return StyleSheet.create({
-    scrollContent: { ...s.scrollContent, paddingBottom: 30 },
+    scrollContent: { ...s.scrollContent, paddingBottom: 110 },
     emptyContainer: s.emptyContainer,
     emptyIconCircle: {
       width: 72,

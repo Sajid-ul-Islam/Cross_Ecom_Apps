@@ -60,7 +60,7 @@ export function sharedStyles(colors: ThemeColors): SharedStyleMap {
     scrollContent: {
       padding: 16,
       gap: 12,
-      paddingBottom: 40,
+      paddingBottom: 88,
     },
 
     // ─── Card system ─────────────────────────────────────────
@@ -94,8 +94,8 @@ export function sharedStyles(colors: ThemeColors): SharedStyleMap {
     input: {
       borderWidth: 1,
       borderRadius: 8,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
       fontSize: 13,
     },
     multilineInput: {

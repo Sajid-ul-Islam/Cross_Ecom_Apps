@@ -298,13 +298,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   letter-spacing: 0.5px;
   color: #fff;
 }
-.product-card__badge--new { left: 8px; top: 8px; background: var(--indigo); }
-.product-card__badge--sale { left: 8px; top: 8px; right: auto; background: var(--crimson); }
+.product-card__badge--new { left: 10px; top: 10px; background: var(--indigo); }
+.product-card__badge--sale { left: 10px; top: 10px; right: auto; background: var(--crimson); }
 .product-card__badge--oos {
-  left: 8px; top: 8px; right: auto; bottom: auto;
+  left: 10px; top: 10px; right: auto; bottom: auto;
   background: var(--ink); text-align: center;
 }
-.product-card__info { padding: 14px; }
+.product-card__info { padding: 12px 14px 14px; }
 .product-card__category {
   font-size: 10px; font-weight: 700; letter-spacing: 1px;
   color: var(--sub); text-transform: uppercase; margin-bottom: 4px;
