@@ -54,25 +54,67 @@ export function AnimatedSplashScreen({ onAnimationComplete }: { onAnimationCompl
           transform: [{ scale }],
         }}
       >
+        {/* Brand Icon */}
+        <View
+          style={{
+            width: 88,
+            height: 88,
+            borderRadius: 22,
+            marginBottom: 16,
+            shadowColor: "#000",
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.25,
+            shadowRadius: 10,
+            elevation: 8,
+          }}
+        >
+          <Animated.Image
+            source={isDark ? require("../../assets/icon_dark.png") : require("../../assets/icon_light.png")}
+            style={{
+              width: 88,
+              height: 88,
+              borderRadius: 22,
+              borderWidth: 1.5,
+              borderColor: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.08)",
+            }}
+            resizeMode="cover"
+          />
+        </View>
+
+        {/* Brand Logo Wordmark */}
         <Animated.Image
           source={isDark ? require("../../assets/logo_white.png") : require("../../assets/logo.png")}
           style={{
-            width: 220,
-            height: 64,
+            width: 200,
+            height: 56,
             resizeMode: "contain",
           }}
         />
+
+        {/* Brand Heritage & Slogan */}
         <Text
           style={{
             marginTop: 14,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: "800",
-            letterSpacing: 2.5,
+            letterSpacing: 1.5,
+            color: colors.denimStitch,
+            textTransform: "uppercase",
+          }}
+        >
+          দেশের প্রথম ডেনিম ব্র্যান্ড
+        </Text>
+        <Text
+          style={{
+            marginTop: 4,
+            fontSize: 10,
+            fontWeight: "700",
+            letterSpacing: 2,
             color: colors.sub,
             textTransform: "uppercase",
           }}
         >
-          Cross Hatch Denim & Apparel
+          EST. 2020 · DHAKA
         </Text>
       </Animated.View>
     </Animated.View>

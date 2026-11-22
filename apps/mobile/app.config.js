@@ -9,7 +9,7 @@ module.exports = ({ config }) => {
     ...config,
     name: "DEEN",
     slug: "deen-commerce",
-    version: "1.0.1",
+    version: config.version || "1.0.3",
     orientation: "portrait",
     icon: "./assets/icon.png",
     logo: "./assets/logo.png",
@@ -35,11 +35,12 @@ module.exports = ({ config }) => {
     },
     android: {
       adaptiveIcon: {
-        foregroundImage: "./assets/adaptive-icon.png",
-        backgroundColor: "#000000",
+        foregroundImage: "./assets/icon_light.png",
+        monochromeImage: "./assets/icon_dark.png",
+        backgroundColor: "#FF6B00",
       },
       package: "com.deencommerce.app",
-      versionCode: 2,
+      versionCode: config.android?.versionCode || 3,
     },
     web: {
       bundler: "metro",

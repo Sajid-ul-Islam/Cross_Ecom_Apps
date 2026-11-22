@@ -139,30 +139,44 @@ export default function Header() {
               </svg>
             </button>
 
-            <Link href="/" className="nav__brand" style={{ display: "flex", flexDirection: "column", textDecoration: "none", gap: 1 }}>
+            <Link href="/" className="nav__brand" style={{ display: "flex", alignItems: "center", textDecoration: "none", gap: 8 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={isDark ? "/logo_white.png" : "/logo.png"}
-                alt="DEEN - দেশের প্রথম ডেনিম ব্র্যান্ড"
+                src="/icon.png"
+                alt="DEEN Icon"
                 style={{
-                  height: 26,
-                  width: "auto",
-                  objectFit: "contain",
+                  width: 28,
+                  height: 28,
+                  borderRadius: 7,
+                  objectFit: "cover",
+                  border: "1px solid var(--border)",
                 }}
               />
-              <span
-                style={{
-                  fontSize: "8px",
-                  fontWeight: 800,
-                  letterSpacing: "0.12em",
-                  textTransform: "uppercase",
-                  color: "var(--denim-stitch)",
-                  lineHeight: 1,
-                  marginTop: "1px",
-                }}
-              >
-                EST. 2020 · DHAKA
-              </span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={isDark ? "/logo_white.png" : "/logo.png"}
+                  alt="DEEN - দেশের প্রথম ডেনিম ব্র্যান্ড"
+                  style={{
+                    height: 24,
+                    width: "auto",
+                    objectFit: "contain",
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: "8px",
+                    fontWeight: 800,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    color: "var(--denim-stitch)",
+                    lineHeight: 1,
+                    marginTop: "1px",
+                  }}
+                >
+                  EST. 2020 · DHAKA
+                </span>
+              </div>
             </Link>
           </div>
 

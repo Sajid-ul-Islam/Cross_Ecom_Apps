@@ -64,7 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
           <View style={styles.brandContainer}>
             <View style={styles.brandRow}>
               <TouchableOpacity
-                style={[styles.iconButton, { backgroundColor: colors.cardSecondary, marginRight: 6 }]}
+                style={[styles.iconButton, { backgroundColor: colors.cardSecondary, marginRight: 8 }]}
                 onPress={() => setSideNavVisible(true)}
                 accessibilityRole="button"
                 accessibilityLabel="Open navigation menu"
@@ -72,24 +72,31 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <Menu size={20} color={colors.ink} />
               </TouchableOpacity>
-              <View style={{ flexDirection: "column" }}>
+              <View style={styles.brandIdentity}>
                 <Image
-                  source={isDark ? require("../../assets/logo_white.png") : require("../../assets/logo.png")}
-                  style={styles.brandLogo}
-                  resizeMode="contain"
+                  source={isDark ? require("../../assets/icon_dark.png") : require("../../assets/icon_light.png")}
+                  style={styles.brandIcon}
+                  resizeMode="cover"
                 />
-                <Text
-                  style={{
-                    fontSize: 8.5,
-                    fontWeight: "800",
-                    letterSpacing: 1,
-                    textTransform: "uppercase",
-                    color: colors.denimStitch,
-                    marginTop: 1,
-                  }}
-                >
-                  {subtitle || "EST. 2020 · DHAKA"}
-                </Text>
+                <View style={styles.brandTextCol}>
+                  <Image
+                    source={isDark ? require("../../assets/logo_white.png") : require("../../assets/logo.png")}
+                    style={styles.brandLogo}
+                    resizeMode="contain"
+                  />
+                  <Text
+                    style={{
+                      fontSize: 8,
+                      fontWeight: "800",
+                      letterSpacing: 0.8,
+                      textTransform: "uppercase",
+                      color: colors.denimStitch,
+                      marginTop: 1,
+                    }}
+                  >
+                    {subtitle || "EST. 2020 · DHAKA"}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
@@ -99,8 +106,8 @@ export const Header: React.FC<HeaderProps> = ({
           <View style={styles.centerTitleContainer}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6, justifyContent: "center" }}>
               <Image
-                source={require("../../assets/icon.png")}
-                style={{ width: 18, height: 18, borderRadius: 4 }}
+                source={isDark ? require("../../assets/icon_dark.png") : require("../../assets/icon_light.png")}
+                style={{ width: 20, height: 20, borderRadius: 5 }}
                 resizeMode="cover"
               />
               <Text style={[styles.headerTitle, { color: colors.ink }]} numberOfLines={1}>
@@ -232,7 +239,23 @@ function createStyles(colors: ThemeColors) {
     brandRow: {
       flexDirection: "row",
       alignItems: "center",
+      gap: 4,
+    },
+    brandIdentity: {
+      flexDirection: "row",
+      alignItems: "center",
       gap: 8,
+    },
+    brandIcon: {
+      width: 28,
+      height: 28,
+      borderRadius: 7,
+      borderWidth: 1,
+      borderColor: colors.borderLight,
+    },
+    brandTextCol: {
+      flexDirection: "column",
+      justifyContent: "center",
     },
     brandTitle: {
       fontSize: 22,
@@ -240,8 +263,8 @@ function createStyles(colors: ThemeColors) {
       letterSpacing: 2,
     },
     brandLogo: {
-      width: 96,
-      height: 28,
+      width: 86,
+      height: 24,
     },
     brandSubtitle: {
       fontSize: 11,
