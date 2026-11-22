@@ -40,6 +40,31 @@ export default function ProductCard({ product }: Props) {
       ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
       : 0);
 
+  // Single-Badge Priority: 1. OUT OF STOCK -> 2. SALE DISCOUNT -> 3. NEW -> 4. SELECT
+  const primaryBadge = useMemo(() => {
+    if (isOutOfStock) {
+      return { text: "OUT OF STOCK", className: "product-card__badge product-card__badge--oos", style: undefined };
+    }
+    if (discountPct > 0) {
+      return { text: `-${discountPct}%`, className: "product-card__badge product-card__badge--sale", style: undefined };
+    }
+    if (product.isNew) {
+      return { text: "NEW", className: "product-card__badge product-card__badge--new", style: undefined };
+    }
+    if (product.segment === "select") {
+      return {
+        text: "⚡ SELECT",
+        className: "product-card__badge",
+        style: {
+          background: "#1e1b4b",
+          color: "#fbbf24",
+          border: "1px solid rgba(251, 191, 36, 0.4)",
+        },
+      };
+    }
+    return null;
+  }, [isOutOfStock, discountPct, product.isNew, product.segment]);
+
   const isSaved = isInWishlist(product.id);
 
   const primaryImg = resolveProductImage(product.images[0]);
@@ -146,38 +171,28 @@ export default function ProductCard({ product }: Props) {
             </div>
           )}
 
-          {product.segment === "select" && (
+          {/* Single-Badge Priority: exactly one primary status pill at top-left */}
+          {primaryBadge && (
             <span
-              className="product-card__badge"
+              className={primaryBadge.className}
               style={{
+                position: "absolute",
                 left: 8,
                 top: 8,
-                background: "#1e1b4b",
-                color: "#fbbf24",
-                border: "1px solid rgba(251, 191, 36, 0.4)",
+                padding: "3px 8px",
+                borderRadius: 4,
+                fontSize: 10,
+                fontWeight: 800,
+                letterSpacing: "0.5px",
+                zIndex: 2,
+                ...primaryBadge.style,
               }}
             >
-              ⚡ SELECT
+              {primaryBadge.text}
             </span>
-          )}
-          {product.isNew && (
-            <span
-              className="product-card__badge product-card__badge--new"
-              style={product.segment === "select" ? { top: 32 } : undefined}
-            >
-              NEW
-            </span>
-          )}
-          {discountPct > 0 && (
-            <span className="product-card__badge product-card__badge--sale">
-              -{discountPct}%
-            </span>
-          )}
-          {isOutOfStock && (
-            <span className="product-card__badge product-card__badge--oos">OUT OF STOCK</span>
           )}
 
-          {/* Wishlist Heart Button - positioned at bottom right corner */}
+          {/* Wishlist Heart Button - positioned at top right corner */}
           <div
             role="button"
             tabIndex={0}
@@ -186,12 +201,12 @@ export default function ProductCard({ product }: Props) {
             title={isSaved ? "Saved in Wishlist" : "Save to Wishlist"}
             style={{
               position: "absolute",
-              bottom: 10,
-              right: 10,
+              top: 8,
+              right: 8,
               width: 32,
               height: 32,
               borderRadius: "50%",
-              background: "rgba(255,255,255,0.85)",
+              background: "rgba(255,255,255,0.88)",
               backdropFilter: "blur(4px)",
               display: "flex",
               alignItems: "center",
@@ -322,8 +337,8 @@ export default function ProductCard({ product }: Props) {
                 position: "absolute",
                 bottom: 10,
                 left: 10,
-                right: 48,
-                padding: "8px",
+                right: 10,
+                padding: "8px 12px",
                 borderRadius: 6,
                 border: "none",
                 background: addedSize ? "var(--emerald)" : "var(--indigo)",
@@ -359,60 +374,24 @@ export default function ProductCard({ product }: Props) {
             )}
           </div>
           <p className="product-card__name">{decodeHtmlEntities(product.name)}</p>
-          {product.sku && (
-            <p style={{ fontSize: 10, color: "var(--sub)", fontFamily: "monospace", letterSpacing: 0.3, marginBottom: 4, opacity: 0.75 }}>
-              SKU: {product.sku}
-            </p>
-          )}
           <div className="product-card__price-row">
             <span className="product-card__price">{bdt(currentPrice)}</span>
             {hasDiscount && originalPrice && (
               <span className="product-card__original">{bdt(originalPrice)}</span>
             )}
           </div>
-          {inStockSizes.length > 0 && (
-            <div className="product-card__sizes">
-              {inStockSizes.slice(0, 6).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={(e) => handleAddDirectSize(e, s)}
-                  className="product-card__size-chip-btn"
-                  title={`Quick add size ${s}`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         <style>{`
           .product-card:hover .product-card__quick-add {
             opacity: 1 !important;
           }
-          .product-card__size-chip-btn {
-            font-size: 10px;
-            font-weight: 700;
-            padding: 2px 7px;
-            border-radius: 4px;
-            background: var(--surface-2);
-            color: var(--sub);
-            border: 1px solid var(--border);
-            cursor: pointer;
-            transition: all 0.15s ease;
-          }
-          .product-card__size-chip-btn:hover {
-            background: var(--indigo);
-            color: #fff;
-            border-color: var(--indigo);
-          }
           @media (max-width: 768px), (hover: none) {
             .product-card__quick-add {
               opacity: 1 !important;
               bottom: 8px !important;
               left: 8px !important;
-              right: 42px !important;
+              right: 8px !important;
               padding: 6px 8px !important;
               font-size: 10px !important;
             }

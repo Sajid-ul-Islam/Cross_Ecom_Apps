@@ -19,7 +19,6 @@ import {
 } from "../../src/components/Icons";
 import { SectionHeader } from "../../src/components/SectionHeader";
 import { ScreenShell } from "../../src/components/ScreenShell";
-import { DeliveryNoticeBanner } from "../../src/components/Banner";
 import { StoreNoticeBanner } from "../../src/components/StoreNoticeBanner";
 import { ProductCard } from "../../src/components/ProductCard";
 
@@ -176,7 +175,6 @@ export default function HomeScreen() {
   return (
     <ScreenShell>
       <StoreNoticeBanner />
-      <DeliveryNoticeBanner />
       <FestivalGreetingModal />
 
       <ScrollView

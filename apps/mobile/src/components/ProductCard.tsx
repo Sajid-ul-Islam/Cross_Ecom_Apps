@@ -42,6 +42,23 @@ function ProductCardBase({ product, style }: ProductCardProps) {
   const hasDiscount = Boolean(origPrice && origPrice > currentPrice);
   const pct = product.salePct ?? (hasDiscount && origPrice ? Math.round(((origPrice - currentPrice) / origPrice) * 100) : 0);
 
+  // Single-Badge Priority: 1. SOLD OUT -> 2. SALE DISCOUNT -> 3. NEW -> 4. SELECT
+  const primaryBadge = useMemo(() => {
+    if (outOfStock) {
+      return { text: "SOLD OUT", bg: colors.ink, color: "#FFFFFF" };
+    }
+    if (pct > 0) {
+      return { text: `-${pct}%`, bg: colors.crimson, color: "#FFFFFF" };
+    }
+    if (product.isNew) {
+      return { text: "NEW", bg: colors.indigo, color: "#FFFFFF" };
+    }
+    if (product.segment === "select") {
+      return { text: "⚡ SELECT", bg: "#1C1917", color: "#D97706" };
+    }
+    return null;
+  }, [outOfStock, pct, product.isNew, product.segment, colors]);
+
   // Use the Woo thumbnail variant for the grid (fast + correct ratio); fall back
   // to the first gallery/full image if thumb is missing. Never host our own image.
   const imageUri =
@@ -78,33 +95,32 @@ function ProductCardBase({ product, style }: ProductCardProps) {
               <ActivityIndicator size="small" color={colors.indigo} />
             </View>
           )}
-          {product.segment === "select" && (
-            <View style={styles.badgeSelect}>
-              <Text style={styles.badgeSelectText}>⚡ SELECT</Text>
+          {/* Single-Badge Priority: exactly one primary status pill at top-left */}
+          {primaryBadge && (
+            <View style={[styles.primaryBadge, { backgroundColor: primaryBadge.bg }]}>
+              <Text style={[styles.primaryBadgeText, { color: primaryBadge.color }]}>
+                {primaryBadge.text}
+              </Text>
             </View>
           )}
-          {product.isNew && (
-            <View style={[styles.badgeNew, { backgroundColor: colors.indigo }, product.segment === "select" && styles.badgeNewOffset]}>
-              <Text style={styles.badgeNewText}>NEW</Text>
-            </View>
-          )}
-          {pct > 0 && (
-            <View style={[styles.badgeSale, { backgroundColor: colors.crimson }]}>
-              <Text style={styles.badgeSaleText}>-{pct}%</Text>
-            </View>
-          )}
-          {outOfStock && (
-            <View style={[styles.badgeOOS, { backgroundColor: colors.ink }]}>
-              <Text style={styles.badgeOOSText}>SOLD OUT</Text>
-            </View>
-          )}
+
+          {/* Wishlist Heart Button — cleanly isolated at top-right */}
+          <TouchableOpacity
+            style={[styles.heartBtn, { backgroundColor: isDark ? "rgba(16, 16, 16, 0.85)" : "rgba(255, 255, 255, 0.9)" }]}
+            onPress={() => toggleWishlist(product)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel={isSaved ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
+          >
+            <Heart size={15} color={isSaved ? colors.crimson : colors.ink} />
+          </TouchableOpacity>
 
           {/* Quick Add Overlay Button on the Image */}
           {!outOfStock && (
             <TouchableOpacity
               style={[styles.quickAddBtn, { backgroundColor: colors.indigo }]}
               activeOpacity={0.85}
-              hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               onPress={(e) => {
                 e.stopPropagation();
                 setPreselectSize("");
@@ -118,17 +134,6 @@ function ProductCardBase({ product, style }: ProductCardProps) {
               </Text>
             </TouchableOpacity>
           )}
-
-          {/* Wishlist Heart Button */}
-          <TouchableOpacity
-            style={[styles.heartBtn, { backgroundColor: isDark ? "rgba(16, 16, 16, 0.85)" : "rgba(255, 255, 255, 0.85)" }]}
-            onPress={() => toggleWishlist(product)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            accessibilityRole="button"
-            accessibilityLabel={isSaved ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
-          >
-            <Heart size={15} color={isSaved ? colors.crimson : colors.ink} />
-          </TouchableOpacity>
         </View>
 
         <View style={styles.info}>
@@ -139,9 +144,6 @@ function ProductCardBase({ product, style }: ProductCardProps) {
           <Text style={[styles.name, { color: colors.ink }]} numberOfLines={2}>
             {decodeHtmlEntities(product.name)}
           </Text>
-          {product.sku ? (
-            <Text style={[styles.sku, { color: colors.faint }]}>SKU: {product.sku}</Text>
-          ) : null}
 
           <View style={styles.priceRow}>
             <Text style={[styles.price, { color: isDark ? colors.indigo : colors.indigoDark }]}>
@@ -156,30 +158,6 @@ function ProductCardBase({ product, style }: ProductCardProps) {
             <View style={styles.ratingRow}>
               <Text style={[styles.ratingStar, { color: colors.denimStitch }]}>★</Text>
               <Text style={[styles.ratingText, { color: colors.sub }]}>{product.rating.toFixed(1)}</Text>
-            </View>
-          )}
-
-          {inStockSizes.length > 0 && (
-            <View style={styles.sizePreviewRow}>
-              {inStockSizes.slice(0, 4).map((s) => (
-                <TouchableOpacity
-                  key={s}
-                  style={[styles.sizeChip, { backgroundColor: colors.paper, borderColor: colors.borderLight }]}
-                  hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    setPreselectSize(s);
-                    setSheetVisible(true);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Quick select size ${s}`}
-                >
-                  <Text style={[styles.sizeChipText, { color: colors.sub }]}>{s}</Text>
-                </TouchableOpacity>
-              ))}
-              {inStockSizes.length > 4 && (
-                <Text style={[styles.moreSizes, { color: colors.faint }]}>+{inStockSizes.length - 4}</Text>
-              )}
             </View>
           )}
         </View>
@@ -224,61 +202,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  badgeNew: {
+  primaryBadge: {
     position: "absolute",
     top: 8,
     left: 8,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
     borderRadius: 4,
+    zIndex: 2,
   },
-  badgeNewOffset: {
-    top: 32,
-  },
-  badgeNewText: {
-    color: "#FFFFFF",
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  badgeSelect: {
-    position: "absolute",
-    top: 8,
-    left: 8,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 4,
-    backgroundColor: "#1C1917",
-  },
-  badgeSelectText: {
-    color: "#D97706",
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  badgeSale: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 4,
-  },
-  badgeSaleText: {
-    color: "#FFFFFF",
-    fontSize: 9,
-    fontWeight: "800",
-  },
-  badgeOOS: {
-    position: "absolute",
-    bottom: 8,
-    left: 8,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 4,
-  },
-  badgeOOSText: {
-    color: "#FFFFFF",
+  primaryBadgeText: {
     fontSize: 9,
     fontWeight: "800",
     letterSpacing: 0.5,
@@ -287,27 +220,27 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 8,
     left: 8,
-    right: 46,
-    height: 30,
+    right: 8,
+    height: 32,
     borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
     zIndex: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.25,
     shadowRadius: 3,
     elevation: 3,
   },
   quickAddBtnText: {
     color: "#FFFFFF",
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: "800",
     letterSpacing: 0.5,
   },
   heartBtn: {
     position: "absolute",
-    bottom: 8,
+    top: 8,
     right: 8,
     width: 32,
     height: 32,
@@ -315,6 +248,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     zIndex: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
   },
   cardOOS: {
     opacity: 0.55,
@@ -333,21 +271,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     lineHeight: 18,
-    marginBottom: 3,
+    marginBottom: 4,
     minHeight: 36,
-  },
-  sku: {
-    fontSize: 9,
-    fontFamily: "monospace" as const,
-    letterSpacing: 0.3,
-    marginBottom: 5,
-    opacity: 0.7,
   },
   priceRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginBottom: 6,
+    marginBottom: 4,
   },
   price: {
     fontSize: 14,
@@ -357,29 +288,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textDecorationLine: "line-through",
   },
-  sizePreviewRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  sizeChip: {
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 4,
-    borderWidth: 1,
-  },
-  sizeChipText: {
-    fontSize: 9.5,
-    fontWeight: "700",
-  },
-  moreSizes: {
-    fontSize: 9,
-  },
   ratingRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 3,
-    marginBottom: 6,
   },
   ratingStar: {
     fontSize: 11,

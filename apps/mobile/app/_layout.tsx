@@ -15,7 +15,6 @@ import { startGatewayKeepAlive, reportBug } from "../src/services/gateway";
 
 import { AnimatedSplashScreen } from "../src/components/AnimatedSplashScreen";
 import { OTAUpdateBanner } from "../src/components/OTAUpdateBanner";
-import { ChatFloatingWidget } from "../src/components/ChatFloatingWidget";
 import { ScreenErrorBoundary } from "../src/components/ScreenErrorBoundary";
 
 // Tell TypeScript that React Native's `global` exists (RN exposes it at runtime
@@ -154,7 +153,6 @@ export default function RootLayout() {
                         <ScreenErrorBoundary fallbackTitle="DEEN Commerce App">
                           <RootNavigator />
                         </ScreenErrorBoundary>
-                        <ChatFloatingWidget />
                         {isSplashVisible && (
                           <AnimatedSplashScreen onAnimationComplete={() => setSplashVisible(false)} />
                         )}
